@@ -2,10 +2,7 @@ package io.specmatic.core.examples.server
 
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.conversions.convertPathParameterStyle
-import io.specmatic.core.Feature
-import io.specmatic.core.Resolver
-import io.specmatic.core.Result
-import io.specmatic.core.Scenario
+import io.specmatic.core.*
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesFromDir
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExistingExampleFiles
 import io.specmatic.core.pattern.*
@@ -32,7 +29,12 @@ class ExamplesView {
                     exampleFile = example?.first,
                     exampleMismatchReason = example?.second?.reportString()?.takeIf { it.isNotBlank() },
                     isPartialFailure = example?.second?.isPartialFailure() ?: false,
-                    isDiscriminatorBased = isScenarioMultiGen(scenario, scenario.resolver)
+                    isDiscriminatorBased = isScenarioMultiGen(scenario, scenario.resolver),
+                    failureDetails = if (example?.second is Result.Failure) {
+                        (example.second as Result.Failure).toMatchFailureDetailList()
+                    } else {
+                        emptyList()
+                    },
                 )
             }.filterEndpoints()
         }
@@ -109,67 +111,14 @@ class ExamplesView {
                                     exampleName = it.exampleFile?.nameWithoutExtension,
                                     exampleMismatchReason = it.exampleMismatchReason?.takeIf { reason -> reason.isNotBlank() },
                                     isPartialFailure = it.isPartialFailure,
-                                    isDiscriminatorBased = it.isDiscriminatorBased
+                                    isDiscriminatorBased = it.isDiscriminatorBased,
+                                    failureDetails = it.failureDetails,
                                 ).also { showPath = false; showMethod = false; showStatus = false }
                             }
                         }
                     }
                 }
             }
-        }
-
-        // SCHEMA EXAMPLE METHODS
-        private fun getWithMissingDiscriminators(feature: Feature, mainPattern: String, examples: List<Triple<String, File?, Result?>>): List<Triple<String, File?, Result?>> {
-            val discriminatorValues = feature.getAllDiscriminatorValues(mainPattern)
-            if (discriminatorValues.isEmpty()) return examples
-
-            return discriminatorValues.map { value ->
-                examples.find { it.first == value && it.second != null } ?: Triple(value, null, null)
-            }
-        }
-
-        private fun List<Pair<SchemaExample, Result?>>.groupByPattern(): Map<String, List<Pair<SchemaExample, Result?>>> {
-            return this.groupBy { it.first.discriminatorBasedOn.takeIf { disc -> !disc.isNullOrEmpty() } ?: it.first.schemaBasedOn }
-        }
-
-        private fun Map<String, List<Pair<SchemaExample, Result?>>>.withMissingDiscriminators(feature: Feature): Map<String, List<Triple<String, File?, Result?>>> {
-            return this.mapValues { (mainPattern, examples) ->
-                val existingExample = examples.map { example ->
-                    if (example.first.value is NullValue) {
-                        Triple(example.first.schemaBasedOn, null, null)
-                    } else Triple(example.first.schemaBasedOn, example.first.file, example.second)
-                }
-                getWithMissingDiscriminators(feature, mainPattern, existingExample)
-            }
-        }
-
-        fun List<TableRow>.withSchemaExamples(feature: Feature, schemaExample: List<Pair<SchemaExample, Result?>>): List<TableRow> {
-            val groupedSchemaExamples = schemaExample.groupByPattern()
-            return groupedSchemaExamples.withMissingDiscriminators(feature).flatMap { (mainPattern, examples) ->
-                val isDiscriminator = examples.size > 1
-                examples.mapIndexed { index, (patternName, exampleFile, result) ->
-                    TableRow(
-                        rawPath = mainPattern,
-                        path = mainPattern,
-                        method = patternName.takeIf { isDiscriminator } ?: "",
-                        responseStatus = "",
-                        contentType = "",
-                        pathSpan = examples.size,
-                        methodSpan = 1,
-                        statusSpan = 1,
-                        showPath = index == 0,
-                        showMethod = isDiscriminator,
-                        showStatus = false,
-                        example = exampleFile?.canonicalPath,
-                        exampleName = exampleFile?.nameWithoutExtension,
-                        exampleMismatchReason = result?.reportString()?.takeIf { it.isNotBlank() },
-                        isPartialFailure = result?.isPartialFailure() ?: false,
-                        isDiscriminatorBased = false, isSchemaBased = true,
-                        pathColSpan = if (isDiscriminator) 3 else 5,
-                        methodColSpan = if (isDiscriminator) 2 else 1
-                    )
-                }
-            }.plus(this)
         }
     }
 }
@@ -197,7 +146,8 @@ data class TableRow(
     val isMainRow: Boolean = showPath || showMethod || showStatus,
     val isSchemaBased: Boolean = false,
     val pathColSpan: Int = 3,
-    val methodColSpan: Int = 1
+    val methodColSpan: Int = 1,
+    val failureDetails : List<MatchFailureDetails> = emptyList(),
 )
 
 data class StatusGroup(
@@ -224,7 +174,8 @@ data class Endpoint(
     val exampleFile: File? = null,
     val exampleMismatchReason: String? = null,
     val isPartialFailure: Boolean = false,
-    val isDiscriminatorBased: Boolean
+    val isDiscriminatorBased: Boolean,
+    val failureDetails : List<MatchFailureDetails> = emptyList()
 )
 
 class HtmlTemplateConfiguration {

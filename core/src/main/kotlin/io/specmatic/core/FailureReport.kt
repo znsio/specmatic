@@ -35,7 +35,7 @@ data class FailureReport(val contractPath: String?, private val scenarioMessage:
     override fun toString(): String = toText()
 
     private fun matchFailureDetails(): String {
-        return matchFailureDetailList.joinToString("\n\n") {
+        return matchFailureDetailList.sortedBy { it.isPartial }.joinToString("\n\n") {
             matchFailureDetails(it)
         }
     }

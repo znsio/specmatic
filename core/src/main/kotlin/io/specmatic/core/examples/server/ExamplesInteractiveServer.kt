@@ -4,6 +4,7 @@ import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
+import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
@@ -30,8 +31,8 @@ import io.specmatic.core.discriminator.DiscriminatorExampleInjector
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.examples.server.ExamplesView.Companion.isScenarioMultiGen
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
-import io.specmatic.core.examples.server.ExamplesView.Companion.withSchemaExamples
 import io.specmatic.core.examples.server.SchemaExample.Companion.toSchemaExampleFileName
+import io.specmatic.core.examples.server.SchemaExamplesView.Companion.schemaExamplesToTableRows
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.consoleDebug
@@ -85,7 +86,7 @@ class ExamplesInteractiveServer(
     }
 
     private fun getServerHostPort(request: ExamplePageRequest? = null) : String {
-        return request?.hostPort ?: "http://localhost:$serverPort"
+        return (request?.hostPort ?: "http://localhost:$serverPort").trimEnd('/')
     }
 
     private val environment = applicationEngineEnvironment {
@@ -106,6 +107,7 @@ class ExamplesInteractiveServer(
             configureHealthCheckModule()
 
             routing {
+                staticResources("/_specmatic/examples/assets", "static")
                 get("/_specmatic/examples") {
                     val contractFile = getContractFileOrBadRequest(call) ?: return@get
                     try {
@@ -171,14 +173,14 @@ class ExamplesInteractiveServer(
                         val contractFile = getContractFile()
                         val validationResultResponse = try {
                             val result = validateExample(contractFile, File(request.exampleFile))
-                            if(result.isSuccess())
-                                ValidateExampleResponse(request.exampleFile)
-                            else {
+                            if (result is Result.Failure) {
                                 ValidateExampleResponse(
                                     absPath = request.exampleFile, errorMessage = result.reportString(),
-                                    errorList = ExampleValidationErrorMessage(result.reportString()).jsonPathToErrorDescriptionMapping(),
+                                    errorList = ExampleValidationDetails(result.toMatchFailureDetailList()).jsonPathToErrorDescriptionMapping(),
                                     isPartialFailure = result.isPartialFailure()
                                 )
+                            } else {
+                                ValidateExampleResponse(request.exampleFile)
                             }
                         } catch (e: FileNotFoundException) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
@@ -188,8 +190,11 @@ class ExamplesInteractiveServer(
                             ValidateExampleResponse(request.exampleFile, e.message ?: "An unexpected error occurred")
                         }
                         call.respond(HttpStatusCode.OK, validationResultResponse)
-                    } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("errorMessage" to exceptionCauseMessage(e)))
+                    } catch (e: Exception) {
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("errorMessage" to exceptionCauseMessage(e))
+                        )
                     }
                 }
 
@@ -278,7 +283,12 @@ class ExamplesInteractiveServer(
         val examplesDir = getExamplesDirPath(contractFile)
         val endpoints = ExamplesView.getEndpoints(feature, examplesDir)
         val schemaExamplesPairs = examplesDir.getSchemaExamplesWithValidation(feature)
-        val tableRows = endpoints.toTableRows().withSchemaExamples(feature, schemaExamplesPairs)
+
+        val exampleTableRows = endpoints.toTableRows()
+        val schemaTableRows = schemaExamplesToTableRows(feature, schemaExamplesPairs)
+
+        // NOTE: Keep schemaTableRows before exampleTableRows
+        val tableRows = schemaTableRows.plus(exampleTableRows)
 
         return HtmlTemplateConfiguration.process(
             templateName = "examples/index.html",
@@ -300,7 +310,7 @@ class ExamplesInteractiveServer(
                 { it.example ?: "null" },
                 {
                     mapOf(
-                        "errorList" to ExampleValidationErrorMessage(it.exampleMismatchReason ?: "null").jsonPathToErrorDescriptionMapping(),
+                        "errorList" to ExampleValidationDetails(it.failureDetails).jsonPathToErrorDescriptionMapping(),
                         "errorMessage" to it.exampleMismatchReason
                     )
                 }
@@ -386,7 +396,7 @@ class ExamplesInteractiveServer(
                 val examplesDir = getExamplesDirPath(contractFile).also { if (it.exists()) it.mkdirs() }
                 val allExistingExamples = examplesDir.getExamplesFromDir()
 
-                val schemaExamples = emptyList<TableRow>().withSchemaExamples(feature, examplesDir.getSchemaExamplesWithValidation(feature)).flatMap {
+                val schemaExamples = schemaExamplesToTableRows(feature, examplesDir.getSchemaExamplesWithValidation(feature)).flatMap {
                     if (it.example != null) {
                         listOf(ExamplePathInfo(path = it.example, created = false, status = ExampleGenerationStatus.EXISTED))
                     } else generateForSchemaBased(contractFile, it.rawPath, it.method)
@@ -474,13 +484,18 @@ class ExamplesInteractiveServer(
             )
         }
 
-        fun generateForSchemaBased(contractFile: File, mainPattern: String, subPattern: String): List<ExamplePathInfo> {
+        fun generateForSchemaBased(contractFile: File, path: String, method: String): List<ExamplePathInfo> {
             val examplesDir = getExamplesDirPath(contractFile)
             if(examplesDir.exists().not()) examplesDir.mkdirs()
 
             val feature = parseContractFileToFeature(contractFile)
-            val value = feature.generateSchemaFlagBased(mainPattern, subPattern)
-            val schemaFileName = toSchemaExampleFileName(mainPattern, subPattern)
+            val (discriminatorPatternName, patternName) = when {
+                method.isEmpty() -> null to path
+                else -> path to method
+            }
+
+            val value = feature.generateSchemaFlagBased(discriminatorPatternName, patternName)
+            val schemaFileName = toSchemaExampleFileName(discriminatorPatternName, patternName)
 
             val exampleFile = examplesDir.getSchemaExamples().firstOrNull {
                 it.file.nameWithoutExtension == schemaFileName
@@ -610,7 +625,7 @@ class ExamplesInteractiveServer(
         }
 
         private fun validateExample(feature: Feature, example: ExampleFromFile): Result {
-            return feature.matchResultFlagBased(example.request, example.response, InteractiveExamplesMismatchMessages).toResultIfAny()
+            return feature.matchResultFlagBased(example.request, example.response, InteractiveExamplesMismatchMessages).toResultIfAnyWithCauses()
         }
 
         private fun validateExample(feature: Feature, schemaExample: SchemaExample): Result {
@@ -618,7 +633,13 @@ class ExamplesInteractiveServer(
                 return Result.Success()
             }
 
-            return feature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value, InteractiveExamplesMismatchMessages)
+            return feature.matchResultSchemaFlagBased(
+                discriminatorPatternName = schemaExample.discriminatorBasedOn,
+                patternName = schemaExample.schemaBasedOn,
+                value = schemaExample.value,
+                mismatchMessages = InteractiveExamplesMismatchMessages,
+                breadCrumbIfDiscriminatorMismatch = schemaExample.file.name
+            )
         }
 
         private fun validateExample(feature: Feature, exampleFile: File): Result {
@@ -677,7 +698,13 @@ class ExamplesInteractiveServer(
         fun File.getSchemaExamplesWithValidation(feature: Feature): List<Pair<SchemaExample, Result?>> {
             return getSchemaExamples().map {
                 it to if(it.value !is NullValue) {
-                    feature.matchResultSchemaFlagBased(it.discriminatorBasedOn, it.schemaBasedOn, it.value, InteractiveExamplesMismatchMessages)
+                    feature.matchResultSchemaFlagBased(
+                        discriminatorPatternName = it.discriminatorBasedOn,
+                        patternName = it.schemaBasedOn,
+                        value = it.value,
+                        mismatchMessages = InteractiveExamplesMismatchMessages,
+                        breadCrumbIfDiscriminatorMismatch = it.file.name
+                    )
                 } else null
             }
         }
@@ -787,16 +814,31 @@ class ExamplesInteractiveServer(
 
         private fun writeToExampleFile(scenarioStub: ScenarioStub, contractFile: File): File {
             val examplesDir = getExamplesDirPath(contractFile)
-            if(examplesDir.exists().not()) examplesDir.mkdirs()
+            if (examplesDir.exists().not()) examplesDir.mkdirs()
             val stubJSON = scenarioStub.toJSON()
             val uniqueNameForApiOperation =
                 uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
 
-            val file = examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
+            val file =
+                examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
             println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
             file.writeText(stubJSON.toStringLiteral())
             return file
         }
+        private fun validatePartialFailures(contractFile: File, exampleFile: File): Any {
+            val feature = parseContractFileToFeature(contractFile)
+            val exampleFromFile = ExampleFromFile.fromFile(exampleFile).realise(
+                hasValue = { example, _ -> validatePartialFailures(feature, example) },
+                orFailure = { it.failure },
+                orException = { it.toHasFailure().failure }
+            )
+            return exampleFromFile
+        }
+
+        private fun validatePartialFailures(feature: Feature, exampleFromFile: ExampleFromFile): List<Result> {
+            return feature.matchResultFlagBased(exampleFromFile.request, exampleFromFile.response, InteractiveExamplesMismatchMessages).toResultPartialFailures()
+        }
+
     }
 }
 

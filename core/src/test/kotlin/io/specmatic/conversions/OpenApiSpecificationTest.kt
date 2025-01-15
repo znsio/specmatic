@@ -9823,6 +9823,52 @@ paths:
             .hasSize(1)
     }
 
+    @Test
+    fun `should ignore other properties when $ref is defined`() {
+        val specContent = """
+        openapi: '3.0.3'
+        info:
+          title: Simple Pet API
+          version: '1.0'
+        paths:
+          /pet:
+            get:
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        ${'$'}ref: '#/components/schemas/Pet'
+        components:
+          schemas:
+            Pet:
+              type: object
+              properties:
+                name:
+                  type: string
+                pet-type:
+                  type: string
+                  ${"$"}ref: '#/components/schemas/PetType'
+            PetType:
+              type: string
+              enum:
+                - dog
+                - cat
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(specContent, "").toFeature()
+
+        val petScenario = feature.scenarios.first { it.path == "/pet" }
+        val petPattern = resolvedHop(petScenario.httpResponsePattern.body, petScenario.resolver) as JSONObjectPattern
+        val petTypePattern = resolvedHop(petPattern.pattern.getValue("pet-type?"), petScenario.resolver) as EnumPattern
+
+        assertThat(petPattern.pattern.values).hasSize(2).hasOnlyElementsOfTypes(StringPattern::class.java, DeferredPattern::class.java)
+        assertThat(petTypePattern.pattern.pattern).hasSize(2).hasOnlyElementsOfTypes(ExactValuePattern::class.java)
+        assertThat(petTypePattern.pattern.pattern.map { it.pattern }).containsExactlyInAnyOrder(
+            StringValue("dog"), StringValue("cat")
+        )
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

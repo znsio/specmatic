@@ -72,7 +72,8 @@ class OpenApiSpecification(
     private val specificationPath: String? = null,
     private val securityConfiguration: SecurityConfiguration? = null,
     private val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-    private val dictionary: Map<String, Value> = loadDictionary(openApiFilePath, specmaticConfig.stub.dictionary)
+    private val dictionary: Map<String, Value> = loadDictionary(openApiFilePath, specmaticConfig.stub.dictionary),
+    private val strictMode: Boolean = false
 ) : IncludedSpecification, ApiSpecification {
     init {
         logger.log(openApiSpecificationInfo(openApiFilePath, parsedOpenApi))
@@ -130,7 +131,8 @@ class OpenApiSpecification(
             specificationPath: String? = null,
             securityConfiguration: SecurityConfiguration? = null,
             specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-            overlayContent: String = ""
+            overlayContent: String = "",
+            strictMode: Boolean = false
         ): OpenApiSpecification {
             val implicitOverlayFile = getImplicitOverlayContent(openApiFilePath)
 
@@ -164,6 +166,7 @@ class OpenApiSpecification(
                 specificationPath,
                 securityConfiguration,
                 specmaticConfig,
+                strictMode = strictMode
             )
         }
 
@@ -249,6 +252,7 @@ class OpenApiSpecification(
             serviceType = SERVICE_TYPE_HTTP,
             stubsFromExamples = stubsFromExamples,
             specmaticConfig = specmaticConfig,
+            strictMode = strictMode
         )
     }
 
@@ -1276,6 +1280,18 @@ class OpenApiSpecification(
             preExistingResult
         else if (typeStack.filter { it == patternName }.size > 1) {
             DeferredPattern("($patternName)")
+        } else if (schema.`$ref` != null) {
+            val component: String = schema.`$ref`
+            val (componentName, referredSchema) = resolveReferenceToSchema(component)
+            val cyclicReference = typeStack.contains(componentName)
+            if (!cyclicReference) {
+                val componentPattern = toSpecmaticPattern(
+                    referredSchema,
+                    typeStack.plus(componentName), componentName
+                )
+                cacheComponentPattern(componentName, componentPattern)
+            }
+            DeferredPattern("(${componentName})")
         } else when (schema) {
             is StringSchema -> when (schema.enum) {
                 null -> StringPattern(
@@ -1444,20 +1460,6 @@ class OpenApiSpecification(
                     toFreeFormDictionaryWithStringKeysPattern()
                 } else if(schema.properties != null)
                     toJsonObjectPattern(schema, patternName, typeStack)
-                else if (schema.`$ref` != null) {
-                    val component: String = schema.`$ref`
-
-                    val (componentName, referredSchema) = resolveReferenceToSchema(component)
-                    val cyclicReference = typeStack.contains(componentName)
-                    if (!cyclicReference) {
-                        val componentPattern = toSpecmaticPattern(
-                            referredSchema,
-                            typeStack.plus(componentName), componentName
-                        )
-                        cacheComponentPattern(componentName, componentPattern)
-                    }
-                    DeferredPattern("(${componentName})")
-                }
                 else {
                     val schemaFragment = if(patternName.isNotBlank()) " in schema $patternName" else " in the schema"
 

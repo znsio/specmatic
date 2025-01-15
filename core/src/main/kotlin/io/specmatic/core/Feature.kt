@@ -15,6 +15,7 @@ import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
+import io.ktor.http.*
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.*
@@ -37,7 +38,8 @@ fun parseContractFileToFeature(
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
     specmaticConfig: SpecmaticConfig = loadSpecmaticConfigOrDefault(getConfigFilePath()),
-    overlayContent: String = ""
+    overlayContent: String = "",
+    strictMode: Boolean = false
 ): Feature {
     return parseContractFileToFeature(
         File(contractPath),
@@ -48,7 +50,8 @@ fun parseContractFileToFeature(
         specificationPath,
         securityConfiguration,
         specmaticConfig,
-        overlayContent
+        overlayContent,
+        strictMode
     )
 }
 
@@ -66,7 +69,8 @@ fun parseContractFileToFeature(
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
     specmaticConfig: SpecmaticConfig = loadSpecmaticConfigOrDefault(getConfigFilePath()),
-    overlayContent: String = ""
+    overlayContent: String = "",
+    strictMode: Boolean = false
 ): Feature {
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
     return when (file.extension) {
@@ -79,7 +83,8 @@ fun parseContractFileToFeature(
             specificationPath = specificationPath,
             securityConfiguration = securityConfiguration,
             specmaticConfig = specmaticConfig,
-            overlayContent = overlayContent
+            overlayContent = overlayContent,
+            strictMode = strictMode
         ).toFeature()
         WSDL -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
@@ -119,7 +124,8 @@ data class Feature(
     val serviceType:String? = null,
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
     val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-    val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig)
+    val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig),
+    val strictMode: Boolean = false
 ): IFeature {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         val updatedSpecmaticConfig = specmaticConfig.copy(
@@ -374,35 +380,59 @@ data class Feature(
         } != null
     }
 
-    fun matchResultSchemaFlagBased(primaryPatternName: String?, secondaryPatternName: String, value: Value, mismatchMessages: MismatchMessages): Result {
+    fun matchResultSchemaFlagBased(
+        discriminatorPatternName: String?,
+        patternName: String, value: Value,
+        mismatchMessages: MismatchMessages,
+        breadCrumbIfDiscriminatorMismatch: String? = null
+    ): Result {
         val updatedResolver = flagsBased.update(scenarios.last().resolver).copy(mismatchMessages = mismatchMessages)
-        return try {
-            val pattern = primaryPatternName ?: secondaryPatternName
-            val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(pattern))
-            resolvedPattern.matches(value, updatedResolver)
-        } catch (e: Throwable) {
-            Result.Failure(e.message ?: "Couldn't match pattern $primaryPatternName, please check if this exists")
+
+        val pattern = runCatching {
+            getSchemaPattern(discriminatorPatternName, patternName, updatedResolver)
+        }.getOrElse { e ->
+            return if (e is ContractException) e.failure()
+            else Result.Failure(e.message ?: "Invalid Pattern \"$discriminatorPatternName.$patternName\"")
+        }
+
+        return if (pattern is AnyPattern && !discriminatorPatternName.isNullOrEmpty()) {
+            pattern.matchesValue(value, updatedResolver, patternName, breadCrumbIfDiscriminatorMismatch)
+        } else pattern.matches(value, updatedResolver)
+    }
+
+    fun getAllDiscriminatorValuesIfExists(patternName: String): Set<String> {
+        val resolver = flagsBased.update(scenarios.last().resolver)
+        val pattern = runCatching {
+            getSchemaPattern(patternName, "", resolver)
+        }.getOrElse { return emptySet() }
+
+        return when (pattern) {
+            is AnyPattern -> pattern.discriminator?.values.orEmpty()
+            else -> emptySet()
         }
     }
 
-    fun getAllDiscriminatorValues(patternName: String): Set<String> {
+    fun generateSchemaFlagBased(discriminatorPatternName: String?, patternName: String): Value {
         val updatedResolver = flagsBased.update(scenarios.last().resolver)
-        return try {
-            val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(patternName)) as? AnyPattern
-            resolvedPattern?.discriminator?.values.orEmpty()
-        } catch (e: Throwable) {
-            emptySet()
-        }
+
+       return when (val pattern = getSchemaPattern(discriminatorPatternName, patternName, updatedResolver)) {
+           is AnyPattern -> pattern.generateValue(updatedResolver, patternName)
+           else -> pattern.generate(updatedResolver)
+       }
     }
 
-    fun generateSchemaFlagBased(primaryPatternName: String?, secondaryPatternName: String): Value {
-        val updatedResolver = flagsBased.update(scenarios.last().resolver)
-        val pattern = primaryPatternName ?: secondaryPatternName
-
-        return when (val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(pattern))) {
-            is AnyPattern -> resolvedPattern.generateValue(updatedResolver, secondaryPatternName)
-            else -> resolvedPattern.generate(updatedResolver)
+    private fun getSchemaPattern(discriminatorPatternName: String?, patternName: String, resolver: Resolver): Pattern {
+        if (!discriminatorPatternName.isNullOrEmpty()) {
+            return when (val discriminatorPattern = resolver.getPattern(withPatternDelimiters(discriminatorPatternName))) {
+                is AnyPattern -> discriminatorPattern
+                else -> throw ContractException(
+                    breadCrumb = discriminatorPatternName,
+                    errorMessage = "Pattern ${discriminatorPatternName.quote()} is not an Discriminator Pattern"
+                )
+            }
         }
+
+        return resolver.getPattern(withPatternDelimiters(patternName))
     }
 
     fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {
@@ -1702,7 +1732,9 @@ data class Feature(
                     ) to exampleFromFile.toRow(specmaticConfig)
                 }
             } catch (e: Throwable) {
-                logger.log(e, "Error reading file ${exampleFromFile.expectationFilePath}")
+                val errorMessage = "Error reading file ${exampleFromFile.expectationFilePath}"
+                if(strictMode) throw ContractException(errorMessage)
+                logger.log(e, errorMessage)
                 null
             }
         }
@@ -1748,19 +1780,26 @@ data class Feature(
             println()
             logger.log("The following externalized examples were not used:")
 
-            unusedExternalizedExamples.sorted().forEach { externalizedExamplePath: String ->
-                logger.log("  $externalizedExamplePath")
+            val errorMessages = unusedExternalizedExamples.sorted().map { externalizedExamplePath: String ->
+                if(strictMode.not()) logger.log("  $externalizedExamplePath")
 
                 try {
                     val example = ScenarioStub.parse(File(externalizedExamplePath).readText())
 
-                    val method = example.request.method
-                    val path = example.request.path
-                    val responseCode = example.response.status
-                    logger.log("    $method $path -> $responseCode does not match any operation in the specification")
+                    val method = example.requestMethod()
+                    val path = example.requestPath()
+                    val responseCode = example.responseStatus()
+                    val errorMessage = "    $method $path -> $responseCode does not match any operation in the specification"
+                    if(strictMode.not()) logger.log(errorMessage)
+                    "The example $externalizedExamplePath is unused due to error: $errorMessage"
                 } catch(e: Throwable) {
-                    logger.log("    Could not parse the example: ${exceptionCauseMessage(e)}")
+                    val errorMessage = "    Could not parse the example: ${exceptionCauseMessage(e)}"
+                    if(strictMode.not()) logger.log(errorMessage)
+                    "The example $externalizedExamplePath is unused due to error: $errorMessage"
                 }
+            }
+            if(strictMode && errorMessages.isNotEmpty()) {
+                throw ContractException(errorMessages.joinToString(System.lineSeparator()))
             }
 
             logger.newLine()

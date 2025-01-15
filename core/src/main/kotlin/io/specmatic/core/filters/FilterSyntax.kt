@@ -161,9 +161,17 @@ data class FilterSyntax(val filter: String) {
                         else
                             FilterExpression.NotRegex(key, pattern)
                     }
-                    key == ScenarioFilterTags.STATUS_CODE.key && value.contains(SpecialSymbol.RANGE.symbol) -> {
+                    key == ScenarioFilterTags.STATUS_CODE.key && value.endsWith(SpecialSymbol.DOUBLE_DIGIT_WILDCARD.symbol) -> {
                         val rangeStart = value[0].digitToInt() * 100
                         val rangeEnd = rangeStart + 99
+                        if (operator == ComparisonOperator.EQUAL.symbol)
+                            FilterExpression.Range(key, rangeStart, rangeEnd)
+                        else
+                            FilterExpression.NotRange(key, rangeStart, rangeEnd)
+                    }
+                    key == ScenarioFilterTags.STATUS_CODE.key && value.endsWith(SpecialSymbol.SINGLE_DIGIT_WILDCARD.symbol) -> {
+                        val rangeStart = value.substring(0, 2).toInt() * 10
+                        val rangeEnd = rangeStart + 9
                         if (operator == ComparisonOperator.EQUAL.symbol)
                             FilterExpression.Range(key, rangeStart, rangeEnd)
                         else

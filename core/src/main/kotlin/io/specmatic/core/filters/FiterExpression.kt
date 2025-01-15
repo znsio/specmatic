@@ -48,7 +48,6 @@ sealed class FilterExpression {
             val value = getValue(metadata, key) ?: return false
 
             return value
-                .asSequence()
                 .none { item ->
                     pattern.matcher(item).matches()
                 }
@@ -62,7 +61,6 @@ sealed class FilterExpression {
             if (parsedValues.isEmpty()) return false
 
             return parsedValues
-                .asSequence()
                 .any { value ->
                     value in start..end
                 }
@@ -76,7 +74,6 @@ sealed class FilterExpression {
             if (parsedValues.isEmpty()) return false
 
             return parsedValues
-                .asSequence()
                 .none { value ->
                     value in start..end
                 }
@@ -92,7 +89,6 @@ sealed class FilterExpression {
                 ScenarioFilterTags.HEADER -> metadata.header.toList()
                 ScenarioFilterTags.QUERY -> metadata.query.toList()
                 ScenarioFilterTags.EXAMPLE_NAME  -> listOf( metadata.exampleName )
-                else -> null
             }
         }
     }

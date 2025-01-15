@@ -275,4 +275,12 @@ class ScenarioMetadataFilterTests {
         assertFalse(filter.isSatisfiedBy(postOrders502))
     }
 
+    @Test
+    fun `exclude scenarios with wildcard only for last digit in status codes`() {
+        val filter = ScenarioMetadataFilter.from("STATUS!=50x")
+
+        assertTrue(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 521)))
+        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 502)))
+    }
+
 }

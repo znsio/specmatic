@@ -172,7 +172,8 @@ header {
 
         &[data-valid="processing"],
         &[data-generate="processing"],
-        &[data-test="processing"] {
+        &[data-test="processing"],
+        &[data-fix="processing"] {
             pointer-events: none;
 
             &::after {

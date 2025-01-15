@@ -116,13 +116,13 @@ table.addEventListener("click", async (event) => {
 
             case "INPUT": {
                 if (target.matches("th > label > input")) {
-                    const {validatedCount, generatedCount, discAndMainCount, totalCount} = getRowsCount();
+                    const {validatedCount, generatedCount, discAndMainCount, needsFixCount, totalCount} = getRowsCount();
                     toggleAllSelects(target.checked);
 
                     if (table.hasAttribute("data-generated")) {
                         bulkValidateBtn.setAttribute("data-selected", target.checked ? generatedCount : 0);
                         bulkTestBtn.setAttribute("data-selected", target.checked ? validatedCount : 0);
-                        bulkFixBtn.setAttribute("data-selected", target.checked ? generatedCount - validatedCount : 0);
+                        bulkFixBtn.setAttribute("data-selected", target.checked ? needsFixCount : 0);
                     }
 
                     return bulkGenerateBtn.setAttribute("data-selected", target.checked ? totalCount - generatedCount + discAndMainCount : 0);
@@ -150,7 +150,7 @@ function handleSingleInput(nearestTableRow, checked) {
 
     const hasBeenGenerated = nearestTableRow.getAttribute("data-generate") === "success";
     const hasBeenValidated = dataValidationSuccessValues.includes(nearestTableRow.getAttribute("data-valid"));
-    const isInvalid = hasBeenGenerated && !hasBeenValidated;
+    const isInvalid = hasBeenGenerated && nearestTableRow.getAttribute("data-valid") !== "success";
     const isDiscriminatorRow = nearestTableRow.getAttribute("data-disc") === "true";
     const isMainRow = nearestTableRow.getAttribute("data-main") === "true";
 
@@ -230,7 +230,7 @@ bulkGenerateBtn.addEventListener("click", async () => {
 
 bulkFixBtn.addEventListener("click", async () => {
     blockGenValidate = true;
-    bulkValidateBtn.setAttribute("data-fix", "processing");
+    bulkFixBtn.setAttribute("data-fix", "processing");
 
     switch (bulkFixBtn.getAttribute("data-panel")) {
         case "table": {
@@ -239,6 +239,11 @@ bulkFixBtn.addEventListener("click", async () => {
         }
 
         case "details": {
+            try { JSON.parse(savedEditorResponse) } catch (e) {
+                createAlert("Failed to Fix Example (Invalid Syntax)", e.message, true);
+                break;
+            }
+
             const rowValues = extractRowValues(selectedTableRow);
             await fixRowExamples(selectedTableRow, rowValues);
             const originalYScroll = scrollYPosition;
@@ -248,7 +253,7 @@ bulkFixBtn.addEventListener("click", async () => {
         }
     }
 
-    bulkValidateBtn.removeAttribute("data-valid");
+    bulkFixBtn.removeAttribute("data-fix");
     return cleanUpSelections();
 })
 
@@ -355,10 +360,11 @@ function getRowsCount() {
         acc.validatedCount += isRowValidated ? 1 : 0;
         acc.generatedCount += isRowGenerated ? 1 : 0;
         acc.discAndMainCount += isRowGenerated && isRowDiscAndMain ? 1 : 0;
+        acc.needsFixCount += (isRowGenerated && row.getAttribute("data-valid") !== "success") ? 1 : 0;
         acc.totalCount += 1;
         return acc;
 
-    }, {validatedCount: 0, generatedCount: 0, discAndMainCount: 0, totalCount: 0});
+    }, {validatedCount: 0, generatedCount: 0, discAndMainCount: 0, totalCount: 0, needsFixCount: 0});
 }
 
 function toggleAllSelects(isSelected = true) {

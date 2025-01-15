@@ -1,8 +1,9 @@
 package application
 
+import io.specmatic.core.config.SpecmaticConfigVersion.Companion.getLatestVersion
 import io.specmatic.core.config.getVersion
 import io.specmatic.core.config.toSpecmaticConfig
-import io.specmatic.core.config.v2.SPECMATIC_CONFIG_VERSION_2
+import io.specmatic.core.getConfigFilePath
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.exitWithMessage
 import picocli.CommandLine.Command
@@ -13,14 +14,12 @@ import java.util.concurrent.Callable
 private const val SUCCESS_EXIT_CODE = 0
 private const val FAILURE_EXIT_CODE = 1
 
-private const val SPECMATIC_YAML = "specmatic.yaml"
-private const val SPECMATIC_YML = "specmatic.yml"
-private const val SPECMATIC_JSON = "specmatic.json"
+private const val SPECMATIC_CONFIGURATION = "Specmatic Configuration"
 
 @Command(
     name = "config",
     mixinStandardHelpOptions = true,
-    description = ["Manage and configure Specmatic Config."],
+    description = ["Manage and configure $SPECMATIC_CONFIGURATION."],
     subcommands = [
         ConfigCommand.Upgrade::class
     ]
@@ -34,50 +33,48 @@ class ConfigCommand : Callable<Int> {
     @Command(
         name = "upgrade",
         mixinStandardHelpOptions = true,
-        description = ["Upgrade Specmatic Config to the latest version."]
+        description = ["Upgrade $SPECMATIC_CONFIGURATION to the latest version."]
     )
     class Upgrade : Callable<Int> {
-        @Option(names = ["--input"], description = ["Path to config file that needs to upgraded."])
+        @Option(names = ["--input"], description = ["Path to $SPECMATIC_CONFIGURATION file that needs to updated."])
         var inputFile: File? = null
 
-        @Option(names = ["--output"], description = ["Output file path for the upgraded config."])
-        var outputFile: File? = null
+        @Option(
+            names = ["--output"], description = ["File to write the updated $SPECMATIC_CONFIGURATION to. " +
+                    "If not provided, the configuration will be logged in the console."]
+        )
+        val outputFile: File? = null
 
-        private val upgradeVersion = SPECMATIC_CONFIG_VERSION_2
+        private val upgradeVersion = getLatestVersion()
 
         override fun call(): Int {
-            inputFile = inputFile ?: getConfigFile() ?: run {
-                logger.log("Missing input file. Please provide path to Specmatic Config.")
-                return FAILURE_EXIT_CODE
-            }
+            try {
+                val configFile = inputFile ?: File(getConfigFilePath()).takeIf { it.exists() } ?: run {
+                    logger.log(
+                        "Default $SPECMATIC_CONFIGURATION file named " +
+                                "specmatic.yaml/specmatic.yml/specmatic.json not found. " +
+                                "Please provide the valid configuration file path using --input option."
+                    )
+                    return FAILURE_EXIT_CODE
+                }
 
-            if (inputFile!!.readText().getVersion() == upgradeVersion) {
-                logger.log("Config is already up-to-date")
+                if (configFile.readText().getVersion() == upgradeVersion) {
+                    logger.log("The provided $SPECMATIC_CONFIGURATION file is already up-to-date")
+                    return SUCCESS_EXIT_CODE
+                }
+
+                val upgradedConfigYaml = getUpgradedConfig(configFile)
+
+                if (outputFile != null) {
+                    logger.log("Writing upgraded $SPECMATIC_CONFIGURATION file to ${outputFile.path}")
+                    outputFile.writeText(upgradedConfigYaml)
+                } else {
+                    logger.log(upgradedConfigYaml)
+                }
+
                 return SUCCESS_EXIT_CODE
-            }
-
-            val upgradedConfigYaml = getUpgradedConfig(inputFile!!)
-
-            if (outputFile != null) {
-                logger.log("Writing upgraded config file to ${outputFile!!.path}")
-                outputFile!!.writeText(upgradedConfigYaml)
-            } else {
-                logger.log(upgradedConfigYaml)
-            }
-
-            return SUCCESS_EXIT_CODE
-        }
-
-        private fun getConfigFile(): File? {
-            val yamlFile = File(SPECMATIC_YAML)
-            val ymlFile = File(SPECMATIC_YML)
-            val jsonFile = File(SPECMATIC_JSON)
-
-            return when {
-                yamlFile.exists() -> yamlFile
-                ymlFile.exists() -> ymlFile
-                jsonFile.exists() -> jsonFile
-                else -> null
+            } catch (e: Exception) {
+                exitWithMessage(e.message.orEmpty())
             }
         }
 

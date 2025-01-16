@@ -110,7 +110,7 @@ data class AttributeSelectionPattern(
 data class SpecmaticConfig(
     val sources: List<Source> = emptyList(),
     val auth: Auth? = null,
-    val pipeline: Pipeline? = null,
+    var pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
     val hooks: Map<String, String> = emptyMap(),
     val repository: RepositoryInfo? = null,

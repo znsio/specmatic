@@ -4,6 +4,7 @@ import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.git.NonZeroExitError
 import io.specmatic.core.git.SystemGit
+import io.specmatic.core.loadSpecmaticConfigOrDefault
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.*
 import picocli.CommandLine
@@ -16,8 +17,11 @@ class SubscribeCommand: Callable<Unit> {
     override fun call() {
         val userHome = File(System.getProperty("user.home"))
         val workingDirectory = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
-        val manifestFile = File(configFilePath)
-        val manifestData = try { loadConfigJSON(manifestFile) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
+        val manifestData = try {
+            loadSpecmaticConfigOrDefault(configFilePath)
+        } catch (e: ContractException) {
+            exitWithMessage(e.failure().toReport().toText())
+        }
         val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
 
         val unsupportedSources = sources.filter { it !is GitSource }.mapNotNull { it.type }.distinct()

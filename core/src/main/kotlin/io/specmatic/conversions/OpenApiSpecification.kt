@@ -1237,7 +1237,7 @@ class OpenApiSpecification(
                 }
 
                 val mappingWithSchema: Map<String, Pair<String, List<Schema<Any>>>> = mappingWithSchemaListAndDiscriminator.mapValues { entry: Map.Entry<String, Pair<String, Pair<List<Schema<Any>>, DiscriminatorDetails>>> ->
-                    entry.key to (entry.value.second.first)
+                    entry.value.first to (entry.value.second.first)
                 }
 
                 Triple(propertyName, mappingWithSchema, mergedDiscriminatorDetailsFromMappingSchemas)
@@ -1407,12 +1407,15 @@ class OpenApiSpecification(
                         AnyPattern(oneOfs, typeAlias = "(${patternName})")
                     else if(allDiscriminators.isNotEmpty())
                         AnyPattern(
-                            schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") },
+                            pattern = schemaProperties.zip(allDiscriminators.schemaNames).map { (properties, schemaName) ->
+                                toJSONObjectPattern(properties, "(${schemaName})")
+                            },
                             discriminator = Discriminator.create(
                                 allDiscriminators.key,
                                 allDiscriminators.values.toSet(),
                                 schema.discriminator?.mapping.orEmpty()
-                            )
+                            ),
+                            typeAlias = "(${patternName})"
                         )
                     else if(schemaProperties.size > 1)
                         AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") })

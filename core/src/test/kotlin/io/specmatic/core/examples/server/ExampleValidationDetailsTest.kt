@@ -1,10 +1,37 @@
 package io.specmatic.core.examples.server
 
 import io.specmatic.core.MatchFailureDetails
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 
 class ExampleValidationDetailsTest {
+
+    @ParameterizedTest
+    @CsvSource(
+        "RESPONSE-BODY-(~~~ ABC Object)-name, /http-response/body/name, http-response.body (when ABC Object).name",
+        "RESPONSE-BODY-.(~~~ ABC Object)-name, /http-response/body/name, http-response.body (when ABC Object).name",
+        "RESPONSE-BODY-(~~~ ABC)-details-.(~~~ XYZ)-name, /http-response/body/details/name, http-response.body (when ABC).details (when XYZ).name"
+    )
+    fun `should handle tilde breadcrumbs in JSON path and description`(breadCrumb: String, expectedJsonPath: String, expectedDescBreadCrumb: String) {
+        val matchFailureDetails = listOf(
+            MatchFailureDetails(
+                breadCrumbs = breadCrumb.split("-"),
+                errorMessages = listOf("Name is invalid"),
+                isPartial = false
+            )
+        )
+        val validationResults = ExampleValidationDetails(matchFailureDetails).jsonPathToErrorDescriptionMapping()
+        val result = validationResults.single()
+
+
+        assertThat(validationResults).hasSize(1)
+        assertThat(result.jsonPath).isEqualTo(expectedJsonPath)
+        assertThat(result.description).isEqualTo(">> $expectedDescBreadCrumb\n\nName is invalid")
+        assertThat(result.severity).isEqualTo(Severity.ERROR)
+    }
 
     @Test
     fun `should map single response JSON path to description`() {

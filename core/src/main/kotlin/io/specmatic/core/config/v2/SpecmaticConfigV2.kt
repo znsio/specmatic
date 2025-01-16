@@ -2,13 +2,14 @@ package io.specmatic.core.config.v2
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import io.specmatic.core.*
+import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
 
 data class SpecmaticConfigV2(
-    val version: Int,
+    val version: SpecmaticConfigVersion,
     val contracts: List<ContractConfig> = emptyList(),
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
@@ -30,7 +31,7 @@ data class SpecmaticConfigV2(
 ) {
     fun transform(): SpecmaticConfig {
         return SpecmaticConfig(
-            version = this.version,
+            version = SpecmaticConfigVersion.VERSION_2,
             sources = this.contracts.map { contract -> contract.transform() },
             auth = this.auth,
             pipeline = this.pipeline,

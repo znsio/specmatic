@@ -23,7 +23,7 @@ internal class VersionAwareConfigParserTest {
         fun `should create SpecmaticConfig from a config file with version 1`(configFile: String) {
             val specmaticConfig = File(configFile).toSpecmaticConfig()
 
-            assertThat(specmaticConfig.version).isEqualTo(SpecmaticConfigVersion.VERSION_1.value)
+            assertThat(specmaticConfig.version).isEqualTo(SpecmaticConfigVersion.VERSION_1)
 
             val expectedGitSource = Source(
                 provider = SourceProvider.git,
@@ -49,7 +49,7 @@ internal class VersionAwareConfigParserTest {
         fun `should create SpecmaticConfig from a config file with version 2`(configFile: String) {
             val specmaticConfig = File(configFile).toSpecmaticConfig()
 
-            assertThat(specmaticConfig.version).isEqualTo(SpecmaticConfigVersion.VERSION_2.value)
+            assertThat(specmaticConfig.version).isEqualTo(SpecmaticConfigVersion.VERSION_2)
 
             val expectedGitSource = Source(
                 provider = SourceProvider.git,
@@ -76,7 +76,7 @@ internal class VersionAwareConfigParserTest {
         fun `should default to version 1 when no version is provided`(configFile: String) {
             assertThat(
                 File(configFile).toSpecmaticConfig().version
-            ).isEqualTo(SpecmaticConfigVersion.VERSION_1.value)
+            ).isEqualTo(SpecmaticConfigVersion.VERSION_1)
         }
 
         @CsvSource(
@@ -87,7 +87,7 @@ internal class VersionAwareConfigParserTest {
         fun `should throw error when unsupported version is provided`(configFile: String) {
             val specmaticConfigWithInvalidVersion = File(configFile)
             val exception = assertThrows<ContractException> { specmaticConfigWithInvalidVersion.toSpecmaticConfig() }
-            assertThat(exception.message).isEqualTo("Unsupported Specmatic config version: 100")
+            assertThat(exception.message).isEqualTo("Unsupported Specmatic config version")
         }
     }
 
@@ -96,15 +96,15 @@ internal class VersionAwareConfigParserTest {
         @Test
         fun `should return the version from the specmatic config`() {
             val config = """
-           {"version": 10}
+           {"version": 2}
         """.trimIndent()
 
-            assertThat(config.getVersion()).isEqualTo(10)
+            assertThat(config.getVersion()).isEqualTo(SpecmaticConfigVersion.VERSION_2)
         }
 
         @Test
         fun `should return the version as 1 if it is not present`() {
-            assertThat("{}".getVersion()).isEqualTo(SpecmaticConfigVersion.VERSION_1.value)
+            assertThat("{}".getVersion()).isEqualTo(SpecmaticConfigVersion.VERSION_1)
         }
 
         @Test
@@ -113,7 +113,7 @@ internal class VersionAwareConfigParserTest {
                {"version": null}
             """.trimIndent()
 
-            assertThat(config.getVersion()).isEqualTo(SpecmaticConfigVersion.VERSION_1.value)
+            assertThat(config.getVersion()).isEqualTo(SpecmaticConfigVersion.VERSION_1)
         }
     }
 

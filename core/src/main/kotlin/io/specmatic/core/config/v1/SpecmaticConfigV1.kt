@@ -32,7 +32,7 @@ data class SpecmaticConfigV1 (
 	val allPatternsMandatory: Boolean = getBooleanValue(Flags.ALL_PATTERNS_MANDATORY),
 	@field:JsonAlias("default_pattern_values")
 	val defaultPatternValues: Map<String, Any> = emptyMap(),
-	val version: Int? = null
+	val version: SpecmaticConfigVersion? = null
 ){
 	fun transform(): SpecmaticConfig {
 		return SpecmaticConfig(
@@ -54,7 +54,7 @@ data class SpecmaticConfigV1 (
 			attributeSelectionPattern = this.attributeSelectionPattern,
 			allPatternsMandatory = this.allPatternsMandatory,
 			defaultPatternValues = this.defaultPatternValues,
-			version = SpecmaticConfigVersion.VERSION_1.value
+			version = SpecmaticConfigVersion.VERSION_1
 		)
 	}
 }

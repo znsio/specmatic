@@ -2,6 +2,7 @@ package io.specmatic.core.config.v2
 
 import io.specmatic.core.SourceProvider
 import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.toSpecmaticConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
@@ -32,7 +33,7 @@ internal class SpecmaticConfigV2Test {
 
         val specmaticConfig = specmaticConfigV2.transform()
 
-        assertThat(specmaticConfig.version).isEqualTo(specmaticConfigV2.version)
+        assertThat(specmaticConfig.version).isEqualTo(SpecmaticConfigVersion.VERSION_2)
         assertThat(specmaticConfig.sources.size).isEqualTo(specmaticConfigV2.contracts.size)
         assertThat(specmaticConfig.sources[0].provider).isEqualTo(SourceProvider.git)
         assertThat(specmaticConfig.sources[0].repository).isEqualTo(specmaticConfigV2.contracts[0].git?.url)
@@ -64,7 +65,7 @@ internal class SpecmaticConfigV2Test {
 
         val specmaticConfig = specmaticConfigV2.transform()
 
-        assertThat(specmaticConfig.version).isEqualTo(specmaticConfigV2.version)
+        assertThat(specmaticConfig.version).isEqualTo(SpecmaticConfigVersion.VERSION_2)
         assertThat(specmaticConfig.sources.size).isEqualTo(specmaticConfigV2.contracts.size)
         assertThat(specmaticConfig.sources[1].provider).isEqualTo(SourceProvider.filesystem)
         assertThat(specmaticConfig.sources[1].directory).isEqualTo(specmaticConfigV2.contracts[1].filesystem?.directory)

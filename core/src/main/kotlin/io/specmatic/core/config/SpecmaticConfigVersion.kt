@@ -1,16 +1,24 @@
 package io.specmatic.core.config
 
-enum class SpecmaticConfigVersion(val value: Int) {
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonValue
+
+enum class SpecmaticConfigVersion(@JsonValue val value: Int) {
     VERSION_1(1),
     VERSION_2(2);
 
     companion object {
+        @JsonCreator
+        fun getByValue(value: Int): SpecmaticConfigVersion? {
+            return entries.find { it.value == value }
+        }
+
         fun getLatestVersion(): SpecmaticConfigVersion {
             return entries.maxBy { it.value }
         }
 
-        fun isValidVersion(version: Int): Boolean {
-            return entries.any { it.value == version }
+        fun isValidVersion(version: SpecmaticConfigVersion): Boolean {
+            return entries.any { it == version }
         }
     }
 }

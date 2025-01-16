@@ -15,23 +15,23 @@ private val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
 
 fun File.toSpecmaticConfig(): SpecmaticConfig {
     val configYaml = this.readText()
-    return when (val configVersion = configYaml.getVersion()) {
-        SpecmaticConfigVersion.VERSION_1.value -> {
+    return when (configYaml.getVersion()) {
+        SpecmaticConfigVersion.VERSION_1 -> {
             objectMapper.readValue(configYaml, SpecmaticConfigV1::class.java).transform()
         }
 
-        SpecmaticConfigVersion.VERSION_2.value -> {
+        SpecmaticConfigVersion.VERSION_2 -> {
             objectMapper.readValue(configYaml, SpecmaticConfigV2::class.java).transform()
         }
 
         else -> {
-            throw ContractException("Unsupported Specmatic config version: $configVersion")
+            throw ContractException("Unsupported Specmatic config version")
         }
     }
 }
 
-fun String.getVersion(): Int {
+fun String.getVersion(): SpecmaticConfigVersion? {
     val version = objectMapper.readTree(this).get(SPECMATIC_CONFIG_VERSION)?.asInt()
-    if(version == null || version == 0) return SpecmaticConfigVersion.VERSION_1.value
-    return version
+    if (version == null || version == 0) return SpecmaticConfigVersion.VERSION_1
+    return SpecmaticConfigVersion.getByValue(version)
 }

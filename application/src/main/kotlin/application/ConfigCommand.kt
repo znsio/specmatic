@@ -1,5 +1,6 @@
 package application
 
+import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.Companion.getLatestVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.Companion.isValidVersion
 import io.specmatic.core.config.getVersion
@@ -14,7 +15,6 @@ import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
 private const val SUCCESS_EXIT_CODE = 0
-private const val FAILURE_EXIT_CODE = 1
 
 private const val SPECMATIC_CONFIGURATION = "Specmatic Configuration"
 
@@ -76,15 +76,15 @@ class ConfigCommand : Callable<Int> {
             logger.log("The upgraded $SPECMATIC_CONFIGURATION is written successfully to ${outputFile.path}")
         }
 
-        private fun exitIfAlreadyUpToDate(existingVersion: Int) {
-            if (existingVersion == upgradeVersion.value) {
+        private fun exitIfAlreadyUpToDate(existingVersion: SpecmaticConfigVersion?) {
+            if (existingVersion == upgradeVersion) {
                 logger.log("The provided $SPECMATIC_CONFIGURATION file is already up-to-date")
                 exitProcess(SUCCESS_EXIT_CODE)
             }
         }
 
-        private fun exitIfInvalidVersion(existingVersion: Int) {
-            if(isValidVersion(existingVersion).not()) {
+        private fun exitIfInvalidVersion(existingVersion: SpecmaticConfigVersion?) {
+            if (existingVersion == null || isValidVersion(existingVersion).not()) {
                 exitWithMessage("The provided $SPECMATIC_CONFIGURATION file does not have a valid version. Please provide a valid $SPECMATIC_CONFIGURATION file.")
             }
         }

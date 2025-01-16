@@ -1,6 +1,7 @@
 package io.specmatic.core.config.v1
 
 import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.loadSpecmaticConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
@@ -21,7 +22,7 @@ internal class SpecmaticConfigV1Test {
 
         val specmaticConfig = specmaticConfigV1.transform()
 
-        assertThat(specmaticConfig.version).isEqualTo(specmaticConfigV1.version)
+        assertThat(specmaticConfig.version).isEqualTo(SpecmaticConfigVersion.VERSION_1)
         assertThat(specmaticConfig.sources.size).isEqualTo(specmaticConfigV1.sources.size)
         assertThat(specmaticConfig.sources).containsAll(specmaticConfigV1.sources)
     }

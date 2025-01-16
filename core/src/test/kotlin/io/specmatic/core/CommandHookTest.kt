@@ -1,7 +1,6 @@
 package io.specmatic.core
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.utilities.Flags
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll

@@ -126,7 +126,7 @@ data class SpecmaticConfig(
     val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
     val allPatternsMandatory: Boolean = getBooleanValue(Flags.ALL_PATTERNS_MANDATORY),
     val defaultPatternValues: Map<String, Any> = emptyMap(),
-    val version: Int? = null
+    val version: SpecmaticConfigVersion? = null
 ) {
     @JsonIgnore
     fun attributeSelectionQueryParamKey(): String {
@@ -169,7 +169,7 @@ data class SpecmaticConfig(
 
     private fun upgradeToV2(): SpecmaticConfigV2 {
         return SpecmaticConfigV2(
-            version = SpecmaticConfigVersion.VERSION_2.value,
+            version = SpecmaticConfigVersion.VERSION_2,
             contracts = this.sources.map { ContractConfig(it) },
             auth = this.auth,
             pipeline = this.pipeline,

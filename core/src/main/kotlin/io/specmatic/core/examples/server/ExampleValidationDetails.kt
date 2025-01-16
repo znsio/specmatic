@@ -61,7 +61,7 @@ data class ExampleValidationDetails(val matchFailureDetailsList: List<MatchFailu
     private fun List<String>.jsonPathForDescription(): String {
         return this.joinToString("") {
             when {
-                it.isTildeBreadCrumb() -> it.removePrefix(JSONPATH_DELIMITER).replace(Regex("\\.?\\(~{3}"), " (when")
+                it.isTildeBreadCrumb() -> it.removePrefix(JSONPATH_DELIMITER).replace(Regex("\\(~{3}"), " (when")
                 it.all(Char::isDigit) -> ".[$it]"
                 else -> ".$it"
             }

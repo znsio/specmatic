@@ -79,8 +79,7 @@ internal class CommandHookTest {
         val configFile = tempDir.resolve("specmatic.json")
         val specmaticConfig = SpecmaticConfig(
             emptyList(),
-            hooks = mapOf(HookName.stub_load_contract.name to "cat ${secondary.canonicalPath}"),
-            version = SpecmaticConfigVersion.VERSION_1.value
+            hooks = mapOf(HookName.stub_load_contract.name to "cat ${secondary.canonicalPath}")
         )
         configFile.writeText(ObjectMapper().writeValueAsString(specmaticConfig))
         Configuration.configFilePath = configFile.canonicalPath

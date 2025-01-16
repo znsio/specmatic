@@ -10,14 +10,8 @@ data class ContractConfig(
     val consumes: List<String>? = null
 ) {
     constructor(source: Source) : this(
-        git = when (source.provider) {
-            SourceProvider.git -> GitConfig(url = source.repository, branch = source.branch)
-            else -> null
-        },
-        filesystem = when (source.provider) {
-            SourceProvider.filesystem -> FileSystemConfig(directory = source.directory)
-            else -> null
-        },
+        git =  GitConfig(source).takeIf { source.provider == SourceProvider.git },
+        filesystem = FileSystemConfig(source).takeIf { source.provider == SourceProvider.filesystem },
         provides = source.test,
         consumes = source.stub
     )
@@ -45,8 +39,12 @@ data class ContractConfig(
 data class GitConfig(
     val url: String? = null,
     val branch: String? = null
-)
+) {
+    constructor(source: Source): this(source.repository, source.branch)
+}
 
 data class FileSystemConfig(
     val directory: String? = null
-)
+) {
+    constructor(source: Source): this(source.directory)
+}

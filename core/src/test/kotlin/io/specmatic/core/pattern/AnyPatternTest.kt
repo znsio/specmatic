@@ -442,4 +442,104 @@ internal class AnyPatternTest {
             assertThat(values).isNotEmpty
         }
     }
+
+    @Nested
+    inner class AllPatternsMandatory {
+        @Test
+        fun `should call out when optional parameters are missing`() {
+            val pattern = AnyPattern(
+                listOf(
+                    JSONObjectPattern(mapOf("type" to ExactValuePattern(StringValue("sub1")), "address?" to StringPattern()), typeAlias = "(Sub1)"),
+                    JSONObjectPattern(mapOf("type" to ExactValuePattern(StringValue("sub2")), "age?" to NumberPattern()), typeAlias = "(Sub2)")
+                ), typeAlias = "(Base)",
+                discriminator = Discriminator(
+                    property = "type",
+                    values = setOf("sub1", "sub2"),
+                    mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
+                )
+            )
+
+            val invalidSub1Value = JSONObjectValue(mapOf("type" to StringValue("sub1")))
+            val resultSub1 = pattern.matches(invalidSub1Value, Resolver().withAllPatternsAsMandatory())
+
+            val invalidSub2Value = JSONObjectValue(mapOf("type" to StringValue("sub2")))
+            val resultSub2 = pattern.matches(invalidSub2Value, Resolver().withAllPatternsAsMandatory())
+
+            println(resultSub1.reportString())
+            assertThat(resultSub1.reportString()).isEqualToNormalizingWhitespace("""
+            >> address
+            Expected optional key named "address" was missing
+            """.trimIndent())
+
+            println(resultSub2.reportString())
+            assertThat(resultSub2.reportString()).isEqualToNormalizingWhitespace("""
+            >> age
+            Expected optional key named "age" was missing
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should not complain about missing keys when pattern is cycling`() {
+            val pattern = AnyPattern(
+                listOf(
+                    JSONObjectPattern(mapOf(
+                        "type" to ExactValuePattern(StringValue("sub1")),
+                        "details?" to DeferredPattern("(Base)")
+                    ), typeAlias = "(Sub1)"),
+                    JSONObjectPattern(mapOf(
+                        "type" to ExactValuePattern(StringValue("sub2")),
+                        "details?" to DeferredPattern("(Base)")
+                    ), typeAlias = "(Sub2)"),
+                ), typeAlias = "(Base)",
+                discriminator = Discriminator(
+                    property = "type",
+                    values = setOf("sub1", "sub2"),
+                    mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
+                )
+            )
+
+            val validValue = JSONObjectValue(mapOf(
+                "type" to StringValue("sub1"),
+                "details" to JSONObjectValue(mapOf("type" to StringValue("sub2")))
+            ))
+            val result = pattern.matches(validValue, Resolver(
+                newPatterns = mapOf("(Base)" to pattern)
+            ).withAllPatternsAsMandatory())
+
+            assertThat(result).withFailMessage(result.reportString()).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `should complain the first time when optional keys are missing even if pattern is cycling`() {
+            val pattern = AnyPattern(
+                listOf(
+                    JSONObjectPattern(mapOf(
+                        "type" to ExactValuePattern(StringValue("sub1")),
+                        "details?" to DeferredPattern("(Base)")
+                    ), typeAlias = "(Sub1)"),
+                    JSONObjectPattern(mapOf(
+                        "type" to ExactValuePattern(StringValue("sub2")),
+                        "details?" to DeferredPattern("(Base)")
+                    ), typeAlias = "(Sub2)"),
+                ), typeAlias = "(Base)",
+                discriminator = Discriminator(
+                    property = "type",
+                    values = setOf("sub1", "sub2"),
+                    mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
+                )
+            )
+
+            val validValue = JSONObjectValue(mapOf("type" to StringValue("sub1")))
+            val result = pattern.matches(validValue, Resolver(
+                newPatterns = mapOf("(Base)" to pattern)
+            ).withAllPatternsAsMandatory())
+
+            print(result.reportString())
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+            assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+            >> details
+            Expected optional key named "details" was missing
+            """.trimIndent())
+        }
+    }
 }

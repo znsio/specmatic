@@ -242,13 +242,13 @@ data class JSONObjectPattern(
 
     private fun shouldMakePropertyMandatory(pattern: Pattern, resolver: Resolver): Boolean {
         if (!resolver.allPatternsAreMandatory) return false
+        if (pattern is DeferredPattern) return shouldMakePropertyMandatory(resolvedHop(pattern, resolver), resolver)
 
-        val patternToCheck = when(pattern) {
-            is ListPattern -> pattern.typeAlias?.let { pattern } ?: pattern.pattern
-            else -> pattern.typeAlias?.let { pattern } ?: this
-        }
-
-        return !resolver.hasSeenPattern(patternToCheck)
+        return when(pattern) {
+            is ListPattern -> resolver.hasSeenPattern(pattern.typeAlias?.let { pattern } ?: pattern.pattern)
+            is AnyPattern -> resolver.hasSeenPattern(pattern) && pattern.pattern.any { resolver.hasSeenPattern(it) }
+            else -> resolver.hasSeenPattern(pattern.typeAlias?.let { pattern } ?: this)
+        }.not()
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {

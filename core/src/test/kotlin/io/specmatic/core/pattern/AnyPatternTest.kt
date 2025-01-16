@@ -14,6 +14,36 @@ import org.junit.jupiter.api.Test
 
 internal class AnyPatternTest {
     @Test
+    fun `should be able to generate for a discriminator value when it's nested inside another AnyPattern`() {
+        val discriminator = Discriminator(
+            property = "type",
+            values = setOf("simple", "complex"),
+            mapping = mapOf("simple" to "#/components/schemas/Simple", "complex" to "#/components/schemas/Complex")
+        )
+
+        val otherPattern =  AnyPattern(pattern = listOf(
+                JSONObjectPattern(mapOf("type" to "simple".toDiscriminator(), "prop1" to StringPattern()), typeAlias = "(Simple)"),
+                JSONObjectPattern(mapOf("type" to "complex".toDiscriminator(), "prop2" to NumberPattern()), typeAlias = "(Complex)"),
+            ), discriminator = discriminator)
+        val pattern = AnyPattern(pattern = listOf(otherPattern), discriminator = discriminator)
+
+        val simpleObject = pattern.generateValue(Resolver(), "simple")
+        val complexObject = pattern.generateValue(Resolver(), "complex")
+
+        println(simpleObject)
+        assertThat(simpleObject).isInstanceOf(JSONObjectValue::class.java)
+        simpleObject as JSONObjectValue
+        assertThat(simpleObject.keys()).containsExactlyInAnyOrder("type", "prop1")
+        assertThat(simpleObject.getString("type")).isEqualTo("simple")
+
+        println(complexObject)
+        assertThat(complexObject).isInstanceOf(JSONObjectValue::class.java)
+        complexObject as JSONObjectValue
+        assertThat(complexObject.keys()).containsExactlyInAnyOrder("type", "prop2")
+        assertThat(complexObject.getString("type")).isEqualTo("complex")
+    }
+
+    @Test
     fun `should match multiple patterns`() {
         val pattern = AnyPattern(listOf(NumberPattern(), StringPattern()))
         val string = StringValue("hello")
@@ -441,5 +471,9 @@ internal class AnyPatternTest {
             val values = pattern.generateForEveryDiscriminatorValue(Resolver())
             assertThat(values).isNotEmpty
         }
+    }
+
+    private fun String.toDiscriminator(): ExactValuePattern {
+        return ExactValuePattern(StringValue(this))
     }
 }

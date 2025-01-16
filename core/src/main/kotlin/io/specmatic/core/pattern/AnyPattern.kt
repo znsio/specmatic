@@ -340,7 +340,7 @@ data class AnyPattern(
 
         return discriminator.updatePatternsWithDiscriminator(pattern, resolver).listFold().realise(
             hasValue = { updatedPatterns, _ ->
-                val chosenPattern = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue) ?: return@realise Failure(
+                val chosenPattern = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue, resolver) ?: return@realise Failure(
                     breadCrumb = discMisMatchBreadCrumb ?: discriminator.property,
                     message = "Could not find pattern with discriminator value ${discriminatorValue.quote()}",
                     failureReason = FailureReason.DiscriminatorMismatch
@@ -364,7 +364,7 @@ data class AnyPattern(
             else
                 pattern
 
-        val chosenByDiscriminator = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue)
+        val chosenByDiscriminator = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue, resolver)
         if(chosenByDiscriminator != null)
             return generate(resolver, chosenByDiscriminator)
 
@@ -411,18 +411,22 @@ data class AnyPattern(
                 pattern.filterNot { it is NullPattern }.filter { it is ScalarType }.size == 1
     }
 
-    private fun getDiscriminatorBasedPattern(
-        updatedPatterns: List<Pattern>,
-        discriminatorValue: String,
-    ): JSONObjectPattern? {
-        return updatedPatterns.filterIsInstance<JSONObjectPattern>().firstOrNull {
-            if(it.pattern.containsKey(discriminator?.property.orEmpty()).not()) {
-                return@firstOrNull false
+    private fun getDiscriminatorBasedPattern(updatedPatterns: List<Pattern>, discriminatorValue: String, resolver: Resolver): JSONObjectPattern? {
+        return updatedPatterns.firstNotNullOfOrNull {
+            when (it) {
+                is AnyPattern -> it.getDiscriminatorBasedPattern(
+                    it.discriminator?.updatePatternsWithDiscriminator(it.pattern, resolver)?.listFold()?.value ?: it.pattern,
+                    discriminatorValue = discriminatorValue, resolver = resolver
+                )
+                is JSONObjectPattern -> {
+                    val discriminatorKey = discriminator?.property ?: return@firstNotNullOfOrNull null
+                    val keyPattern = it.pattern[discriminatorKey] ?: return@firstNotNullOfOrNull null
+                    it.takeIf {
+                        keyPattern is ExactValuePattern && keyPattern.discriminator && keyPattern.pattern.toStringLiteral() == discriminatorValue
+                    }
+                }
+                else -> null
             }
-            val discriminatorPattern = it.pattern[discriminator?.property.orEmpty()]
-            if(discriminatorPattern !is ExactValuePattern) return@firstOrNull false
-            discriminatorPattern.discriminator
-                    && discriminatorPattern.pattern.toStringLiteral() == discriminatorValue
         }
     }
 

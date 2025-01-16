@@ -4,6 +4,7 @@ import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.*
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.externaliseInlineExamples
+import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.fixExample
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesDirPath
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesFromDir
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExistingExampleFiles
@@ -34,7 +35,8 @@ private const val FAILURE_EXIT_CODE = 1
         ExamplesCommand.Interactive::class,
         ExamplesCommand.Transform::class,
         ExamplesCommand.Export::class,
-        ExamplesCommand.ExampleToDictionary::class
+        ExamplesCommand.ExampleToDictionary::class,
+        ExamplesCommand.Fix::class
     ]
 )
 class ExamplesCommand : Callable<Int> {
@@ -737,6 +739,59 @@ For example:
                 patternMatchStrategy = actualMatch,
                 findKeyErrorCheck = findKeyErrorCheck.copy(unexpectedKeyCheck = ValidateUnexpectedKeys)
             )
+        }
+    }
+
+    @Command(
+        name = "fix",
+        mixinStandardHelpOptions = true,
+        description = ["Fix the invalid external examples"]
+    )
+    class Fix: Callable<Int> {
+
+        @Option(names = ["--spec-file"], description = ["Specification file path"], required = true)
+        lateinit var specFile: File
+
+        override fun call(): Int {
+            val feature = parseContractFileToFeature(specFile)
+            val examplesDir = defaultExternalExampleDirFrom(specFile)
+            logger.log("Fixing examples in the directory '${examplesDir.name}'...")
+
+            val results = examplesDir.walk().filter { it.isFile }.mapIndexed { index, exampleFile ->
+                try {
+                    val result = fixExample(feature, exampleFile)
+                    "${index.inc()}. $result" to true
+                } catch(e: Exception) {
+                    "${index.inc()}. An error occurred while fixing '${exampleFile.name}': ${e.message}" to false
+                }
+            }
+
+            return printFixExamplesOperationResultsAndReturnExitCode(results)
+        }
+
+        private fun printFixExamplesOperationResultsAndReturnExitCode(results: Sequence<Pair<String, Boolean>>): Int {
+            val successResults = results.filter { (_, isFixed) -> isFixed }.toList()
+            val failureResults = results.filter { (_, isFixed) -> isFixed.not() }.toList()
+
+            if (successResults.isNotEmpty()) {
+                logger.log("${System.lineSeparator()}Examples fixed successfully: ")
+                successResults.forEach { (message, _) ->
+                    logger.log("\t$message")
+                }
+            }
+            if (failureResults.isNotEmpty()) {
+                logger.log("${System.lineSeparator()}Examples for which the fix operation failed: ")
+                failureResults.forEach { (message, _) ->
+                    logger.log("\t$message")
+                }
+            }
+
+            logger.log(System.lineSeparator())
+            logger.log("Examples fixed/skipped: ${successResults.size}")
+            logger.log("Failures while fixing examples: ${failureResults.size}")
+
+            if (failureResults.isEmpty()) return SUCCESS_EXIT_CODE
+            return FAILURE_EXIT_CODE
         }
     }
 }

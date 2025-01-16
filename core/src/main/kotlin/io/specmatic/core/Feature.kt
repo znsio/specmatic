@@ -504,6 +504,13 @@ data class Feature(
         }
     }
 
+    fun matchingHttpPathPatternFor(path: String): HttpPathPattern? {
+        return scenarios.firstOrNull {
+            if(it.httpRequestPattern.httpPathPattern == null) return@firstOrNull false
+            it.httpRequestPattern.matchesPath(path, it.resolver) is Result.Success
+        }?.httpRequestPattern?.httpPathPattern
+    }
+
     private fun stubMatchResult(
         request: HttpRequest,
         response: HttpResponse,
@@ -761,6 +768,18 @@ data class Feature(
                 inlineExampleName !in externalExampleNames
             }
         )
+    }
+
+    fun scenarioAssociatedTo(
+        method: String,
+        path: String,
+        responseStatusCode: Int,
+        contentType: String? = null,
+    ): Scenario? {
+        return scenarios.firstOrNull {
+            it.method == method && it.status == responseStatusCode && it.path == path
+                    && (contentType == null || it.httpRequestPattern.headersPattern.contentType == contentType)
+        }
     }
 
     private fun getScenarioWithDescription(scenarioResult: ReturnValue<Scenario>): ReturnValue<Scenario> {

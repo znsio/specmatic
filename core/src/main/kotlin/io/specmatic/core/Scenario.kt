@@ -836,17 +836,19 @@ data class Scenario(
     }
 
     fun fixRequestResponse(httpRequest: HttpRequest, httpResponse: HttpResponse, flagsBased: FlagsBased): Pair<HttpRequest, HttpResponse> {
-        val updatedFlagBased = if (isRequestAttributeSelected(httpRequest)) {
-            flagsBased.copy(unexpectedKeyCheck = ValidateUnexpectedKeys)
-        } else flagsBased
+        val updatedResolver = flagsBased.copy(
+            unexpectedKeyCheck = when {
+                isRequestAttributeSelected(httpRequest) -> ValidateUnexpectedKeys
+                else -> flagsBased.unexpectedKeyCheck
+            }
+        ).update(resolver)
 
-        val updatedResolver = updatedFlagBased.update(resolver)
-        val updatedScenario = newBasedOnAttributeSelectionFields(httpRequest.queryParams)
-
-        val fixedHttpRequest = updatedScenario.httpRequestPattern.fixRequest(httpRequest, updatedResolver)
-        val fixedHttpResponse = updatedScenario.httpResponsePattern.fixResponse(httpResponse, updatedResolver)
-
-        return Pair(fixedHttpRequest, fixedHttpResponse)
+        this.newBasedOnAttributeSelectionFields(httpRequest.queryParams).let { newScenario ->
+            return Pair(
+                newScenario.httpRequestPattern.fixRequest(httpRequest, updatedResolver),
+                newScenario.httpResponsePattern.fixResponse(httpResponse, updatedResolver)
+            )
+        }
     }
 }
 

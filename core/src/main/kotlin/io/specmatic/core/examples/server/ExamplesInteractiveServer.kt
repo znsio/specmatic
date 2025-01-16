@@ -202,7 +202,7 @@ class ExamplesInteractiveServer(
                     val request = call.receive<FixExampleRequest>()
                     try {
                         val contractFile = getContractFile()
-                        val validationResultResponse = try {
+                        val fixExamplesResponse = try {
                             fixExample(contractFile, request)
                         } catch (e: FileNotFoundException) {
                             FixExampleResponse(request.exampleFile, e.message ?: "File not found")
@@ -211,7 +211,7 @@ class ExamplesInteractiveServer(
                         } catch (e: Exception) {
                             FixExampleResponse(request.exampleFile, e.message ?: "An unexpected error occurred")
                         }
-                        call.respond(HttpStatusCode.OK, validationResultResponse)
+                        call.respond(HttpStatusCode.OK, fixExamplesResponse)
                     } catch (e: Exception) {
                         call.respond(
                             HttpStatusCode.InternalServerError,
@@ -491,10 +491,7 @@ class ExamplesInteractiveServer(
             allowOnlyMandatoryKeysInJSONObject: Boolean
         ): List<ExamplePathInfo> {
             val feature = parseContractFileToFeature(contractFile)
-            val scenario: Scenario? = feature.scenarios.firstOrNull {
-                it.method == method && it.status == responseStatusCode && it.path == path
-                        && (contentType == null || it.httpRequestPattern.headersPattern.contentType == contentType)
-            }
+            val scenario = feature.scenarioAssociatedTo(method, path, responseStatusCode, contentType)
             if(scenario == null) return emptyList()
 
             val examplesDir = getExamplesDirPath(contractFile)
@@ -517,21 +514,52 @@ class ExamplesInteractiveServer(
                 return FixExampleResponse(exampleFile = example.file)
             }
 
-            val scenario = feature.scenarios.firstOrNull {
-                it.method == request.method && it.status == request.responseStatusCode && it.path == request.path
-                        && (request.contentType == null || it.httpRequestPattern.headersPattern.contentType == request.contentType)
-            } ?: return FixExampleResponse(exampleFile = request.exampleFile, errorMessage = "Scenario not found")
+            val scenario = feature.scenarioAssociatedTo(
+                request.method, request.path, request.responseStatusCode, request.contentType
+            ) ?: return FixExampleResponse(exampleFile = request.exampleFile, errorMessage = "Scenario not found")
 
-            val example = ScenarioStub.readFromFile(request.exampleFile)
+            fixExampleAndWriteTo(request.exampleFile, scenario, feature)
+            return FixExampleResponse(exampleFile = request.exampleFile)
+        }
+
+        fun fixExample(feature: Feature, exampleFile: File): String {
+            val example = ExampleFromFile.fromFile(exampleFile).value
+
+            val matchingHttpPathPattern = feature.matchingHttpPathPatternFor(
+                example.requestPath.orEmpty()
+            ) ?: throw Exception("No scenario found for request path in '${exampleFile.name}'.")
+
+            val scenario = feature.scenarioAssociatedTo(
+                method = example.requestMethod.orEmpty(),
+                path = matchingHttpPathPattern.path,
+                responseStatusCode = example.responseStatus ?: 0,
+                contentType = example.requestContentType
+            )
+            if(scenario == null) {
+                throw Exception("No scenario found for example '${exampleFile.name}'.")
+            }
+
+            if(validateExample(feature, exampleFile) is Result.Success) {
+                return "Skipping the example '${exampleFile.name}' as it is already valid."
+            }
+
+            fixExampleAndWriteTo(exampleFile, scenario, feature)
+            return "The example '${exampleFile.name}' is fixed."
+        }
+
+        private fun fixExampleAndWriteTo(exampleFile: File, scenario: Scenario, feature: Feature) {
+            val example = ScenarioStub.readFromFile(exampleFile)
             val (fixedRequest, fixedResponse) = scenario.fixRequestResponse(
                 httpRequest = example.request,
                 httpResponse = example.response,
                 flagsBased = feature.flagsBased
             )
-            val fixedExampleJson = example.copy(request = fixedRequest, response = fixedResponse).toJSON().toStringLiteral()
-            request.exampleFile.writeText(fixedExampleJson)
+            val fixedExampleJson = example.copy(
+                request = fixedRequest,
+                response = fixedResponse
+            ).toJSON().toStringLiteral()
 
-            return FixExampleResponse(exampleFile = request.exampleFile)
+            exampleFile.writeText(fixedExampleJson)
         }
 
         fun generateForSchemaBased(contractFile: File, path: String, method: String): List<ExamplePathInfo> {

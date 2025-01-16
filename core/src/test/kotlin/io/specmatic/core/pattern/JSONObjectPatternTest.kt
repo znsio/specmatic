@@ -1877,7 +1877,7 @@ components:
             {
                 "topLevelKey": "(string)",
                 "topLevelOptionalKey?": "(number)",
-                "nested": "(Test)"
+                "nested?": "(Test)"
             }
             """.trimIndent(), typeAlias = "(Test)")
             val patternDictionary = mapOf(
@@ -1890,15 +1890,21 @@ components:
                 "topLevelOptionalKey": 999
             }
             """.trimIndent())
-            val fixedValue = pattern.fixValue(value, Resolver(newPatterns = mapOf("(Test)" to pattern), dictionary = patternDictionary))
+
+            val resolver = Resolver(newPatterns = mapOf("(Test)" to pattern), dictionary = patternDictionary)
+
+            val fixedValue = pattern.fixValue(value, resolver)
             println(fixedValue?.toStringLiteral())
 
-            assertThat(fixedValue).isEqualTo(parsedValue("""
-            {
-                "topLevelKey": "Fixed",
-                "topLevelOptionalKey": 999
-            }
-            """.trimIndent()))
+            assertThat(fixedValue).isEqualTo(
+                parsedValue(
+                    """{
+                            "topLevelKey": "Fixed",
+                            "topLevelOptionalKey": 999
+                        }
+                    """.trimIndent()
+                )
+            )
         }
 
         @Test
@@ -1907,7 +1913,7 @@ components:
             {
                 "topLevelKey": "(string)",
                 "topLevelOptionalKey?": "(number)",
-                "nested": "(Test)"
+                "nested?": "(Test)"
             }
             """.trimIndent(), typeAlias = "(Test)")
             val patternDictionary = mapOf(
@@ -1929,7 +1935,11 @@ components:
             assertThat(fixedValue).isEqualTo(parsedValue("""
             {
                 "topLevelKey": "Fixed",
-                "topLevelOptionalKey": 999
+                "topLevelOptionalKey": 999,
+                "nested": {
+                    "topLevelKey": "Fixed",
+                    "topLevelOptionalKey": 999
+                }
             }
             """.trimIndent()))
         }

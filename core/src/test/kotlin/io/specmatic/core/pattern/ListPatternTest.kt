@@ -407,7 +407,10 @@ Feature: Recursive test
             }
             """.trimIndent(), typeAlias = "(Test)")
             val pattern = ListPattern(innerPattern)
-            val patternDictionary = mapOf("Test.topLevelKey" to StringValue("Fixed"))
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.topLevelOptionalKey" to NumberValue(10)
+            )
 
             val emptyList = parsedValue("[]")
             val fixedValue = pattern.fixValue(emptyList, Resolver(dictionary = patternDictionary).withAllPatternsAsMandatory())
@@ -415,11 +418,16 @@ Feature: Recursive test
 
             assertThat((fixedValue as JSONArrayValue).list).isNotEmpty
             assertThat(fixedValue.list).allSatisfy {
-                assertThat(it.toStringLiteral()).isEqualTo("""
-                {
-                    "topLevelKey": "Fixed"
-                }
-                """.trimIndent())
+                assertThat(it).isEqualTo(
+                    parsedValue(
+                        """
+                        {
+                            "topLevelKey": "Fixed",
+                            "topLevelOptionalKey": 10 
+                        }
+                        """.trimIndent()
+                    )
+                )
             }
         }
     }

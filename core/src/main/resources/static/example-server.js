@@ -70,6 +70,8 @@ backBtn.addEventListener("click", () => {
                 bulkFixBtn.setAttribute("data-panel", "table");
                 window.scrollTo(0, scrollYPosition);
                 console.log("Changes discarded!");
+                bulkTestBtn.classList.remove("bulk-disabled");
+                bulkFixBtn.classList.remove("bulk-disabled");
                 isSaved = true;
             },
 
@@ -84,7 +86,8 @@ backBtn.addEventListener("click", () => {
     bulkGenerateBtn.setAttribute("data-panel", "table");
     bulkTestBtn.setAttribute("data-panel", "table");
     bulkFixBtn.setAttribute("data-panel", "table");
-    bulkFixBtn.removeAttribute("bulk-disabled");
+    bulkTestBtn.classList.remove("bulk-disabled");
+    bulkFixBtn.classList.remove("bulk-disabled");
     window.scrollTo(0, scrollYPosition);
 });
 

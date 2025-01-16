@@ -155,19 +155,13 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun upgradeTo(version: SpecmaticConfigVersion): String {
+    fun upgrade(): String {
         val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
-        return when (version) {
-            SpecmaticConfigVersion.VERSION_2 -> objectMapper.writeValueAsString(upgradeToV2())
-            else -> throw IllegalArgumentException(
-                "Unable to upgrade: SpecmaticConfigVersion ${version.value} " +
-                        "does not exist or is not supported for upgrade."
-            )
-        }
+        return objectMapper.writeValueAsString(upgradeToLatest())
     }
 
-    private fun upgradeToV2(): SpecmaticConfigV2 {
+    private fun upgradeToLatest(): SpecmaticConfigV2 {
         return SpecmaticConfigV2(
             version = SpecmaticConfigVersion.VERSION_2,
             contracts = this.sources.map { ContractConfig(it) },

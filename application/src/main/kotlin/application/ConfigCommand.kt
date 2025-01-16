@@ -47,8 +47,6 @@ class ConfigCommand : Callable<Int> {
         )
         val outputFile: File? = null
 
-        private val upgradeVersion = getLatestVersion()
-
         override fun call(): Int {
             try {
                 val configFile = getConfigFile()
@@ -65,7 +63,7 @@ class ConfigCommand : Callable<Int> {
         }
 
         private fun upgrade(configFile: File) {
-            val upgradedConfigYaml = configFile.toSpecmaticConfig().upgradeTo(upgradeVersion)
+            val upgradedConfigYaml = configFile.toSpecmaticConfig().upgrade()
             if(outputFile == null) {
                 logger.log(upgradedConfigYaml)
                 return
@@ -77,7 +75,7 @@ class ConfigCommand : Callable<Int> {
         }
 
         private fun exitIfAlreadyUpToDate(existingVersion: SpecmaticConfigVersion?) {
-            if (existingVersion == upgradeVersion) {
+            if (existingVersion == getLatestVersion()) {
                 logger.log("The provided $SPECMATIC_CONFIGURATION file is already up-to-date")
                 exitProcess(SUCCESS_EXIT_CODE)
             }

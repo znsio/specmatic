@@ -423,11 +423,17 @@ data class Feature(
 
     fun fixSchemaFlagBased(discriminatorPatternName: String?, patternName: String, value: Value): Value {
         val updatedResolver = flagsBased.update(scenarios.last().resolver)
+        val pattern = getSchemaPattern(discriminatorPatternName, patternName, updatedResolver)
 
-        return when (val pattern = getSchemaPattern(discriminatorPatternName, patternName, updatedResolver)) {
-            is AnyPattern -> pattern.fixValue(value, updatedResolver, patternName)
-            else -> pattern.fixValue(value, updatedResolver)
-        } ?: generateSchemaFlagBased(discriminatorPatternName, patternName)
+        if (pattern is AnyPattern && !discriminatorPatternName.isNullOrEmpty()) {
+            return pattern.fixValue(
+                value = value, resolver = updatedResolver, discriminatorValue = patternName,
+                onValidDiscValue = { pattern.generateValue(updatedResolver, patternName) },
+                onInvalidDiscValue = { f -> throw ContractException(f.toFailureReport())}
+            ) ?: throw ContractException("Couldn't fix pattern with discriminator value ${patternName.quote()}")
+        }
+
+        return pattern.fixValue(value, updatedResolver) ?: pattern.generate(updatedResolver)
     }
 
     private fun getSchemaPattern(discriminatorPatternName: String?, patternName: String, resolver: Resolver): Pattern {

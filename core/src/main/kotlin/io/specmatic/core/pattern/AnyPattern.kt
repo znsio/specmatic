@@ -6,10 +6,7 @@ import io.specmatic.core.Result.Failure
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
-import io.specmatic.core.value.EmptyString
-import io.specmatic.core.value.NullValue
-import io.specmatic.core.value.ScalarValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 
 data class AnyPattern(
     override val pattern: List<Pattern>,
@@ -33,28 +30,39 @@ data class AnyPattern(
 
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
 
-    fun fixValue(value: Value, resolver: Resolver, discriminatorValue: String): Value? {
-        if (discriminator == null) return null
-
+    fun fixValue(
+        value: Value, resolver: Resolver, discriminatorValue: String,
+        onValidDiscValue: () -> Value?, onInvalidDiscValue: (Failure) -> Value?
+    ): Value? {
         return getDiscriminatorPattern(discriminatorValue, resolver).realise(
             hasValue = { it, _ -> it.fixValue(value, resolver) },
-            orFailure = { null },
-            orException = { null }
+            orException = { _ -> onValidDiscValue() },
+            orFailure = { f -> onInvalidDiscValue(f.failure) }
         )
     }
 
     override fun fixValue(value: Value, resolver: Resolver): Value? {
+        val discBasedFixedValue = if (discriminator != null && value is JSONObjectValue && discriminator.property in value.jsonObject) {
+            val discriminatorValue = value.jsonObject.getValue(discriminator.property).toStringLiteral()
+            fixValue(
+                value = value, resolver = resolver, discriminatorValue = discriminatorValue,
+                onValidDiscValue = { generateValue(resolver, discriminatorValue) },
+                onInvalidDiscValue = { null }
+            )
+        } else null
+
+        if (discBasedFixedValue != null) return discBasedFixedValue
         val updatedPatterns = discriminator
             ?.updatePatternsWithDiscriminator(pattern, resolver)?.listFold()
             ?.withDefault(pattern) { it } ?: pattern
 
-        val matchingPattern = updatedPatterns.minByOrNull { pattern ->
-            (pattern.matches(value, resolver) as? Failure)?.failureCount() ?: 0
+        val patternMatches = updatedPatterns.map { pattern ->
+            AnyPatternMatch(pattern, pattern.matches(value, resolver))
         }
 
-        return if (matchingPattern != null) {
-            matchingPattern.fixValue(value, resolver)
-        } else updatedPatterns.firstNotNullOfOrNull { it.fixValue(value, resolver) }
+        if (patternMatches.any { it.result.isSuccess() }) return value
+        val matchingPatternNew = patternMatches.minBy { (it.result as? Failure)?.failureCount() ?: 0}
+        return matchingPatternNew.pattern.fixValue(value, resolver)
     }
 
     override fun removeKeysNotPresentIn(keys: Set<String>, resolver: Resolver): Pattern {
@@ -348,9 +356,7 @@ data class AnyPattern(
     }
 
     private fun getDiscriminatorPattern(discriminatorValue: String, resolver: Resolver): ReturnValue<Pattern> {
-        if (discriminator == null) return HasException(
-            ContractException("Pattern is not discriminator based")
-        )
+        if (discriminator == null) return HasFailure("Pattern is not discriminator based")
 
         val discriminatorCsvClause = if(discriminator.values.size == 1) {
             discriminator.values.first()
@@ -375,8 +381,8 @@ data class AnyPattern(
                 )
                 HasValue(chosenPattern)
             },
-            orFailure = { failure -> HasFailure<Any>(failure.failure).cast() },
-            orException = { exception -> exception.toHasFailure().cast() }
+            orFailure = { failure -> HasException(ContractException(failure.failure.toFailureReport())) },
+            orException = { exception -> exception.cast() }
         )
     }
 

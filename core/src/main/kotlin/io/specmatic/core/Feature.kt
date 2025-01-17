@@ -778,7 +778,7 @@ data class Feature(
     ): Scenario? {
         return scenarios.firstOrNull {
             it.method == method && it.status == responseStatusCode && it.path == path
-                    && (contentType == null || it.httpRequestPattern.headersPattern.contentType == contentType)
+                    && (contentType == null || it.requestContentType == null || it.requestContentType == contentType)
         }
     }
 

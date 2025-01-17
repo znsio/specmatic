@@ -759,11 +759,15 @@ For example:
             val examplesDir = defaultExternalExampleDirFrom(specFile)
             logger.log("Fixing examples in the directory '${examplesDir.name}'...")
 
-            val results = examplesDir.walk().filter { it.isFile }.map { exampleFile ->
+            val results = examplesDir.walk().filter { it.isFile && it.extension == "json" }.map { exampleFile ->
                 try {
                     fixExample(feature, exampleFile)
                 } catch (e: Exception) {
-                    FixExampleResult(status = FixExampleStatus.FAILED, exampleFileName = exampleFile.name)
+                    FixExampleResult(
+                        status = FixExampleStatus.FAILED,
+                        exampleFileName = exampleFile.name,
+                        error = e
+                    )
                 }
             }.toList()
 
@@ -794,7 +798,8 @@ For example:
             if (failureResults.isNotEmpty()) {
                 logger.log("${System.lineSeparator()}Examples for which the fix operation failed: ")
                 failureResults.forEachIndexed { index, it ->
-                    logger.log("\t${index.inc()}. An error occurred while fixing '${it.exampleFileName}'")
+                    val errorMessage = exceptionCauseMessage(it.error ?: Exception("Unknown error"))
+                    logger.log("\t${index.inc()}. An error occurred while fixing '${it.exampleFileName}': $errorMessage")
                 }
             }
 

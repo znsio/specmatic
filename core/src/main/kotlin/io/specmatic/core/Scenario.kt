@@ -121,6 +121,11 @@ data class Scenario(
             return if(isNegative) 400 else httpResponsePattern.status
         }
 
+    val requestContentType: String?
+        get() {
+            return httpRequestPattern.headersPattern.contentType
+        }
+
     private fun serverStateMatches(actualState: Map<String, Value>, resolver: Resolver) =
         expectedFacts.keys == actualState.keys &&
                 mapZip(expectedFacts, actualState).all { (key, expectedStateValue, actualStateValue) ->

@@ -53,4 +53,3 @@ data class SpecmaticConfigV2(
         )
     }
 }
-

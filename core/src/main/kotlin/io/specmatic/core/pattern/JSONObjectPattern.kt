@@ -240,15 +240,19 @@ data class JSONObjectPattern(
         return JSONArrayValue(valueList)
     }
 
+    private fun getPatternsToCheck(pattern: Pattern, resolver: Resolver): List<Pattern> {
+        return when (pattern) {
+            is DeferredPattern -> getPatternsToCheck(resolvedHop(pattern, resolver), resolver)
+            is ListPattern -> getPatternsToCheck(pattern.pattern, resolver)
+            is AnyPattern -> pattern.pattern.flatMap { getPatternsToCheck(it, resolver) }
+            else -> listOf(pattern.takeIf { it.typeAlias != null } ?: this)
+        }
+    }
+
     private fun shouldMakePropertyMandatory(pattern: Pattern, resolver: Resolver): Boolean {
         if (!resolver.allPatternsAreMandatory) return false
-        if (pattern is DeferredPattern) return shouldMakePropertyMandatory(resolvedHop(pattern, resolver), resolver)
-
-        return when(pattern) {
-            is ListPattern -> resolver.hasSeenPattern(pattern.typeAlias?.let { pattern } ?: pattern.pattern)
-            is AnyPattern -> resolver.hasSeenPattern(pattern) && pattern.pattern.any { resolver.hasSeenPattern(it) }
-            else -> resolver.hasSeenPattern(pattern.typeAlias?.let { pattern } ?: this)
-        }.not()
+        val patternsToCheck = getPatternsToCheck(pattern, resolver)
+        return patternsToCheck.none { resolver.hasSeenPattern(it) }
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {

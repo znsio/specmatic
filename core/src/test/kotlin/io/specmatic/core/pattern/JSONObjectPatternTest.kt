@@ -1094,9 +1094,9 @@ internal class JSONObjectPatternTest {
         @Test
         fun `should not result in failure for missing keys when pattern is cycling with resolver set to allPatternsAsMandatory`() {
             val basePattern = parsedPattern("""{
-            "mandatoryKey": "(number)",
-            "optionalKey?": "(string)"
-        }""".trimIndent()) as JSONObjectPattern
+                "mandatoryKey": "(number)",
+                "optionalKey?": "(string)"
+            }""".trimIndent()) as JSONObjectPattern
 
             val thirdPattern = JSONObjectPattern(
                 basePattern.pattern + mapOf("firstObject?" to DeferredPattern("(firstPattern)")),
@@ -1113,20 +1113,20 @@ internal class JSONObjectPatternTest {
             val newPatterns = mapOf("(firstPattern)" to firstPattern, "(secondPattern)" to secondPattern, "(thirdPattern)" to thirdPattern)
 
             val matchingValue = parsedValue("""{
-            "mandatoryKey": 10,
-            "optionalKey": "abc",
-            "secondObject": {
                 "mandatoryKey": 10,
                 "optionalKey": "abc",
-                "thirdObject": {
+                "secondObject": {
                     "mandatoryKey": 10,
                     "optionalKey": "abc",
-                    "firstObject": {
-                        "mandatoryKey": 10
+                    "thirdObject": {
+                        "mandatoryKey": 10,
+                        "optionalKey": "abc",
+                        "firstObject": {
+                            "mandatoryKey": 10
+                        }
                     }
                 }
-            }
-        }""".trimIndent())
+            }""".trimIndent())
             val matchingResult = firstPattern.matches(matchingValue, Resolver(newPatterns = newPatterns).withAllPatternsAsMandatory())
             println(matchingResult.reportString())
             assertThat(matchingResult).isInstanceOf(Result.Success::class.java)

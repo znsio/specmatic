@@ -506,23 +506,14 @@ class ExamplesInteractiveServer(
         }
 
         fun fixExample(contractFile: File, request: FixExampleRequest): FixExampleResponse {
-            val feature = parseContractFileToFeature(contractFile)
-
-            if (request.isSchemaBased) {
-                val example = SchemaExample.fromFile(request.exampleFile).value
-                val fixedExample = feature.fixSchemaFlagBased(example.discriminatorBasedOn, example.schemaBasedOn, example.value)
-                example.file.writeText(fixedExample.toStringLiteral())
-                return FixExampleResponse(exampleFile = example.file)
+            try {
+                val feature = parseContractFileToFeature(contractFile)
+                fixExample(feature, request.exampleFile)
+                return FixExampleResponse(exampleFile = request.exampleFile)
+            } catch(e: Throwable) {
+                return FixExampleResponse(exampleFile = request.exampleFile, errorMessage = exceptionCauseMessage(e))
             }
-
-            val scenario = feature.scenarioAssociatedTo(
-                request.method, request.path, request.responseStatusCode, request.contentType
-            ) ?: return FixExampleResponse(exampleFile = request.exampleFile, errorMessage = "Scenario not found")
-
-            fixExampleAndWriteTo(request.exampleFile, scenario, feature)
-            return FixExampleResponse(exampleFile = request.exampleFile)
         }
-
 
         fun fixExample(feature: Feature, exampleFile: File): FixExampleResult {
             val exampleReturnValue = ExampleFromFile.fromFile(exampleFile)

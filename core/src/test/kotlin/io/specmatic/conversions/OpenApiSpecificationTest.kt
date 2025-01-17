@@ -9869,6 +9869,76 @@ paths:
         )
     }
 
+    @Test
+    fun `the patterns in AnyPattern for a discriminated schema should have the correct type-aliases`() {
+        val specContent = """
+        openapi: 3.0.0
+        info:
+          title: Object API
+          version: "2.0"
+        paths:
+          /object:
+            get:
+              summary: Gets a object
+              responses:
+                '200':
+                  description: Success
+                  content:
+                    application/json:
+                      schema:
+                        ${'$'}ref: '#/components/schemas/Object'
+        components:
+          schemas:
+            Base:
+              type: object
+              required:
+                - objectType
+              properties:
+                id:
+                  type: number
+                objectType:
+                  type: string
+            Object:
+              allOf:
+                - ${'$'}ref: '#/components/schemas/Base'
+              discriminator:
+                propertyName: objectType
+                mapping:
+                  simple: '#/components/schemas/simpleObject'
+                  complex: '#/components/schemas/complexObject'
+            simpleObject:
+              allOf:
+                - ${'$'}ref: '#/components/schemas/Object'
+                - type: object
+                  required:
+                    - property1
+                  properties:
+                    property1:
+                      type: string
+            complexObject:
+              allOf:
+                - ${'$'}ref: '#/components/schemas/Object'
+                - type: object
+                  required:
+                    - property2
+                  properties:
+                    property2:
+                      type: string
+        """.trimIndent()
+        val apiSpec = OpenApiSpecification.fromYAML(specContent, "")
+        val feature = apiSpec.toFeature()
+        val scenario = feature.scenarios.first()
+        val resolver = scenario.resolver
+        val responseBodyPattern = resolvedHop(scenario.httpResponsePattern.body, resolver)
+
+        assertThat(responseBodyPattern).isInstanceOf(AnyPattern::class.java)
+        responseBodyPattern as AnyPattern
+        assertThat(responseBodyPattern.typeAlias).isEqualTo("(Object)")
+        assertThat(responseBodyPattern.pattern.map { it.typeAlias }).containsExactlyInAnyOrder(
+            "(simpleObject)", "(complexObject)"
+        )
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

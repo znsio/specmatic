@@ -203,20 +203,42 @@ data class FilterGroup(
     var isNegated: Boolean = false
 ) {
     fun isSatisfiedBy(metadata: ScenarioMetadata): Boolean {
-        val filterMatches = filters.map { it.matches(metadata) }
-
-        val subGroupMatches = subGroups.map { it.isSatisfiedBy(metadata) }
-
-        val allMatches = filterMatches + subGroupMatches
-        var groupResult : Boolean
-        if(subGroupMatches.any())
-        {
-            val subGroupResult = subGroupMatches.any { it }
-            groupResult =  allMatches.all { it }  || subGroupResult
+        var filterMatches : List<Boolean> = emptyList()
+        if(filters.isNotEmpty()) {
+             filterMatches = filters.map { it.matches(metadata) }
         }
-        else {
-             groupResult = allMatches.all { it }
+
+        val subGroupResults = mutableListOf<Boolean>()
+        var tempAndResult: Boolean? = null
+        if(subGroups.isNotEmpty()) {
+            for ((index, group) in subGroups.withIndex()) {
+                val currentResult = group.filters.map { it.matches(metadata) }
+                val res = currentResult.all { it }
+                if (index == 0) {
+                    tempAndResult = res
+                } else if (group.isAndOperation) {
+                    tempAndResult = res.and(res)
+                } else {
+                    if (tempAndResult != null) {
+                        subGroupResults.add(tempAndResult)
+                        tempAndResult = null
+                    }
+
+                    subGroupResults.add(res)
+                }
+            }
+
+            if (tempAndResult != null) {
+                subGroupResults.add(tempAndResult)
+            }
         }
+        val allMatches = filterMatches + subGroupResults.any { it }
+        val groupResult = allMatches.all { it }
+
         return if (isNegated) !groupResult else groupResult
+
+        //subgroups =>
+        // subgroup1 - filters:{METHOD=GET}
+        // subgroup2 - filters:{METHOD=POST}, {STATUS=200}
     }
 }

@@ -66,15 +66,19 @@ data class FilterSyntax(val filter: String) {
         val stack = mutableListOf<Any>()
         val result = mutableListOf<FilterGroup>()
         var currentGroup = mutableListOf<Any>()
-
+        var groupIndex = 0
+        var presentGroup = FilterGroup()
         tokens.forEach { token ->
             when (token) {
                 Parenthesis.OPEN.symbol -> {
                     if(currentGroup.any{it is FilterExpression}) {
-                        result.add(buildFilterGroup(currentGroup))
+                        presentGroup = buildFilterGroup(currentGroup)
                         currentGroup = mutableListOf()
                     }
-
+                    if(stack.contains(Parenthesis.OPEN.symbol))
+                    {
+                        groupIndex ++
+                    }
                     stack.add(token)
                 }
                 Parenthesis.CLOSE.symbol -> {
@@ -86,27 +90,32 @@ data class FilterSyntax(val filter: String) {
                         currentGroup.add(0, stack.removeFirst())
                     }
 
-                    val filterGroup = buildFilterGroup(currentGroup)
-
-                    val isNegated = if (stack.isNotEmpty() && stack.last() == LogicalOperator.NOT.symbol) {
-                        stack.removeAt(stack.size - 1)
-                        true
-                    } else {
-                        false
+                    if(groupIndex > 0) {
+                        val previousGroup = currentGroup
+                        currentGroup  = mutableListOf()
+                        presentGroup.subGroups.add(buildFilterGroup(previousGroup))
+                        groupIndex --
                     }
-                    filterGroup.isNegated = isNegated
-                    result.add(filterGroup)
-                    currentGroup = mutableListOf()
+                    if(currentGroup.isNotEmpty()) {
+                        val filterGroup = buildFilterGroup(currentGroup)
+                        val isNegated = if (stack.isNotEmpty() && stack.last() == LogicalOperator.NOT.symbol) {
+                            stack.removeAt(stack.size - 1)
+                            true
+                        } else {
+                            false
+                        }
+                        filterGroup.isNegated = isNegated
+                        result.add(filterGroup)
+                        currentGroup = mutableListOf()
+                    }
                 }
                 LogicalOperator.AND.symbol-> {
                     stack.add(token)
                 }
                 LogicalOperator.OR.symbol-> {
                     if(currentGroup.isNotEmpty()) {
-
                         val filterGroup = buildFilterGroup(currentGroup)
-
-                        result.add(filterGroup)
+                        presentGroup.subGroups.add(filterGroup)
                         currentGroup = mutableListOf()
                     }
                 }
@@ -123,7 +132,7 @@ data class FilterSyntax(val filter: String) {
         if (currentGroup.isNotEmpty()) {
             result.add(buildFilterGroup(currentGroup))
         }
-
+        result.add(presentGroup)
         return result
     }
 
@@ -189,7 +198,7 @@ data class FilterSyntax(val filter: String) {
 
 data class FilterGroup(
     val filters: List<FilterExpression> = emptyList(),
-    val subGroups: List<FilterGroup> = emptyList(),
+    var subGroups: MutableList<FilterGroup> = mutableListOf(),
     val isAndOperation: Boolean = false,
     var isNegated: Boolean = false
 ) {
@@ -199,8 +208,15 @@ data class FilterGroup(
         val subGroupMatches = subGroups.map { it.isSatisfiedBy(metadata) }
 
         val allMatches = filterMatches + subGroupMatches
-        val groupResult = allMatches.all { it }
-
+        var groupResult : Boolean
+        if(subGroupMatches.any())
+        {
+            val subGroupResult = subGroupMatches.any { it }
+            groupResult =  allMatches.all { it }  || subGroupResult
+        }
+        else {
+             groupResult = allMatches.all { it }
+        }
         return if (isNegated) !groupResult else groupResult
     }
 }

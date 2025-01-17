@@ -290,4 +290,34 @@ class ScenarioMetadataFilterTests {
         assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 502)))
     }
 
+    @Test
+    fun `t1`() {
+        val filter = ScenarioMetadataFilter.from("(METHOD=GET || (METHOD=POST && STATUS=200))")
+        assertTrue(filter.isSatisfiedBy(createScenarioMetadata(method = "POST" , statusCode = 200)))
+        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "POST" , statusCode = 201)))
+        assertTrue(filter.isSatisfiedBy(createScenarioMetadata(method = "GET" , statusCode = 200)))
+        assertTrue(filter.isSatisfiedBy(createScenarioMetadata(method = "GET")))
+    }
+
+
+    @Test
+    fun `t2`() {
+        val filter = ScenarioMetadataFilter.from("(METHOD!=GET && (PATH=/orders || PATH=/products))")
+        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(path = "/order", method = "POST" )))
+        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(path = "/product", method = "POST")))
+
+
+        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET" , statusCode = 200)))
+        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET")))
+    }
+
+    //(A && (B || C))
+
+//    Filter Group -> Sub Group (1) -> METHOD=POST
+//    Filter Group -> Sub Group (1) -> STATUS=200
+//
+//    Filter Group -> Sub Group (2) ->
+//    (1)METHOD=POST
+//    (2)STATUS=200
+
 }

@@ -10,12 +10,11 @@ import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
-import org.cornutum.regexpgen.RandomGen
-import org.cornutum.regexpgen.RegExpGen
 import org.cornutum.regexpgen.js.Provider
 import org.cornutum.regexpgen.random.RandomBoundsGen
 import java.nio.charset.StandardCharsets
 import java.util.*
+
 
 data class StringPattern (
     override val typeAlias: String? = null,
@@ -33,6 +32,7 @@ data class StringPattern (
             val regexWithoutCaretAndDollar = validateRegex(it).removePrefix("^").removeSuffix("$")
             regexMinLengthValidation(regexWithoutCaretAndDollar)
             regexMaxLengthValidation(regexWithoutCaretAndDollar)
+            Generex(regexWithoutCaretAndDollar)
         }
 
     }
@@ -44,10 +44,9 @@ data class StringPattern (
     }
 
     private fun regexMinLengthValidation(it: String) {
-        val automaton = RegExp(it).toAutomaton()
+        val shortestPossibleLengthOfRegex = Provider.forEcmaScript().matchingExact(it).minLength
 
         minLength?.let {
-            val shortestPossibleLengthOfRegex = automaton.getShortestExample(true).length
             if (shortestPossibleLengthOfRegex < it) {
                 throw IllegalArgumentException("Invalid String Constraints - minLength cannot be greater than length of shortest possible string that matches regex")
             } else if (maxLength != null && shortestPossibleLengthOfRegex > maxLength) {
@@ -57,20 +56,24 @@ data class StringPattern (
     }
 
     private fun regexMaxLengthValidation(regexWithoutCaretAndDollar: String) {
-        maxLength?.let {
-            val finite = RegExp(regexWithoutCaretAndDollar).toAutomaton().isFinite
-            if (!finite) {
+            maxLength?.let {
+                val finite = RegExp(regexWithoutCaretAndDollar).toAutomaton().isFinite
+                if (!finite) {
                 throw IllegalArgumentException("Invalid String Constraints - regex cannot generate infinite string when maxLength has been set")
+                }
+                val maxRegexLength = Provider.forEcmaScript().matchingExact(regexWithoutCaretAndDollar).maxLength
+//                val regExp = RegExp(regex)
+//                val automaton = regExp.toAutomaton()
+//                val maxRegexLength2 = if (automaton.isFinite) {
+//                    automaton.finiteStrings.map { it.length }.maxOrNull() ?: -1
+//                } else {
+//                    -1
+//                }
+                if (maxLength > maxRegexLength) {
+                    throw IllegalArgumentException("Invalid String Constraints - regex cannot generate / match string greater than maxLength")
+                }
+
             }
-            try {
-                val generator: RegExpGen = Provider.forEcmaScript().matchingExact(regexWithoutCaretAndDollar)
-                val random: RandomGen = RandomBoundsGen()
-                generator.generate(random, maxLength, maxLength)
-            }
-            catch(e: Exception) {
-                throw IllegalArgumentException("Invalid String Constraints - regex cannot generate / match string greater than maxLength")
-            }
-        }
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
@@ -149,9 +152,9 @@ data class StringPattern (
 
     private fun generateFromRegex(regexWithoutCaretAndDollar: String, minLength: Int, maxLength: Int? = null): String =
         if(maxLength != null) {
-            Generex(regexWithoutCaretAndDollar).random(minLength, maxLength)
+            Provider.forEcmaScript().matchingExact(regexWithoutCaretAndDollar).generate(RandomBoundsGen(),minLength,maxLength)
         } else {
-            Generex(regexWithoutCaretAndDollar).random(minLength)
+            Provider.forEcmaScript().matchingExact(regexWithoutCaretAndDollar).generate(RandomBoundsGen(),minLength,null)
         }
 
 

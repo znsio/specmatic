@@ -1,19 +1,22 @@
 package application
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import picocli.CommandLine
 import io.specmatic.core.*
 import io.specmatic.core.Configuration.Companion.configFilePath
-import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.config.toSpecmaticConfig
 import io.specmatic.core.git.NonZeroExitError
 import io.specmatic.core.git.SystemGit
+import io.specmatic.core.git.loadFromPath
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.utilities.*
+import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
-import picocli.CommandLine
+import io.specmatic.core.value.Value
 import java.io.File
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
+
+private const val pipelineKeyInSpecmaticConfig = "pipeline"
 
 @CommandLine.Command(
     name = "push",
@@ -29,11 +32,8 @@ class PushCommand: Callable<Unit> {
     override fun call() {
         val userHome = File(System.getProperty("user.home"))
         val workingDirectory = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
-        val manifestData = try {
-            loadSpecmaticConfigOrDefault(configFilePath)
-        } catch (e: ContractException) {
-            exitWithMessage(e.failure().toReport().toText())
-        }
+        val manifestFile = File(configFilePath)
+        val manifestData = try { loadConfigJSON(manifestFile) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
         val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
 
         val unsupportedSources = sources.filter { it !is GitSource }.mapNotNull { it.type }.distinct()
@@ -105,62 +105,66 @@ class PushCommand: Callable<Unit> {
     }
 }
 
-fun hasAzureData(azureInfo: Pipeline): Boolean {
-    return when {
-        azureInfo.organization.isBlank() -> {
-            println("Azure info must contain \"organisation\"")
+fun hasAzureData(azureInfo: Map<String, Value>): Boolean {
+    val expectedKeys = listOf("organization", "project", "definitionId", "provider")
+    val missingKey = expectedKeys.find { it !in azureInfo }
+
+    return when(missingKey) {
+        null -> true
+        else -> {
+            println("Azure info must contain the key \"organisation\"")
             false
         }
-
-        azureInfo.project.isBlank() -> {
-            println("Azure info must contain \"project\"")
-            false
-        }
-
-        azureInfo.definitionId.equals(0) -> {
-            println("Azure info must contain \"definitionId\"")
-            false
-        }
-
-        else -> true
     }
 }
 
-fun subscribeToContract(manifestData: SpecmaticConfig, contractPath: String, sourceGit: SystemGit) {
+fun subscribeToContract(manifestData: Value, contractPath: String, sourceGit: SystemGit) {
     println("Checking to see if manifest has CI credentials")
 
-    if (manifestData.pipeline != null)
+    if (manifestData !is JSONObjectValue)
+        exitWithMessage("Manifest must contain a json object")
+
+    if (manifestData.jsonObject.containsKey(pipelineKeyInSpecmaticConfig))
         registerPipelineCredentials(manifestData, contractPath, sourceGit)
 }
 
-fun registerPipelineCredentials(manifestData: SpecmaticConfig, contractPath: String, sourceGit: SystemGit) {
+fun registerPipelineCredentials(manifestData: JSONObjectValue, contractPath: String, sourceGit: SystemGit) {
     println("Manifest has pipeline credentials, checking if they are already registered")
 
-    val provider = manifestData.pipeline?.provider
-    val manifestPipelineInfo = manifestData.pipeline
+    val provider = loadFromPath(manifestData, listOf(pipelineKeyInSpecmaticConfig, "provider"))?.toStringLiteral()
+    val pipelineInfo = manifestData.getJSONObject(pipelineKeyInSpecmaticConfig)
 
-    if (provider != null && manifestPipelineInfo != null && provider == PipelineProvider.azure && hasAzureData(
-            manifestPipelineInfo
-        )
-    ) {
+    if (provider == "azure" && hasAzureData(pipelineInfo)) {
         val filePath = File(contractPath)
         val specmaticConfigFile = File("${filePath.parent}/${filePath.nameWithoutExtension}.json")
 
+        val pipelinesKeyInContractMetaData = "pipelines"
+
         val specmaticConfig = when {
-            specmaticConfigFile.exists() -> specmaticConfigFile.toSpecmaticConfig()
+            specmaticConfigFile.exists() -> parsedJSON(specmaticConfigFile.readText())
             else -> {
                 println("Could not find Specmatic config file")
-                SpecmaticConfig()
+                JSONObjectValue(mapOf(pipelinesKeyInContractMetaData to JSONArrayValue(emptyList())))
             }
         }
 
-        if (specmaticConfig.pipeline?.equals(manifestPipelineInfo) != true) {
+        if (specmaticConfig !is JSONObjectValue)
+            exitWithMessage("Contract meta data must contain a json object")
+
+        if (!specmaticConfig.jsonObject.containsKey(pipelinesKeyInContractMetaData))
+            exitWithMessage("Contract meta data must contain the key \"azure-pipelines\"")
+
+        val pipelines = specmaticConfig.jsonObject.getValue(pipelinesKeyInContractMetaData)
+        if (pipelines !is JSONArrayValue)
+            exitWithMessage("\"azure-pipelines\" key must contain a list of pipelines")
+
+        if(pipelines.list.none { it is JSONObjectValue && it.jsonObject == pipelineInfo }) {
             println("Updating the contract manifest to run this project's CI when ${filePath.name} changes...")
 
-            specmaticConfig.pipeline = manifestPipelineInfo
-            val configJson =
-                JSONObjectValue(jsonStringToValueMap(ObjectMapper().writeValueAsString(specmaticConfig)))
-            specmaticConfigFile.writeText(configJson.toStringLiteral())
+            val newPipelines = JSONArrayValue(pipelines.list.plus(JSONObjectValue(pipelineInfo)))
+            val newMetaData = specmaticConfig.jsonObject.plus(pipelinesKeyInContractMetaData to newPipelines)
+
+            specmaticConfigFile.writeText(JSONObjectValue(newMetaData).toStringLiteral())
 
             sourceGit.add()
         }

@@ -754,9 +754,14 @@ For example:
         @Option(names = ["--spec-file"], description = ["Specification file path"], required = true)
         lateinit var specFile: File
 
+        @Option(names = ["--examples"], description = ["Examples directory path"], required = false)
+        var examplesDirPath: File? = null
+
         override fun call(): Int {
+            exitIfSpecFileDoesNotExist()
+
             val feature = parseContractFileToFeature(specFile)
-            val examplesDir = defaultExternalExampleDirFrom(specFile)
+            val examplesDir = examplesDirPath ?: defaultExternalExampleDirFrom(specFile)
             logger.log("Fixing examples in the directory '${examplesDir.name}'...")
 
             val results = examplesDir.walk().filter { it.isFile && it.extension == "json" }.map { exampleFile ->
@@ -772,6 +777,12 @@ For example:
             }.toList()
 
             return printFixExamplesOperationResultsAndReturnExitCode(results)
+        }
+
+        private fun exitIfSpecFileDoesNotExist() {
+            if(specFile.exists().not()) {
+                exitWithMessage("Provided specification file ${specFile.name} does not exist.")
+            }
         }
 
         private fun List<FixExampleResult>.with(status: FixExampleStatus): List<FixExampleResult> {

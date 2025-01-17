@@ -522,7 +522,7 @@ class ExamplesInteractiveServer(
             return FixExampleResponse(exampleFile = request.exampleFile)
         }
 
-        fun fixExample(feature: Feature, exampleFile: File): String {
+        fun fixExample(feature: Feature, exampleFile: File): FixExampleResult {
             val example = ExampleFromFile.fromFile(exampleFile).value
 
             val matchingHttpPathPattern = feature.matchingHttpPathPatternFor(
@@ -540,11 +540,11 @@ class ExamplesInteractiveServer(
             }
 
             if(validateExample(feature, exampleFile) is Result.Success) {
-                return "Skipping the example '${exampleFile.name}' as it is already valid."
+                return FixExampleResult(status = FixExampleStatus.SKIPPED, exampleFileName = exampleFile.name)
             }
 
             fixExampleAndWriteTo(exampleFile, scenario, feature)
-            return "The example '${exampleFile.name}' is fixed."
+            return FixExampleResult(status = FixExampleStatus.SUCCEDED, exampleFileName = exampleFile.name)
         }
 
         private fun fixExampleAndWriteTo(exampleFile: File, scenario: Scenario, feature: Feature) {

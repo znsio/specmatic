@@ -9,6 +9,8 @@ import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.get
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesFromDir
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExistingExampleFiles
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateExample
+import io.specmatic.core.examples.server.FixExampleResult
+import io.specmatic.core.examples.server.FixExampleStatus
 import io.specmatic.core.examples.server.defaultExternalExampleDirFrom
 import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.*
@@ -757,38 +759,49 @@ For example:
             val examplesDir = defaultExternalExampleDirFrom(specFile)
             logger.log("Fixing examples in the directory '${examplesDir.name}'...")
 
-            val results = examplesDir.walk().filter { it.isFile }.mapIndexed { index, exampleFile ->
+            val results = examplesDir.walk().filter { it.isFile }.map { exampleFile ->
                 try {
-                    val result = fixExample(feature, exampleFile)
-                    "${index.inc()}. $result" to true
-                } catch(e: Exception) {
-                    "${index.inc()}. An error occurred while fixing '${exampleFile.name}': ${e.message}" to false
+                    fixExample(feature, exampleFile)
+                } catch (e: Exception) {
+                    FixExampleResult(status = FixExampleStatus.FAILED, exampleFileName = exampleFile.name)
                 }
-            }
+            }.toList()
 
             return printFixExamplesOperationResultsAndReturnExitCode(results)
         }
 
-        private fun printFixExamplesOperationResultsAndReturnExitCode(results: Sequence<Pair<String, Boolean>>): Int {
-            val successResults = results.filter { (_, isFixed) -> isFixed }.toList()
-            val failureResults = results.filter { (_, isFixed) -> isFixed.not() }.toList()
+        private fun List<FixExampleResult>.with(status: FixExampleStatus): List<FixExampleResult> {
+            return this.filter {  it.status == status }
+        }
+
+        private fun printFixExamplesOperationResultsAndReturnExitCode(results: List<FixExampleResult>): Int {
+            val skippedResults = results.with(status = FixExampleStatus.SKIPPED)
+            val successResults = results.with(status = FixExampleStatus.SUCCEDED)
+            val failureResults = results.with(status = FixExampleStatus.FAILED)
 
             if (successResults.isNotEmpty()) {
                 logger.log("${System.lineSeparator()}Examples fixed successfully: ")
-                successResults.forEach { (message, _) ->
-                    logger.log("\t$message")
+                successResults.forEachIndexed { index, it ->
+                    logger.log("\t${index.inc()}. The example '${it.exampleFileName}' is fixed.")
+                }
+            }
+            if(skippedResults.isNotEmpty()) {
+                logger.log("${System.lineSeparator()}Skipped examples: ")
+                skippedResults.forEachIndexed { index, it ->
+                    logger.log("\t${index.inc()}. Skipping the example '${it.exampleFileName}' as it is already valid.")
                 }
             }
             if (failureResults.isNotEmpty()) {
                 logger.log("${System.lineSeparator()}Examples for which the fix operation failed: ")
-                failureResults.forEach { (message, _) ->
-                    logger.log("\t$message")
+                failureResults.forEachIndexed { index, it ->
+                    logger.log("\t${index.inc()}. An error occurred while fixing '${it.exampleFileName}'")
                 }
             }
 
             logger.log(System.lineSeparator())
-            logger.log("Examples fixed/skipped: ${successResults.size}")
-            logger.log("Failures while fixing examples: ${failureResults.size}")
+            logger.log("Examples fixed: ${successResults.size}")
+            logger.log("Examples skipped: ${skippedResults.size}")
+            logger.log("Examples failed to be fixed: ${failureResults.size}")
 
             if (failureResults.isEmpty()) return SUCCESS_EXIT_CODE
             return FAILURE_EXIT_CODE

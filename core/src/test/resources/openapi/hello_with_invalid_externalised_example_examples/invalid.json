@@ -1,0 +1,10 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/hello/10"
+  },
+  "http-respons": {
+    "status": 200,
+    "body": "success"
+  }
+}

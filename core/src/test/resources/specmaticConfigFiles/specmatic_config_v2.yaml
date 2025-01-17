@@ -4,15 +4,14 @@ contracts:
       url: https://contracts
       branch: 1.0.1
     provides:
-      - product_search_bff_v4.yaml
+      - com/petstore/1.yaml
     consumes:
-      - api_order_v3.yaml
-      - kafka.yaml
+      - com/petstore/payment.yaml
 
   - filesystem:
-      directory: "specmatic-order-contracts"
+      directory: "contracts"
     provides:
-      - product_search_bff_v4.yaml
+      - com/petstore/1.yaml
     consumes:
-      - api_order_v3.yaml
-      - kafka.yaml
+      - com/petstore/payment.yaml
+      - com/petstore/order.yaml

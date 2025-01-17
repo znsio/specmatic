@@ -40,6 +40,7 @@ import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.HasFailure
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.uniqueNameForApiOperation
@@ -522,9 +523,19 @@ class ExamplesInteractiveServer(
             return FixExampleResponse(exampleFile = request.exampleFile)
         }
 
-        fun fixExample(feature: Feature, exampleFile: File): FixExampleResult {
-            val example = ExampleFromFile.fromFile(exampleFile).value
 
+        fun fixExample(feature: Feature, exampleFile: File): FixExampleResult {
+            val exampleReturnValue = ExampleFromFile.fromFile(exampleFile)
+
+            if(exampleReturnValue is HasFailure<ExampleFromFile>) {
+                if(validateSchemaExample(feature, exampleFile) is Result.Success) {
+                    return FixExampleResult(status = FixExampleStatus.SKIPPED, exampleFileName = exampleFile.name)
+                }
+                fixSchemaExampleAndWriteTo(exampleFile, feature)
+                return FixExampleResult(status = FixExampleStatus.SUCCEDED, exampleFileName = exampleFile.name)
+            }
+
+            val example = exampleReturnValue.value
             val matchingHttpPathPattern = feature.matchingHttpPathPatternFor(
                 example.requestPath.orEmpty()
             ) ?: throw Exception("No scenario found for request path in '${exampleFile.name}'.")
@@ -534,10 +545,7 @@ class ExamplesInteractiveServer(
                 path = matchingHttpPathPattern.path,
                 responseStatusCode = example.responseStatus ?: 0,
                 contentType = example.requestContentType
-            )
-            if(scenario == null) {
-                throw Exception("No scenario found for example '${exampleFile.name}'.")
-            }
+            ) ?: throw Exception("No scenario found for example '${exampleFile.name}'.")
 
             if(validateExample(feature, exampleFile) is Result.Success) {
                 return FixExampleResult(status = FixExampleStatus.SKIPPED, exampleFileName = exampleFile.name)
@@ -560,6 +568,16 @@ class ExamplesInteractiveServer(
             ).toJSON().toStringLiteral()
 
             exampleFile.writeText(fixedExampleJson)
+        }
+
+        private fun fixSchemaExampleAndWriteTo(exampleFile: File, feature: Feature) {
+            val schemaExample = SchemaExample.fromFile(exampleFile).value
+            val fixedExample = feature.fixSchemaFlagBased(
+                schemaExample.discriminatorBasedOn,
+                schemaExample.schemaBasedOn,
+                schemaExample.value
+            )
+            schemaExample.file.writeText(fixedExample.toStringLiteral())
         }
 
         fun generateForSchemaBased(contractFile: File, path: String, method: String): List<ExamplePathInfo> {

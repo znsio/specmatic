@@ -2,13 +2,9 @@ package io.specmatic.core
 
 import com.fasterxml.jackson.annotation.*
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.toSpecmaticConfig
-import io.specmatic.core.config.v2.ContractConfig
-import io.specmatic.core.config.v2.SpecmaticConfigV2
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
@@ -110,7 +106,7 @@ data class AttributeSelectionPattern(
 data class SpecmaticConfig(
     val sources: List<Source> = emptyList(),
     val auth: Auth? = null,
-    var pipeline: Pipeline? = null,
+    val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
     val hooks: Map<String, String> = emptyMap(),
     val repository: RepositoryInfo? = null,
@@ -152,37 +148,6 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun parsedDefaultPatternValues(): Map<String, Value> {
         return parsedJSONObject(ObjectMapper().writeValueAsString(defaultPatternValues)).jsonObject
-    }
-
-    @JsonIgnore
-    fun upgrade(): String {
-        val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
-        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
-        return objectMapper.writeValueAsString(upgradeToLatest())
-    }
-
-    private fun upgradeToLatest(): SpecmaticConfigV2 {
-        return SpecmaticConfigV2(
-            version = SpecmaticConfigVersion.VERSION_2,
-            contracts = this.sources.map { ContractConfig(it) },
-            auth = this.auth,
-            pipeline = this.pipeline,
-            environments = this.environments,
-            hooks = this.hooks,
-            repository = this.repository,
-            report = this.report,
-            security = this.security,
-            test = this.test,
-            stub = this.stub,
-            virtualService = this.virtualService,
-            examples = this.examples,
-            workflow = this.workflow,
-            ignoreInlineExamples = this.ignoreInlineExamples,
-            additionalExampleParamsFilePath = this.additionalExampleParamsFilePath,
-            attributeSelectionPattern = this.attributeSelectionPattern,
-            allPatternsMandatory = this.allPatternsMandatory,
-            defaultPatternValues = this.defaultPatternValues
-        )
     }
 }
 

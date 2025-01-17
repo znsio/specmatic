@@ -1,10 +1,16 @@
 package application
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.Companion.getLatestVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.Companion.isValidVersion
 import io.specmatic.core.config.getVersion
 import io.specmatic.core.config.toSpecmaticConfig
+import io.specmatic.core.config.v2.ContractConfig
+import io.specmatic.core.config.v2.SpecmaticConfigV2
 import io.specmatic.core.getConfigFilePath
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.exitWithMessage
@@ -63,7 +69,9 @@ class ConfigCommand : Callable<Int> {
         }
 
         private fun upgrade(configFile: File) {
-            val upgradedConfigYaml = configFile.toSpecmaticConfig().upgrade()
+            val upgradedConfigYaml =
+                getObjectMapper().writeValueAsString(getLatestConfig(configFile.toSpecmaticConfig()))
+
             if(outputFile == null) {
                 logger.log(upgradedConfigYaml)
                 return
@@ -72,6 +80,36 @@ class ConfigCommand : Callable<Int> {
             logger.log("Writing upgraded $SPECMATIC_CONFIGURATION to ${outputFile.path}")
             outputFile.writeText(upgradedConfigYaml)
             logger.log("The upgraded $SPECMATIC_CONFIGURATION is written successfully to ${outputFile.path}")
+        }
+
+        private fun getLatestConfig(specmaticConfig: SpecmaticConfig): SpecmaticConfigV2 {
+            return SpecmaticConfigV2(
+                version = SpecmaticConfigVersion.VERSION_2,
+                contracts = specmaticConfig.sources.map { ContractConfig(it) },
+                auth = specmaticConfig.auth,
+                pipeline = specmaticConfig.pipeline,
+                environments = specmaticConfig.environments,
+                hooks = specmaticConfig.hooks,
+                repository = specmaticConfig.repository,
+                report = specmaticConfig.report,
+                security = specmaticConfig.security,
+                test = specmaticConfig.test,
+                stub = specmaticConfig.stub,
+                virtualService = specmaticConfig.virtualService,
+                examples = specmaticConfig.examples,
+                workflow = specmaticConfig.workflow,
+                ignoreInlineExamples = specmaticConfig.ignoreInlineExamples,
+                additionalExampleParamsFilePath = specmaticConfig.additionalExampleParamsFilePath,
+                attributeSelectionPattern = specmaticConfig.attributeSelectionPattern,
+                allPatternsMandatory = specmaticConfig.allPatternsMandatory,
+                defaultPatternValues = specmaticConfig.defaultPatternValues
+            )
+        }
+
+        private fun getObjectMapper(): ObjectMapper {
+            val objectMapper = ObjectMapper(YAMLFactory())
+            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
+            return objectMapper
         }
 
         private fun exitIfAlreadyUpToDate(existingVersion: SpecmaticConfigVersion?) {

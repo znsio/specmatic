@@ -541,5 +541,28 @@ internal class AnyPatternTest {
             Expected optional key named "details" was missing
             """.trimIndent())
         }
+
+        @Test
+        fun `should not add itself as seen as the discriminator mappings can ref back to itself`() {
+            val pattern = AnyPattern(
+                listOf(
+                    JSONObjectPattern(mapOf("type" to ExactValuePattern(StringValue("sub")), "address?" to StringPattern()), typeAlias = "(Sub)"),
+                ), typeAlias = "(Sub)",
+                discriminator = Discriminator(
+                    property = "type",
+                    values = setOf("sub"),
+                    mapping = mapOf("sub" to "#/components/schemas/Sub")
+                ),
+            )
+            val invalidValue = JSONObjectValue(mapOf("type" to StringValue("sub")))
+            val result = pattern.matches(invalidValue, Resolver().withAllPatternsAsMandatory())
+
+            println(result.reportString())
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+            assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+            >> address
+            Expected optional key named "address" was missing
+            """.trimIndent())
+        }
     }
 }

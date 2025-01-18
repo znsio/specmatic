@@ -6,6 +6,8 @@ import io.specmatic.GENERATION
 import io.specmatic.core.Result.Failure
 import io.specmatic.core.Result.Success
 import io.specmatic.core.pattern.*
+import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.trimmedLinesList
@@ -521,4 +523,83 @@ class HttpQueryParamPatternTest {
         assertThat(generatedValue.first().keys).contains("key")
         assertThat(generatedValue.first().keys.filter { it != "key" }).hasSize(1)
  }
+
+    @Nested
+    inner class FixValueTests {
+        @Test
+        fun `should be able to add missing values`() {
+            val queryPattern = HttpQueryParamPattern(mapOf("petId" to NumberPattern(), "owner" to StringPattern()))
+            val invalidValue = QueryParameters(listOf("petId" to "123"))
+
+            val dictionary = mapOf("QUERY-PARAMS.owner" to StringValue("TODO"))
+            val fixedValue = queryPattern.fixValue(invalidValue, Resolver(dictionary = dictionary))
+            println(fixedValue)
+
+            assertThat(fixedValue.paramPairs).isNotEmpty
+            assertThat(fixedValue.paramPairs).containsExactlyInAnyOrderElementsOf(listOf(
+                "petId" to "123",
+                "owner" to "TODO"
+            ))
+        }
+
+        @Test
+        fun `should not add missing optional keys`() {
+            val queryPattern = HttpQueryParamPattern(mapOf("petId" to NumberPattern(), "owner?" to StringPattern()))
+
+            val value = QueryParameters(listOf("petId" to "123"))
+            val fixedValue = queryPattern.fixValue(value, Resolver())
+            println(fixedValue)
+
+            assertThat(fixedValue.paramPairs).isNotEmpty
+            assertThat(fixedValue.paramPairs).containsExactlyInAnyOrderElementsOf(value.paramPairs)
+        }
+
+        @Test
+        fun `should be able to fix invalid values`() {
+            val queryPattern = HttpQueryParamPattern(mapOf("petId" to NumberPattern(), "owner" to StringPattern()))
+            val invalidValue = QueryParameters(listOf("petId" to "TODO", "owner" to "999"))
+
+            val dictionary = mapOf(
+                "QUERY-PARAMS.petId" to NumberValue(123),
+                "QUERY-PARAMS.owner" to StringValue("TODO")
+            )
+            val fixedValue = queryPattern.fixValue(invalidValue, Resolver(dictionary = dictionary))
+            println(fixedValue)
+
+            assertThat(fixedValue.paramPairs).isNotEmpty
+            assertThat(fixedValue.paramPairs).containsExactlyInAnyOrderElementsOf(listOf(
+                "petId" to "123",
+                "owner" to "TODO"
+            ))
+        }
+
+        @Test
+        fun `should allow extra keys in the value when EXTENSIBLE_QUERY_PARAMS is set`() {
+            val queryPattern = HttpQueryParamPattern(mapOf("petId" to NumberPattern(), "owner" to StringPattern()))
+            val value = QueryParameters(listOf("petId" to "999", "owner" to "TODO", "extra" to "value"))
+
+            val fixedValue = Flags.using(EXTENSIBLE_QUERY_PARAMS to "true") {
+                queryPattern.fixValue(value, Resolver())
+            }
+            println(fixedValue)
+
+            assertThat(fixedValue.paramPairs).isNotEmpty
+            assertThat(fixedValue.paramPairs).isEqualTo(value.paramPairs)
+        }
+
+        @Test
+        fun `should not allow extra keys in the value when EXTENSIBLE_QUERY_PARAMS is not set`() {
+            val queryPattern = HttpQueryParamPattern(mapOf("petId" to NumberPattern(), "owner" to StringPattern()))
+            val value = QueryParameters(listOf("petId" to "999", "owner" to "TODO", "extra" to "value"))
+
+            val fixedValue = queryPattern.fixValue(value, Resolver())
+            println(fixedValue)
+
+            assertThat(fixedValue.paramPairs).isNotEmpty
+            assertThat(fixedValue.paramPairs).containsExactlyInAnyOrderElementsOf(listOf(
+                "petId" to "999",
+                "owner" to "TODO"
+            ))
+        }
+    }
 }

@@ -9,6 +9,7 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.ktor.util.reflect.*
 import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.value.NumberValue
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -544,6 +545,73 @@ internal class HttpHeadersPatternTest {
 
         assertThat(positiveCount).isEqualTo(1)
         assertThat(securityHeadersFound).isTrue()
+    }
+
+    @Nested
+    inner class FixValueTests {
+        @Test
+        fun `should be able to add missing values`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("key" to ExactValuePattern(StringValue("value"))))
+            val invalidValue = emptyMap<String, String>()
+            val fixedValue = httpHeaders.fixValue(invalidValue, Resolver())
+            println(fixedValue)
+
+            assertThat(fixedValue).isNotEmpty
+            assertThat(fixedValue).containsExactlyInAnyOrderEntriesOf(mapOf(
+                "key" to "value"
+            ))
+        }
+
+        @Test
+        fun `should be able to fix invalid values`() {
+            val httpHeaders = HttpHeadersPattern(mapOf(
+                "key" to ExactValuePattern(StringValue("value")),
+                "type" to ExactValuePattern(StringValue("person")),
+                "age" to NumberPattern()
+            ))
+            val invalidValue = mapOf("key" to "value", "type" to  "Invalid", "age" to "invalid")
+
+            val dictionary = mapOf("HEADERS.age" to NumberValue(999))
+            val fixedValue = httpHeaders.fixValue(invalidValue, Resolver(dictionary = dictionary))
+            println(fixedValue)
+
+            assertThat(fixedValue).isNotEmpty
+            assertThat(fixedValue).containsExactlyInAnyOrderEntriesOf(mapOf(
+                "key" to "value",
+                "type" to "person",
+                "age" to "999"
+            ))
+        }
+
+        @Test
+        fun `should not add missing optional keys`() {
+            val httpHeaders = HttpHeadersPattern(mapOf(
+                "key" to ExactValuePattern(StringValue("value")),
+                "optional?" to StringPattern()
+            ))
+
+            val validValue = mapOf("key" to "value")
+            val fixedValue = httpHeaders.fixValue(validValue, Resolver())
+            println(fixedValue)
+
+            assertThat(fixedValue).isNotEmpty
+            assertThat(fixedValue).isEqualTo(validValue)
+        }
+
+        @Test
+        fun `should allow key-value pairs where key is not in the pattern`() {
+            val httpHeaders = HttpHeadersPattern(mapOf(
+                "key" to ExactValuePattern(StringValue("value")),
+                "optional?" to StringPattern()
+            ))
+
+            val validValue = mapOf("key" to "value", "extraKey" to "extraValue")
+            val fixedValue = httpHeaders.fixValue(validValue, Resolver())
+            println(fixedValue)
+
+            assertThat(fixedValue).isNotEmpty
+            assertThat(fixedValue).isEqualTo(validValue)
+        }
     }
 }
 

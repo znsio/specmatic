@@ -411,16 +411,21 @@ data class HttpHeadersPattern(
             pattern,
             headersWithRelevantKeys.mapValues { StringValue(it.value) }
         )
-        val missingKeys = keyErrors.filterIsInstance<MissingKeyError>().map { it.name }
         val unexpectedKeys = keyErrors.filterIsInstance<UnexpectedKeyError>().map { it.name }
+        val missingKeysToPattern = keyErrors.filterIsInstance<MissingKeyError>().associate {
+            it.name to this.pattern.getValue(it.name)
+        }
 
         val fixedValue = headersWithFixedContentType.mapNotNull { (key, value) ->
             val pattern = this.pattern[key] ?: this.pattern["$key?"]
             if (pattern == null && key in unexpectedKeys) return@mapNotNull null
-            key to (pattern?.fixValue(parseOrString(pattern, value, resolver), resolver)?.toStringLiteral() ?: value)
+
+            val updatedResolver = resolver.updateLookupPath(HEADERS_BREADCRUMB, key)
+            key to (pattern?.fixValue(parseOrString(pattern, value, updatedResolver), updatedResolver)?.toStringLiteral() ?: value)
         }
-        val missingKeysToValue = missingKeys.mapNotNull { key ->
-            this.pattern.getValue(key).fixValue(NullValue, resolver)?.let { key to it.toStringLiteral() }
+        val missingKeysToValue = missingKeysToPattern.mapNotNull { (key, pattern) ->
+            val updatedResolver = resolver.updateLookupPath(HEADERS_BREADCRUMB, key)
+            pattern.fixValue(NullValue, updatedResolver)?.let { key to it.toStringLiteral() }
         }
 
         return fixedValue.plus(missingKeysToValue).toMap()

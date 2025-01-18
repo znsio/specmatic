@@ -256,7 +256,7 @@ data class Resolver(
         return updatedResolver
     }
 
-    private fun lookupPath(typeAlias: String?, lookupKey: String): String {
+    fun lookupPath(typeAlias: String?, lookupKey: String): String {
         val lookupPath = if (typeAlias.isNullOrBlank()) {
             if (lookupKey.isBlank())
                 ""

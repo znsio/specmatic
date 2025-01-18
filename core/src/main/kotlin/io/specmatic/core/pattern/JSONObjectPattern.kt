@@ -30,15 +30,13 @@ data class JSONObjectPattern(
 
     override fun fixValue(value: Value, resolver: Resolver): Value? {
         val adjustedValue = (value as? JSONObjectValue) ?: JSONObjectValue()
-        val adjustedPattern = pattern.mapKeys {
-            if (shouldMakePropertyMandatory(it.value, resolver)) {
-                withoutOptionality(it.key)
-            } else it.key
-        }
+        val adjustedPattern = adjustOptionality(pattern, resolver)
 
         val errors = resolver.findKeyErrorList(adjustedPattern, adjustedValue.jsonObject)
-        val missingKeys = errors.filterIsInstance<MissingKeyError>().map { it.name }
         val unexpectedKeys = errors.filterIsInstance<UnexpectedKeyError>().map { it.name }
+        val missingKeysToPattern = errors.filterIsInstance<MissingKeyError>().associate {
+            it.name to adjustedPattern.getValue(it.name)
+        }
 
         val updatedResolver = resolver.addPatternAsSeen(this)
         val fixedValue = adjustedValue.jsonObject.mapNotNull { (key, value) ->
@@ -46,10 +44,8 @@ data class JSONObjectPattern(
             if (pattern == null && key in unexpectedKeys) return@mapNotNull null
             key to (pattern?.fixValue(value, updatedResolver.updateLookupPath(this.typeAlias, key)) ?: value)
         }
-        val missingKeysToValue = missingKeys.mapNotNull { key ->
-            adjustedPattern.getValue(key).fixValue(
-                NullValue, updatedResolver.updateLookupPath(this.typeAlias, key)
-            )?.let { key to it }
+        val missingKeysToValue = missingKeysToPattern.mapNotNull { (key, pattern) ->
+            pattern.fixValue(NullValue, updatedResolver.updateLookupPath(this.typeAlias, key))?.let { key to it }
         }
 
         return fixedValue.plus(missingKeysToValue).takeIf { it.isNotEmpty() }?.let { JSONObjectValue(it.toMap()) }
@@ -265,6 +261,23 @@ data class JSONObjectPattern(
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         return JSONArrayValue(valueList)
+    }
+
+    private fun adjustOptionality(jsonMap: Map<String, Pattern>, resolver: Resolver): Map<String, Pattern> {
+        return jsonMap.mapKeys { (key, pattern) ->
+            val patternToCheck = when(pattern) {
+                is ListPattern -> pattern.typeAlias?.let { pattern } ?: pattern.pattern
+                else -> pattern.typeAlias?.let { pattern } ?: this
+            }
+            when {
+                pattern !is ScalarType && resolver.hasSeenPattern(patternToCheck) && !isOptional(key) -> throw ContractException(
+                    breadCrumb = resolver.lookupPath(this.typeAlias, key),
+                    errorMessage = "Invalid Pattern, Cycling References Detected"
+                )
+                resolver.allPatternsAreMandatory && !resolver.hasSeenPattern(patternToCheck) -> withoutOptionality(key)
+                else -> key
+            }
+        }
     }
 
     private fun shouldMakePropertyMandatory(pattern: Pattern, resolver: Resolver): Boolean {

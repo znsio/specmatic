@@ -16,12 +16,8 @@ import io.specmatic.stub.captureStandardOutput
 import io.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.util.function.Consumer
@@ -1872,43 +1868,7 @@ components:
         }
 
         @Test
-        fun `should not add mandatory keys again when the pattern is cycling`() {
-            val pattern = parsedPattern("""
-            {
-                "topLevelKey": "(string)",
-                "topLevelOptionalKey?": "(number)",
-                "nested?": "(Test)"
-            }
-            """.trimIndent(), typeAlias = "(Test)")
-            val patternDictionary = mapOf(
-                "Test.topLevelKey" to StringValue("Fixed"),
-                "Test.topLevelOptionalKey" to NumberValue(999),
-            )
-
-            val value = parsedValue("""
-            {
-                "topLevelOptionalKey": 999
-            }
-            """.trimIndent())
-
-            val resolver = Resolver(newPatterns = mapOf("(Test)" to pattern), dictionary = patternDictionary)
-
-            val fixedValue = pattern.fixValue(value, resolver)
-            println(fixedValue?.toStringLiteral())
-
-            assertThat(fixedValue).isEqualTo(
-                parsedValue(
-                    """{
-                            "topLevelKey": "Fixed",
-                            "topLevelOptionalKey": 999
-                        }
-                    """.trimIndent()
-                )
-            )
-        }
-
-        @Test
-        fun `should not add mandatory keys again when the pattern is cycling even when allPatternsMandatory is set`() {
+        fun `should not add keys again when the pattern is cycling with avoidable recursion when allPatternsMandatory is set`() {
             val pattern = parsedPattern("""
             {
                 "topLevelKey": "(string)",
@@ -1942,6 +1902,34 @@ components:
                 }
             }
             """.trimIndent()))
+        }
+
+        @Test
+        fun `should throw an exception when there is an unavoidable cyclic reference`() {
+            val pattern = parsedPattern("""
+            {
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "nested": "(Test)"
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.topLevelOptionalKey" to NumberValue(999),
+            )
+            val value = parsedValue("""
+            {
+                "topLevelOptionalKey": 999
+            }
+            """.trimIndent())
+            val resolver = Resolver(newPatterns = mapOf("(Test)" to pattern), dictionary = patternDictionary)
+            val exception = assertThrows<ContractException> { pattern.fixValue(value, resolver) }
+
+            println(exception.report())
+            assertThat(exception.failure().reportString()).isEqualToNormalizingWhitespace("""
+            >> Test.nested
+            Invalid Pattern, Cycling References Detected
+            """.trimIndent())
         }
     }
 }

@@ -263,7 +263,8 @@ data class HttpPathPattern(
 
         val pathHadPrefix = path.startsWith("/")
         return pathSegmentPatterns.zip(pathSegments).map { (urlPathPattern, token) ->
-            urlPathPattern.fixValue(urlPathPattern.tryParse(token, resolver), resolver)
+            val updatedResolver = resolver.updateLookupPath(PATH_BREAD_CRUMB, urlPathPattern.key.orEmpty())
+            urlPathPattern.fixValue(urlPathPattern.tryParse(token, updatedResolver), updatedResolver)
         }.joinToString("/", prefix = "/".takeIf { pathHadPrefix }.orEmpty() )
     }
 }

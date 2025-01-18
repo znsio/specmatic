@@ -1931,5 +1931,54 @@ components:
             Invalid Pattern, Cycling References Detected
             """.trimIndent())
         }
+
+        @Test
+        fun `should allow extra key-value pairs when unexpectedKeyCheck is IgnoreUnexpectedKeys`() {
+            val pattern = parsedPattern("""
+            {
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)"
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+            val value = parsedValue("""
+            {
+                "topLevelKey": "TODO",
+                "topLevelOptionalKey": 999,
+                "extraKey": "extraValue"
+            }
+            """.trimIndent())
+
+            val fixedValue = pattern.fixValue(value, Resolver().withUnexpectedKeyCheck(IgnoreUnexpectedKeys))
+            println(fixedValue)
+
+            assertThat(fixedValue).isNotNull
+            assertThat(fixedValue).isEqualTo(value)
+        }
+
+        @Test
+        fun `should not allow extra key-value pairs when unexpectedKeyCheck is ValidateUnexpectedKeys`() {
+            val pattern = parsedPattern("""
+            {
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)"
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+            val value = parsedValue("""
+            {
+                "topLevelKey": "TODO",
+                "topLevelOptionalKey": 999,
+                "extraKey": "extraValue"
+            }
+            """.trimIndent())
+
+            val fixedValue = pattern.fixValue(value, Resolver().withUnexpectedKeyCheck(ValidateUnexpectedKeys))
+            println(fixedValue)
+
+            assertThat(fixedValue).isNotNull
+            assertThat(fixedValue).isEqualTo(JSONObjectValue(mapOf(
+                "topLevelKey" to StringValue("TODO"),
+                "topLevelOptionalKey" to NumberValue(999)
+            )))
+        }
     }
 }

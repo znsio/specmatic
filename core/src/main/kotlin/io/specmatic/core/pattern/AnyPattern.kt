@@ -37,7 +37,11 @@ data class AnyPattern(
         return getDiscriminatorPattern(discriminatorValue, resolver).realise(
             hasValue = { it, _ -> it.fixValue(value, resolver) },
             orException = { _ -> onValidDiscValue() },
-            orFailure = { f -> onInvalidDiscValue(f.failure) }
+            orFailure = { f ->
+                if (f.failure.failureReason == FailureReason.DiscriminatorMismatch) {
+                    onInvalidDiscValue(f.failure)
+                } else onValidDiscValue()
+            }
         )
     }
 
@@ -356,7 +360,12 @@ data class AnyPattern(
     }
 
     private fun getDiscriminatorPattern(discriminatorValue: String, resolver: Resolver): ReturnValue<Pattern> {
-        if (discriminator == null) return HasFailure("Pattern is not discriminator based")
+        if (discriminator == null) return HasFailure(
+            Failure(
+                "Pattern is not discriminator based",
+                failureReason = FailureReason.DiscriminatorMismatch
+            )
+        )
 
         val discriminatorCsvClause = if(discriminator.values.size == 1) {
             discriminator.values.first()
@@ -381,7 +390,7 @@ data class AnyPattern(
                 )
                 HasValue(chosenPattern)
             },
-            orFailure = { failure -> HasException(ContractException(failure.failure.toFailureReport())) },
+            orFailure = { failure -> failure.cast() },
             orException = { exception -> exception.cast() }
         )
     }

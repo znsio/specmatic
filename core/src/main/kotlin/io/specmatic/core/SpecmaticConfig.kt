@@ -2,9 +2,9 @@ package io.specmatic.core
 
 import com.fasterxml.jackson.annotation.*
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import io.specmatic.core.Configuration.Companion.configFilePath
-import io.specmatic.core.config.SpecmaticConfigVersion
-import io.specmatic.core.config.toSpecmaticConfig
+import io.specmatic.core.config.*
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
@@ -70,6 +70,7 @@ fun String.loadContract(): Feature {
     return parseContractFileToFeature(File(this))
 }
 
+@JsonSerialize(using = StubConfigurationSerializer::class)
 data class StubConfiguration(
     val generative: Boolean? = false,
     val delayInMilliseconds: Long? = getLongValue(SPECMATIC_STUB_DELAY),
@@ -77,6 +78,7 @@ data class StubConfiguration(
     val includeMandatoryAndRequestedKeysInResponse: Boolean? = true
 )
 
+@JsonSerialize(using = VirtualServiceSerializer::class)
 data class VirtualServiceConfiguration(
     val nonPatchableKeys: Set<String> = emptySet()
 )
@@ -90,6 +92,7 @@ data class WorkflowConfiguration(
     val ids: Map<String, WorkflowIDOperation> = emptyMap()
 )
 
+@JsonSerialize(using = AttributeSelectionPatternSerializer::class)
 data class AttributeSelectionPattern(
     @field:JsonAlias("default_fields")
     val defaultFields: List<String> = readEnvVarOrProperty(
@@ -151,6 +154,7 @@ data class SpecmaticConfig(
     }
 }
 
+@JsonSerialize(using = TestConfigurationSerializer::class)
 data class TestConfiguration(
     val resiliencyTests: ResiliencyTestsConfig? = ResiliencyTestsConfig(
         isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),

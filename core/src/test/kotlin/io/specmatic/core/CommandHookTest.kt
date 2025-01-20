@@ -1,6 +1,8 @@
 package io.specmatic.core
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.specmatic.core.utilities.Flags
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
@@ -80,7 +82,9 @@ internal class CommandHookTest {
             emptyList(),
             hooks = mapOf(HookName.stub_load_contract.name to "cat ${secondary.canonicalPath}")
         )
-        configFile.writeText(ObjectMapper().writeValueAsString(specmaticConfig))
+        val objectMapper = ObjectMapper().registerKotlinModule()
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
+        configFile.writeText(objectMapper.writeValueAsString(specmaticConfig))
         Configuration.configFilePath = configFile.canonicalPath
         try {
             val contractInFile = CommandHook(HookName.stub_load_contract).readContract(primary.canonicalPath)

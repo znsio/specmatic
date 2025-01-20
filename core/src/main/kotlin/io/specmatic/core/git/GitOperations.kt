@@ -2,7 +2,10 @@
 
 package io.specmatic.core.git
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import io.ktor.http.*
 import io.specmatic.core.azure.AzureAuthCredentials
 import io.specmatic.core.getConfigFilePath
 import io.specmatic.core.loadSpecmaticConfig
@@ -13,7 +16,6 @@ import io.specmatic.core.utilities.GitRepo
 import io.specmatic.core.utilities.getTransportCallingCallback
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
-import io.ktor.http.*
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.HttpTransport
@@ -237,7 +239,9 @@ private fun getPersonalAccessTokenProperty(): String? {
 private fun readConfig(configFile: File): Value {
     try {
         val config = loadSpecmaticConfig(configFile.path)
-        return parsedJSON(ObjectMapper().writeValueAsString(config))
+        val objectMapper = ObjectMapper().registerKotlinModule()
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
+        return parsedJSON(objectMapper.writeValueAsString(config))
     } catch(e: Throwable) {
         throw ContractException("Error loading Specmatic configuration: ${e.message}")
     }

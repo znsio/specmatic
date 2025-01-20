@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import io.specmatic.core.Source
 import io.specmatic.core.SourceProvider
-import io.specmatic.core.pattern.ContractException
 
 @JsonSerialize(using = ContractConfigSerializer::class)
 @JsonDeserialize(using = ContractConfigDeserializer::class)
@@ -22,69 +21,71 @@ data class ContractConfig(
     val consumes: List<String>? = null
 ) {
     constructor(source: Source) : this(
-        contractSource = ContractSource.Git(source).takeIf { source.provider == SourceProvider.git }
-            ?: ContractSource.FileSystem(source),
+        contractSource = GitContractSource(source).takeIf { source.provider == SourceProvider.git }
+            ?: FileSystemContractSource(source),
         provides = source.test,
         consumes = source.stub
     )
 
     fun transform(): Source {
-        return when (val contractSource = this.contractSource) {
-            is ContractSource.Git -> Source(
+        return this.contractSource?.transform(provides, consumes) ?: Source()
+    }
+
+    interface ContractSource {
+        fun write(gen: JsonGenerator)
+        fun transform(provides: List<String>?, consumes: List<String>?): Source
+    }
+
+    data class GitContractSource(
+        val url: String? = null,
+        val branch: String? = null
+    ) : ContractSource {
+        constructor(source: Source) : this(source.repository, source.branch)
+
+        override fun write(gen: JsonGenerator) {
+            gen.writeObjectFieldStart("git")
+            gen.writeStringField("url", this.url)
+            gen.writeStringField("branch", this.branch)
+            gen.writeEndObject()
+        }
+
+        override fun transform(provides: List<String>?, consumes: List<String>?): Source {
+            return Source(
                 provider = SourceProvider.git,
-                repository = contractSource.url,
-                branch = contractSource.branch,
+                repository = this.url,
+                branch = this.branch,
                 test = provides,
                 stub = consumes
             )
+        }
+    }
 
-            is ContractSource.FileSystem -> Source(
+    data class FileSystemContractSource(
+        val directory: String? = null
+    ) : ContractSource {
+        constructor(source: Source) : this(source.directory)
+
+        override fun write(gen: JsonGenerator) {
+            gen.writeObjectFieldStart("filesystem")
+            gen.writeStringField("directory", this.directory)
+            gen.writeEndObject()
+        }
+
+        override fun transform(provides: List<String>?, consumes: List<String>?): Source {
+            return Source(
                 provider = SourceProvider.filesystem,
-                directory = contractSource.directory,
+                directory = this.directory,
                 test = provides,
-                stub = consumes,
+                stub = consumes
             )
-
-            else -> Source()
         }
     }
 }
-
-sealed class ContractSource {
-    data class Git(
-        val url: String? = null,
-        val branch: String? = null
-    ) : ContractSource() {
-        constructor(source: Source) : this(source.repository, source.branch)
-    }
-
-    data class FileSystem(
-        val directory: String? = null
-    ) : ContractSource() {
-        constructor(source: Source) : this(source.directory)
-    }
-}
-
 
 class ContractConfigSerializer : StdSerializer<ContractConfig>(ContractConfig::class.java) {
     override fun serialize(contract: ContractConfig, gen: JsonGenerator, provider: SerializerProvider) {
         gen.writeStartObject()
-        when (val contractSource = contract.contractSource) {
-            is ContractSource.Git -> {
-                gen.writeObjectFieldStart("git")
-                gen.writeStringField("url", contractSource.url)
-                gen.writeStringField("branch", contractSource.branch)
-                gen.writeEndObject()
-            }
-
-            is ContractSource.FileSystem -> {
-                gen.writeObjectFieldStart("filesystem")
-                gen.writeStringField("directory", contractSource.directory)
-                gen.writeEndObject()
-            }
-
-            else -> throw ContractException("Unsupported Contract Source type.")
-        }
+        contract.contractSource?.write(gen)
         gen.writeObjectField("provides", contract.provides)
         gen.writeObjectField("consumes", contract.consumes)
         gen.writeEndObject()
@@ -98,7 +99,7 @@ class ContractConfigDeserializer : StdDeserializer<ContractConfig>(ContractConfi
         val contractSource = when {
             node.has("git") -> {
                 val gitNode = node.get("git")
-                ContractSource.Git(
+                ContractConfig.GitContractSource(
                     url = gitNode.get("url").asText(),
                     branch = gitNode.get("branch").asText()
                 )
@@ -106,7 +107,7 @@ class ContractConfigDeserializer : StdDeserializer<ContractConfig>(ContractConfi
 
             node.has("filesystem") -> {
                 val filesystemNode = node.get("filesystem")
-                ContractSource.FileSystem(
+                ContractConfig.FileSystemContractSource(
                     directory = filesystemNode.get("directory").asText()
                 )
             }

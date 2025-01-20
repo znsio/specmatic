@@ -7,7 +7,6 @@ import io.specmatic.core.Source
 import io.specmatic.core.SourceProvider
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.config.v2.ContractConfig
-import io.specmatic.core.config.v2.ContractSource
 import io.specmatic.core.config.v2.SpecmaticConfigV2
 import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.pattern.ContractException
@@ -95,15 +94,15 @@ internal class SpecmaticConfigAllTest {
         val contracts = specmaticConfigV2.contracts
 
         assertThat(contracts.size).isEqualTo(2)
-        assertThat(contracts[0].contractSource).isInstanceOf(ContractSource.Git::class.java)
-        val gitContractSource = contracts[0].contractSource as ContractSource.Git
+        assertThat(contracts[0].contractSource).isInstanceOf(ContractConfig.GitContractSource::class.java)
+        val gitContractSource = contracts[0].contractSource as ContractConfig.GitContractSource
         assertThat(gitContractSource.url).isEqualTo("https://contracts")
         assertThat(gitContractSource.branch).isEqualTo("1.0.1")
         assertThat(contracts[0].provides).containsOnly("com/petstore/1.yaml")
         assertThat(contracts[0].consumes).containsOnly("com/petstore/payment.yaml")
 
-        assertThat(contracts[1].contractSource).isInstanceOf(ContractSource.FileSystem::class.java)
-        val fileSystemContractSource = contracts[1].contractSource as ContractSource.FileSystem
+        assertThat(contracts[1].contractSource).isInstanceOf(ContractConfig.FileSystemContractSource::class.java)
+        val fileSystemContractSource = contracts[1].contractSource as ContractConfig.FileSystemContractSource
         assertThat(fileSystemContractSource.directory).isEqualTo("contracts")
         assertThat(contracts[1].provides).containsOnly("com/petstore/1.yaml")
         assertThat(contracts[1].consumes).containsOnly("com/petstore/payment.yaml", "com/petstore/order.yaml")
@@ -131,12 +130,12 @@ internal class SpecmaticConfigAllTest {
 
         val contracts = listOf(
             ContractConfig(
-                contractSource = ContractSource.Git(url = "https://contracts", branch = "1.0.1"),
+                contractSource = ContractConfig.GitContractSource(url = "https://contracts", branch = "1.0.1"),
                 provides = listOf("com/petstore/1.yaml"),
                 consumes = listOf("com/petstore/payment.yaml")
             ),
             ContractConfig(
-                contractSource = ContractSource.FileSystem(directory = "contracts"),
+                contractSource = ContractConfig.FileSystemContractSource(directory = "contracts"),
                 provides = listOf("com/petstore/1.yaml"),
                 consumes = listOf("com/petstore/payment.yaml", "com/petstore/order.yaml")
             )

@@ -3,6 +3,8 @@ package io.specmatic.core.config.v1
 import com.fasterxml.jackson.annotation.JsonAlias
 import io.specmatic.core.*
 import io.specmatic.core.config.SpecmaticConfigVersion
+import io.specmatic.core.config.SpecmaticVersionedConfig
+import io.specmatic.core.config.SpecmaticVersionedConfigLoader
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
@@ -33,8 +35,8 @@ data class SpecmaticConfigV1 (
 	@field:JsonAlias("default_pattern_values")
 	val defaultPatternValues: Map<String, Any> = emptyMap(),
 	val version: SpecmaticConfigVersion? = null
-){
-	fun transform(): SpecmaticConfig {
+): SpecmaticVersionedConfig {
+	override fun transform(): SpecmaticConfig {
 		return SpecmaticConfig(
 			sources = this.sources,
 			auth = this.auth,
@@ -56,5 +58,11 @@ data class SpecmaticConfigV1 (
 			defaultPatternValues = this.defaultPatternValues,
 			version = SpecmaticConfigVersion.VERSION_1
 		)
+	}
+
+	companion object : SpecmaticVersionedConfigLoader {
+		override fun loadFrom(config: SpecmaticConfig): SpecmaticVersionedConfig {
+			throw UnsupportedOperationException("Should never convert the config to V1")
+		}
 	}
 }

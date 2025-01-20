@@ -66,7 +66,6 @@ dependencies {
     testImplementation 'io.mockk:mockk:1.13.13'
     testImplementation 'org.assertj:assertj-core:3.26.3'
     testImplementation "io.ktor:ktor-client-mock-jvm:$ktor_version"
-    testImplementation 'org.skyscreamer:jsonassert:2.0-rc1'
     implementation 'org.thymeleaf:thymeleaf:3.1.2.RELEASE'
 }
 

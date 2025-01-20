@@ -2,10 +2,13 @@ package io.specmatic.core.config
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonValue
+import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.config.v1.SpecmaticConfigV1
+import io.specmatic.core.config.v2.SpecmaticConfigV2
 
-enum class SpecmaticConfigVersion(@JsonValue val value: Int) {
-    VERSION_1(1),
-    VERSION_2(2);
+enum class SpecmaticConfigVersion(@JsonValue val value: Int, val configLoader: SpecmaticVersionedConfigLoader) {
+    VERSION_1(1, SpecmaticConfigV1.Companion),
+    VERSION_2(2, SpecmaticConfigV2.Companion);
 
     companion object {
         @JsonCreator
@@ -19,6 +22,10 @@ enum class SpecmaticConfigVersion(@JsonValue val value: Int) {
 
         fun isValidVersion(version: SpecmaticConfigVersion): Boolean {
             return entries.any { it == version }
+        }
+
+        fun convertToLatestVersionedConfig(config: SpecmaticConfig): SpecmaticVersionedConfig {
+            return getLatestVersion().configLoader.loadFrom(config)
         }
     }
 }

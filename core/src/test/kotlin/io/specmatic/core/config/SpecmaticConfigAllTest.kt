@@ -11,13 +11,12 @@ import io.specmatic.core.config.v2.ContractSource
 import io.specmatic.core.config.v2.SpecmaticConfigV2
 import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.parsedJSON
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import org.skyscreamer.jsonassert.JSONAssert
-import org.skyscreamer.jsonassert.JSONCompareMode
 import java.io.File
 
 internal class SpecmaticConfigAllTest {
@@ -146,6 +145,6 @@ internal class SpecmaticConfigAllTest {
         val objectMapper = ObjectMapper().registerKotlinModule()
         val contractsJson = objectMapper.writeValueAsString(contracts)
 
-        JSONAssert.assertEquals(expectedContractsJson, contractsJson, JSONCompareMode.STRICT)
+        assertThat(parsedJSON(contractsJson)).isEqualTo(parsedJSON(expectedContractsJson))
     }
 }

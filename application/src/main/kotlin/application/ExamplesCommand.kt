@@ -232,7 +232,7 @@ For example:
         var filterNotName: String = ""
 
         @Option(
-            names = ["--validate"],
+            names = ["--examples-to-validate"],
             description = ["Whether to validate inline, external, or both examples. Options: INLINE, EXTERNAL, BOTH"],
             converter = [ExamplesToValidateConverter::class],
             defaultValue = "BOTH"

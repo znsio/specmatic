@@ -1,0 +1,22 @@
+{
+  "http-request": {
+    "path": "/greeting",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "name": "Jane"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "message": "Hello Jane"
+    },
+    "status-text": "OK",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

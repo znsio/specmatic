@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test
 import io.specmatic.shouldNotMatch
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.assertThrows
 
 internal class ListPatternTest {
     @Test
@@ -365,13 +366,13 @@ Feature: Recursive test
         }
 
         @Test
-        fun `should not generate when the pattern is cycling and value is missing`() {
+        fun `should not generate when the pattern is avoidably cycling and value is missing`() {
             val pattern = ListPattern(parsedPattern("""{
                 "topLevelKey": "(string)",
                 "topLevelOptionalKey?": "(number)",
-                "subList": "(TestList)"
+                "subList?": "(TestList)"
             }
-            """.trimIndent(), typeAlias = "(Test)"))
+            """.trimIndent(), typeAlias = "(Test)"), typeAlias = "(TestList)")
             val patternDictionary = mapOf(
                 "Test.topLevelKey" to StringValue("Fixed"),
                 "Test.topLevelOptionalKey" to NumberValue(999)
@@ -395,6 +396,36 @@ Feature: Recursive test
                     "topLevelOptionalKey": 999
                 }
             ]
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should throw an exception when the pattern is unavoidably cycling and value is missing`() {
+            val pattern = ListPattern(parsedPattern("""{
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "subList": "(TestList)"
+            }
+            """.trimIndent(), typeAlias = "(Test)"), typeAlias = "(TestList)")
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.topLevelOptionalKey" to NumberValue(999)
+            )
+
+            val value = parsedValue("""
+            [
+                {
+                    "topLevelKey": 999,
+                    "topLevelOptionalKey": "Invalid"
+                }
+            ]
+            """.trimIndent())
+            val exception = assertThrows<ContractException> { pattern.fixValue(value, Resolver(newPatterns = mapOf("(TestList)" to pattern), dictionary = patternDictionary)) }
+
+            println(exception.report())
+            assertThat(exception.failure().reportString()).isEqualToNormalizingWhitespace("""
+            >> Test.subList
+            Invalid Pattern, Cycling References Detected
             """.trimIndent())
         }
 
@@ -429,6 +460,43 @@ Feature: Recursive test
                     )
                 )
             }
+        }
+
+        @Test
+        fun `should not generate when the pattern is avoidably cycling and value is missing even if allPatternsAreMandatory is set`() {
+            val pattern = ListPattern(parsedPattern("""{
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "subList?": "(TestList)"
+            }
+            """.trimIndent(), typeAlias = "(Test)"), typeAlias = "(TestList)")
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.topLevelOptionalKey" to NumberValue(999)
+            )
+
+            val value = parsedValue("""
+            [
+                {
+                    "topLevelKey": 999,
+                    "topLevelOptionalKey": "Invalid"
+                }
+            ]
+            """.trimIndent())
+            val fixedValue = pattern.fixValue(
+                value = value,
+                resolver = Resolver(newPatterns = mapOf("(TestList)" to pattern), dictionary = patternDictionary).withAllPatternsAsMandatory()
+            )
+            println(fixedValue?.toStringLiteral())
+
+            assertThat(fixedValue?.toStringLiteral()).isEqualTo("""
+            [
+                {
+                    "topLevelKey": "Fixed",
+                    "topLevelOptionalKey": 999
+                }
+            ]
+            """.trimIndent())
         }
     }
 }

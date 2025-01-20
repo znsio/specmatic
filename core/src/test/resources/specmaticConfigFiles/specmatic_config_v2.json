@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "contracts": [
+    {
+      "git": {
+        "url": "https://contracts",
+        "branch": "1.0.1"
+      },
+      "provides": [
+        "com/petstore/1.yaml"
+      ],
+      "consumes": [
+        "com/petstore/payment.yaml"
+      ]
+    },
+    {
+      "filesystem": {
+        "directory": "contracts"
+      },
+      "provides": [
+        "com/petstore/1.yaml"
+      ],
+      "consumes": [
+        "com/petstore/payment.yaml",
+        "com/petstore/order.yaml"
+      ]
+    }
+  ]
+}

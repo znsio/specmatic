@@ -1,5 +1,6 @@
 package io.specmatic.core.filters
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
@@ -105,15 +106,77 @@ class FilterSyntaxTest {
     @Test
     fun `isValidFilter should return false for invalid logical operator usage`() {
         val filterSyntax = FilterSyntax("key=value && || key2=value2")
-        val isValid = filterSyntax.isValidFilter()
-        assertFalse(isValid)
+        val exception = org.junit.jupiter.api.assertThrows<Exception> {
+            filterSyntax.validateFilter()
+        }
+        assertThat(exception.message).isEqualTo("Expression is incorrect")
     }
 
     @Test
     fun `isValidFilter should return true for valid filter`() {
         val filterSyntax = FilterSyntax("METHOD=POST && PATH!=/users")
-        val isValid = filterSyntax.isValidFilter()
-        assertTrue(isValid)
+        assertDoesNotThrow {
+            filterSyntax.validateFilter()
+        }
+    }
+
+    @Test
+    fun `evalEx filter validate test 1`() {
+        val filterSyntax = FilterSyntax("((METHOD=\"POST\" && STATUS=200) || PATH!=\"/users\")")
+        assertDoesNotThrow {
+            filterSyntax.validateFilter()
+        }
+    }
+
+    @Test
+    fun `evalEx filter validate test 1 failure (missing curly braces)`() {
+        val filterSyntax = FilterSyntax("((METHOD=\"POST\" && STATUS=200) || PATH!=\"/users\"")
+        val exception = org.junit.jupiter.api.assertThrows<Exception> {
+            filterSyntax.validateFilter()
+        }
+        assertThat(exception.message).isEqualTo("Expression is incorrect")
+    }
+
+    @Test
+    fun `evalEx filter validate test 2 (Status code wildcard)`(){
+        val filterSyntax = FilterSyntax("STATUS!=50x")
+        assertDoesNotThrow {
+            filterSyntax.validateFilter()
+        }
+    }
+    @Test
+    fun `evalEx filter validate test 4 (multiple checks)`(){
+        val filterSyntax = FilterSyntax("(STATUS!=202 || STATUS!=400) && !(PATH=\"/users\" && METHOD=\"POST\") && !(PATH=\"/products\" && METHOD=\"POST\") && STATUS!=5xx")
+        assertDoesNotThrow {
+            filterSyntax.validateFilter()
+        }
+    }
+
+
+    @Test
+    fun `evalEx filter evaluate t1`(){
+        val filterSyntax = FilterSyntax("STATUS!=50x")
+        val exception = org.junit.jupiter.api.assertThrows<Exception> {
+            filterSyntax.evaluateFilter()
+        }
+        assertThat(exception.message).isEqualTo("Expression is incorrect")
+    }
+
+    @Test
+    fun `evalEx filter evaluate t2`(){
+        val filterSyntax = FilterSyntax("STATUS=200,400")
+        val exception = org.junit.jupiter.api.assertThrows<Exception> {
+            filterSyntax.evaluateFilter()
+        }
+        assertThat(exception.message).isEqualTo("Expression is incorrect")
+    }
+
+    @Test
+    fun `evalEx filter evaluate t3`(){
+        val filterSyntax = FilterSyntax("METHOD=\"POST\" && STATUS=200")
+        assertDoesNotThrow {
+            filterSyntax.evaluateFilter()
+        }
     }
 
     @Test

@@ -301,7 +301,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `t1`() {
-        val filter = ScenarioMetadataFilter.from("(METHOD=GET || (METHOD=POST && STATUS=200))")
+        val filter = ScenarioMetadataFilter.from("(METHOD=GET || (METHOD=POST && STATUS=20x,400))")
         assertTrue(filter.isSatisfiedBy(createScenarioMetadata(method = "POST" , statusCode = 200)))
         assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "POST" , statusCode = 201)))
         assertTrue(filter.isSatisfiedBy(createScenarioMetadata(method = "GET" , statusCode = 200)))
@@ -311,7 +311,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `t2`() {
-        val filter = ScenarioMetadataFilter.from("(METHOD!=GET && (PATH=/orders || PATH=/products))")
+        val filter = ScenarioMetadataFilter.from("(METHOD!=\"GET\" && (PATH=\"/orders\" || PATH=\"/products\"))")
         assertFalse(filter.isSatisfiedBy(createScenarioMetadata(path = "/order", method = "POST" )))
         assertFalse(filter.isSatisfiedBy(createScenarioMetadata(path = "/product", method = "POST")))
 
@@ -319,6 +319,7 @@ class ScenarioMetadataFilterTests {
         assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET" , statusCode = 200)))
         assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET")))
     }
+
 
     //(A && (B || C))
 

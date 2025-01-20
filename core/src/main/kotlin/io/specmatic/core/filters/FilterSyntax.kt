@@ -1,50 +1,70 @@
 package io.specmatic.core.filters
 
-import java.util.regex.Pattern
+import com.ezylang.evalex.Expression
+import io.specmatic.core.filters.FilterSymbols.ComparisonOperator
 import io.specmatic.core.filters.FilterSymbols.LogicalOperator
 import io.specmatic.core.filters.FilterSymbols.Parenthesis
-import io.specmatic.core.filters.FilterSymbols.ComparisonOperator
 import io.specmatic.core.filters.FilterSymbols.SpecialSymbol
 import org.jetbrains.annotations.VisibleForTesting
+import java.util.regex.Pattern
 
 data class FilterSyntax(val filter: String) {
 
     fun parse(): List<FilterGroup> {
-        if (!isValidFilter()) return emptyList()
-
-        val tokens = tokenize()
-
-        val filterGroups = parseTokens(tokens)
-
-        return filterGroups
+        validateFilter()
+        evaluateFilter()
+        return emptyList()
+//        val tokens = tokenize()
+//        val filterGroups = parseTokens(tokens)
+//        return filterGroups
     }
 
     @VisibleForTesting
-    internal fun isValidFilter(): Boolean {
-
-        filter.takeIf { it.isBlank() }?.let { return@let false }
-
-        val validKeys = ScenarioFilterTags.entries.map{it.key}.toSet()
-        val regex = Regex("\\s*(\\w+)\\s*(=|!=)\\s*([\\w/*{}, ]+)")
-
-        var balance = 0
-
-        filter.split(" ").forEach { token ->
-            when {
-                token == Parenthesis.OPEN.symbol -> balance++
-                token == Parenthesis.CLOSE.symbol -> {
-                    balance--
-                    if (balance < 0) return false
-                }
-                LogicalOperator.contains(token) -> Unit
-                regex.matches(token) -> {
-                    val key = regex.find(token)?.groupValues?.get(1) ?: return false
-                    if (key !in validKeys) return false
-                }
-            }
+    internal fun validateFilter() {
+        try {
+            val expression = Expression(filter)
+            expression.validate()
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Expression is incorrect")
         }
+    }
 
-        return balance == 0
+        @VisibleForTesting
+        fun evaluateFilter() {
+            try {
+//                val expression = CustomExpression(filter)
+                val expression = Expression(filter)
+                expression.with("METHOD","POST").with("STATUS",200).evaluate()
+            }
+            catch (e : Exception)
+            {
+                throw IllegalArgumentException("Expression is incorrect")
+            }
+
+
+//        filter.takeIf { it.isBlank() }?.let { return@let false }
+//
+//        val validKeys = ScenarioFilterTags.entries.map{it.key}.toSet()
+//        val regex = Regex("\\s*(\\w+)\\s*(=|!=)\\s*([\\w/*{}, ]+)")
+//
+//        var balance = 0
+//
+//        filter.split(" ").forEach { token ->
+//            when {
+//                token == Parenthesis.OPEN.symbol -> balance++
+//                token == Parenthesis.CLOSE.symbol -> {
+//                    balance--
+//                    if (balance < 0) return false
+//                }
+//                LogicalOperator.contains(token) -> Unit
+//                regex.matches(token) -> {
+//                    val key = regex.find(token)?.groupValues?.get(1) ?: return false
+//                    if (key !in validKeys) return false
+//                }
+//            }
+//        }
+//
+//        return balance == 0
     }
 
     private fun tokenize(): List<String> {

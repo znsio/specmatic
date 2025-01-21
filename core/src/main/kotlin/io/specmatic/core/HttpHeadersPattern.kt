@@ -390,7 +390,6 @@ data class HttpHeadersPattern(
         if (headers.isEmpty() && pattern.isEmpty()) return emptyMap()
 
         val contentTypeHeaderValue = headers["Content-Type"]
-
         val headersWithFixedContentType = if (contentType != null && contentTypeHeaderValue != null) {
             val parsedContentType = simplifiedContentType(contentType.lowercase())
             val parsedContentTypeHeaderValue  = simplifiedContentType(contentTypeHeaderValue.lowercase())
@@ -401,34 +400,19 @@ data class HttpHeadersPattern(
                 headers
 
         } else headers
-
         val headersWithRelevantKeys = when {
             ancestorHeaders != null -> withoutIgnorableHeaders(headersWithFixedContentType, ancestorHeaders)
             else -> withoutContentTypeGeneratedBySpecmatic(headersWithFixedContentType, pattern)
         }
 
-        val keyErrors = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).findKeyErrorListCaseInsensitive(
-            pattern,
-            headersWithRelevantKeys.mapValues { StringValue(it.value) }
+        val headersValue = headersWithRelevantKeys.mapValues { StringValue(it.value) }
+        val fixedHeaders = fix(
+            jsonPatternMap = pattern, jsonValueMap = headersValue,
+            resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys),
+            jsonPattern = JSONObjectPattern(pattern, typeAlias = "($HEADERS_BREADCRUMB)")
         )
-        val unexpectedKeys = keyErrors.filterIsInstance<UnexpectedKeyError>().map { it.name }
-        val missingKeysToPattern = keyErrors.filterIsInstance<MissingKeyError>().associate {
-            it.name to this.pattern.getValue(it.name)
-        }
 
-        val fixedValue = headersWithFixedContentType.mapNotNull { (key, value) ->
-            val pattern = this.pattern[key] ?: this.pattern["$key?"]
-            if (pattern == null && key in unexpectedKeys) return@mapNotNull null
-
-            val updatedResolver = resolver.updateLookupPath(HEADERS_BREADCRUMB, key)
-            key to (pattern?.fixValue(parseOrString(pattern, value, updatedResolver), updatedResolver)?.toStringLiteral() ?: value)
-        }
-        val missingKeysToValue = missingKeysToPattern.mapNotNull { (key, pattern) ->
-            val updatedResolver = resolver.updateLookupPath(HEADERS_BREADCRUMB, key)
-            pattern.fixValue(NullValue, updatedResolver)?.let { key to it.toStringLiteral() }
-        }
-
-        return fixedValue.plus(missingKeysToValue).toMap()
+        return fixedHeaders.mapValues { it.value.toStringLiteral() }
     }
 }
 

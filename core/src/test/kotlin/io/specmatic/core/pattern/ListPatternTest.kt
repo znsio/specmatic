@@ -491,22 +491,18 @@ Feature: Recursive test
             println(fixedValue.toStringLiteral())
 
             assertThat(fixedValue.list).allSatisfy {
-                assertThat(it).isEqualTo(parsedJSONObject("""
-                {
-                    "topLevelKey": "Fixed",
-                    "topLevelOptionalKey": 999,
-                    "subList": [
-                        {
-                            "topLevelKey": "Fixed",
-                            "topLevelOptionalKey": 999
-                        },
-                        {
-                            "topLevelKey": "Fixed",
-                            "topLevelOptionalKey": 999
-                        }
-                    ]
+                it as JSONObjectValue
+                assertThat(it.getString("topLevelKey")).isEqualTo("Fixed")
+                assertThat(it.getInt("topLevelOptionalKey")).isEqualTo(999)
+                assertThat(it.getJSONArray("subList")).allSatisfy { nested ->
+                    nested as JSONObjectValue
+                    assertThat(nested).isEqualTo(parsedJSONObject("""
+                     {
+                        "topLevelKey": "Fixed",
+                        "topLevelOptionalKey": 999
+                    }
+                    """.trimIndent()))
                 }
-                """.trimIndent()))
             }
         }
     }

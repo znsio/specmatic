@@ -11,24 +11,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.conversions.OpenApiSpecification.Companion.applyOverlay
-import io.specmatic.core.Feature
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpRequestPattern
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.Resolver
-import io.specmatic.core.Scenario
-import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.loadSpecmaticConfig
+import io.specmatic.core.*
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.IgnoreUnexpectedKeys
-import io.specmatic.core.pattern.JSONObjectPattern
-import io.specmatic.core.pattern.Pattern
-import io.specmatic.core.pattern.PossibleJsonObjectPatternContainer
-import io.specmatic.core.pattern.StringPattern
-import io.specmatic.core.pattern.resolvedHop
-import io.specmatic.core.pattern.withoutOptionality
+import io.specmatic.core.pattern.*
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
 import io.specmatic.core.utilities.exceptionCauseMessage
@@ -37,21 +23,7 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.stub.ContractAndRequestsMismatch
-import io.specmatic.stub.ContractStub
-import io.specmatic.stub.CouldNotParseRequest
-import io.specmatic.stub.FoundStubbedResponse
-import io.specmatic.stub.HttpStubResponse
-import io.specmatic.stub.NotStubbed
-import io.specmatic.stub.ResponseDetails
-import io.specmatic.stub.StubbedResponseResult
-import io.specmatic.stub.badRequest
-import io.specmatic.stub.endPointFromHostAndPort
-import io.specmatic.stub.fakeHttpResponse
-import io.specmatic.stub.generateHttpResponseFrom
-import io.specmatic.stub.internalServerError
-import io.specmatic.stub.ktorHttpRequestToHttpRequest
-import io.specmatic.stub.respondToKtorHttpResponse
+import io.specmatic.stub.*
 import io.specmatic.stub.stateful.StubCache.Companion.idValueFor
 import io.specmatic.test.HttpClient
 import java.io.File
@@ -180,7 +152,7 @@ class StatefulHttpStub(
         val updatedResponse = cachedResponse(
             fakeResponse,
             httpRequest,
-            specmaticConfig.stub.includeMandatoryAndRequestedKeysInResponse,
+            specmaticConfig.getIncludeMandatoryAndRequestedKeysInResponse(),
             responses.responseWithStatusCodeStartingWith("404")?.successResponse?.responseBodyPattern
         ) ?: generateHttpResponseFrom(fakeResponse, httpRequest)
 

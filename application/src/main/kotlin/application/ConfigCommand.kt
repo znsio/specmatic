@@ -1,8 +1,10 @@
 package application
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.Companion.convertToLatestVersionedConfig
 import io.specmatic.core.config.SpecmaticConfigVersion.Companion.getLatestVersion
@@ -67,8 +69,13 @@ class ConfigCommand : Callable<Int> {
         }
 
         private fun upgrade(configFile: File) {
-            val upgradedConfigYaml =
-                getObjectMapper().writeValueAsString(convertToLatestVersionedConfig(configFile.toSpecmaticConfig()))
+            val objectMapper = getObjectMapper()
+            var upgradedConfigYaml =
+                objectMapper.writeValueAsString(convertToLatestVersionedConfig(configFile.toSpecmaticConfig()))
+
+            val rootNode = objectMapper.readTree(upgradedConfigYaml)
+
+            upgradedConfigYaml = objectMapper.writeValueAsString(removeEmptyFields(rootNode, objectMapper))
 
             if(outputFile == null) {
                 logger.log(upgradedConfigYaml)
@@ -81,9 +88,42 @@ class ConfigCommand : Callable<Int> {
         }
 
         private fun getObjectMapper(): ObjectMapper {
-            val objectMapper = ObjectMapper(YAMLFactory())
-            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
+            val objectMapper = ObjectMapper(YAMLFactory()).apply {
+                registerKotlinModule()
+                setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
+            }
             return objectMapper
+        }
+
+        private fun removeEmptyFields(node: JsonNode, objectMapper: ObjectMapper): JsonNode {
+            if (node.isObject) {
+                val fieldsIterator = node.fields()
+                val fieldsMap = mutableMapOf<String, JsonNode>()
+
+                fieldsIterator.forEachRemaining { (fieldName, fieldValue) ->
+                    val cleanedValue = removeEmptyFields(fieldValue, objectMapper)
+                    if (!cleanedValue.isMissingNode && !(cleanedValue.isObject && cleanedValue.isEmpty)) {
+                        fieldsMap[fieldName] = cleanedValue
+                    }
+                }
+
+                val newObjectNode = objectMapper.createObjectNode()
+                fieldsMap.forEach { (k, v) -> newObjectNode.set<JsonNode>(k, v) }
+                return newObjectNode
+            }
+
+            if (node.isArray) {
+                val cleanedArray = mutableListOf<JsonNode>()
+                node.forEach { item ->
+                    val cleanedItem = removeEmptyFields(item, objectMapper)
+                    if (!cleanedItem.isMissingNode && !(cleanedItem.isObject && cleanedItem.isEmpty)) {
+                        cleanedArray.add(cleanedItem)
+                    }
+                }
+                return objectMapper.createArrayNode().addAll(cleanedArray)
+            }
+
+            return node
         }
 
         private fun exitIfAlreadyUpToDate(existingVersion: SpecmaticConfigVersion?) {

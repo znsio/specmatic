@@ -2,9 +2,9 @@ package io.specmatic.core
 
 import com.fasterxml.jackson.annotation.*
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import io.specmatic.core.Configuration.Companion.configFilePath
-import io.specmatic.core.config.*
+import io.specmatic.core.config.SpecmaticConfigVersion
+import io.specmatic.core.config.toSpecmaticConfig
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
@@ -70,15 +70,13 @@ fun String.loadContract(): Feature {
     return parseContractFileToFeature(File(this))
 }
 
-@JsonSerialize(using = StubConfigurationSerializer::class)
 data class StubConfiguration(
     val generative: Boolean? = false,
     val delayInMilliseconds: Long? = getLongValue(SPECMATIC_STUB_DELAY),
     val dictionary: String? = getStringValue(SPECMATIC_STUB_DICTIONARY),
-    val includeMandatoryAndRequestedKeysInResponse: Boolean? = true
+    val includeMandatoryAndRequestedKeysInResponse: Boolean? = null
 )
 
-@JsonSerialize(using = VirtualServiceSerializer::class)
 data class VirtualServiceConfiguration(
     val nonPatchableKeys: Set<String> = emptySet()
 )
@@ -92,7 +90,6 @@ data class WorkflowConfiguration(
     val ids: Map<String, WorkflowIDOperation> = emptyMap()
 )
 
-@JsonSerialize(using = AttributeSelectionPatternSerializer::class)
 data class AttributeSelectionPattern(
     @field:JsonAlias("default_fields")
     val defaultFields: List<String> = readEnvVarOrProperty(
@@ -138,11 +135,11 @@ data class SpecmaticConfig(
     }
     @JsonIgnore
     fun isResiliencyTestingEnabled(): Boolean {
-        return (test?.resiliencyTests?.enable != ResiliencyTestSuite.none)
+        return (getResiliencyTestsEnable() != ResiliencyTestSuite.none)
     }
     @JsonIgnore
     fun isOnlyPositiveTestingEnabled(): Boolean {
-        return (test?.resiliencyTests?.enable == ResiliencyTestSuite.positiveOnly)
+        return (getResiliencyTestsEnable() == ResiliencyTestSuite.positiveOnly)
     }
     @JsonIgnore
     fun isResponseValueValidationEnabled(): Boolean {
@@ -152,9 +149,18 @@ data class SpecmaticConfig(
     fun parsedDefaultPatternValues(): Map<String, Value> {
         return parsedJSONObject(ObjectMapper().writeValueAsString(defaultPatternValues)).jsonObject
     }
+
+    @JsonIgnore
+    fun getIncludeMandatoryAndRequestedKeysInResponse(): Boolean {
+        return stub.includeMandatoryAndRequestedKeysInResponse ?: true
+    }
+
+    @JsonIgnore
+    fun getResiliencyTestsEnable(): ResiliencyTestSuite {
+        return test?.resiliencyTests?.enable ?: ResiliencyTestSuite.none
+    }
 }
 
-@JsonSerialize(using = TestConfigurationSerializer::class)
 data class TestConfiguration(
     val resiliencyTests: ResiliencyTestsConfig? = ResiliencyTestsConfig(
         isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
@@ -170,18 +176,21 @@ enum class ResiliencyTestSuite {
 }
 
 data class ResiliencyTestsConfig(
-    val enable: ResiliencyTestSuite = ResiliencyTestSuite.none
+    val enable: ResiliencyTestSuite? = null
 ) {
     constructor(isResiliencyTestFlagEnabled: Boolean, isOnlyPositiveFlagEnabled: Boolean) : this(
         enable = getEnableFrom(isResiliencyTestFlagEnabled, isOnlyPositiveFlagEnabled)
     )
 
     companion object {
-        private fun getEnableFrom(isResiliencyTestFlagEnabled: Boolean, isOnlyPositiveFlagEnabled: Boolean): ResiliencyTestSuite {
+        private fun getEnableFrom(
+            isResiliencyTestFlagEnabled: Boolean,
+            isOnlyPositiveFlagEnabled: Boolean
+        ): ResiliencyTestSuite? {
             return when {
                 isResiliencyTestFlagEnabled -> ResiliencyTestSuite.all
                 isOnlyPositiveFlagEnabled -> ResiliencyTestSuite.positiveOnly
-                else -> ResiliencyTestSuite.none
+                else -> null
             }
         }
     }

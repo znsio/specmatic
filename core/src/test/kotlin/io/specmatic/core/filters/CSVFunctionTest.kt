@@ -193,7 +193,7 @@ class CSVFunctionTest {
     @Test
     fun `test CSV function with METHODS and PATHS`() {
         // Old Expression : "METHOD=GET && STATUS=200,400"
-        val evalExExpression = "CSV(\"METHOD=GET,POST\") || CSV(\"PATH=/monitor,/cabinet\")"
+        val evalExExpression = "CSV(\"METHOD=GET,POST\") || CSV(\"PATH=/monitor,/monitor(id:string)\")"
         val configuration = ExpressionConfiguration.defaultConfiguration()
             .withAdditionalFunctions(
                 mapOf(Pair("CSV", CSVFunction())).entries.single()
@@ -202,10 +202,15 @@ class CSVFunctionTest {
         val expressionMonitor = Expression(evalExExpression, configuration).with("METHOD","PATCH").with("PATH", "/monitor")
         val resultMonitor = expressionMonitor.evaluate().value
 
+        val expressionMonitorWithId = Expression(evalExExpression, configuration).with("METHOD","PATCH").with("PATH", "/monitor(id:string)")
+        val resultMonitorWithId = expressionMonitorWithId.evaluate().value
+
         val pathCabin = Expression(evalExExpression, configuration).with("METHOD","").with("PATH", "/cabin")
         val resultCabin = pathCabin.evaluate().value
 
+
         assertTrue(resultMonitor as Boolean)
         assertFalse(resultCabin as Boolean)
+        assertTrue(resultMonitorWithId as Boolean)
     }
 }

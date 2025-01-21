@@ -15,17 +15,15 @@ data class ListPattern(
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
 
-    override fun fixValue(value: Value, resolver: Resolver): Value? {
-        if (resolver.hasSeenPattern(this.pattern)) return null
-
+    override fun fixValue(value: Value, resolver: Resolver): Value {
         if (value !is JSONArrayValue || (value.list.isEmpty() && resolver.allPatternsAreMandatory)) {
-            return pattern.listOf(0.until(randomNumber(3)).mapIndexedNotNull { index, _ ->
+            return pattern.listOf(0.until(randomNumber(3)).mapIndexed { index, _ ->
                 attempt(breadCrumb = "[$index (random)]") { pattern.fixValue(NullValue, resolver) }
-            }, resolver).takeIf { it is JSONArrayValue && it.list.isNotEmpty() }
+            }, resolver)
         }
 
         val updatedResolver = resolver.addPatternAsSeen(this)
-        return JSONArrayValue(value.list.mapNotNull { pattern.fixValue(it, updatedResolver) })
+        return JSONArrayValue(value.list.map { pattern.fixValue(it, updatedResolver) })
     }
 
     override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {

@@ -29,11 +29,12 @@ data class JSONObjectPattern(
 ) : Pattern, PossibleJsonObjectPatternContainer {
 
     override fun fixValue(value: Value, resolver: Resolver): Value {
-        val adjustedValue = if (value !is JSONObjectValue) JSONObjectValue() else value
-        return fix(
-            jsonPatternMap = pattern, jsonValueMap = adjustedValue.jsonObject,
-            resolver = resolver, jsonPattern = this
-        ).let { JSONObjectValue(it) }
+        return JSONObjectValue(
+            fix(
+                jsonPatternMap = pattern, jsonValueMap = (value as? JSONObjectValue)?.jsonObject.orEmpty(),
+                resolver = resolver, jsonPattern = this
+            )
+        )
     }
 
     override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {

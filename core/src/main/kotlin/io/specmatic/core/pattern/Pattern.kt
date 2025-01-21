@@ -92,7 +92,7 @@ interface Pattern {
         return value
     }
 
-    fun fixValue(value: Value, resolver: Resolver): Value? {
+    fun fixValue(value: Value, resolver: Resolver): Value {
         return value.takeIf { matches(it, resolver).isSuccess() } ?: resolver.generate(this)
     }
 

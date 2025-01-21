@@ -314,21 +314,22 @@ Feature: Recursive test
                 }
             ]
             """.trimIndent())
-            val fixedValue = pattern.fixValue(invalidValue, Resolver(dictionary = patternDictionary))
-            println(fixedValue?.toStringLiteral())
+            val fixedValue = pattern.fixValue(invalidValue, Resolver(dictionary = patternDictionary)) as JSONArrayValue
+            println(fixedValue.toStringLiteral())
 
-            assertThat(fixedValue?.toStringLiteral()).isEqualTo("""
-            [
+            assertThat(fixedValue.list).allSatisfy {
+                it as JSONObjectValue
+                assertThat(it).isEqualTo(parsedJSONObject("""
                 {
                     "topLevelKey": "Fixed",
-                    "topLevelOptionalKey": 10,
                     "nested": {
                         "nestedKey": "2025-01-01",
                         "nestedOptionalKey": true
-                    }
+                    },
+                    "topLevelOptionalKey": 10
                 }
-            ]
-            """.trimIndent())
+                """.trimIndent()))
+            }
         }
 
         @Test
@@ -351,17 +352,17 @@ Feature: Recursive test
 
             val invalidValue = JSONObjectValue()
             val fixedValue = pattern.fixValue(invalidValue, Resolver(dictionary = patternDictionary))
-            println(fixedValue?.toStringLiteral())
+            println(fixedValue.toStringLiteral())
 
             assertThat((fixedValue as JSONArrayValue).list).allSatisfy {
-                assertThat(it.toStringLiteral()).isEqualTo("""
+                assertThat(it).isEqualTo(parsedJSONObject("""
                 {
                     "topLevelKey": "Fixed",
                     "nested": {
                         "nestedKey": "2025-01-01"
                     }
                 }
-                """.trimIndent())
+                """.trimIndent()))
             }
         }
 
@@ -387,9 +388,9 @@ Feature: Recursive test
             ]
             """.trimIndent())
             val fixedValue = pattern.fixValue(value, Resolver(newPatterns = mapOf("(TestList)" to pattern), dictionary = patternDictionary))
-            println(fixedValue?.toStringLiteral())
+            println(fixedValue.toStringLiteral())
 
-            assertThat(fixedValue?.toStringLiteral()).isEqualTo("""
+            assertThat(fixedValue.toStringLiteral()).isEqualTo("""
             [
                 {
                     "topLevelKey": "Fixed",
@@ -424,8 +425,8 @@ Feature: Recursive test
 
             println(exception.report())
             assertThat(exception.failure().reportString()).isEqualToNormalizingWhitespace("""
-            >> Test.subList
-            Invalid Pattern, Cycling References Detected
+            >> subList[0 (random)].subList[0 (random)].topLevelKey
+            Invalid pattern cycle: Test, Test, Test
             """.trimIndent())
         }
 
@@ -445,7 +446,7 @@ Feature: Recursive test
 
             val emptyList = parsedValue("[]")
             val fixedValue = pattern.fixValue(emptyList, Resolver(dictionary = patternDictionary).withAllPatternsAsMandatory())
-            println(fixedValue?.toStringLiteral())
+            println(fixedValue.toStringLiteral())
 
             assertThat((fixedValue as JSONArrayValue).list).isNotEmpty
             assertThat(fixedValue.list).allSatisfy {
@@ -486,17 +487,27 @@ Feature: Recursive test
             val fixedValue = pattern.fixValue(
                 value = value,
                 resolver = Resolver(newPatterns = mapOf("(TestList)" to pattern), dictionary = patternDictionary).withAllPatternsAsMandatory()
-            )
-            println(fixedValue?.toStringLiteral())
+            ) as JSONArrayValue
+            println(fixedValue.toStringLiteral())
 
-            assertThat(fixedValue?.toStringLiteral()).isEqualTo("""
-            [
+            assertThat(fixedValue.list).allSatisfy {
+                assertThat(it).isEqualTo(parsedJSONObject("""
                 {
                     "topLevelKey": "Fixed",
-                    "topLevelOptionalKey": 999
+                    "topLevelOptionalKey": 999,
+                    "subList": [
+                        {
+                            "topLevelKey": "Fixed",
+                            "topLevelOptionalKey": 999
+                        },
+                        {
+                            "topLevelKey": "Fixed",
+                            "topLevelOptionalKey": 999
+                        }
+                    ]
                 }
-            ]
-            """.trimIndent())
+                """.trimIndent()))
+            }
         }
     }
 }

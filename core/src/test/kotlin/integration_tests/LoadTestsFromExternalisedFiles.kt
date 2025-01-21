@@ -623,8 +623,11 @@ class LoadTestsFromExternalisedFiles {
 
                 assertThat(requestsCount).isEqualTo(1)
                 assertThat(results).hasSize(2)
-                assertThat(failure.scenario?.testDescription()).containsIgnoringWhitespaces("Scenario: PATCH /pets/(id:number) -> 200 | EX:patch")
-                assertThat(failure.reportString()).containsIgnoringWhitespaces("""
+                assertThat(failure.scenario?.testDescription()).isEqualToNormalizingWhitespace("Scenario: PATCH /pets/(id:number) -> 200 | EX:patch")
+                assertThat(failure.reportString()).isEqualToNormalizingWhitespace("""
+                In scenario "PATCH /pets/(id:number). Response: pet response"
+                API: PATCH /pets/(id:number) -> 200
+
                 >> REQUEST.BODY
                 >> name
                 Contract expected string but found value 10 (number)
@@ -666,8 +669,11 @@ class LoadTestsFromExternalisedFiles {
 
                 assertThat(requestsCount).isEqualTo(1)
                 assertThat(results).hasSize(2)
-                assertThat(failure.scenario?.testDescription()).containsIgnoringWhitespaces("Scenario: PATCH /pets/(id:number) -> 200 | EX:patch")
-                assertThat(failure.reportString()).containsIgnoringWhitespaces("""
+                assertThat(failure.scenario?.testDescription()).isEqualToNormalizingWhitespace("Scenario: PATCH /pets/(id:number) -> 200 | EX:patch")
+                assertThat(failure.reportString()).isEqualToNormalizingWhitespace("""
+                In scenario "PATCH /pets/(id:number). Response: pet response"
+                API: PATCH /pets/(id:number) -> 200
+
                 >> CONFIG.patch.Pet.name
                 Couldn't pick a random value from "CONFIG.patch.Pet.name" that was not equal to "Tom"
                 """.trimIndent())

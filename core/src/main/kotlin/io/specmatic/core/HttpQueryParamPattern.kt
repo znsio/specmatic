@@ -199,30 +199,16 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
         val updatedQueryParams = if(additionalProperties != null) {
             queryParams.withoutMatching(queryPatterns.keys, additionalProperties, resolver)
         } else { queryParams }
-
         val updatedResolver = if (Flags.getBooleanValue(EXTENSIBLE_QUERY_PARAMS)) {
             resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys)
         } else resolver
 
-        val keyErrors =  updatedResolver.findKeyErrorList(queryPatterns, updatedQueryParams.asMap().mapValues { StringValue(it.value) })
-        val unexpectedKeys = keyErrors.filterIsInstance<UnexpectedKeyError>().map { it.name }
-        val missingKeys = keyErrors.filterIsInstance<MissingKeyError>().associate {
-            it.name to queryPatterns.getValue(it.name)
-        }
+        val fixedQueryParams = fix(
+            jsonPatternMap = queryPatterns, jsonValueMap = updatedQueryParams.asValueMap(),
+            resolver = updatedResolver, jsonPattern = JSONObjectPattern(queryPatterns, typeAlias = "($QUERY_PARAMS_BREADCRUMB)")
+        )
 
-        val fixedValue = updatedQueryParams.asValueMap().mapNotNull { (key, value) ->
-            val pattern = queryPatterns[key] ?: queryPatterns["$key?"]
-            if (pattern == null && key in unexpectedKeys) return@mapNotNull null
-
-            val resolverWithLookup = resolver.updateLookupPath(QUERY_PARAMS_BREADCRUMB, key)
-            key to (pattern?.fixValue(value, resolverWithLookup) ?: value).toStringLiteral()
-        }
-        val missingKeysToValue = missingKeys.mapNotNull { (key, pattern) ->
-            val resolverWithLookup = resolver.updateLookupPath(QUERY_PARAMS_BREADCRUMB, key)
-            pattern.fixValue(NullValue, resolverWithLookup)?.let { key to it.toStringLiteral() }
-        }
-
-        return QueryParameters(fixedValue.plus(missingKeysToValue))
+        return QueryParameters(fixedQueryParams.mapValues { it.value.toStringLiteral() })
     }
 }
 

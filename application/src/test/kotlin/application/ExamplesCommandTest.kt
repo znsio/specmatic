@@ -3,8 +3,11 @@ package application
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
 
 class ExamplesCommandTest {
@@ -401,5 +404,86 @@ paths:
 
         val generatedExample = examplesCreated.first { it.name == "product_GET_200_1.json" }
         assertThat(generatedExample.readText()).contains(""""path": "/product"""")
+    }
+
+    @Nested
+    inner class ValidateTests {
+        private val specFile = File("src/test/resources/specifications/simpleSpec/spec.yaml")
+
+        @Test
+        fun `should validate both inline and external examples by default`() {
+            val command = ExamplesCommand.Validate().also { it.contractFile = specFile }
+            val (stdOut, exitCode) = captureStandardOutput { command.call() }
+            println(stdOut)
+
+            assertThat(exitCode).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            =============== Inline Example Validation Summary ===============
+            All 1 example(s) are valid.
+            =================================================================  
+            """.trimIndent())
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            =============== Example File Validation Summary ===============
+            All 1 example(s) are valid.
+            ===============================================================
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should validate inline only when the examplesToValidate flag is set to inline`() {
+            val command = ExamplesCommand.Validate().also {
+                it.contractFile = specFile
+                it.examplesToValidate = ExamplesCommand.Validate.ExamplesToValidate.INLINE
+            }
+            val (stdOut, exitCode) = captureStandardOutput { command.call() }
+            println(stdOut)
+
+            assertThat(exitCode).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            =============== Inline Example Validation Summary ===============
+            All 1 example(s) are valid.
+            =================================================================
+            """.trimIndent())
+            assertThat(stdOut).doesNotContain("""
+            =============== Example File Validation Summary ===============
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should validate external only when the examplesToValidate flag is set to external`() {
+            val command = ExamplesCommand.Validate().also {
+                it.contractFile = specFile
+                it.examplesToValidate = ExamplesCommand.Validate.ExamplesToValidate.EXTERNAL
+            }
+            val (stdOut, exitCode) = captureStandardOutput { command.call() }
+            println(stdOut)
+
+            assertThat(exitCode).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            =============== Example File Validation Summary ===============
+            All 1 example(s) are valid.
+            ===============================================================
+            """.trimIndent())
+            assertThat(stdOut).doesNotContain("""
+            =============== Inline Example Validation Summary =============
+            """.trimIndent())
+        }
+
+        @ParameterizedTest
+        @CsvSource(
+            "inline, INLINE, InLine, INLINE",
+            "external, EXTERNAL, External, EXTERNAL",
+            "both, BOTH, Both, BOTH"
+        )
+        fun `should convert to examplesToValidate enum ignoring case`(
+            lowerCase: String, upperCase: String, titleCase: String, expected: String
+        ) {
+            val cases = listOf(lowerCase, upperCase, titleCase)
+            assertThat(cases).allSatisfy {
+                val examplesToValidate = ExamplesCommand.Validate.ExamplesToValidateConverter().convert(it)
+                println("$it -> $examplesToValidate")
+                assertThat(examplesToValidate.name).isEqualTo(expected)
+            }
+        }
     }
 }

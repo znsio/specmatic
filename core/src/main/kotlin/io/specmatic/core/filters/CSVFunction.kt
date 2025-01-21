@@ -17,8 +17,8 @@ class CSVFunction : AbstractFunction() {
         val (label, operator, values) = parseCondition(inputString)
         val scenarioValue = expression.dataAccessor.getData(label).value
         val result = when (operator) {
-            "=" -> values.any { it == scenarioValue.toString() }
-            "!=" -> values.all { it != scenarioValue.toString() }
+            "=" -> values.any { it == scenarioValue.toString() || (label == ScenarioFilterTags.STATUS_CODE.key && isInRange(it, scenarioValue.toString())) }
+            "!=" -> values.all { it != scenarioValue.toString() && (label != ScenarioFilterTags.STATUS_CODE.key || !isInRange(it, scenarioValue.toString())) }
             else -> throw IllegalArgumentException("Unsupported operator: $operator")
         }
 
@@ -34,5 +34,22 @@ class CSVFunction : AbstractFunction() {
         val values = parts[1].split(",").map { it.trim() }
 
         return Triple(label, operator, values)
+    }
+
+    private fun isInRange(range: String, value: String): Boolean {
+        val intValue = value.toIntOrNull() ?: return false
+        return when {
+            range.endsWith("xx") -> {
+                val rangeStart = range.dropLast(2).toInt() * 100
+                val rangeEnd = rangeStart + 99
+                intValue in rangeStart..rangeEnd
+            }
+            range.endsWith("x") -> {
+                val rangeStart = range.dropLast(1).toInt() * 10
+                val rangeEnd = rangeStart + 9
+                intValue in rangeStart..rangeEnd
+            }
+            else -> false
+        }
     }
 }

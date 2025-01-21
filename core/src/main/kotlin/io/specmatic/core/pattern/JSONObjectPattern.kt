@@ -249,23 +249,6 @@ data class JSONObjectPattern(
         return JSONArrayValue(valueList)
     }
 
-    private fun adjustOptionality(jsonMap: Map<String, Pattern>, resolver: Resolver): Map<String, Pattern> {
-        return jsonMap.mapKeys { (key, pattern) ->
-            val patternToCheck = when(pattern) {
-                is ListPattern -> pattern.typeAlias?.let { pattern } ?: pattern.pattern
-                else -> pattern.typeAlias?.let { pattern } ?: this
-            }
-            when {
-                pattern !is ScalarType && resolver.hasSeenPattern(patternToCheck) && !isOptional(key) -> throw ContractException(
-                    breadCrumb = resolver.lookupPath(this.typeAlias, key),
-                    errorMessage = "Invalid Pattern, Cycling References Detected"
-                )
-                resolver.allPatternsAreMandatory && !resolver.hasSeenPattern(patternToCheck) -> withoutOptionality(key)
-                else -> key
-            }
-        }
-    }
-
     private fun shouldMakePropertyMandatory(pattern: Pattern, resolver: Resolver): Boolean {
         if (!resolver.allPatternsAreMandatory) return false
 

@@ -235,7 +235,7 @@ data class Resolver(
         return updatedResolver.generate(pattern)
     }
 
-    fun fix(typeAlias: String?, lookupKey: String, pattern: Pattern, value: Value): Value? {
+    fun fix(typeAlias: String?, lookupKey: String, pattern: Pattern, value: Value): Value {
         val resolvedPattern = resolvedHop(pattern, this)
         if (resolvedPattern is ExactValuePattern) return resolvedPattern.generate(this)
 
@@ -261,7 +261,7 @@ data class Resolver(
         return updatedResolver
     }
 
-    fun lookupPath(typeAlias: String?, lookupKey: String): String {
+    private fun lookupPath(typeAlias: String?, lookupKey: String): String {
         val lookupPath = if (typeAlias.isNullOrBlank()) {
             if (lookupKey.isBlank())
                 ""

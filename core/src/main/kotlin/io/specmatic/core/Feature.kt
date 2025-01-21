@@ -433,7 +433,7 @@ data class Feature(
             ) ?: throw ContractException("Couldn't fix pattern with discriminator value ${patternName.quote()}")
         }
 
-        return pattern.fixValue(value, updatedResolver) ?: pattern.generate(updatedResolver)
+        return pattern.fixValue(value, updatedResolver)
     }
 
     private fun getSchemaPattern(discriminatorPatternName: String?, patternName: String, resolver: Resolver): Pattern {

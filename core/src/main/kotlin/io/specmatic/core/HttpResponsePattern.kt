@@ -217,7 +217,7 @@ data class HttpResponsePattern(
         return response.copy(
             status = status,
             headers = headersPattern.fixValue(response.headers, resolver),
-            body = body.fixValue(response.body, resolver) ?: body.generate(resolver)
+            body = body.fixValue(response.body, resolver)
         )
     }
 }

@@ -462,9 +462,8 @@ internal class AnyPatternTest {
             val dictionary = mapOf("Sub1.prop" to StringValue("TODO"), "Sub2.prop" to NumberValue(999))
             val invalidSub1Value = JSONObjectValue(mapOf("type" to StringValue("sub1")))
             val validSub1Value = pattern.fixValue(invalidSub1Value, Resolver(dictionary = dictionary))
-            println(validSub1Value?.toStringLiteral())
+            println(validSub1Value.toStringLiteral())
 
-            assertThat(validSub1Value).isNotNull
             assertThat(validSub1Value).isEqualTo(
                 JSONObjectValue(mapOf(
                     "type" to StringValue("sub1"),
@@ -490,9 +489,8 @@ internal class AnyPatternTest {
             val dictionary = mapOf("Sub1.prop" to StringValue("TODO"), "Sub2.prop" to NumberValue(999))
             val invalidSub1Value = JSONObjectValue(mapOf("type" to StringValue("notExists")))
             val validSub1Value = pattern.fixValue(invalidSub1Value, Resolver(dictionary = dictionary))
-            println(validSub1Value?.toStringLiteral())
+            println(validSub1Value.toStringLiteral())
 
-            assertThat(validSub1Value).isNotNull
             assertThat(validSub1Value).isEqualTo(
                 JSONObjectValue(mapOf(
                     "type" to StringValue("sub2"),
@@ -518,9 +516,8 @@ internal class AnyPatternTest {
             val dictionary = mapOf("Sub1.prop" to StringValue("TODO"), "Sub2.prop" to NumberValue(999))
             val invalidSub1Value = JSONObjectValue(emptyMap())
             val validSub1Value = pattern.fixValue(invalidSub1Value, Resolver(dictionary = dictionary))
-            println(validSub1Value?.toStringLiteral())
+            println(validSub1Value.toStringLiteral())
 
-            assertThat(validSub1Value).isNotNull
             assertThat(validSub1Value).isEqualTo(
                 JSONObjectValue(mapOf(
                     "type" to StringValue("sub2"),
@@ -542,9 +539,8 @@ internal class AnyPatternTest {
             val dictionary = mapOf("Sub1.prop" to StringValue("TODO"), "Sub2.prop" to NumberValue(999))
             val invalidSub1Value = JSONObjectValue(emptyMap())
             val validSub1Value = pattern.fixValue(invalidSub1Value, Resolver(dictionary = dictionary))
-            println(validSub1Value?.toStringLiteral())
+            println(validSub1Value.toStringLiteral())
 
-            assertThat(validSub1Value).isNotNull
             assertThat(validSub1Value).isEqualTo(
                 JSONObjectValue(mapOf(
                     "type" to StringValue("sub2"),

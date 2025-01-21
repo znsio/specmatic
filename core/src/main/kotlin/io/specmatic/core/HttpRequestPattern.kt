@@ -888,7 +888,7 @@ data class HttpRequestPattern(
             path = httpPathPattern?.fixValue(request.path, resolver),
             queryParams = httpQueryParamPattern.fixValue(request.queryParams, resolver),
             headers = headersPattern.fixValue(request.headers, resolver),
-            body = body.fixValue(request.body, resolver) ?: body.generate(resolver)
+            body = body.fixValue(request.body, resolver)
         )
     }
 }

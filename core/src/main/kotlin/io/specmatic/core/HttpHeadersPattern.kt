@@ -5,7 +5,6 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.ktor.http.*
-import io.specmatic.core.value.NullValue
 
 const val HEADERS_BREADCRUMB = "HEADERS"
 

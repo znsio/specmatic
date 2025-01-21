@@ -5,7 +5,6 @@ import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
 import io.specmatic.core.utilities.URIUtils
 import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.StringValue
 import java.net.URI
 

@@ -8,7 +8,6 @@ class EvalExTest {
 
     @Test
     fun `filter by PATH and METHOD Old Test`() {
-        // Old Expression : "PATH=/products && METHOD=GET,POST"
         val oldExpression = "PATH=/products && METHOD=GET,POST"
 
         assertTrue(Expression(oldExpression).with("PATH","/products").with("METHOD","GET").evaluate().value as Boolean)
@@ -45,7 +44,10 @@ class EvalExTest {
     fun `filter empty`() {
         //Old Expression : ""
         val evalExExpression = ""
-        assertTrue(Expression(evalExExpression).evaluate().value as Boolean)
+        org.junit.jupiter.api.assertThrows<Exception>() {
+            Expression(evalExExpression).evaluate().value as Boolean
+        }
+
     }
 
     @Test

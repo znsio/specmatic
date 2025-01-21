@@ -2,10 +2,7 @@ package io.specmatic.core
 
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.True
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 import io.specmatic.test.ExampleProcessor
 
 val actualMatch: (resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value) -> Result = { resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value ->
@@ -236,6 +233,14 @@ data class Resolver(
         val updatedResolver = updateLookupPath(typeAlias, lookupKey)
 
         return updatedResolver.generate(pattern)
+    }
+
+    fun fix(typeAlias: String?, lookupKey: String, pattern: Pattern, value: Value): Value? {
+        val resolvedPattern = resolvedHop(pattern, this)
+        if (resolvedPattern is ExactValuePattern) return resolvedPattern.generate(this)
+
+        val updatedResolver = updateLookupPath(typeAlias, lookupKey)
+        return pattern.fixValue(value, updatedResolver)
     }
 
     fun updateLookupPath(typeAlias: String?, lookupKey: String): Resolver {

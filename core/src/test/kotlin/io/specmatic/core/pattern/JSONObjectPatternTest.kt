@@ -1922,13 +1922,14 @@ components:
                 "topLevelOptionalKey": 999
             }
             """.trimIndent())
+
             val resolver = Resolver(newPatterns = mapOf("(Test)" to pattern), dictionary = patternDictionary)
             val exception = assertThrows<ContractException> { pattern.fixValue(value, resolver) }
 
             println(exception.report())
             assertThat(exception.failure().reportString()).isEqualToNormalizingWhitespace("""
-            >> Test.nested
-            Invalid Pattern, Cycling References Detected
+            >> nested.nested.topLevelKey
+            Invalid pattern cycle: Test, Test, Test
             """.trimIndent())
         }
 
@@ -1979,6 +1980,31 @@ components:
                 "topLevelKey" to StringValue("TODO"),
                 "topLevelOptionalKey" to NumberValue(999)
             )))
+        }
+
+        @Test
+        fun cyclicTest() {
+            val patternA = JSONObjectPattern(mapOf(
+                "patternB" to DeferredPattern("(B)"),
+                "prop" to StringPattern()
+            ), typeAlias = "(A)")
+            val patternB = JSONObjectPattern(mapOf(
+                "patternA?" to DeferredPattern("(A)"),
+                "prop" to StringPattern()
+            ), typeAlias = "(B)")
+
+            val resolver = Resolver(
+                newPatterns = mapOf("(A)" to patternA, "(B)" to patternB),
+                dictionary = mapOf("(string)" to StringValue("TODO"))
+            ).withAllPatternsAsMandatory()
+
+            val generatedValue = patternA.generate(resolver)
+            println(generatedValue.toStringLiteral())
+
+            val fixedValue = patternA.fixValue(JSONObjectValue(), resolver)
+            println(fixedValue.toStringLiteral())
+
+            assertThat(fixedValue).isEqualTo(generatedValue)
         }
     }
 }

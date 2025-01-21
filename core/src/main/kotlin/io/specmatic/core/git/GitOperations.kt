@@ -2,9 +2,7 @@
 
 package io.specmatic.core.git
 
-import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.ktor.http.*
 import io.specmatic.core.azure.AzureAuthCredentials
 import io.specmatic.core.getConfigFilePath
@@ -239,9 +237,7 @@ private fun getPersonalAccessTokenProperty(): String? {
 private fun readConfig(configFile: File): Value {
     try {
         val config = loadSpecmaticConfig(configFile.path)
-        val objectMapper = ObjectMapper().registerKotlinModule()
-        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
-        return parsedJSON(objectMapper.writeValueAsString(config))
+        return parsedJSON(ObjectMapper().writeValueAsString(config))
     } catch(e: Throwable) {
         throw ContractException("Error loading Specmatic configuration: ${e.message}")
     }

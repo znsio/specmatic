@@ -71,6 +71,10 @@ data class Resolver(
         return this.copy(allPatternsAreMandatory = true)
     }
 
+    fun withoutAllPatternsAsMandatory(): Resolver {
+        return this.copy(allPatternsAreMandatory = false)
+    }
+
     fun disableOverrideUnexpectedKeycheck(): Resolver {
         return this.copy(findKeyErrorCheck = this.findKeyErrorCheck.disableOverrideUnexpectedKeycheck())
     }

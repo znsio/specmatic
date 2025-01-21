@@ -407,7 +407,7 @@ data class HttpHeadersPattern(
         val headersValue = headersWithRelevantKeys.mapValues { StringValue(it.value) }
         val fixedHeaders = fix(
             jsonPatternMap = pattern, jsonValueMap = headersValue,
-            resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys),
+            resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).withoutAllPatternsAsMandatory(),
             jsonPattern = JSONObjectPattern(pattern, typeAlias = "($HEADERS_BREADCRUMB)")
         )
 

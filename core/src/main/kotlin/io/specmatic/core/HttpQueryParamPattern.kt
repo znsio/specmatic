@@ -204,7 +204,8 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
 
         val fixedQueryParams = fix(
             jsonPatternMap = queryPatterns, jsonValueMap = updatedQueryParams.asValueMap(),
-            resolver = updatedResolver, jsonPattern = JSONObjectPattern(queryPatterns, typeAlias = "($QUERY_PARAMS_BREADCRUMB)")
+            resolver = updatedResolver.withoutAllPatternsAsMandatory(),
+            jsonPattern = JSONObjectPattern(queryPatterns, typeAlias = "($QUERY_PARAMS_BREADCRUMB)")
         )
 
         return QueryParameters(fixedQueryParams.mapValues { it.value.toStringLiteral() })

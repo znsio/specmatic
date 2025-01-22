@@ -662,6 +662,24 @@ internal class HttpHeadersPatternTest {
 
             assertThat(fixedValue).isEqualTo(mapOf("Content-Type" to "application/json"))
         }
+
+        @Test
+        fun `should fix values that do not match the declared header schema`() {
+            val headerName = "key"
+
+            val httpHeaders = HttpHeadersPattern(mapOf(
+                headerName to BooleanPattern()
+            ))
+
+            val headersWithInvalidValue = mapOf(headerName to "abc123")
+            val fixedHeaders = httpHeaders.fixValue(headersWithInvalidValue, Resolver())
+            println(fixedHeaders)
+
+            assertThat(fixedHeaders).containsKey(headerName)
+
+            val headerValue = fixedHeaders.getValue(headerName)
+            assertThat(headerValue).matches("true|false")
+        }
     }
 }
 

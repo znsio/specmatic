@@ -391,7 +391,11 @@ data class HttpHeadersPattern(
         } else headers
 
         if (headersWithContentType.isEmpty() && pattern.isEmpty()) return emptyMap()
-        val headersValue = headersWithContentType.mapValues { StringValue(it.value) }
+        val headersValue = headersWithContentType.mapValues { (key, value) ->
+            val pattern = pattern[key] ?: pattern["$key?"] ?: return@mapValues StringValue(value)
+
+            try { pattern.parse(value, resolver) } catch(e: Exception) { StringValue(value) }
+        }
         val fixedHeaders = fix(
             jsonPatternMap = pattern, jsonValueMap = headersValue,
             resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).withoutAllPatternsAsMandatory(),

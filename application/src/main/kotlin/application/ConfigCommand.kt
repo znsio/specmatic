@@ -70,9 +70,8 @@ class ConfigCommand : Callable<Int> {
         }
 
         private fun upgrade(configFile: File) {
-            val objectMapper = getObjectMapper()
             val upgradedConfigYaml =
-                objectMapper.writeValueAsString(convertToLatestVersionedConfig(configFile.toSpecmaticConfig()))
+                getObjectMapper().writeValueAsString(convertToLatestVersionedConfig(configFile.toSpecmaticConfig()))
 
             if(outputFile == null) {
                 logger.log(upgradedConfigYaml)

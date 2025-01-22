@@ -27,17 +27,17 @@ class EvalExSyntaxConverter {
                 token.contains(EQUALS) && !token.contains(NOT_EQUALS) -> {
                     val (key, value) = token.split(EQUALS).let { it[0] to it[1] }
                     when {
-                        requiresCsvFunction(value) -> "$CSV_FUNCTION(\"$key$EQUALS$value\")"
+                        requiresCsvFunction(value) -> "$CSV_FUNCTION('$key$EQUALS$value')"
                         key.contains(ScenarioFilterTags.STATUS_CODE.key) -> {"$key=$value"}
-                        else -> "$key=\"$value\""
+                        else -> "$key='$value'"
                     }
                 }
                 token.contains(NOT_EQUALS) -> {
                     val (key, value) = token.split(NOT_EQUALS).let { it[0] to it[1] }
                     when {
-                        requiresCsvFunction(value) -> "$CSV_FUNCTION(\"$key$NOT_EQUALS$value\")"
+                        requiresCsvFunction(value) -> "$CSV_FUNCTION('$key$NOT_EQUALS$value')"
                         key.contains(ScenarioFilterTags.STATUS_CODE.key) -> {"$key!=$value"}
-                        else -> "$key!=\"$value\""
+                        else -> "$key!='$value'"
                     }
                 }
                 else -> token

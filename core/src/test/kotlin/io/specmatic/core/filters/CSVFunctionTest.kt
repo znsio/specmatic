@@ -11,8 +11,9 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function with basic expression`() {
-        val evalExExpression = "(METHOD=\"GET\" && CSV(\"STATUS=200,400\"))"
-        val configuration = ExpressionConfiguration.defaultConfiguration()
+        val evalExExpression = "(METHOD='GET' && CSV('STATUS=200,400'))"
+            val configuration = ExpressionConfiguration.builder()
+            .singleQuoteStringLiteralsAllowed(true).build()
             .withAdditionalFunctions(
                 mapOf(Pair("CSV", CSVFunction())).entries.single()
             )
@@ -29,8 +30,9 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function with multiple METHODS`() {
-        val evalExExpression = "CSV(\"METHOD=GET,POST\")"
-        val configuration = ExpressionConfiguration.defaultConfiguration()
+        val evalExExpression = "CSV('METHOD=GET,POST')"
+        val configuration = ExpressionConfiguration.builder()
+            .singleQuoteStringLiteralsAllowed(true).build()
             .withAdditionalFunctions(
                 mapOf(Pair("CSV", CSVFunction())).entries.single()
             )
@@ -47,8 +49,9 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function with multiple METHODS and STATUS CODE`() {
-        val evalExExpression = "(CSV(\"METHOD=GET,POST\") && CSV(\"STATUS=200,400\"))"
-        val configuration = ExpressionConfiguration.defaultConfiguration()
+        val evalExExpression = "(CSV('METHOD=GET,POST') && CSV('STATUS=200,400'))"
+        val configuration = ExpressionConfiguration.builder()
+            .singleQuoteStringLiteralsAllowed(true).build()
             .withAdditionalFunctions(
                 mapOf(Pair("CSV", CSVFunction())).entries.single()
             )
@@ -71,8 +74,9 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function STATUS in double digit range`() {
-        val evalExExpression = "(CSV(\"METHOD=GET,POST\") && CSV(\"STATUS=200,400,5xx\"))"
-        val configuration = ExpressionConfiguration.defaultConfiguration()
+        val evalExExpression = "(CSV('METHOD=GET,POST') && CSV('STATUS=200,400,5xx'))"
+        val configuration = ExpressionConfiguration.builder()
+            .singleQuoteStringLiteralsAllowed(true).build()
             .withAdditionalFunctions(
                 mapOf(Pair("CSV", CSVFunction())).entries.single()
             )
@@ -99,8 +103,9 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function STATUS in single digit range`() {
-        val evalExExpression = "CSV(\"STATUS=50x\")"
-        val configuration = ExpressionConfiguration.defaultConfiguration()
+        val evalExExpression = "CSV('STATUS=50x')"
+        val configuration = ExpressionConfiguration.builder()
+            .singleQuoteStringLiteralsAllowed(true).build()
             .withAdditionalFunctions(
                 mapOf(Pair("CSV", CSVFunction())).entries.single()
             )
@@ -128,8 +133,9 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function STATUS not in single digit range`() {
-        val evalExExpression = "CSV(\"STATUS!=50x\")"
-        val configuration = ExpressionConfiguration.defaultConfiguration()
+        val evalExExpression = "CSV('STATUS!=50x')"
+        val configuration = ExpressionConfiguration.builder()
+            .singleQuoteStringLiteralsAllowed(true).build()
             .withAdditionalFunctions(
                 mapOf(Pair("CSV", CSVFunction())).entries.single()
             )
@@ -157,8 +163,9 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function METHOD not in GET and POST`() {
-        val evalExExpression = "CSV(\"METHOD!=GET,POST\")"
-        val configuration = ExpressionConfiguration.defaultConfiguration()
+        val evalExExpression = "CSV('METHOD!=GET,POST')"
+        val configuration = ExpressionConfiguration.builder()
+            .singleQuoteStringLiteralsAllowed(true).build()
             .withAdditionalFunctions(
                 mapOf(Pair("CSV", CSVFunction())).entries.single()
             )
@@ -186,8 +193,9 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function with METHODS and PATHS`() {
-        val evalExExpression = "CSV(\"METHOD=GET,POST\") || CSV(\"PATH=/monitor,/monitor(id:string)\")"
-        val configuration = ExpressionConfiguration.defaultConfiguration()
+        val evalExExpression = "CSV('METHOD=GET,POST') || CSV('PATH=/monitor,/monitor(id:string)')"
+        val configuration = ExpressionConfiguration.builder()
+            .singleQuoteStringLiteralsAllowed(true).build()
             .withAdditionalFunctions(
                 mapOf(Pair("CSV", CSVFunction())).entries.single()
             )
@@ -209,8 +217,9 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function with only 1 range`() {
-        val evalExExpression = "CSV(\"STATUS=20x\")"
-        val configuration = ExpressionConfiguration.defaultConfiguration()
+        val evalExExpression = "CSV('STATUS=20x')"
+        val configuration = ExpressionConfiguration.builder()
+            .singleQuoteStringLiteralsAllowed(true).build()
             .withAdditionalFunctions(
                 mapOf(Pair("CSV", CSVFunction())).entries.single()
             )
@@ -232,8 +241,9 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function with TMF PATHS`() {
-        val evalExExpression ="STATUS!=202 && CSV(\"PATH!=/hub,/hub/(id:string)\")"
-        val configuration = ExpressionConfiguration.defaultConfiguration()
+        val evalExExpression ="STATUS!=202 && CSV('PATH!=/hub,/hub/(id:string)')"
+        val configuration = ExpressionConfiguration.builder()
+            .singleQuoteStringLiteralsAllowed(true).build()
             .withAdditionalFunctions(
                 mapOf(Pair("CSV", CSVFunction())).entries.single()
             )
@@ -255,8 +265,9 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function relative path`() {
-        val evalExExpression ="CSV(\"PATH=/products/*/v1\")"
-        val configuration = ExpressionConfiguration.defaultConfiguration()
+        val evalExExpression ="CSV('PATH=/products/*/v1')"
+        val configuration = ExpressionConfiguration.builder()
+            .singleQuoteStringLiteralsAllowed(true).build()
             .withAdditionalFunctions(
                 mapOf(Pair("CSV", CSVFunction())).entries.single()
             )
@@ -272,8 +283,9 @@ class CSVFunctionTest {
     }
     @Test
     fun `test CSV function relative path fail`() {
-        val evalExExpression ="CSV(\"PATH!=/products/*/v1\")"
-        val configuration = ExpressionConfiguration.defaultConfiguration()
+        val evalExExpression ="CSV('PATH!=/products/*/v1')"
+        val configuration = ExpressionConfiguration.builder()
+            .singleQuoteStringLiteralsAllowed(true).build()
             .withAdditionalFunctions(
                 mapOf(Pair("CSV", CSVFunction())).entries.single()
             )
@@ -291,7 +303,8 @@ class CSVFunctionTest {
     @Test
     fun `test CSV function with empty string`() {
         val evalExExpression =""
-        val configuration = ExpressionConfiguration.defaultConfiguration()
+        val configuration = ExpressionConfiguration.builder()
+            .singleQuoteStringLiteralsAllowed(true).build()
             .withAdditionalFunctions(
                 mapOf(Pair("CSV", CSVFunction())).entries.single()
             )
@@ -305,8 +318,10 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function with QUERY`() {
-        val evalExExpression ="QUERY=\"fields\""
-        val expression = Expression(evalExExpression).with("QUERY","fields").evaluate().value
+        val configuration = ExpressionConfiguration.builder()
+            .singleQuoteStringLiteralsAllowed(true).build()
+        val evalExExpression ="QUERY='fields'"
+        val expression = Expression(evalExExpression,configuration).with("QUERY","fields").evaluate().value
         assertTrue(expression as Boolean)
     }
 }

@@ -27,7 +27,8 @@ data class ScenarioMetadataFilter(
     companion object {
         fun from(filterExpression: String): ScenarioMetadataFilter {
             val evalExExpression = EvalExSyntaxConverter().standardizeExpression(filterExpression)
-            val configuration = ExpressionConfiguration.defaultConfiguration()
+            val configuration = ExpressionConfiguration.builder()
+                .singleQuoteStringLiteralsAllowed(true).build()
                 .withAdditionalFunctions(
                     mapOf(Pair("CSV", CSVFunction())).entries.single()
                 )

@@ -1934,6 +1934,36 @@ components:
         }
 
         @Test
+        fun `should throw an exception when there is an unavoidable two-level cyclic reference`() {
+            val testPattern = parsedPattern("""
+            {
+                "toTest2": "(Test2)"
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+
+            val test2Pattern = parsedPattern("""
+            {
+                "toTest": "(Test)"
+            }
+            """.trimIndent(), typeAlias = "(Test2)")
+
+            val value = parsedValue("""
+            {
+                "topLevelOptionalKey": 999
+            }
+            """.trimIndent())
+
+            val resolver = Resolver(newPatterns = mapOf("(Test)" to testPattern, "(Test2)" to test2Pattern))
+            val exception = assertThrows<ContractException> { testPattern.fixValue(value, resolver) }
+
+            println(exception.report())
+            assertThat(exception.failure().reportString()).isEqualToNormalizingWhitespace("""
+            >> toTest2.toTest.toTest2.toTest.toTest2
+            Invalid pattern cycle: Test, Test2, Test, Test2, Test
+            """.trimIndent())
+        }
+
+        @Test
         fun `should allow extra key-value pairs when unexpectedKeyCheck is IgnoreUnexpectedKeys`() {
             val pattern = parsedPattern("""
             {

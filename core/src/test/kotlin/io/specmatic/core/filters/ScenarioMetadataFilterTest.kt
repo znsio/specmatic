@@ -46,7 +46,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `wrong filter syntaxes fails silently and includes everything`() {
-        val filter = ScenarioMetadataFilter.from("PATH=/products &| METHOD=GET,POST")
+        val filter = ScenarioMetadataFilter.from("PATH='/products' &| METHOD='GET,POST'")
 
         val getProducts = createScenarioMetadata(method = "GET", path = "/products")
         val postProducts = createScenarioMetadata(method = "POST", path = "/products")
@@ -67,7 +67,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `filter by PATH and METHOD`() {
-        val filter = ScenarioMetadataFilter.from("PATH=/products && METHOD=GET,POST")
+        val filter = ScenarioMetadataFilter.from("PATH='/products' && METHOD='GET,POST'")
 
         val getProducts = createScenarioMetadata(method = "GET", path = "/products")
         val postProducts = createScenarioMetadata(method = "POST", path = "/products")
@@ -96,7 +96,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `filter by Relative Path`() {
-        val filter = ScenarioMetadataFilter.from("PATH=/products/*/1")
+        val filter = ScenarioMetadataFilter.from("PATH='/products/*/1'")
         val metadata1 = createScenarioMetadata(path = "/products/car/1")
         val metadata2 = createScenarioMetadata(path = "/products/bike/1")
         val metadata3 = createScenarioMetadata(path = "/products/car/bike/1")
@@ -113,7 +113,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `filter by STATUS 200 or 400`() {
-        val filter = ScenarioMetadataFilter.from("STATUS=200,400")
+        val filter = ScenarioMetadataFilter.from("STATUS='200,400'")
 
         val status200 = createScenarioMetadata(statusCode = 200)
         val metadata2 = createScenarioMetadata(statusCode = 400)
@@ -126,7 +126,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `filter by STATUS not 200 or 400`() {
-        val filter = ScenarioMetadataFilter.from("STATUS!=200,400")
+        val filter = ScenarioMetadataFilter.from("STATUS!='200,400'")
         val metadata1 = createScenarioMetadata(statusCode = 500)
         val metadata2 = createScenarioMetadata(statusCode = 200)
         val metadata3 = createScenarioMetadata(statusCode = 400)
@@ -138,7 +138,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `filter by STATUS 2xx`() {
-        val filter = ScenarioMetadataFilter.from("STATUS=2xx")
+        val filter = ScenarioMetadataFilter.from("STATUS='2xx'")
 
         val metadata1 = createScenarioMetadata(statusCode = 200)
         val metadata2 = createScenarioMetadata(statusCode = 201)
@@ -151,7 +151,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `filter by METHOD not GET and PATH not users`() {
-        val filter = ScenarioMetadataFilter.from("METHOD!=GET || PATH!=/users")
+        val filter = ScenarioMetadataFilter.from("METHOD!='GET' || PATH!='/users'")
         val postProducts = createScenarioMetadata(method = "POST", path = "/products")
         val metadata2 = createScenarioMetadata(method = "GET", path = "/products")
         val metadata3 = createScenarioMetadata(method = "POST", path = "/users")
@@ -166,7 +166,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `complex filter with OR`() {
-        val filter = ScenarioMetadataFilter.from("PATH=/products || METHOD=POST")
+        val filter = ScenarioMetadataFilter.from("PATH='/products' || METHOD='POST'")
         val metadata1 = createScenarioMetadata(method = "GET", path = "/products")
         val postProducts = createScenarioMetadata(method = "POST", path = "/products")
         val metadata2 = createScenarioMetadata(method = "POST", path = "/users")
@@ -192,7 +192,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `exclude scenarios by example name with exact match`() {
-        val filter = ScenarioMetadataFilter.from("PATH!=/hub,/hub/(id:string)")
+        val filter = ScenarioMetadataFilter.from("PATH!='/hub,/hub/(id:string)'")
         val metadata1 = createScenarioMetadata(path = "/hub")
         val metadata2 = createScenarioMetadata(path = "/hub/(id:string)")
         val metadata3 = createScenarioMetadata(path = "/hub/id")
@@ -208,7 +208,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `exclude scenarios with STATUS not in a list`() {
-        val filter = ScenarioMetadataFilter.from("STATUS!=202,401,403")
+        val filter = ScenarioMetadataFilter.from("STATUS!='202,401,403'")
         val metadata1 = createScenarioMetadata(statusCode = 200)
         val metadata2 = createScenarioMetadata(statusCode = 401)
         val metadata3 = createScenarioMetadata(statusCode = 202)
@@ -221,7 +221,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `exclude scenarios by list of status codes including range expression`() {
-        val filter = ScenarioMetadataFilter.from("STATUS!=202,401,403,405,5xx")
+        val filter = ScenarioMetadataFilter.from("STATUS!='202,401,403,405,5xx'")
         val metadata1 = createScenarioMetadata(statusCode = 202)
         val metadata2 = createScenarioMetadata(statusCode = 500)
         val metadata3 = createScenarioMetadata(statusCode = 201)
@@ -233,7 +233,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `exclude scenarios with combined STATUS and path conditions`() {
-        val filter = ScenarioMetadataFilter.from("STATUS!=202 && PATH!=/hub,/hub/(id:string)")
+        val filter = ScenarioMetadataFilter.from("STATUS!=202 && PATH!='/hub,/hub/(id:string)'")
         val metadata1 = createScenarioMetadata(statusCode = 200, path = "/users")
         val metadata2 = createScenarioMetadata(statusCode = 202, path = "/users")
         val metadata3 = createScenarioMetadata(statusCode = 200, path = "/hub")
@@ -249,7 +249,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `include scenarios with combined METHOD and PATH conditions`() {
-        val filter = ScenarioMetadataFilter.from("(PATH=/users && METHOD=POST) || (PATH=/products && METHOD=POST)")
+        val filter = ScenarioMetadataFilter.from("(PATH='/users' && METHOD='POST') || (PATH='/products' && METHOD='POST')")
         val metadata1 = createScenarioMetadata(method = "GET", path = "/products")
         val metadata2 = createScenarioMetadata(method = "POST", path = "/products")
         val metadata3 = createScenarioMetadata(method = "GET", path = "/users")
@@ -266,7 +266,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `include scenarios where nothing matches`() {
-        val filter = ScenarioMetadataFilter.from("(PATH=/users && METHOD=POST) && (PATH=/products && METHOD=POST)")
+        val filter = ScenarioMetadataFilter.from("(PATH='/users' && METHOD='POST') && (PATH='/products' && METHOD='POST')")
         val metadata1 = createScenarioMetadata(method = "GET", path = "/products")
         val metadata2 = createScenarioMetadata(method = "POST", path = "/products")
         val metadata3 = createScenarioMetadata(method = "GET", path = "/users")
@@ -283,7 +283,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `exclude scenarios with combined METHOD and PATH conditions`() {
-        val filter = ScenarioMetadataFilter.from("!(PATH=/users && METHOD=POST) && !(PATH=/products && METHOD=POST)")
+        val filter = ScenarioMetadataFilter.from("!(PATH='/users' && METHOD='POST') && !(PATH='/products' && METHOD='POST')")
         val metadata1 = createScenarioMetadata(method = "GET", path = "/products")
         val metadata2 = createScenarioMetadata(method = "POST", path = "/products")
         val metadata3 = createScenarioMetadata(method = "GET", path = "/users")
@@ -301,7 +301,7 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `double nested conditions`() {
         val filter =
-            ScenarioMetadataFilter.from("!(STATUS=202,401,403,405 || STATUS=50x || (PATH=/monitor && METHOD=GET) || (PATH=/monitor/(id:string) && METHOD=GET)) && (PATH=/orders && METHOD=GET)")
+            ScenarioMetadataFilter.from("!(STATUS='202,401,403,405' || STATUS='50x' || (PATH='/monitor' && METHOD='GET') || (PATH='/monitor/(id:string)' && METHOD='GET')) && (PATH='/orders' && METHOD='GET')")
         assertTrue(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/orders", statusCode = 200)))
         assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 200)))
     }
@@ -309,7 +309,7 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `exclude scenarios with combined METHOD and PATH conditions, in addition also a status condition`() {
         val filter =
-            ScenarioMetadataFilter.from("!(PATH=/users && METHOD=POST) && !(PATH=/products && METHOD=POST) && STATUS!=202,400,500")
+            ScenarioMetadataFilter.from("!(PATH='/users' && METHOD='POST') && !(PATH='/products' && METHOD='POST') && STATUS!='202,400,500'")
 
         val getProducts200 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 200)
         val getProducts202 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 202)
@@ -346,7 +346,7 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `exclude scenarios with combined METHOD and PATH conditions, in addition also a status condition as first condition`() {
         val filter =
-            ScenarioMetadataFilter.from("STATUS!=202,400 && !(PATH=/users && METHOD=POST) && !(PATH=/products && METHOD=POST) && STATUS!=5xx")
+            ScenarioMetadataFilter.from("STATUS!='202,400' && !(PATH='/users' && METHOD='POST') && !(PATH='/products' && METHOD='POST') && STATUS!='5xx'")
 
         val getProducts200 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 200)
         val getProducts202 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 202)
@@ -385,7 +385,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `exclude scenarios with wildcard only for last digit in status codes`() {
-        val filter = ScenarioMetadataFilter.from("STATUS!=50x")
+        val filter = ScenarioMetadataFilter.from("STATUS!='50x'")
 
         assertTrue(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 521)))
         assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 502)))

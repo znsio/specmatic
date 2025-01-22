@@ -18,7 +18,7 @@ class EvalExSyntaxConverterTest {
 
     @Test
     fun `test standard expression with METHOD and STATUS expression`() {
-        val expression = "METHOD='GET' && STATUS=200,400"
+        val expression = "METHOD='GET' && STATUS='200,400'"
         val expected = "METHOD='GET' && CSV('STATUS=200,400')"
         val standardExpression= evalExSyntaxConverter.standardizeExpression(expression)
         assertEquals(expected,standardExpression)
@@ -26,7 +26,7 @@ class EvalExSyntaxConverterTest {
 
     @Test
     fun `test standard expression with multiple METHOD and STATUS expression`() {
-        val expression = "METHOD='GET,POST' && STATUS=200,400"
+        val expression = "METHOD='GET,POST' && STATUS='200,400'"
         val expected = "CSV('METHOD=GET,POST') && CSV('STATUS=200,400')"
         val standardExpression= evalExSyntaxConverter.standardizeExpression(expression)
         assertEquals(expected,standardExpression)

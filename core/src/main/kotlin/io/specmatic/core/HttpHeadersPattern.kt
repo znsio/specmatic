@@ -386,25 +386,12 @@ data class HttpHeadersPattern(
     }
 
     fun fixValue(headers: Map<String, String>, resolver: Resolver): Map<String, String> {
-        if (headers.isEmpty() && pattern.isEmpty()) return emptyMap()
-
-        val contentTypeHeaderValue = headers["Content-Type"]
-        val headersWithFixedContentType = if (contentType != null && contentTypeHeaderValue != null) {
-            val parsedContentType = simplifiedContentType(contentType.lowercase())
-            val parsedContentTypeHeaderValue  = simplifiedContentType(contentTypeHeaderValue.lowercase())
-
-            if(parsedContentType != parsedContentTypeHeaderValue)
-                headers.plus(CONTENT_TYPE to contentType)
-            else
-                headers
-
+        val headersWithContentType = if (contentType != null) {
+            headers.plus(CONTENT_TYPE to contentType)
         } else headers
-        val headersWithRelevantKeys = when {
-            ancestorHeaders != null -> withoutIgnorableHeaders(headersWithFixedContentType, ancestorHeaders)
-            else -> withoutContentTypeGeneratedBySpecmatic(headersWithFixedContentType, pattern)
-        }
 
-        val headersValue = headersWithRelevantKeys.mapValues { StringValue(it.value) }
+        if (headersWithContentType.isEmpty() && pattern.isEmpty()) return emptyMap()
+        val headersValue = headersWithContentType.mapValues { StringValue(it.value) }
         val fixedHeaders = fix(
             jsonPatternMap = pattern, jsonValueMap = headersValue,
             resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).withoutAllPatternsAsMandatory(),

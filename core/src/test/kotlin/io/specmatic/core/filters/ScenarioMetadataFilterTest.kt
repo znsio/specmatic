@@ -240,11 +240,6 @@ class ScenarioMetadataFilterTests {
         val metadata4 = createScenarioMetadata(statusCode = 202, path = "/hub")
         val metadata5 = createScenarioMetadata(statusCode = 202, path = "/hub/(id:string)")
 
-//        assertTrue(filter.isSatisfiedBy(metadata1))
-//        assertTrue(filter.isSatisfiedBy(metadata2))
-//        assertTrue(filter.isSatisfiedBy(metadata3))
-//        assertFalse(filter.isSatisfiedBy(metadata4))
-//        assertFalse(filter.isSatisfiedBy(metadata5))
         assertTrue(filter.isSatisfiedBy(metadata1))
         assertFalse(filter.isSatisfiedBy(metadata2))
         assertFalse(filter.isSatisfiedBy(metadata3))

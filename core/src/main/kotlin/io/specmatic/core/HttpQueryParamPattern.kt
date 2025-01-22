@@ -193,17 +193,18 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
     }
 
     fun fixValue(queryParams: QueryParameters?, resolver: Resolver): QueryParameters {
-        if (queryParams == null) return QueryParameters(this.generate(resolver))
+        val adjustedQueryParams = when {
+            queryParams == null || queryParams.paramPairs.isEmpty() -> QueryParameters(emptyMap())
+            additionalProperties != null -> queryParams.withoutMatching(queryPatterns.keys, additionalProperties, resolver)
+            else -> queryParams
+        }
 
-        val updatedQueryParams = if(additionalProperties != null) {
-            queryParams.withoutMatching(queryPatterns.keys, additionalProperties, resolver)
-        } else { queryParams }
         val updatedResolver = if (Flags.getBooleanValue(EXTENSIBLE_QUERY_PARAMS)) {
             resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys)
-        } else resolver
+        } else resolver.withUnexpectedKeyCheck(ValidateUnexpectedKeys)
 
         val fixedQueryParams = fix(
-            jsonPatternMap = queryPatterns, jsonValueMap = updatedQueryParams.asValueMap(),
+            jsonPatternMap = queryPatterns, jsonValueMap = adjustedQueryParams.asValueMap(),
             resolver = updatedResolver.withoutAllPatternsAsMandatory(),
             jsonPattern = JSONObjectPattern(queryPatterns, typeAlias = "($QUERY_PARAMS_BREADCRUMB)")
         )

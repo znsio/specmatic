@@ -601,5 +601,38 @@ class HttpQueryParamPatternTest {
                 "owner" to "TODO"
             ))
         }
+
+        @Test
+        fun `should not generate optional keys when initial value is null or empty`() {
+            val queryPattern = HttpQueryParamPattern(mapOf("petId" to NumberPattern(), "owner?" to StringPattern()))
+            val dictionary = mapOf("QUERY-PARAMS.owner" to StringValue("TODO"), "QUERY-PARAMS.petId" to NumberValue(999))
+
+            val emptyValue = QueryParameters(emptyList())
+            val emptyFixedValue = queryPattern.fixValue(emptyValue, Resolver(dictionary=dictionary))
+            println(emptyFixedValue)
+
+            val nullValue = null
+            val nullFixedValue = queryPattern.fixValue(nullValue, Resolver(dictionary=dictionary))
+            println(nullFixedValue)
+
+            assertThat(emptyFixedValue).isEqualTo(nullFixedValue)
+            assertThat(emptyFixedValue.paramPairs).containsExactlyInAnyOrderElementsOf(listOf(
+                "petId" to "999"
+            ))
+        }
+
+        @Test
+        fun `should override unexpectedKeyCheck set by flagBased or anything before it`() {
+            val queryPattern = HttpQueryParamPattern(mapOf("petId" to NumberPattern(), "owner" to StringPattern()))
+
+            val value = QueryParameters(listOf("petId" to "999", "owner" to "TODO", "extra" to "value"))
+            val fixedValue = queryPattern.fixValue(value, Resolver().withUnexpectedKeyCheck(IgnoreUnexpectedKeys))
+            println(fixedValue)
+
+            assertThat(fixedValue.paramPairs).containsExactlyInAnyOrderElementsOf(listOf(
+                "petId" to "999",
+                "owner" to "TODO"
+            ))
+        }
     }
 }

@@ -43,7 +43,7 @@ class EvalExSyntaxConverterTest {
     @Test
     fun `test standardizeExpression with multiple METHOD and single PATH expressions`() {
         val expression = "(METHOD=POST && PATH=/users) || (METHOD=POST && PATH=/products)"
-        val expected = "(METHOD=\"POST\" && PATH=\"/users\") || (METHOD=\"POST\" && PATH=\"/products\")"
+        val expected = "( METHOD=\"POST\" && PATH=\"/users\" ) || ( METHOD=\"POST\" && PATH=\"/products\" )"
         val standardExpressions= evalExSyntaxConverter.standardizeExpression(expression)
         assertEquals(expected,standardExpressions)
     }
@@ -64,5 +64,19 @@ class EvalExSyntaxConverterTest {
         assertEquals(expected,standardExpressions)
     }
 
+    @Test
+    fun `test standardizeExpression with QUERY expression`() {
+        val expression = "QUERY=fields"
+        val expected = "QUERY=\"fields\""
+        val standardExpressions= evalExSyntaxConverter.standardizeExpression(expression)
+        assertEquals(expected,standardExpressions)
+    }
 
+    @Test
+    fun `test standardizeExpression with empty expression`() {
+        val expression = ""
+        val expected = ""
+        val standardExpressions= evalExSyntaxConverter.standardizeExpression(expression)
+        assertEquals(expected,standardExpressions)
+    }
 }

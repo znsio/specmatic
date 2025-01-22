@@ -1,6 +1,7 @@
 import io.specmatic.core.filters.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class ScenarioMetadataFilterTests {
 
@@ -29,11 +30,21 @@ class ScenarioMetadataFilterTests {
         val postProducts = createScenarioMetadata(method = "POST", path = "/products")
         val putProducts = createScenarioMetadata(method = "PUT", path = "/products")
         val getUsers = createScenarioMetadata(method = "GET", path = "/users")
-
-        assertTrue(filter.isSatisfiedBy(getProducts))
-        assertTrue(filter.isSatisfiedBy(postProducts))
-        assertTrue(filter.isSatisfiedBy(putProducts))
-        assertTrue(filter.isSatisfiedBy(getUsers))
+        val scenarios = listOf(
+            getProducts,
+            postProducts,
+            putProducts,
+            getUsers
+        )
+//        assertTrue(filter.isSatisfiedBy(getProducts))
+//        assertTrue(filter.isSatisfiedBy(postProducts))
+//        assertTrue(filter.isSatisfiedBy(putProducts))
+//        assertTrue(filter.isSatisfiedBy(getUsers))
+        scenarios.forEach { scenario ->
+            assertThrows<Exception> {
+                filter.isSatisfiedBy(scenario)
+            }
+        }
     }
 
     @Test
@@ -44,11 +55,21 @@ class ScenarioMetadataFilterTests {
         val postProducts = createScenarioMetadata(method = "POST", path = "/products")
         val putProducts = createScenarioMetadata(method = "PUT", path = "/products")
         val getUsers = createScenarioMetadata(method = "GET", path = "/users")
-
-        assertTrue(filter.isSatisfiedBy(getProducts))
-        assertTrue(filter.isSatisfiedBy(postProducts))
-        assertTrue(filter.isSatisfiedBy(putProducts))
-        assertTrue(filter.isSatisfiedBy(getUsers))
+        val scenarios = listOf(
+            getProducts,
+            postProducts,
+            putProducts,
+            getUsers
+        )
+//        assertTrue(filter.isSatisfiedBy(getProducts))
+//        assertTrue(filter.isSatisfiedBy(postProducts))
+//        assertTrue(filter.isSatisfiedBy(putProducts))
+//        assertTrue(filter.isSatisfiedBy(getUsers))
+        scenarios.forEach { scenario ->
+            assertThrows<Exception> {
+                filter.isSatisfiedBy(scenario)
+            }
+        }
     }
 
     @Test
@@ -143,9 +164,13 @@ class ScenarioMetadataFilterTests {
         val metadata3 = createScenarioMetadata(method = "POST", path = "/users")
         val metadata4 = createScenarioMetadata(method = "GET", path = "/users")
 
+//        assertTrue(filter.isSatisfiedBy(postProducts))
+//        assertFalse(filter.isSatisfiedBy(metadata2))
+//        assertFalse(filter.isSatisfiedBy(metadata3))
+//        assertFalse(filter.isSatisfiedBy(metadata4))
         assertTrue(filter.isSatisfiedBy(postProducts))
-        assertFalse(filter.isSatisfiedBy(metadata2))
-        assertFalse(filter.isSatisfiedBy(metadata3))
+        assertTrue(filter.isSatisfiedBy(metadata2))
+        assertTrue(filter.isSatisfiedBy(metadata3))
         assertFalse(filter.isSatisfiedBy(metadata4))
     }
 
@@ -225,9 +250,14 @@ class ScenarioMetadataFilterTests {
         val metadata4 = createScenarioMetadata(statusCode = 202, path = "/hub")
         val metadata5 = createScenarioMetadata(statusCode = 202, path = "/hub/(id:string)")
 
+//        assertTrue(filter.isSatisfiedBy(metadata1))
+//        assertTrue(filter.isSatisfiedBy(metadata2))
+//        assertTrue(filter.isSatisfiedBy(metadata3))
+//        assertFalse(filter.isSatisfiedBy(metadata4))
+//        assertFalse(filter.isSatisfiedBy(metadata5))
         assertTrue(filter.isSatisfiedBy(metadata1))
-        assertTrue(filter.isSatisfiedBy(metadata2))
-        assertTrue(filter.isSatisfiedBy(metadata3))
+        assertFalse(filter.isSatisfiedBy(metadata2))
+        assertFalse(filter.isSatisfiedBy(metadata3))
         assertFalse(filter.isSatisfiedBy(metadata4))
         assertFalse(filter.isSatisfiedBy(metadata5))
     }

@@ -5,12 +5,12 @@ import com.ezylang.evalex.config.ExpressionConfiguration
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class CSVFunctionTest {
 
     @Test
     fun `test CSV function with basic expression`() {
-        // Old Expression : "METHOD=GET && STATUS=200,400"
         val evalExExpression = "(METHOD=\"GET\" && CSV(\"STATUS=200,400\"))"
         val configuration = ExpressionConfiguration.defaultConfiguration()
             .withAdditionalFunctions(
@@ -29,7 +29,6 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function with multiple METHODS`() {
-        // Old Expression : "METHOD=GET && STATUS=200,400"
         val evalExExpression = "CSV(\"METHOD=GET,POST\")"
         val configuration = ExpressionConfiguration.defaultConfiguration()
             .withAdditionalFunctions(
@@ -48,7 +47,6 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function with multiple METHODS and STATUS CODE`() {
-        // Old Expression : "METHOD=GET && STATUS=200,400"
         val evalExExpression = "(CSV(\"METHOD=GET,POST\") && CSV(\"STATUS=200,400\"))"
         val configuration = ExpressionConfiguration.defaultConfiguration()
             .withAdditionalFunctions(
@@ -73,7 +71,6 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function STATUS in double digit range`() {
-        // Old Expression : "METHOD=GET && STATUS=200,400"
         val evalExExpression = "(CSV(\"METHOD=GET,POST\") && CSV(\"STATUS=200,400,5xx\"))"
         val configuration = ExpressionConfiguration.defaultConfiguration()
             .withAdditionalFunctions(
@@ -102,7 +99,6 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function STATUS in single digit range`() {
-        // Old Expression : "METHOD=GET && STATUS=200,400"
         val evalExExpression = "CSV(\"STATUS=50x\")"
         val configuration = ExpressionConfiguration.defaultConfiguration()
             .withAdditionalFunctions(
@@ -132,7 +128,6 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function STATUS not in single digit range`() {
-        // Old Expression : "METHOD=GET && STATUS=200,400"
         val evalExExpression = "CSV(\"STATUS!=50x\")"
         val configuration = ExpressionConfiguration.defaultConfiguration()
             .withAdditionalFunctions(
@@ -162,7 +157,6 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function METHOD not in GET and POST`() {
-        // Old Expression : "METHOD=GET && STATUS=200,400"
         val evalExExpression = "CSV(\"METHOD!=GET,POST\")"
         val configuration = ExpressionConfiguration.defaultConfiguration()
             .withAdditionalFunctions(
@@ -192,7 +186,6 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function with METHODS and PATHS`() {
-        // Old Expression : "METHOD=GET && STATUS=200,400"
         val evalExExpression = "CSV(\"METHOD=GET,POST\") || CSV(\"PATH=/monitor,/monitor(id:string)\")"
         val configuration = ExpressionConfiguration.defaultConfiguration()
             .withAdditionalFunctions(
@@ -216,7 +209,6 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function with only 1 range`() {
-        // Old Expression : "METHOD=GET && STATUS=200,400"
         val evalExExpression = "CSV(\"STATUS=20x\")"
         val configuration = ExpressionConfiguration.defaultConfiguration()
             .withAdditionalFunctions(
@@ -240,7 +232,6 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function with TMF PATHS`() {
-        // Old Expression : "METHOD=GET && STATUS=200,400"
         val evalExExpression ="STATUS!=202 && CSV(\"PATH!=/hub,/hub/(id:string)\")"
         val configuration = ExpressionConfiguration.defaultConfiguration()
             .withAdditionalFunctions(
@@ -260,5 +251,59 @@ class CSVFunctionTest {
         assertFalse(resultFailure as Boolean)
         assertFalse(resultFailureWithPath as Boolean)
         assertTrue(resultCorrect as Boolean)
+    }
+
+    @Test
+    fun `test CSV function relative path`() {
+        val evalExExpression ="CSV(\"PATH=/products/*/v1\")"
+        val configuration = ExpressionConfiguration.defaultConfiguration()
+            .withAdditionalFunctions(
+                mapOf(Pair("CSV", CSVFunction())).entries.single()
+            )
+
+        val expressionCorrect = Expression(evalExExpression, configuration).with("PATH","/products/car/v1")
+        val resultCorrect = expressionCorrect.evaluate().value
+
+        assertTrue(resultCorrect as Boolean)
+    }
+    @Test
+    fun `test CSV function relative path fail`() {
+        val evalExExpression ="CSV(\"PATH!=/products/*/v1\")"
+        val configuration = ExpressionConfiguration.defaultConfiguration()
+            .withAdditionalFunctions(
+                mapOf(Pair("CSV", CSVFunction())).entries.single()
+            )
+
+        val expressionCorrect = Expression(evalExExpression, configuration).with("PATH","/products/car")
+        val resultCorrect = expressionCorrect.evaluate().value
+
+        val expressionFailure = Expression(evalExExpression, configuration).with("PATH","/products/car/v1")
+        val resultFailure = expressionFailure.evaluate().value
+
+        assertTrue(resultCorrect as Boolean)
+        assertFalse(resultFailure as Boolean)
+    }
+
+    @Test
+    fun `test CSV function with empty string`() {
+        val evalExExpression =""
+        val configuration = ExpressionConfiguration.defaultConfiguration()
+            .withAdditionalFunctions(
+                mapOf(Pair("CSV", CSVFunction())).entries.single()
+            )
+
+        val expressionFailure = Expression(evalExExpression, configuration).with("PATH","/products/car/v1")
+
+       assertThrows<Exception>(){
+           expressionFailure.evaluate().value
+       }
+    }
+
+    @Test
+    fun `test CSV function with QUERY`() {
+        // Old Expression :
+        val evalExExpression ="QUERY=\"fields\""
+        val expression = Expression(evalExExpression).with("QUERY","fields").evaluate().value
+        assertTrue(expression as Boolean)
     }
 }

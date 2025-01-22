@@ -14,19 +14,18 @@ data class ScenarioMetadataFilter(
             .with(ScenarioFilterTags.PATH.key, metadata.path)
             .with(ScenarioFilterTags.STATUS_CODE.key, metadata.statusCode)
             .with(ScenarioFilterTags.HEADER.key, metadata.header.joinToString(","))
-            .with(ScenarioFilterTags.QUERY.key, metadata.query.joinToString(","))
-            .with(ScenarioFilterTags.EXAMPLE_NAME.key, metadata.exampleName)
+            .with(ScenarioFilterTags.QUERY.name, metadata.query.joinToString(","))
+            .with(ScenarioFilterTags.EXAMPLE_NAME.name, metadata.exampleName)
 
         return try {
             expressionWithVariables.evaluate().booleanValue ?: false
         } catch (e: Exception) {
-            false
+          throw Exception(e)
         }
     }
 
     companion object {
         fun from(filterExpression: String): ScenarioMetadataFilter {
-            if (filterExpression.isEmpty()) return ScenarioMetadataFilter()
             val evalExExpression = EvalExSyntaxConverter().standardizeExpression(filterExpression)
             val configuration = ExpressionConfiguration.defaultConfiguration()
                 .withAdditionalFunctions(

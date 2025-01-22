@@ -11,26 +11,40 @@ class EvalExSyntaxConverter {
     }
 
     fun standardizeExpression(expression: String): String {
-        return StringUtils.splitByWholeSeparatorPreserveAllTokens(expression, " ")
-            .joinToString(" ") { token ->
-                when {
-                    token.contains(EQUALS) -> {
-                        val (key, value) = token.split(EQUALS)
-                        if (value.contains(',') || value.endsWith('x') || value.endsWith("xx")) "$CSV_FUNCTION(\"$key$EQUALS$value\")"
-                        else if(key.contains(ScenarioFilterTags.STATUS_CODE.key)) {
-                            "$key=$value"
-                        }
-                        else "$key=\"$value\""
+        val regex = Regex("""
+        [A-Za-z]+(?:=|!=)[^()\s&|]+(?:\([^()]*\))?|  
+        \(|
+        \)|
+        !(?=\()|
+        &&|
+        \|\|
+        """.trimIndent().replace(Regex("#.*\\n"), "").replace("\\s+".toRegex(), ""))
+
+        val tokens = regex.findAll(expression).map { it.value.trim() }.filter { it.isNotEmpty() }.toList()
+
+        return tokens.joinToString(" ") { token ->
+            when {
+                token.contains(EQUALS) && !token.contains(NOT_EQUALS) -> {
+                    val (key, value) = token.split(EQUALS).let { it[0] to it[1] }
+                    when {
+                        requiresCsvFunction(value) -> "$CSV_FUNCTION(\"$key$EQUALS$value\")"
+                        key.contains(ScenarioFilterTags.STATUS_CODE.key) -> {"$key=$value"}
+                        else -> "$key=\"$value\""
                     }
-                    token.contains(NOT_EQUALS) -> {
-                        val (key, value) = token.split(NOT_EQUALS)
-                        if (value.contains(",") || value.endsWith('x') || value.endsWith("xx")) "$CSV_FUNCTION(\"$key$NOT_EQUALS$value\")"
-                        else if(key.contains(ScenarioFilterTags.STATUS_CODE.key))
-                            "$key!=$value"
-                        else "$key!=\"$value\""
-                    }
-                    else -> token
                 }
+                token.contains(NOT_EQUALS) -> {
+                    val (key, value) = token.split(NOT_EQUALS).let { it[0] to it[1] }
+                    when {
+                        requiresCsvFunction(value) -> "$CSV_FUNCTION(\"$key$NOT_EQUALS$value\")"
+                        key.contains(ScenarioFilterTags.STATUS_CODE.key) -> {"$key!=$value"}
+                        else -> "$key!=\"$value\""
+                    }
+                }
+                else -> token
             }
+        }
+    }
+    private fun requiresCsvFunction(value: String): Boolean {
+        return value.contains(',') || value.endsWith('x') || value.endsWith("xx") || value.contains("*")
     }
 }

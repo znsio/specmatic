@@ -6,6 +6,7 @@ import com.ezylang.evalex.data.EvaluationValue
 import com.ezylang.evalex.functions.AbstractFunction
 import com.ezylang.evalex.functions.FunctionParameter
 import com.ezylang.evalex.parser.Token
+import java.util.regex.Pattern
 
 @FunctionParameter(name = "value")
 class CSVFunction : AbstractFunction() {
@@ -17,8 +18,10 @@ class CSVFunction : AbstractFunction() {
         val (label, operator, values) = parseCondition(inputString)
         val scenarioValue = expression.dataAccessor.getData(label).value
         val result = when (operator) {
-            "=" -> values.any { it == scenarioValue.toString() || (label == ScenarioFilterTags.STATUS_CODE.key && isInRange(it, scenarioValue.toString())) }
-            "!=" -> values.all { it != scenarioValue.toString() && (label != ScenarioFilterTags.STATUS_CODE.key || !isInRange(it, scenarioValue.toString())) }
+            "=" -> values.any { it == scenarioValue.toString() || (label == ScenarioFilterTags.STATUS_CODE.key && isInRange(it, scenarioValue.toString()))
+                    || (label == ScenarioFilterTags.PATH.key && it.contains("*") && Pattern.compile(it.replace("*", ".*")).matcher(scenarioValue.toString()).matches())}
+            "!=" -> values.all { it != scenarioValue.toString() && (label != ScenarioFilterTags.STATUS_CODE.key || !isInRange(it, scenarioValue.toString())) &&
+                    (label == ScenarioFilterTags.PATH.key && !it.contains("*") || !Pattern.compile(it.replace("*", ".*")).matcher(scenarioValue.toString()).matches())}
             else -> throw IllegalArgumentException("Unsupported operator: $operator")
         }
 

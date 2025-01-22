@@ -1,7 +1,6 @@
 package application
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.specmatic.core.config.SpecmaticConfigVersion
@@ -17,6 +16,9 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import java.io.File
 import java.util.concurrent.Callable
+import kotlin.reflect.KClass
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.isAccessible
 import kotlin.system.exitProcess
 
 private const val SUCCESS_EXIT_CODE = 0
@@ -69,12 +71,8 @@ class ConfigCommand : Callable<Int> {
 
         private fun upgrade(configFile: File) {
             val objectMapper = getObjectMapper()
-            var upgradedConfigYaml =
+            val upgradedConfigYaml =
                 objectMapper.writeValueAsString(convertToLatestVersionedConfig(configFile.toSpecmaticConfig()))
-
-            val rootNode = objectMapper.readTree(upgradedConfigYaml)
-
-            upgradedConfigYaml = objectMapper.writeValueAsString(removeEmptyFields(rootNode, objectMapper))
 
             if(outputFile == null) {
                 logger.log(upgradedConfigYaml)
@@ -87,39 +85,37 @@ class ConfigCommand : Callable<Int> {
         }
 
         private fun getObjectMapper(): ObjectMapper {
-            val objectMapper = ObjectMapper(YAMLFactory()).setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
+            val objectMapper = ObjectMapper(YAMLFactory()).setDefaultPropertyInclusion(
+                JsonInclude.Value.construct(
+                    JsonInclude.Include.NON_DEFAULT,
+                    JsonInclude.Include.CUSTOM
+                ).withValueFilter(EmptyCollectionFilter::class.java)
+            )
             return objectMapper
         }
 
-        private fun removeEmptyFields(node: JsonNode, objectMapper: ObjectMapper): JsonNode {
-            if (node.isObject) {
-                val fieldsIterator = node.fields()
-                val fieldsMap = mutableMapOf<String, JsonNode>()
-
-                fieldsIterator.forEachRemaining { (fieldName, fieldValue) ->
-                    val cleanedValue = removeEmptyFields(fieldValue, objectMapper)
-                    if (!cleanedValue.isMissingNode && !(cleanedValue.isObject && cleanedValue.isEmpty)) {
-                        fieldsMap[fieldName] = cleanedValue
-                    }
+        private class EmptyCollectionFilter {
+            override fun equals(other: Any?): Boolean {
+                return when (other) {
+                    null -> true
+                    is Map<*, *> -> other.all { it.key is String && equals(it.value) }
+                    is Collection<*> -> other.all { equals(it) }
+                    is Array<*> -> other.all { equals(it) }
+                    is String -> other.isBlank()
+                    else -> isDataClassEmpty(other)
                 }
-
-                val newObjectNode = objectMapper.createObjectNode()
-                fieldsMap.forEach { (k, v) -> newObjectNode.set<JsonNode>(k, v) }
-                return newObjectNode
             }
 
-            if (node.isArray) {
-                val cleanedArray = mutableListOf<JsonNode>()
-                node.forEach { item ->
-                    val cleanedItem = removeEmptyFields(item, objectMapper)
-                    if (!cleanedItem.isMissingNode && !(cleanedItem.isObject && cleanedItem.isEmpty)) {
-                        cleanedArray.add(cleanedItem)
-                    }
-                }
-                return objectMapper.createArrayNode().addAll(cleanedArray)
-            }
+            private fun isDataClassEmpty(obj: Any): Boolean {
+                val kClass: KClass<*> = obj::class
+                if (!kClass.isData) return false
 
-            return node
+                return kClass.memberProperties.all { prop ->
+                    prop.isAccessible = true
+                    val value = prop.call(obj)
+                    equals(value)
+                }
+            }
         }
 
         private fun exitIfAlreadyUpToDate(existingVersion: SpecmaticConfigVersion?) {

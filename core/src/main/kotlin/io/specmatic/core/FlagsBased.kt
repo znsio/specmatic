@@ -51,7 +51,7 @@ fun strategiesFromFlags(specmaticConfig: SpecmaticConfig): FlagsBased {
         unexpectedKeyCheck = if (specmaticConfig.isExtensibleSchemaEnabled()) IgnoreUnexpectedKeys else null,
         positivePrefix = positivePrefix,
         negativePrefix = negativePrefix,
-        allPatternsAreMandatory = specmaticConfig.allPatternsMandatory
+        allPatternsAreMandatory = specmaticConfig.getAllPatternsMandatory()
     )
 }
 

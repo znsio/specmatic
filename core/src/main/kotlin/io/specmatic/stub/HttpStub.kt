@@ -958,7 +958,7 @@ fun fakeHttpResponse(
                     && it.scenario?.let { it.status == 400 || it.status == 422 } == true
             }.map { it.scenario!! }.firstOrNull()
 
-            if(firstScenarioWith400Response != null && specmaticConfig.stub.generative == true) {
+            if (firstScenarioWith400Response != null && specmaticConfig.getStubGenerative()) {
                 val httpResponse = (firstScenarioWith400Response as Scenario).generateHttpResponse(emptyMap())
                 val updatedResponse: HttpResponse = dumpIntoFirstAvailableStringField(httpResponse, combinedFailureResult.report())
 

@@ -215,19 +215,19 @@ class CSVFunctionTest {
                 mapOf(Pair("CSV", CSVFunction())).entries.single()
             )
 
-        val expressionMonitor = Expression(evalExExpression, configuration).with("STATUS",200)
-        val resultMonitor = expressionMonitor.evaluate().value
+        val status200 = Expression(evalExExpression, configuration).with("STATUS",200)
+        val result200 = status200.evaluate().value
 
-        val expressionMonitorWithId = Expression(evalExExpression, configuration).with("STATUS",500)
-        val resultMonitorWithId = expressionMonitorWithId.evaluate().value
+        val status500 = Expression(evalExExpression, configuration).with("STATUS",500)
+        val result500 = status500.evaluate().value
 
-        val pathCabin = Expression(evalExExpression, configuration).with("STATUS",201)
-        val resultCabin = pathCabin.evaluate().value
+        val status201 = Expression(evalExExpression, configuration).with("STATUS",201)
+        val result201 = status201.evaluate().value
 
 
-        assertTrue(resultMonitor as Boolean)
-        assertFalse(resultMonitorWithId as Boolean)
-        assertTrue(resultCabin as Boolean)
+        assertTrue(result200 as Boolean)
+        assertFalse(result500 as Boolean)
+        assertTrue(result201 as Boolean)
     }
 
     @Test
@@ -264,7 +264,11 @@ class CSVFunctionTest {
         val expressionCorrect = Expression(evalExExpression, configuration).with("PATH","/products/car/v1")
         val resultCorrect = expressionCorrect.evaluate().value
 
+        val expressionFailure = Expression(evalExExpression, configuration).with("PATH","/products/v2/car/v2")
+        val resultFailure = expressionFailure.evaluate().value
+
         assertTrue(resultCorrect as Boolean)
+        assertFalse(resultFailure as Boolean)
     }
     @Test
     fun `test CSV function relative path fail`() {
@@ -301,7 +305,6 @@ class CSVFunctionTest {
 
     @Test
     fun `test CSV function with QUERY`() {
-        // Old Expression :
         val evalExExpression ="QUERY=\"fields\""
         val expression = Expression(evalExExpression).with("QUERY","fields").evaluate().value
         assertTrue(expression as Boolean)

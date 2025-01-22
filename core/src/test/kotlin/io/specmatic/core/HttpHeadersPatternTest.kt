@@ -612,6 +612,74 @@ internal class HttpHeadersPatternTest {
             assertThat(fixedValue).isNotEmpty
             assertThat(fixedValue).isEqualTo(validValue)
         }
+
+        @Test
+        fun `should allow content-type through even if not in pattern`() {
+            val httpHeaders = HttpHeadersPattern(emptyMap())
+            val validValue = mapOf("Content-Type" to "application/json")
+            val fixedValue = httpHeaders.fixValue(validValue, Resolver())
+            println(fixedValue)
+
+            assertThat(fixedValue).isEqualTo(validValue)
+        }
+
+        @Test
+        fun `should fix content-type if key exists and value is known even when not in pattern`() {
+            val httpHeaders = HttpHeadersPattern(emptyMap(), contentType = "application/json")
+            val invalidValue = mapOf("Content-Type" to "invalid")
+            val fixedValue = httpHeaders.fixValue(invalidValue, Resolver())
+            println(fixedValue)
+
+            assertThat(fixedValue).isEqualTo(mapOf("Content-Type" to "application/json"))
+        }
+
+        @Test
+        fun `should not modify content-type if key exists but value is unknown`() {
+            val httpHeaders = HttpHeadersPattern(emptyMap())
+            val invalidValue = mapOf("Content-Type" to "invalid")
+            val fixedValue = httpHeaders.fixValue(invalidValue, Resolver())
+            println(fixedValue)
+
+            assertThat(fixedValue).isEqualTo(mapOf("Content-Type" to "invalid"))
+        }
+
+        @Test
+        fun `should be able to fix content-type if its in the pattern`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("Content-Type" to ExactValuePattern(StringValue("application/json"))))
+            val invalidValue = mapOf("Content-Type" to "invalid")
+            val fixedValue = httpHeaders.fixValue(invalidValue, Resolver())
+            println(fixedValue)
+
+            assertThat(fixedValue).isEqualTo(mapOf("Content-Type" to "application/json"))
+        }
+
+        @Test
+        fun `should add content-type if key not exists`() {
+            val httpHeaders = HttpHeadersPattern(emptyMap(), contentType = "application/json")
+            val invalidValue = emptyMap<String, String>()
+            val fixedValue = httpHeaders.fixValue(invalidValue, Resolver())
+            println(fixedValue)
+
+            assertThat(fixedValue).isEqualTo(mapOf("Content-Type" to "application/json"))
+        }
+
+        @Test
+        fun `should fix values that do not match the declared header schema`() {
+            val headerName = "key"
+
+            val httpHeaders = HttpHeadersPattern(mapOf(
+                headerName to BooleanPattern()
+            ))
+
+            val headersWithInvalidValue = mapOf(headerName to "abc123")
+            val fixedHeaders = httpHeaders.fixValue(headersWithInvalidValue, Resolver())
+            println(fixedHeaders)
+
+            assertThat(fixedHeaders).containsKey(headerName)
+
+            val headerValue = fixedHeaders.getValue(headerName)
+            assertThat(headerValue).matches("true|false")
+        }
     }
 }
 

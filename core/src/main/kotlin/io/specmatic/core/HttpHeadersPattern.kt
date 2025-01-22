@@ -384,6 +384,35 @@ data class HttpHeadersPattern(
             headersInPartial + missingHeaders
         }
     }
+
+    fun fixValue(headers: Map<String, String>, resolver: Resolver): Map<String, String> {
+        if (headers.isEmpty() && pattern.isEmpty()) return emptyMap()
+
+        val contentTypeHeaderValue = headers["Content-Type"]
+        val headersWithFixedContentType = if (contentType != null && contentTypeHeaderValue != null) {
+            val parsedContentType = simplifiedContentType(contentType.lowercase())
+            val parsedContentTypeHeaderValue  = simplifiedContentType(contentTypeHeaderValue.lowercase())
+
+            if(parsedContentType != parsedContentTypeHeaderValue)
+                headers.plus(CONTENT_TYPE to contentType)
+            else
+                headers
+
+        } else headers
+        val headersWithRelevantKeys = when {
+            ancestorHeaders != null -> withoutIgnorableHeaders(headersWithFixedContentType, ancestorHeaders)
+            else -> withoutContentTypeGeneratedBySpecmatic(headersWithFixedContentType, pattern)
+        }
+
+        val headersValue = headersWithRelevantKeys.mapValues { StringValue(it.value) }
+        val fixedHeaders = fix(
+            jsonPatternMap = pattern, jsonValueMap = headersValue,
+            resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).withoutAllPatternsAsMandatory(),
+            jsonPattern = JSONObjectPattern(pattern, typeAlias = "($HEADERS_BREADCRUMB)")
+        )
+
+        return fixedHeaders.mapValues { it.value.toStringLiteral() }
+    }
 }
 
 private fun parseOrString(pattern: Pattern, sampleValue: String, resolver: Resolver) =

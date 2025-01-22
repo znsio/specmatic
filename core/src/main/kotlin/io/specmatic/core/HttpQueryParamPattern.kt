@@ -1,6 +1,8 @@
 package io.specmatic.core
 
 import io.specmatic.core.pattern.*
+import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
 import io.specmatic.core.utilities.URIUtils
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.StringValue
@@ -188,6 +190,26 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
     }
     fun matches(row: Row, resolver: Resolver): Result {
         return matches(queryPatterns, row, resolver, "query param")
+    }
+
+    fun fixValue(queryParams: QueryParameters?, resolver: Resolver): QueryParameters {
+        val adjustedQueryParams = when {
+            queryParams == null || queryParams.paramPairs.isEmpty() -> QueryParameters(emptyMap())
+            additionalProperties != null -> queryParams.withoutMatching(queryPatterns.keys, additionalProperties, resolver)
+            else -> queryParams
+        }
+
+        val updatedResolver = if (Flags.getBooleanValue(EXTENSIBLE_QUERY_PARAMS)) {
+            resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys)
+        } else resolver.withUnexpectedKeyCheck(ValidateUnexpectedKeys)
+
+        val fixedQueryParams = fix(
+            jsonPatternMap = queryPatterns, jsonValueMap = adjustedQueryParams.asValueMap(),
+            resolver = updatedResolver.withoutAllPatternsAsMandatory(),
+            jsonPattern = JSONObjectPattern(queryPatterns, typeAlias = "($QUERY_PARAMS_BREADCRUMB)")
+        )
+
+        return QueryParameters(fixedQueryParams.mapValues { it.value.toStringLiteral() })
     }
 }
 

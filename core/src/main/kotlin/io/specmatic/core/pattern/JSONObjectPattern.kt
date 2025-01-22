@@ -28,6 +28,15 @@ data class JSONObjectPattern(
     val maxProperties: Int? = null
 ) : Pattern, PossibleJsonObjectPatternContainer {
 
+    override fun fixValue(value: Value, resolver: Resolver): Value {
+        return JSONObjectValue(
+            fix(
+                jsonPatternMap = pattern, jsonValueMap = (value as? JSONObjectValue)?.jsonObject.orEmpty(),
+                resolver = resolver, jsonPattern = this
+            )
+        )
+    }
+
     override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
         if (value !is JSONObjectValue) return value
 
@@ -476,6 +485,49 @@ fun generate(jsonPatternMap: Map<String, Pattern>, resolver: Resolver, jsonPatte
         }
         .filterValues { it.isPresent }
         .mapValues { (_, opt) -> opt.get() }
+}
+
+fun fix(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, resolver: Resolver, jsonPattern: JSONObjectPattern): Map<String, Value> {
+    val defaultKeyToPatternValuePair = adjustedPattern(jsonPatternMap, resolver)
+        .map { (key, pattern) -> key to Pair(pattern, NullValue) }
+        .toMap()
+
+    val keyToPatternValuePair = jsonValueMap.mapNotNull { (key, value) ->
+        val pattern = jsonPatternMap[key] ?: jsonPatternMap["$key?"]
+        if (pattern == null && resolver.findKeyErrorCheck.unexpectedKeyCheck is ValidateUnexpectedKeys) return@mapNotNull null
+        key to Pair(pattern, value)
+    }.toMap()
+
+    val finalMap = defaultKeyToPatternValuePair.plus(keyToPatternValuePair)
+    return finalMap.mapValues { (key, patternToValue) ->
+        val (pattern, value) = patternToValue
+        if (pattern == null) return@mapValues Optional.of(value)
+
+        attempt(breadCrumb = key) {
+            val returnNullOnCycle = jsonPatternMap.containsKey("$key?")
+            val fixedValue = Optional.ofNullable(
+                resolver.withCyclePrevention(jsonPattern, key, returnNullOnCycle) {
+                    it.fix(jsonPattern.typeAlias, key, pattern, value)
+                }
+            )
+
+            if (fixedValue.isPresent || resolver.hasSeenLookupPath(jsonPattern, key)) return@attempt fixedValue
+
+            val resolverWithCycleMarker = resolver.cyclePast(jsonPattern, key)
+            Optional.ofNullable(
+                resolverWithCycleMarker.withCyclePrevention(jsonPattern, key, returnNullOnCycle) {
+                    it.fix(jsonPattern.typeAlias, key, pattern, value)
+                }
+            )
+        }
+    }
+    .filterValues { it.isPresent }
+    .mapValues { (_, opt) -> opt.get() }
+}
+
+private fun adjustedPattern(jsonPatternMap: Map<String, Pattern>, resolver: Resolver): Map<String, Pattern> {
+    if (!resolver.allPatternsAreMandatory) return jsonPatternMap.filterKeys { !isOptional(it) }
+    return jsonPatternMap.mapKeys { withoutOptionality(it.key) }
 }
 
 private fun selectPropertiesWithinMaxAndMin(

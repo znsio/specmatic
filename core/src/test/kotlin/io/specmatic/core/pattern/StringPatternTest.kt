@@ -2,9 +2,9 @@ package io.specmatic.core.pattern
 
 import io.specmatic.GENERATION
 import io.specmatic.core.Resolver
+import io.specmatic.core.Result
 import io.specmatic.core.UseDefaultExample
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
-import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.shouldNotMatch
@@ -16,8 +16,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import java.lang.Exception
-import io.specmatic.core.Result as Result
 
 internal class StringPatternTest {
     @Test
@@ -91,9 +89,10 @@ internal class StringPatternTest {
         maxLength?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
     }
 
-
     @ParameterizedTest
     @CsvSource(
+        "'^\\w+(-\\w+)*$',null,10,1",
+        "'^[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$',1,10,1",
         "'^[a-z]*$', null, null, 5",
         "'^[a-z0-9]{6,10}',6,10,6",
         "null, 1, 10, 1"
@@ -101,19 +100,24 @@ internal class StringPatternTest {
     fun `generate string value as per regex in conjunction with minLength and maxLength`(
         regex: String?, min: String?, max: String?, expectedLength: Int
     ) {
-        val minLength = min?.toIntOrNull()
-        val maxLength = max?.toIntOrNull()
-        val patternRegex = if (regex == "null") null else regex
+        repeat(10) {
+            val minLength = min?.toIntOrNull()
+            val maxLength = max?.toIntOrNull()
+            val patternRegex = if (regex == "null") null else regex
 
-        val result = StringPattern(minLength = minLength, maxLength = maxLength, regex = patternRegex).generate(Resolver()) as StringValue
-        val generatedString = result.string
-        val generatedLength = generatedString.length
+            val result = StringPattern(
+                minLength = minLength,
+                maxLength = maxLength,
+                regex = patternRegex
+            ).generate(Resolver()) as StringValue
+            val generatedString = result.string
+            val generatedLength = generatedString.length
 
-        assertThat(generatedLength).isGreaterThanOrEqualTo(expectedLength)
-        maxLength?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
-        patternRegex?.let { assertThat(generatedString).matches(patternRegex) }
+            assertThat(generatedLength).isGreaterThanOrEqualTo(expectedLength)
+            maxLength?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
+            patternRegex?.let { assertThat(generatedString).matches(patternRegex) }
+        }
     }
-
 
     @Test
     fun `string should encompass enum of string`() {

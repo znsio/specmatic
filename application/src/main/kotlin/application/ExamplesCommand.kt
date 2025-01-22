@@ -235,6 +235,22 @@ For example:
         )
         var filterNotName: String = ""
 
+        @Option(
+            names = ["--examples-to-validate"],
+            description = ["Whether to validate inline, external, or both examples. Options: INLINE, EXTERNAL, BOTH"],
+            converter = [ExamplesToValidateConverter::class],
+            defaultValue = "BOTH"
+        )
+        var examplesToValidate: ExamplesToValidate = ExamplesToValidate.BOTH
+
+        enum class ExamplesToValidate { INLINE, EXTERNAL, BOTH }
+        class ExamplesToValidateConverter : ITypeConverter<ExamplesToValidate> {
+            override fun convert(value: String): ExamplesToValidate {
+                return ExamplesToValidate.entries.firstOrNull { it.name.equals(value, ignoreCase = true) }
+                    ?: throw IllegalArgumentException("Invalid value: $value. Expected one of: ${ExamplesToValidate.entries.joinToString(", ")}")
+            }
+        }
+
         override fun call(): Int {
             configureLogger(this.verbose)
 
@@ -361,12 +377,10 @@ For example:
         }
 
         private fun getValidateInlineAndValidateExternalFlags(): Pair<Boolean, Boolean> {
-            return when {
-                !Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") && !Flags.getBooleanValue(
-                    "IGNORE_INLINE_EXAMPLES"
-                ) -> true to true
-
-                else -> Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") to Flags.getBooleanValue("IGNORE_INLINE_EXAMPLES")
+            return when(examplesToValidate) {
+                ExamplesToValidate.BOTH -> true to true
+                ExamplesToValidate.INLINE -> true to false
+                ExamplesToValidate.EXTERNAL -> false to true
             }
         }
 

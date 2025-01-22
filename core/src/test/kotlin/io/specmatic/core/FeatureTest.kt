@@ -5,6 +5,7 @@ import io.mockk.mockk
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
+import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.NumberPattern
 import io.specmatic.core.pattern.StringPattern
 import io.specmatic.core.pattern.parsedJSONObject
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.fail
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -2424,6 +2426,47 @@ paths:
     }
 
     @Test
+    fun `should throw an error if an example was ignored when loading it for test in strict mode`() {
+        val feature = OpenApiSpecification.fromFile(
+            "src/test/resources/openapi/has_irrelevant_externalized_test.yaml",
+        ).toFeature().copy(strictMode = true)
+
+        val error = assertThrows<ContractException> {
+            feature.loadExternalisedExamples()
+        }
+
+        assertThat(error.message)
+            .contains("POST /order_action_figure -> 200 does not match any operation in the specification")
+    }
+
+    @Test
+    fun `should throw an error if a partial example was ignored when loading it for test in strict mode`() {
+        val feature = OpenApiSpecification.fromFile(
+            "src/test/resources/openapi/has_irrelevant_externalized_test.yaml",
+        ).toFeature().copy(strictMode = true)
+
+        val error = assertThrows<ContractException> {
+            feature.loadExternalisedExamples()
+        }
+
+        assertThat(error.message)
+            .contains("POST /order_partial -> 200 does not match any operation in the specification")
+    }
+
+    @Test
+    fun `should throw an error if the example to be loaded is invalid, in strict mode`() {
+        val feature = OpenApiSpecification.fromFile(
+            "src/test/resources/openapi/hello_with_invalid_externalised_example.yaml",
+        ).toFeature().copy(strictMode = true)
+
+        val error = assertThrows<ContractException> {
+            feature.loadExternalisedExamples()
+        }
+
+        assertThat(error.message).isEqualTo("Error loading example from file 'invalid.json' as it is in invalid format. Please fix the example format to load this example.")
+    }
+
+    @Test
     fun `validate an invalid query param in the path of an externalised example`() {
         val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_invalid_external_query_in_url.yaml").toFeature().loadExternalisedExamples()
 
@@ -2475,7 +2518,7 @@ paths:
     }
 
     @Test
-    fun `shoudl be able to create a contract test based on an example`(@TempDir tempDir: File) {
+    fun `should be able to create a contract test based on an example`(@TempDir tempDir: File) {
         val feature = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.0

@@ -12,7 +12,7 @@ repositories {
 }
 
 def ktor_version = "2.3.12"
-def junit_version = "5.11.3"
+def junit_version = "5.11.4"
 
 dependencies {
     // TODO Fix to eliminate vulnerabilities, remove when the enclosing library supports it
@@ -23,8 +23,8 @@ dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-maven-serialization'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
     implementation 'org.assertj:assertj-core:3.26.3'
-    implementation 'org.junit.jupiter:junit-jupiter-api:5.11.3'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.0'
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.11.4'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
     implementation 'org.thymeleaf:thymeleaf:3.1.2.RELEASE'
 
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
@@ -32,7 +32,7 @@ dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter-params:${junit_version}"
     implementation 'org.junit.platform:junit-platform-launcher:1.11.3'
-    implementation 'org.junit.platform:junit-platform-reporting:1.11.3'
+    implementation 'org.junit.platform:junit-platform-reporting:1.11.4'
     implementation 'org.fusesource.jansi:jansi:2.4.1'
 }
 

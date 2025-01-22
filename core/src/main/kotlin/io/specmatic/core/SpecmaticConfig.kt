@@ -1,14 +1,10 @@
 package io.specmatic.core
 
-import com.fasterxml.jackson.annotation.JsonAlias
-import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.annotation.JsonSubTypes
-import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.annotation.JsonTypeName
+import com.fasterxml.jackson.annotation.*
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.specmatic.core.Configuration.Companion.configFilePath
+import io.specmatic.core.config.SpecmaticConfigVersion
+import io.specmatic.core.config.toSpecmaticConfig
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
@@ -43,7 +39,6 @@ val CONTRACT_EXTENSIONS = listOf(CONTRACT_EXTENSION, WSDL) + OPENAPI_FILE_EXTENS
 const val DATA_DIR_SUFFIX = "_data"
 const val TEST_DIR_SUFFIX = "_tests"
 const val EXAMPLES_DIR_SUFFIX = "_examples"
-const val DICTIONARY_FILE_SUFFIX = "_dictionary.json"
 const val SPECMATIC_GITHUB_ISSUES = "https://github.com/znsio/specmatic/issues"
 const val DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
 
@@ -109,7 +104,6 @@ data class AttributeSelectionPattern(
 )
 
 data class SpecmaticConfig(
-    @field:JsonAlias("contract_repositories")
     val sources: List<Source> = emptyList(),
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
@@ -120,18 +114,15 @@ data class SpecmaticConfig(
     val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
-    @field:JsonAlias("virtual_service")
     val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
     val workflow: WorkflowConfiguration? = null,
     val ignoreInlineExamples: Boolean = getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES),
     val additionalExampleParamsFilePath: String? = getStringValue(Flags.ADDITIONAL_EXAMPLE_PARAMS_FILE),
-    @field:JsonAlias("attribute_selection_pattern")
     val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
-    @field:JsonAlias("all_patterns_mandatory")
     val allPatternsMandatory: Boolean = getBooleanValue(Flags.ALL_PATTERNS_MANDATORY),
-    @field:JsonAlias("default_pattern_values")
-    val defaultPatternValues: Map<String, Any> = emptyMap()
+    val defaultPatternValues: Map<String, Any> = emptyMap(),
+    val version: SpecmaticConfigVersion? = null
 ) {
     @JsonIgnore
     fun attributeSelectionQueryParamKey(): String {
@@ -346,7 +337,7 @@ fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
         throw ContractException("Could not find the Specmatic configuration at path ${configFile.canonicalPath}")
     }
     try {
-        return ObjectMapper(YAMLFactory()).readValue(configFile.readText(), SpecmaticConfig::class.java)
+        return configFile.toSpecmaticConfig()
     } catch(e: LinkageError) {
         logger.log(e, "A dependency version conflict has been detected. If you are using Spring in a maven project, a common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.")
         throw e

@@ -39,23 +39,27 @@ data class StringPattern (
         }
     }
 
-    private fun regexMinLengthValidation(it: String) {
-        val automaton = RegExp(it).toAutomaton()
-
+    private fun regexMinLengthValidation(regex: String) {
         minLength?.let {
+            val automaton = RegExp(regex).toAutomaton()
             val shortestPossibleLengthOfRegex = automaton.getShortestExample(true).length
             if (shortestPossibleLengthOfRegex < it) {
                 throw IllegalArgumentException("Invalid String Constraints - minLength cannot be greater than length of shortest possible string that matches regex")
-            } else if (maxLength != null && shortestPossibleLengthOfRegex > maxLength) {
+            }
+            if (maxLength != null && shortestPossibleLengthOfRegex > maxLength) {
                 throw IllegalArgumentException("Invalid String Constraints - maxLength cannot be less than length of shortest possible string that matches regex")
             }
         }
     }
 
-    private fun regexMaxLengthValidation(regexWithoutCaretAndDollar: String) {
+    private fun regexMaxLengthValidation(regex: String) {
         maxLength?.let {
-            val generatedString = generateFromRegex(regexWithoutCaretAndDollar, it+1)
-
+            val automaton = RegExp(regex).toAutomaton()
+            val generatedString = if (automaton.isFinite) {
+                generateFromRegex(regex, it + 1)
+            } else {
+                generateFromRegex(regex, minLength ?: 0, it)
+            }
             if (generatedString.length > it) {
                 throw IllegalArgumentException("Invalid String Constraints - regex cannot generate / match string greater than maxLength")
             }
@@ -137,10 +141,15 @@ data class StringPattern (
 
 
     private fun generateFromRegex(regexWithoutCaretAndDollar: String, minLength: Int, maxLength: Int? = null): String =
-        if(maxLength != null) {
-            Generex(regexWithoutCaretAndDollar).random(minLength, maxLength)
-        } else {
-            Generex(regexWithoutCaretAndDollar).random(minLength)
+        try {
+            if(maxLength != null) {
+                Generex(regexWithoutCaretAndDollar).random(minLength, maxLength)
+            } else {
+                Generex(regexWithoutCaretAndDollar).random(minLength)
+            }
+        } catch (e: StackOverflowError) {
+            //TODO: This is a temporary fix for the stack overflow error, need to find a better solution
+            generateFromRegex(regexWithoutCaretAndDollar, minLength, maxLength)
         }
 
 

@@ -171,8 +171,10 @@ class LoadTestsFromExternalisedFiles {
                     .toFeature()
                     .loadExternalisedExamplesAndListUnloadableExamples()
 
-            assertThat(unusedExamplesFilePaths).hasSize(1)
-            assertThat(unusedExamplesFilePaths.first()).endsWith("irrelevant_test.json")
+            assertThat(unusedExamplesFilePaths).hasSize(2)
+            assertThat(unusedExamplesFilePaths.any {
+                it.endsWith("irrelevant_test.json")
+            }).isTrue()
         } finally {
             logger = defaultLogger
         }

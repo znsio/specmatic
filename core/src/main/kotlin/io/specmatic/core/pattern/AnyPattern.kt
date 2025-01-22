@@ -473,7 +473,7 @@ data class AnyPattern(
                 )
                 is JSONObjectPattern -> {
                     val discriminatorKey = discriminator?.property ?: return@firstNotNullOfOrNull null
-                    val keyPattern = it.pattern[discriminatorKey] ?: return@firstNotNullOfOrNull null
+                    val keyPattern = it.patternForKey(discriminatorKey) ?: return@firstNotNullOfOrNull null
                     it.takeIf {
                         keyPattern is ExactValuePattern && keyPattern.discriminator && keyPattern.pattern.toStringLiteral() == discriminatorValue
                     }

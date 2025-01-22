@@ -213,4 +213,52 @@ class CSVFunctionTest {
         assertFalse(resultCabin as Boolean)
         assertTrue(resultMonitorWithId as Boolean)
     }
+
+    @Test
+    fun `test CSV function with only 1 range`() {
+        // Old Expression : "METHOD=GET && STATUS=200,400"
+        val evalExExpression = "CSV(\"STATUS=20x\")"
+        val configuration = ExpressionConfiguration.defaultConfiguration()
+            .withAdditionalFunctions(
+                mapOf(Pair("CSV", CSVFunction())).entries.single()
+            )
+
+        val expressionMonitor = Expression(evalExExpression, configuration).with("STATUS",200)
+        val resultMonitor = expressionMonitor.evaluate().value
+
+        val expressionMonitorWithId = Expression(evalExExpression, configuration).with("STATUS",500)
+        val resultMonitorWithId = expressionMonitorWithId.evaluate().value
+
+        val pathCabin = Expression(evalExExpression, configuration).with("STATUS",201)
+        val resultCabin = pathCabin.evaluate().value
+
+
+        assertTrue(resultMonitor as Boolean)
+        assertFalse(resultMonitorWithId as Boolean)
+        assertTrue(resultCabin as Boolean)
+    }
+
+    @Test
+    fun `test CSV function with TMF PATHS`() {
+        // Old Expression : "METHOD=GET && STATUS=200,400"
+        val evalExExpression ="STATUS!=202 && CSV(\"PATH!=/hub,/hub/(id:string)\")"
+        val configuration = ExpressionConfiguration.defaultConfiguration()
+            .withAdditionalFunctions(
+                mapOf(Pair("CSV", CSVFunction())).entries.single()
+            )
+
+        val expressionFailure = Expression(evalExExpression, configuration).with("STATUS",202)
+        val resultFailure = expressionFailure.evaluate().value
+
+        val expressionFailureWithPath = Expression(evalExExpression, configuration).with("STATUS",202).with("PATH","/hub")
+        val resultFailureWithPath = expressionFailureWithPath.evaluate().value
+
+        val expressionCorrect = Expression(evalExExpression, configuration).with("STATUS",201).with("PATH","/hello")
+        val resultCorrect = expressionCorrect.evaluate().value
+
+
+        assertFalse(resultFailure as Boolean)
+        assertFalse(resultFailureWithPath as Boolean)
+        assertTrue(resultCorrect as Boolean)
+    }
 }

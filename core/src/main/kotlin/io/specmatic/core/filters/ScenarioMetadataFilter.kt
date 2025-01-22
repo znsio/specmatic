@@ -1,43 +1,39 @@
 package io.specmatic.core.filters
 
+import com.ezylang.evalex.Expression
+import com.ezylang.evalex.config.ExpressionConfiguration
+
 data class ScenarioMetadataFilter(
-    val filterGroups: List<FilterGroup> = emptyList()
+    val expression: Expression? = null
 ) {
     fun isSatisfiedBy(metadata: ScenarioMetadata): Boolean {
-        if (filterGroups.isEmpty()) return true
 
-        val groupResults = mutableListOf<Boolean>()
-        var tempAndResult: Boolean? = null
+        val expression = expression ?: return false
+        val expressionWithVariables = expression
+            .with(ScenarioFilterTags.METHOD.key, metadata.method)
+            .with(ScenarioFilterTags.PATH.key, metadata.path)
+            .with(ScenarioFilterTags.STATUS_CODE.key, metadata.statusCode)
+            .with(ScenarioFilterTags.HEADER.key, metadata.header.joinToString(","))
+            .with(ScenarioFilterTags.QUERY.key, metadata.query.joinToString(","))
+            .with(ScenarioFilterTags.EXAMPLE_NAME.key, metadata.exampleName)
 
-        for ((index, group) in filterGroups.withIndex()) {
-            val currentResult = group.isSatisfiedBy(metadata)
-
-            if (index == 0) {
-                tempAndResult = currentResult
-            } else if (group.isAndOperation) {
-                tempAndResult = tempAndResult?.and(currentResult) ?: currentResult
-            } else {
-                if (tempAndResult != null) {
-                    groupResults.add(tempAndResult)
-                    tempAndResult = null
-                }
-
-                groupResults.add(currentResult)
-            }
+        return try {
+            expressionWithVariables.evaluate().booleanValue ?: false
+        } catch (e: Exception) {
+            false
         }
-
-        if (tempAndResult != null) {
-            groupResults.add(tempAndResult)
-        }
-
-        return groupResults.any { it }
     }
 
     companion object {
         fun from(filterExpression: String): ScenarioMetadataFilter {
             if (filterExpression.isEmpty()) return ScenarioMetadataFilter()
-            val parsedFilters = FilterSyntax(filterExpression).parse()
-            return ScenarioMetadataFilter(filterGroups = parsedFilters)
+            val evalExExpression = EvalExSyntaxConverter().standardizeExpression(filterExpression)
+            val configuration = ExpressionConfiguration.defaultConfiguration()
+                .withAdditionalFunctions(
+                    mapOf(Pair("CSV", CSVFunction())).entries.single()
+                )
+            val finalExpression = Expression(evalExExpression, configuration)
+            return ScenarioMetadataFilter(expression = finalExpression)
         }
 
         fun <T> filterUsing(

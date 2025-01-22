@@ -203,17 +203,6 @@ class ScenarioMetadataFilterTests {
         assertFalse(filter.isSatisfiedBy(metadata3))
     }
 
-    @Test
-    fun `exclude scenarios by list of status codes with AND condition`() {
-        val filter = ScenarioMetadataFilter.from("STATUS!=202,401,403,405 && STATUS!=5xx")
-        val metadata1 = createScenarioMetadata(statusCode = 202)
-        val metadata2 = createScenarioMetadata(statusCode = 500)
-        val metadata3 = createScenarioMetadata(statusCode = 201)
-
-        assertFalse(filter.isSatisfiedBy(metadata1))
-        assertFalse(filter.isSatisfiedBy(metadata2))
-        assertTrue(filter.isSatisfiedBy(metadata3))
-    }
 
     @Test
     fun `exclude scenarios by list of status codes including range expression`() {

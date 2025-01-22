@@ -1,7 +1,6 @@
 package io.specmatic.core.filters
 
 import org.apache.commons.lang3.StringUtils
-import java.util.*
 
 class EvalExSyntaxConverter {
 
@@ -12,15 +11,6 @@ class EvalExSyntaxConverter {
     }
 
     fun standardizeExpression(expression: String): String {
-        val tokenizer = StringTokenizer(expression, " ()=!", true)
-        val tokens = mutableListOf<String>()
-
-        while (tokenizer.hasMoreTokens()) {
-            val token = tokenizer.nextToken().trim()
-            if (token.isNotEmpty()) {
-                tokens.add(token)
-            }
-        }
         return StringUtils.splitByWholeSeparatorPreserveAllTokens(expression, " ")
             .joinToString(" ") { token ->
                 when {

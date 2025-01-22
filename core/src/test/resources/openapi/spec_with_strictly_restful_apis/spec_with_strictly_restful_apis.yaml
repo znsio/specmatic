@@ -120,6 +120,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Product'
+        '422':
+          description: Product update failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntityError'
         '404':
           description: Product not found
 
@@ -145,6 +151,19 @@ paths:
           description: Product deleted successfully
         '404':
           description: Product not found
+  /orders:
+    get:
+      summary: Get all orders
+      description: Retrieve a list of all orders.
+      responses:
+        '200':
+          description: A list of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
 
 components:
   schemas:
@@ -206,6 +225,40 @@ components:
           type: boolean
           example: false
 
+    Order:
+      allOf:
+        - $ref: '#/components/schemas/SmallOrder'
+        - $ref: '#/components/schemas/BigOrder'
+      discriminator:
+        propertyName: type
+        mapping:
+          small: '#/components/schemas/SmallOrder'
+          large: '#/components/schemas/LargeOrder'
+
+    SmallOrder:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        units:
+          type: integer
+          minimum: 1
+          maximum: 10
+
+    LargeOrder:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        units:
+          type: integer
+          minimum: 10
+          maximum: 100
+
     NotFoundError:
       type: object
       properties:
@@ -215,6 +268,14 @@ components:
           type: string
 
     BadRequestError:
+      type: object
+      properties:
+        error:
+          type: string
+        reason:
+          type: string
+
+    UnprocessableEntityError:
       type: object
       properties:
         error:

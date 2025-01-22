@@ -4,7 +4,9 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.value.*
+import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.loadContractStubsFromImplicitPaths
 import org.assertj.core.api.Assertions.assertThat
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
+import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 
@@ -143,7 +146,7 @@ class StatefulHttpStubTest {
 
     @Test
     @Order(4)
-    fun `should update an existing product with patch except for the non-patchable 'description' key`() {
+    fun `should update an existing product with patch and ignore non-patchable keys if value remains the same`() {
         val response = httpStub.client.execute(
             HttpRequest(
                 method = "PATCH",
@@ -151,9 +154,9 @@ class StatefulHttpStubTest {
                 body = parsedJSONObject(
                     """
                     {
-                      "name": "Product B",
-                      "price": 100,
-                      "description": "random description"
+                      "name": "Product A",
+                      "description": "A detailed description of Product A.",
+                      "price": 100
                     }
                     """.trimIndent()
                 )
@@ -164,14 +167,40 @@ class StatefulHttpStubTest {
         val responseBody = response.body as JSONObjectValue
 
         assertThat(responseBody.getStringValue("id")).isEqualTo(resourceId)
-        assertThat(responseBody.getStringValue("name")).isEqualTo("Product B")
-        assertThat(responseBody.getStringValue("price")).isEqualTo("100")
+        assertThat(responseBody.getStringValue("name")).isEqualTo("Product A")
         assertThat(responseBody.getStringValue("description")).isEqualTo("A detailed description of Product A.")
+        assertThat(responseBody.getStringValue("price")).isEqualTo("100")
         assertThat(responseBody.getStringValue("inStock")).isEqualTo("true")
     }
 
     @Test
     @Order(5)
+    fun `should get a 422 response when trying to patch a non-patchable key with a new value`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "PATCH",
+                path = "/products/$resourceId",
+                body = parsedJSONObject(
+                    """
+                    {
+                      "name": "Product B",
+                      "description": "A detailed description of Product B."
+                    }
+                    """.trimIndent()
+                )
+            )
+        )
+
+        println(response.toLogString())
+        assertThat(response.status).isEqualTo(422)
+        assertThat(response.body.toStringLiteral())
+            .contains("error")
+            .contains(">> REQUEST.BODY.description")
+            .contains("""Key \"description\" is not patchable""")
+    }
+
+    @Test
+    @Order(6)
     fun `should get the updated product`() {
         val response = httpStub.client.execute(
             HttpRequest(
@@ -184,14 +213,14 @@ class StatefulHttpStubTest {
         val responseBody = response.body as JSONObjectValue
 
         assertThat(responseBody.getStringValue("id")).isEqualTo(resourceId)
-        assertThat(responseBody.getStringValue("name")).isEqualTo("Product B")
+        assertThat(responseBody.getStringValue("name")).isEqualTo("Product A")
         assertThat(responseBody.getStringValue("price")).isEqualTo("100")
         assertThat(responseBody.getStringValue("description")).isEqualTo("A detailed description of Product A.")
         assertThat(responseBody.getStringValue("inStock")).isEqualTo("true")
     }
 
     @Test
-    @Order(6)
+    @Order(7)
     fun `should delete a product`() {
         val response = httpStub.client.execute(
             HttpRequest(
@@ -213,7 +242,7 @@ class StatefulHttpStubTest {
     }
 
     @Test
-    @Order(7)
+    @Order(8)
     fun `should post a product even though the request contains unknown keys`() {
         val response = httpStub.client.execute(
             HttpRequest(
@@ -244,7 +273,7 @@ class StatefulHttpStubTest {
     }
 
     @Test
-    @Order(8)
+    @Order(9)
     fun `should get a 400 response in a structured manner for an invalid post request`() {
         val response = httpStub.client.execute(
             HttpRequest(
@@ -270,7 +299,7 @@ class StatefulHttpStubTest {
         assertThat(error).contains("Contract expected boolean but request contained \"true\"")
     }
 
-    @Order(9)
+    @Order(10)
     @Test
     fun `should get a 400 response as a string for an invalid get request where 400 schema is not defined for the same in the spec`() {
         val response = httpStub.client.execute(
@@ -288,7 +317,7 @@ class StatefulHttpStubTest {
     }
 
     @Test
-    @Order(10)
+    @Order(11)
     fun `should get a 404 response in a structured manner for a get request where the entry with requested id is not present in the cache`() {
         val response = httpStub.client.execute(
             HttpRequest(
@@ -304,7 +333,7 @@ class StatefulHttpStubTest {
     }
 
     @Test
-    @Order(11)
+    @Order(12)
     fun `should get a 404 response as a string for a delete request with missing id where 404 schema is not defined for the same in the spec`() {
         val response = httpStub.client.execute(
             HttpRequest(
@@ -471,6 +500,226 @@ class StatefulHttpStubWithAttributeSelectionTest {
 
     private fun JSONObjectValue.getStringValue(key: String): String? {
         return this.jsonObject[key]?.toStringLiteral()
+    }
+}
+
+@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
+class StatefulHttpStubAttributeFilteringTest {
+    companion object {
+        private lateinit var httpStub: ContractStub
+        private val API_DIR = File("src/test/resources/openapi/spec_with_strictly_restful_apis")
+        private val API_SPEC = API_DIR.resolve("spec_with_strictly_restful_apis.yaml")
+        private val POST_EXAMPLE = API_DIR.resolve("spec_with_strictly_restful_apis_examples/post_iphone_product_with_id_300.json")
+        private val ORDERS_GET_EXAMPLE = API_DIR.resolve("spec_with_strictly_restful_apis_examples/get_all_orders.json")
+
+        private fun getExtendedPostExample(): ScenarioStub {
+            val example = ScenarioStub.readFromFile(POST_EXAMPLE)
+            val updatedResponse = example.response.updateBody(
+                JSONObjectValue((example.response.body as JSONObjectValue).jsonObject.plus(mapOf("extraKey" to StringValue("extraValue"))))
+            )
+            return example.copy(response = updatedResponse)
+        }
+
+        @JvmStatic
+        @BeforeAll
+        fun setup() {
+            System.setProperty(EXTENSIBLE_SCHEMA, "true")
+            val extendedPostExample = getExtendedPostExample()
+            val ordersGetExample = ScenarioStub.readFromFile(ORDERS_GET_EXAMPLE)
+
+            val feature = OpenApiSpecification.fromFile(API_SPEC.canonicalPath).toFeature()
+            val scenariosWithAttrSelection = feature.scenarios.map {
+                it.copy(attributeSelectionPattern = AttributeSelectionPattern(queryParamKey = "columns"))
+            }
+            httpStub = StatefulHttpStub(
+                features = listOf(feature.copy(scenarios = scenariosWithAttrSelection)),
+                scenarioStubs = listOf(extendedPostExample, ordersGetExample)
+            )
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun tearDown() {
+            httpStub.close()
+            System.clearProperty(EXTENSIBLE_SCHEMA)
+        }
+    }
+
+    @Test
+    fun `should get the list of products`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val responseBody = response.body as JSONArrayValue
+        assertThat(responseBody.list.size).isEqualTo(1)
+    }
+
+    @Test
+    fun `should be able to filter based on attributes`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products",
+                queryParams = QueryParameters(mapOf("name" to "iPhone 16")),
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val responseBody = response.body as JSONArrayValue
+        assertThat(responseBody.list.size).isEqualTo(1)
+        assertThat((responseBody.list.first() as JSONObjectValue).findFirstChildByPath("name")!!.toStringLiteral()).isEqualTo("iPhone 16")
+    }
+
+    @Test
+    fun `should be able to filter based on extra attributes not in the spec`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products",
+                queryParams = QueryParameters(mapOf("extraKey" to "extraValue")),
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val responseBody = response.body as JSONArrayValue
+        assertThat(responseBody.list.size).isEqualTo(1)
+        assertThat((responseBody.list.first() as JSONObjectValue).findFirstChildByPath("extraKey")!!.toStringLiteral()).isEqualTo("extraValue")
+    }
+
+    @Test
+    fun `should return an empty array if no products match the filter`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products",
+                queryParams = QueryParameters(mapOf("name" to "Xiaomi")),
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val responseBody = response.body as JSONArrayValue
+        assertThat(responseBody.list.size).isEqualTo(0)
+    }
+
+    @Test
+    fun `attribute selection query param should not be filtered on`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products",
+                queryParams = QueryParameters(mapOf("columns" to "name")),
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val responseBody = response.body as JSONArrayValue
+        assertThat(responseBody.list.size).isEqualTo(1)
+        assertThat((responseBody.list.first() as JSONObjectValue).findFirstChildByPath("name")!!.toStringLiteral()).isEqualTo("iPhone 16")
+    }
+
+    @Test
+    fun `filtering with invalid value should result in a 400 response, string in-place of number`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products",
+                queryParams = QueryParameters(mapOf("price" to "abcd")),
+            )
+        )
+
+        val responseBody = response.body as StringValue
+        println(response.toLogString())
+
+        assertThat(response.status).isEqualTo(400)
+        assertThat(responseBody.toStringLiteral())
+            .contains(">> REQUEST.QUERY-PARAMS.price")
+            .contains("Expected number, actual was \"abcd\"")
+    }
+
+    @Test
+    fun `filtering with number in-place of string should not result in a 400 response, the number should be casted`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products",
+                queryParams = QueryParameters(mapOf("name" to "100")),
+            )
+        )
+
+        val responseBody = response.body as JSONArrayValue
+        println(response.toLogString())
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(responseBody.list.size).isEqualTo(0)
+    }
+
+    @Test
+    fun `should get the list of orders`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/orders"
+            )
+        )
+
+        val responseBody = response.body as JSONArrayValue
+        println(response.toLogString())
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(responseBody.list.size).isEqualTo(2)
+    }
+
+    @Test
+    fun `should not result in an error when value matches at-least one pattern key in an any pattern schema`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/orders",
+                queryParams = QueryParameters(mapOf("units" to "20")),
+            )
+        )
+
+        val responseBody = response.body as JSONArrayValue
+        println(response.toLogString())
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(responseBody.list.size).isEqualTo(1)
+        assertThat((responseBody.list.first() as JSONObjectValue).getStringValue("units")).isEqualTo("20")
+    }
+
+    @Test
+    fun `should result in an error when the value doesn't mach any of the pattern keys in an any pattern schema`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/orders",
+                queryParams = QueryParameters(mapOf("units" to "99999999")),
+            )
+        )
+
+        val responseBody = response.body as StringValue
+        println(response.toLogString())
+
+        assertThat(response.status).isEqualTo(400)
+        assertThat(responseBody.toStringLiteral())
+            .contains(">> REQUEST.QUERY-PARAMS").contains(">> units")
+            .contains("Expected number <= 10, actual was 99999999 (number)")
+            .contains("Expected number <= 100, actual was 99999999 (number)")
     }
 }
 

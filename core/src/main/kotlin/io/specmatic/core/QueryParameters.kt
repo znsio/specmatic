@@ -1,8 +1,7 @@
 package io.specmatic.core
 
-import io.specmatic.core.pattern.Pattern
-import io.specmatic.core.pattern.parsedJSONArray
-import io.specmatic.core.value.Value
+import io.specmatic.core.pattern.*
+import io.specmatic.core.value.*
 
 data class QueryParameters(val paramPairs: List<Pair<String, String>> = emptyList())  {
 
@@ -44,6 +43,16 @@ data class QueryParameters(val paramPairs: List<Pair<String, String>> = emptyLis
                 parameterName to parameterValues.map { it.second }
             } else {
                 parameterName to parameterValues.single().second
+            }
+        }.toMap()
+    }
+
+    fun asValueMap(): Map<String, Value> {
+        return paramPairs.groupBy { it.first }.map { (parameterName, parameterValues) ->
+            if (parameterValues.size > 1) {
+                parameterName to JSONArrayValue(parameterValues.map { parsedScalarValue(it.second) })
+            } else {
+                parameterName to parsedScalarValue(parameterValues.first().second)
             }
         }.toMap()
     }

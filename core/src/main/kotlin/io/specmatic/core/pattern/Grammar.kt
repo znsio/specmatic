@@ -5,6 +5,7 @@ import io.specmatic.core.MismatchMessages
 import io.specmatic.core.utilities.jsonStringToValueArray
 import io.specmatic.core.utilities.jsonStringToValueMap
 import io.specmatic.core.value.*
+import javax.validation.constraints.Null
 
 const val XML_ATTR_OPTIONAL_SUFFIX = ".opt"
 const val DEFAULT_OPTIONAL_SUFFIX = "?"
@@ -360,4 +361,16 @@ fun parsedValue(content: String?): Value {
             StringValue(it)
         }
     } ?: EmptyString
+}
+
+fun parsedScalarValue(content: String?): Value {
+    val trimmed = content?.trim() ?: return NullValue
+    return when {
+        trimmed.toIntOrNull() != null -> NumberValue(trimmed.toInt())
+        trimmed.toLongOrNull() != null -> NumberValue(trimmed.toLong())
+        trimmed.toFloatOrNull() != null -> NumberValue(trimmed.toFloat())
+        trimmed.toDoubleOrNull() != null -> NumberValue(trimmed.toDouble())
+        trimmed.lowercase() in setOf("true", "false") -> BooleanValue(trimmed.toBoolean())
+        else -> StringValue(trimmed)
+    }
 }

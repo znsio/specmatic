@@ -86,7 +86,7 @@ class ConfigCommand : Callable<Int> {
         private fun getObjectMapper(): ObjectMapper {
             val objectMapper = ObjectMapper(YAMLFactory()).setDefaultPropertyInclusion(
                 JsonInclude.Value.construct(
-                    JsonInclude.Include.NON_DEFAULT,
+                    JsonInclude.Include.CUSTOM,
                     JsonInclude.Include.CUSTOM
                 ).withValueFilter(EmptyCollectionFilter::class.java)
             )

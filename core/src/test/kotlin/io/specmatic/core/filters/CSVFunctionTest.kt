@@ -13,7 +13,9 @@ class CSVFunctionTest {
     fun `should escape special char in regex pattern match`() {
         val value = "/monitor(id:string)"
         val scenarioValue = "/monitor(id:string)"
-        assertTrue(Pattern.compile(value.replace("*", ".*")).matcher(scenarioValue).matches())
+        assertTrue(Pattern.compile(value.replace("(", "\\(")
+            .replace(")", "\\)")
+            .replace("*", ".*")).matcher(scenarioValue).matches())
     }
 
     @Test

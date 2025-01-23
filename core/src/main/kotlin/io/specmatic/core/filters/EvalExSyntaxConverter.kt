@@ -7,7 +7,7 @@ class EvalExSyntaxConverter {
     }
 
     fun standardizeExpression(expression: String): String {
-        val regexPattern = "\\b\\w+(=|!=)('[^']*([,x*])[^']*'|[^|&(]*([,x*])[^|&()]*\\b)".trimIndent().toRegex()
+        val regexPattern = "\\b\\w+(=|!=)('[^']*([,x*])[^']*')".trimIndent().toRegex()
 
         val result = regexPattern.replace(expression) { matchResult ->
             "$CSV_FUNCTION('${matchResult.value.filter { it != '\'' }}')"

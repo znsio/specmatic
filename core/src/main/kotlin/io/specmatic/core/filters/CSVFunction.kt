@@ -14,9 +14,9 @@ class CSVFunction : AbstractFunction() {
         expression: Expression, functionToken: Token, vararg parameterValues: EvaluationValue
     ): EvaluationValue {
         val inputString = parameterValues[0].stringValue
-        val (label, operator, values) = parseCondition(inputString)
-        val scenarioValue = expression.dataAccessor.getData(label).value.toString()
-        val result = evaluateCondition(label, operator, values, scenarioValue)
+        val (filterKey, operator, filterValue) = parseCondition(inputString)
+        val scenarioValue = expression.dataAccessor.getData(filterKey).value.toString()
+        val result = evaluateCondition(filterKey, operator, filterValue, scenarioValue)
 
         return EvaluationValue.of(result, ExpressionConfiguration.defaultConfiguration())
     }
@@ -41,7 +41,8 @@ class CSVFunction : AbstractFunction() {
     }
 
     private fun matchesPath(value: String, scenarioValue: String): Boolean {
-        return value.contains("*") && Pattern.compile(value.replace("*", ".*")).matcher(scenarioValue).matches()
+        return value.contains("*") && Pattern.compile(value.replace("(", "\\(")
+            .replace(")", "\\)").replace("*", ".*")).matcher(scenarioValue).matches()
     }
 
     private fun parseCondition(condition: String): Triple<String, String, List<String>> {

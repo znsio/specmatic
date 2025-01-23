@@ -7,6 +7,7 @@ const alerts = document.getElementById("alert-container");
 const bulkValidateBtn = document.querySelector("button#bulk-validate");
 const bulkGenerateBtn = document.querySelector("button#bulk-generate");
 const bulkTestBtn = document.querySelector("button#bulk-test");
+const bulkFixBtn = document.querySelector("button#bulk-fix");
 const chevronDownIcon = document.querySelector("svg.chevron");
 
 const Severity = {
@@ -66,8 +67,11 @@ backBtn.addEventListener("click", () => {
                 bulkValidateBtn.setAttribute("data-panel", "table");
                 bulkGenerateBtn.setAttribute("data-panel", "table");
                 bulkTestBtn.setAttribute("data-panel", "table");
+                bulkFixBtn.setAttribute("data-panel", "table");
                 window.scrollTo(0, scrollYPosition);
                 console.log("Changes discarded!");
+                bulkTestBtn.classList.remove("bulk-disabled");
+                bulkFixBtn.classList.remove("bulk-disabled");
                 isSaved = true;
             },
 
@@ -81,6 +85,9 @@ backBtn.addEventListener("click", () => {
     bulkValidateBtn.setAttribute("data-panel", "table");
     bulkGenerateBtn.setAttribute("data-panel", "table");
     bulkTestBtn.setAttribute("data-panel", "table");
+    bulkFixBtn.setAttribute("data-panel", "table");
+    bulkTestBtn.classList.remove("bulk-disabled");
+    bulkFixBtn.classList.remove("bulk-disabled");
     window.scrollTo(0, scrollYPosition);
 });
 
@@ -112,12 +119,13 @@ table.addEventListener("click", async (event) => {
 
             case "INPUT": {
                 if (target.matches("th > label > input")) {
-                    const {validatedCount, generatedCount, discAndMainCount, totalCount} = getRowsCount();
+                    const {validatedCount, generatedCount, discAndMainCount, needsFixCount, totalCount} = getRowsCount();
                     toggleAllSelects(target.checked);
 
                     if (table.hasAttribute("data-generated")) {
                         bulkValidateBtn.setAttribute("data-selected", target.checked ? generatedCount : 0);
                         bulkTestBtn.setAttribute("data-selected", target.checked ? validatedCount : 0);
+                        bulkFixBtn.setAttribute("data-selected", target.checked ? needsFixCount : 0);
                     }
 
                     return bulkGenerateBtn.setAttribute("data-selected", target.checked ? totalCount - generatedCount + discAndMainCount : 0);
@@ -141,9 +149,11 @@ function handleSingleInput(nearestTableRow, checked) {
     const valPreSelectCount = getPreSelectCount(bulkValidateBtn, "data-selected");
     const genPreSelectCount = getPreSelectCount(bulkGenerateBtn, "data-selected");
     const testPreSelectCount = getPreSelectCount(bulkTestBtn, "data-selected");
+    const fixPreSelectCount = getPreSelectCount(bulkFixBtn, "data-selected");
 
     const hasBeenGenerated = nearestTableRow.getAttribute("data-generate") === "success";
     const hasBeenValidated = dataValidationSuccessValues.includes(nearestTableRow.getAttribute("data-valid"));
+    const isInvalid = hasBeenGenerated && nearestTableRow.getAttribute("data-valid") !== "success";
     const isDiscriminatorRow = nearestTableRow.getAttribute("data-disc") === "true";
     const isMainRow = nearestTableRow.getAttribute("data-main") === "true";
 
@@ -156,6 +166,9 @@ function handleSingleInput(nearestTableRow, checked) {
         }
         if (hasBeenValidated) {
             bulkTestBtn.setAttribute("data-selected", testPreSelectCount + countAdjustment);
+        }
+        if (isInvalid) {
+            bulkFixBtn.setAttribute("data-selected", fixPreSelectCount + countAdjustment);
         }
     } else if (isMainRow) {
         bulkGenerateBtn.setAttribute("data-selected", genPreSelectCount + countAdjustment);
@@ -218,6 +231,35 @@ bulkGenerateBtn.addEventListener("click", async () => {
     return cleanUpSelections();
 });
 
+bulkFixBtn.addEventListener("click", async () => {
+    blockGenValidate = true;
+    bulkFixBtn.setAttribute("data-fix", "processing");
+
+    switch (bulkFixBtn.getAttribute("data-panel")) {
+        case "table": {
+            await fixAllSelected();
+            break;
+        }
+
+        case "details": {
+            try { JSON.parse(savedEditorResponse) } catch (e) {
+                createAlert("Failed to Fix Example (Invalid Syntax)", e.message, true);
+                break;
+            }
+
+            const rowValues = extractRowValues(selectedTableRow);
+            await fixRowExamples(selectedTableRow, rowValues);
+            const originalYScroll = scrollYPosition;
+            await goToDetails(selectedTableRow, rowValues);
+            scrollYPosition = originalYScroll;
+            break;
+        }
+    }
+
+    bulkFixBtn.removeAttribute("data-fix");
+    return cleanUpSelections();
+})
+
 async function validateAllSelected() {
     bulkValidateBtn.setAttribute("data-valid", "processing");
 
@@ -234,6 +276,28 @@ async function validateAllSelected() {
 
     bulkValidateBtn.removeAttribute("data-generate");
     createAlert("Validations Complete", `${errorsCount} out of ${rowsWithExamples.length} are invalid`, errorsCount !== 0);
+    return cleanUpSelections();
+}
+
+async function fixAllSelected() {
+    bulkFixBtn.setAttribute("data-fix", "processing");
+
+    let errorsCount = 0;
+    const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
+    const invalidRowsWithExamples = selectedRows.filter(row =>
+        row.getAttribute("data-generate") === "success" && row.getAttribute("data-valid") !== "success"
+    );
+
+    for (const row of invalidRowsWithExamples) {
+        const rowValues = extractRowValues(row);
+        const success = await fixRowExamples(row, rowValues, true);
+        if (!success) {
+            errorsCount++;
+        }
+    }
+
+    bulkFixBtn.removeAttribute("data-fix");
+    createAlert("Fixes Complete", `${errorsCount} out of ${invalidRowsWithExamples.length} have been fixed`, errorsCount !== 0);
     return cleanUpSelections();
 }
 
@@ -299,10 +363,11 @@ function getRowsCount() {
         acc.validatedCount += isRowValidated ? 1 : 0;
         acc.generatedCount += isRowGenerated ? 1 : 0;
         acc.discAndMainCount += isRowGenerated && isRowDiscAndMain ? 1 : 0;
+        acc.needsFixCount += (isRowGenerated && row.getAttribute("data-valid") !== "success") ? 1 : 0;
         acc.totalCount += 1;
         return acc;
 
-    }, {validatedCount: 0, generatedCount: 0, discAndMainCount: 0, totalCount: 0});
+    }, {validatedCount: 0, generatedCount: 0, discAndMainCount: 0, totalCount: 0, needsFixCount: 0});
 }
 
 function toggleAllSelects(isSelected = true) {
@@ -414,6 +479,25 @@ async function testRowExample(tableRow, bulkMode = false) {
     return true;
 }
 
+async function fixRowExamples(tableRow, rowValues, bulkMode = false) {
+    const originalValidAttr = tableRow.getAttribute("data-valid");
+    tableRow.setAttribute("data-valid", "processing");
+    const exampleData = getExampleData(tableRow);
+
+    const { exampleFile, errorMessage } = await fixExample(rowValues, exampleData);
+    tableRow.setAttribute("data-valid", errorMessage ? originalValidAttr : "success");
+    storeExampleTestData(tableRow, null);
+
+    if (errorMessage) {
+        if (!bulkMode) createAlert("Failed to Fix Example", `Example name: ${parseFileName(exampleFile)}`, true);
+        return false;
+    }
+
+    if (!bulkMode) createAlert("Fixed Example", `Example name: ${parseFileName(exampleFile)}`, false);
+    storeExampleValidationData(tableRow, {errorMessage: null, errorList: []});
+    return true;
+}
+
 // ACTION HELPERS
 function getExamplesCount(examples) {
     return examples.reduce((counts, example) => {
@@ -497,12 +581,14 @@ async function goToDetails(tableRow, rowValues) {
     }
 
     bulkTestBtn.classList.toggle("bulk-disabled", tableRow.getAttribute("data-valid") !== "success")
+    bulkFixBtn.classList.toggle("bulk-disabled", tableRow.getAttribute("data-valid") === "success")
     pathSummaryUl.replaceChildren(createPathSummary(rowValues));
     examplesOl.replaceChildren(docFragment);
     mainElement.setAttribute("data-panel", "details");
     bulkValidateBtn.setAttribute("data-panel", "details");
     bulkGenerateBtn.setAttribute("data-panel", "details");
     bulkTestBtn.setAttribute("data-panel", "details");
+    bulkFixBtn.setAttribute("data-panel", "details");
     scrollYPosition = window.scrollY;
     window.scrollTo(0, 0);
 }
@@ -1002,6 +1088,27 @@ async function testExample(exampleData) {
     }
 }
 
+async function fixExample(rowValues, exampleFile) {
+    try {
+        const resp = await fetch(`${getHostPort()}/_specmatic/examples/fix`, {
+            method: "POST",
+            body: JSON.stringify({...rowValues, exampleFile}),
+            headers: {
+                "Content-Type": "application/json",
+            }
+        });
+        const data = await resp.json();
+
+        if (!resp.ok) {
+            throw new Error(data.errorMessage);
+        }
+
+        return { exampleFile: data.exampleFile, errorMessage: data.errorMessage };
+    } catch (error) {
+        return { errorMessage: error.message, exampleFile: null };
+    }
+}
+
 function parseFileName(absPath) {
     const fileName = absPath.split("\\").pop().split("/").pop();
     const lastIndex = fileName.lastIndexOf(".");
@@ -1060,6 +1167,7 @@ function cleanUpSelections() {
     bulkGenerateBtn.setAttribute("data-selected", "0");
     bulkValidateBtn.setAttribute("data-selected", "0");
     bulkTestBtn.setAttribute("data-selected", "0");
+    bulkFixBtn.setAttribute("data-selected", "0");
     blockGenValidate = false;
 }
 

@@ -40,6 +40,7 @@ import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.HasFailure
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.uniqueNameForApiOperation
@@ -190,6 +191,28 @@ class ExamplesInteractiveServer(
                             ValidateExampleResponse(request.exampleFile, e.message ?: "An unexpected error occurred")
                         }
                         call.respond(HttpStatusCode.OK, validationResultResponse)
+                    } catch (e: Exception) {
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("errorMessage" to exceptionCauseMessage(e))
+                        )
+                    }
+                }
+
+                post("/_specmatic/examples/fix") {
+                    val request = call.receive<FixExampleRequest>()
+                    try {
+                        val contractFile = getContractFile()
+                        val fixExamplesResponse = try {
+                            fixExample(contractFile, request)
+                        } catch (e: FileNotFoundException) {
+                            FixExampleResponse(request.exampleFile, e.message ?: "File not found")
+                        } catch (e: ContractException) {
+                            FixExampleResponse(request.exampleFile, exceptionCauseMessage(e))
+                        } catch (e: Exception) {
+                            FixExampleResponse(request.exampleFile, e.message ?: "An unexpected error occurred")
+                        }
+                        call.respond(HttpStatusCode.OK, fixExamplesResponse)
                     } catch (e: Exception) {
                         call.respond(
                             HttpStatusCode.InternalServerError,
@@ -468,10 +491,7 @@ class ExamplesInteractiveServer(
             allowOnlyMandatoryKeysInJSONObject: Boolean
         ): List<ExamplePathInfo> {
             val feature = parseContractFileToFeature(contractFile)
-            val scenario: Scenario? = feature.scenarios.firstOrNull {
-                it.method == method && it.status == responseStatusCode && it.path == path
-                        && (contentType == null || it.httpRequestPattern.headersPattern.contentType == contentType)
-            }
+            val scenario = feature.scenarioAssociatedTo(method, path, responseStatusCode, contentType)
             if(scenario == null) return emptyList()
 
             val examplesDir = getExamplesDirPath(contractFile)
@@ -482,6 +502,72 @@ class ExamplesInteractiveServer(
                 allExistingExamples = if(bulkMode) examples else emptyList(),
                 allowOnlyMandatoryKeysInJSONObject
             )
+        }
+
+        fun fixExample(contractFile: File, request: FixExampleRequest): FixExampleResponse {
+            try {
+                val feature = parseContractFileToFeature(contractFile)
+                fixExample(feature, request.exampleFile)
+                return FixExampleResponse(exampleFile = request.exampleFile)
+            } catch(e: Throwable) {
+                return FixExampleResponse(exampleFile = request.exampleFile, errorMessage = exceptionCauseMessage(e))
+            }
+        }
+
+        fun fixExample(feature: Feature, exampleFile: File): FixExampleResult {
+            val exampleReturnValue = ExampleFromFile.fromFile(exampleFile)
+
+            if(exampleReturnValue is HasFailure<ExampleFromFile>) {
+                if(validateSchemaExample(feature, exampleFile) is Result.Success) {
+                    return FixExampleResult(status = FixExampleStatus.SKIPPED, exampleFileName = exampleFile.name)
+                }
+                fixSchemaExampleAndWriteTo(exampleFile, feature)
+                return FixExampleResult(status = FixExampleStatus.SUCCEDED, exampleFileName = exampleFile.name)
+            }
+
+            val example = exampleReturnValue.value
+            val matchingHttpPathPattern = feature.matchingHttpPathPatternFor(
+                example.requestPath.orEmpty()
+            ) ?: throw Exception("No scenario found for request path in '${exampleFile.name}'.")
+
+            val scenario = feature.scenarioAssociatedTo(
+                method = example.requestMethod.orEmpty(),
+                path = matchingHttpPathPattern.path,
+                responseStatusCode = example.responseStatus ?: 0,
+                contentType = example.requestContentType
+            ) ?: throw Exception("No scenario found for example '${exampleFile.name}'.")
+
+            if(validateExample(feature, exampleFile) is Result.Success) {
+                return FixExampleResult(status = FixExampleStatus.SKIPPED, exampleFileName = exampleFile.name)
+            }
+
+            fixExampleAndWriteTo(exampleFile, scenario, feature)
+            return FixExampleResult(status = FixExampleStatus.SUCCEDED, exampleFileName = exampleFile.name)
+        }
+
+        private fun fixExampleAndWriteTo(exampleFile: File, scenario: Scenario, feature: Feature) {
+            val example = ScenarioStub.readFromFile(exampleFile)
+            val (fixedRequest, fixedResponse) = scenario.fixRequestResponse(
+                httpRequest = example.request,
+                httpResponse = example.response,
+                flagsBased = feature.flagsBased
+            )
+            val fixedExampleJson = example.copy(
+                request = fixedRequest,
+                response = fixedResponse
+            ).toJSON().toStringLiteral()
+
+            exampleFile.writeText(fixedExampleJson)
+        }
+
+        private fun fixSchemaExampleAndWriteTo(exampleFile: File, feature: Feature) {
+            val schemaExample = SchemaExample.fromFile(exampleFile).value
+            val fixedExample = feature.fixSchemaFlagBased(
+                schemaExample.discriminatorBasedOn,
+                schemaExample.schemaBasedOn,
+                schemaExample.value
+            )
+            schemaExample.file.writeText(fixedExample.toStringLiteral())
         }
 
         fun generateForSchemaBased(contractFile: File, path: String, method: String): List<ExamplePathInfo> {

@@ -421,6 +421,21 @@ data class Feature(
        }
     }
 
+    fun fixSchemaFlagBased(discriminatorPatternName: String?, patternName: String, value: Value): Value {
+        val updatedResolver = flagsBased.update(scenarios.last().resolver)
+        val pattern = getSchemaPattern(discriminatorPatternName, patternName, updatedResolver)
+
+        if (pattern is AnyPattern && !discriminatorPatternName.isNullOrEmpty()) {
+            return pattern.fixValue(
+                value = value, resolver = updatedResolver, discriminatorValue = patternName,
+                onValidDiscValue = { pattern.generateValue(updatedResolver, patternName) },
+                onInvalidDiscValue = { f -> throw ContractException(f.toFailureReport())}
+            ) ?: throw ContractException("Couldn't fix pattern with discriminator value ${patternName.quote()}")
+        }
+
+        return pattern.fixValue(value, updatedResolver)
+    }
+
     private fun getSchemaPattern(discriminatorPatternName: String?, patternName: String, resolver: Resolver): Pattern {
         if (!discriminatorPatternName.isNullOrEmpty()) {
             return when (val discriminatorPattern = resolver.getPattern(withPatternDelimiters(discriminatorPatternName))) {
@@ -493,6 +508,13 @@ data class Feature(
         } finally {
             serverState = emptyMap()
         }
+    }
+
+    fun matchingHttpPathPatternFor(path: String): HttpPathPattern? {
+        return scenarios.firstOrNull {
+            if(it.httpRequestPattern.httpPathPattern == null) return@firstOrNull false
+            it.httpRequestPattern.matchesPath(path, it.resolver) is Result.Success
+        }?.httpRequestPattern?.httpPathPattern
     }
 
     private fun stubMatchResult(
@@ -752,6 +774,18 @@ data class Feature(
                 inlineExampleName !in externalExampleNames
             }
         )
+    }
+
+    fun scenarioAssociatedTo(
+        method: String,
+        path: String,
+        responseStatusCode: Int,
+        contentType: String? = null,
+    ): Scenario? {
+        return scenarios.firstOrNull {
+            it.method == method && it.status == responseStatusCode && it.path == path
+                    && (contentType == null || it.requestContentType == null || it.requestContentType == contentType)
+        }
     }
 
     private fun getScenarioWithDescription(scenarioResult: ReturnValue<Scenario>): ReturnValue<Scenario> {

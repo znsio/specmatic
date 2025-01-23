@@ -6,10 +6,7 @@ import io.specmatic.core.Result.Failure
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
-import io.specmatic.core.value.EmptyString
-import io.specmatic.core.value.NullValue
-import io.specmatic.core.value.ScalarValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 
 data class AnyPattern(
     override val pattern: List<Pattern>,
@@ -32,6 +29,45 @@ data class AnyPattern(
     ))
 
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
+
+    fun fixValue(
+        value: Value, resolver: Resolver, discriminatorValue: String,
+        onValidDiscValue: () -> Value?, onInvalidDiscValue: (Failure) -> Value?
+    ): Value? {
+        return getDiscriminatorPattern(discriminatorValue, resolver).realise(
+            hasValue = { it, _ -> it.fixValue(value, resolver) },
+            orException = { _ -> onValidDiscValue() },
+            orFailure = { f ->
+                if (f.failure.failureReason == FailureReason.DiscriminatorMismatch) {
+                    onInvalidDiscValue(f.failure)
+                } else onValidDiscValue()
+            }
+        )
+    }
+
+    override fun fixValue(value: Value, resolver: Resolver): Value {
+        val discBasedFixedValue = if (discriminator != null && value is JSONObjectValue && discriminator.property in value.jsonObject) {
+            val discriminatorValue = value.jsonObject.getValue(discriminator.property).toStringLiteral()
+            fixValue(
+                value = value, resolver = resolver, discriminatorValue = discriminatorValue,
+                onValidDiscValue = { generateValue(resolver, discriminatorValue) },
+                onInvalidDiscValue = { null }
+            )
+        } else null
+
+        if (discBasedFixedValue != null) return discBasedFixedValue
+        val updatedPatterns = discriminator
+            ?.updatePatternsWithDiscriminator(pattern, resolver)?.listFold()
+            ?.withDefault(pattern) { it } ?: pattern
+
+        val patternMatches = updatedPatterns.map { pattern ->
+            AnyPatternMatch(pattern, pattern.matches(value, resolver))
+        }
+
+        if (patternMatches.any { it.result.isSuccess() }) return value
+        val matchingPatternNew = patternMatches.minBy { (it.result as? Failure)?.failureCount() ?: 0}
+        return matchingPatternNew.pattern.fixValue(value, resolver)
+    }
 
     override fun removeKeysNotPresentIn(keys: Set<String>, resolver: Resolver): Pattern {
         if(keys.isEmpty()) return this
@@ -323,32 +359,49 @@ data class AnyPattern(
         }
     }
 
-    fun matchesValue(sampleData: Value?, resolver: Resolver, discriminatorValue: String, discMisMatchBreadCrumb: String? = null): Result {
-        if (discriminator == null) return matches(sampleData, resolver)
+    private fun getDiscriminatorPattern(discriminatorValue: String, resolver: Resolver): ReturnValue<Pattern> {
+        if (discriminator == null) return HasFailure(
+            Failure(
+                "Pattern is not discriminator based",
+                failureReason = FailureReason.DiscriminatorMismatch
+            )
+        )
 
         val discriminatorCsvClause = if(discriminator.values.size == 1) {
             discriminator.values.first()
         } else "one of ${discriminator.values.joinToString(", ")}"
 
         if (discriminatorValue !in discriminator.values) {
-            return Failure(
-                breadCrumb = discMisMatchBreadCrumb ?: discriminator.property,
-                message = "Expected the value of discriminator to be $discriminatorCsvClause but it was ${discriminatorValue.quote()}",
-                failureReason = FailureReason.DiscriminatorMismatch
+            return HasFailure(
+                Failure(
+                    message = "Expected the value of discriminator to be $discriminatorCsvClause but it was ${discriminatorValue.quote()}",
+                    failureReason = FailureReason.DiscriminatorMismatch
+                )
             )
         }
 
         return discriminator.updatePatternsWithDiscriminator(pattern, resolver).listFold().realise(
             hasValue = { updatedPatterns, _ ->
-                val chosenPattern = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue) ?: return@realise Failure(
-                    breadCrumb = discMisMatchBreadCrumb ?: discriminator.property,
-                    message = "Could not find pattern with discriminator value ${discriminatorValue.quote()}",
-                    failureReason = FailureReason.DiscriminatorMismatch
+                val chosenPattern = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue, resolver) ?: return@realise HasFailure(
+                    Failure(
+                        message = "Could not find pattern with discriminator value ${discriminatorValue.quote()}",
+                        failureReason = FailureReason.DiscriminatorMismatch
+                    )
                 )
-                chosenPattern.matches(sampleData, resolver)
+                HasValue(chosenPattern)
             },
-            orFailure = { failure ->  failure.failure },
-            orException = { exception -> exception.toHasFailure().failure }
+            orFailure = { failure -> failure.cast() },
+            orException = { exception -> exception.cast() }
+        )
+    }
+
+    fun matchesValue(sampleData: Value?, resolver: Resolver, discriminatorValue: String, discMisMatchBreadCrumb: String? = null): Result {
+        if (discriminator == null) return matches(sampleData, resolver)
+
+        return getDiscriminatorPattern(discriminatorValue, resolver).realise(
+            hasValue = { it, _ -> it.matches(sampleData, resolver) },
+            orFailure = { it.failure.breadCrumb(discMisMatchBreadCrumb ?: discriminator.property) },
+            orException = { it.toHasFailure().failure.breadCrumb(discMisMatchBreadCrumb ?: discriminator.property) }
         )
     }
 
@@ -364,7 +417,7 @@ data class AnyPattern(
             else
                 pattern
 
-        val chosenByDiscriminator = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue)
+        val chosenByDiscriminator = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue, resolver)
         if(chosenByDiscriminator != null)
             return generate(resolver, chosenByDiscriminator)
 
@@ -411,18 +464,22 @@ data class AnyPattern(
                 pattern.filterNot { it is NullPattern }.filter { it is ScalarType }.size == 1
     }
 
-    private fun getDiscriminatorBasedPattern(
-        updatedPatterns: List<Pattern>,
-        discriminatorValue: String,
-    ): JSONObjectPattern? {
-        return updatedPatterns.filterIsInstance<JSONObjectPattern>().firstOrNull {
-            if(it.pattern.containsKey(discriminator?.property.orEmpty()).not()) {
-                return@firstOrNull false
+    private fun getDiscriminatorBasedPattern(updatedPatterns: List<Pattern>, discriminatorValue: String, resolver: Resolver): JSONObjectPattern? {
+        return updatedPatterns.firstNotNullOfOrNull {
+            when (it) {
+                is AnyPattern -> it.getDiscriminatorBasedPattern(
+                    it.discriminator?.updatePatternsWithDiscriminator(it.pattern, resolver)?.listFold()?.value ?: it.pattern,
+                    discriminatorValue = discriminatorValue, resolver = resolver
+                )
+                is JSONObjectPattern -> {
+                    val discriminatorKey = discriminator?.property ?: return@firstNotNullOfOrNull null
+                    val keyPattern = it.patternForKey(discriminatorKey) ?: return@firstNotNullOfOrNull null
+                    it.takeIf {
+                        keyPattern is ExactValuePattern && keyPattern.discriminator && keyPattern.pattern.toStringLiteral() == discriminatorValue
+                    }
+                }
+                else -> null
             }
-            val discriminatorPattern = it.pattern[discriminator?.property.orEmpty()]
-            if(discriminatorPattern !is ExactValuePattern) return@firstOrNull false
-            discriminatorPattern.discriminator
-                    && discriminatorPattern.pattern.toStringLiteral() == discriminatorValue
         }
     }
 

@@ -119,6 +119,8 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         json.findByPath("http-request.method")?.toStringLiteral()
     }
 
+    val requestContentType: String? = json.findByPath("http-request.headers.Content-Type")?.toStringLiteral()
+
     private val rawPath: String? =
         json.findByPath("http-request.path")?.toStringLiteral()
 

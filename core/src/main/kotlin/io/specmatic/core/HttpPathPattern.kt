@@ -254,6 +254,19 @@ data class HttpPathPattern(
             }
         }.toMap()
     }
+
+    fun fixValue(path: String?, resolver: Resolver): String {
+        if (path == null) return this.generate(resolver)
+
+        val pathSegments = path.split("/".toRegex()).filter { it.isNotEmpty() }.toTypedArray()
+        if (pathSegmentPatterns.size != pathSegments.size) return this.generate(resolver)
+
+        val pathHadPrefix = path.startsWith("/")
+        return pathSegmentPatterns.zip(pathSegments).map { (urlPathPattern, token) ->
+            val updatedResolver = resolver.updateLookupPath(PATH_BREAD_CRUMB, urlPathPattern.key.orEmpty())
+            urlPathPattern.fixValue(urlPathPattern.tryParse(token, updatedResolver), updatedResolver)
+        }.joinToString("/", prefix = "/".takeIf { pathHadPrefix }.orEmpty() )
+    }
 }
 
 fun buildHttpPathPattern(

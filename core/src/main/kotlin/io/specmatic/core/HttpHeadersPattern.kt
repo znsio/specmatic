@@ -384,6 +384,26 @@ data class HttpHeadersPattern(
             headersInPartial + missingHeaders
         }
     }
+
+    fun fixValue(headers: Map<String, String>, resolver: Resolver): Map<String, String> {
+        val headersWithContentType = if (contentType != null) {
+            headers.plus(CONTENT_TYPE to contentType)
+        } else headers
+
+        if (headersWithContentType.isEmpty() && pattern.isEmpty()) return emptyMap()
+        val headersValue = headersWithContentType.mapValues { (key, value) ->
+            val pattern = pattern[key] ?: pattern["$key?"] ?: return@mapValues StringValue(value)
+
+            try { pattern.parse(value, resolver) } catch(e: Exception) { StringValue(value) }
+        }
+        val fixedHeaders = fix(
+            jsonPatternMap = pattern, jsonValueMap = headersValue,
+            resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).withoutAllPatternsAsMandatory(),
+            jsonPattern = JSONObjectPattern(pattern, typeAlias = "($HEADERS_BREADCRUMB)")
+        )
+
+        return fixedHeaders.mapValues { it.value.toStringLiteral() }
+    }
 }
 
 private fun parseOrString(pattern: Pattern, sampleValue: String, resolver: Resolver) =

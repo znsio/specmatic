@@ -9,6 +9,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import io.specmatic.core.pattern.*
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
 import java.io.UnsupportedEncodingException
 import java.net.URI
@@ -294,6 +295,49 @@ internal class HttpPathPatternTest {
             val value = it as? HasValue ?: fail("Expected HasValue but got ${it.javaClass.simpleName}")
             println(value.comments())
             assertThat(value.comments()).contains("PATH.id")
+        }
+    }
+
+    @Nested
+    inner class FixValueTests {
+        @Test
+        fun `should regenerate path when segments size doesn't match`() {
+            val urlPattern = buildHttpPathPattern(URI("/pets/123/owners"))
+            val invalidPath = "/pets/123/owners/123"
+
+            val fixedPath = urlPattern.fixValue(invalidPath, Resolver())
+            println(fixedPath)
+
+            assertThat(fixedPath).isEqualTo("/pets/123/owners")
+        }
+
+        @Test
+        fun `should be able to fix invalid values in path parameters`() {
+            val urlPattern = buildHttpPathPattern("/pets/(id:number)")
+            val invalidPath = "/pets/abc"
+
+            val dictionary = mapOf("PATH.id" to NumberValue(999))
+            val fixedPath = urlPattern.fixValue(invalidPath, Resolver(dictionary = dictionary))
+            println(fixedPath)
+
+            assertThat(fixedPath).isEqualTo("/pets/999")
+        }
+
+        @Test
+        fun `should only add the prefix if the path already had it`() {
+            val urlPattern = buildHttpPathPattern("/pets/(id:number)")
+            val dictionary = mapOf("PATH.id" to NumberValue(999))
+            val resolver = Resolver(dictionary = dictionary)
+
+            val prefixedPath = "/pets/abc"
+            val fixedPath = urlPattern.fixValue(prefixedPath, resolver)
+            println(fixedPath)
+            assertThat(fixedPath).isEqualTo("/pets/999")
+
+            val unPrefixedPath = "pets/abc"
+            val unPrefixedFixedPath = urlPattern.fixValue(unPrefixedPath, resolver)
+            println(unPrefixedFixedPath)
+            assertThat(unPrefixedFixedPath).isEqualTo("pets/999")
         }
     }
 }

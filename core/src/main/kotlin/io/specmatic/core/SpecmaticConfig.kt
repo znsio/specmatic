@@ -7,8 +7,9 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.specmatic.core.Configuration.Companion.configFilePath
+import io.specmatic.core.config.SpecmaticConfigVersion
+import io.specmatic.core.config.toSpecmaticConfig
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
@@ -43,7 +44,6 @@ val CONTRACT_EXTENSIONS = listOf(CONTRACT_EXTENSION, WSDL) + OPENAPI_FILE_EXTENS
 const val DATA_DIR_SUFFIX = "_data"
 const val TEST_DIR_SUFFIX = "_tests"
 const val EXAMPLES_DIR_SUFFIX = "_examples"
-const val DICTIONARY_FILE_SUFFIX = "_dictionary.json"
 const val SPECMATIC_GITHUB_ISSUES = "https://github.com/znsio/specmatic/issues"
 const val DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
 
@@ -76,10 +76,10 @@ fun String.loadContract(): Feature {
 }
 
 data class StubConfiguration(
-    val generative: Boolean? = false,
+    val generative: Boolean? = null,
     val delayInMilliseconds: Long? = getLongValue(SPECMATIC_STUB_DELAY),
     val dictionary: String? = getStringValue(SPECMATIC_STUB_DICTIONARY),
-    val includeMandatoryAndRequestedKeysInResponse: Boolean? = true
+    val includeMandatoryAndRequestedKeysInResponse: Boolean? = null
 )
 
 data class VirtualServiceConfiguration(
@@ -109,7 +109,6 @@ data class AttributeSelectionPattern(
 )
 
 data class SpecmaticConfig(
-    @field:JsonAlias("contract_repositories")
     val sources: List<Source> = emptyList(),
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
@@ -120,18 +119,15 @@ data class SpecmaticConfig(
     val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
-    @field:JsonAlias("virtual_service")
     val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
     val workflow: WorkflowConfiguration? = null,
-    val ignoreInlineExamples: Boolean = getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES),
+    val ignoreInlineExamples: Boolean? = null,
     val additionalExampleParamsFilePath: String? = getStringValue(Flags.ADDITIONAL_EXAMPLE_PARAMS_FILE),
-    @field:JsonAlias("attribute_selection_pattern")
     val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
-    @field:JsonAlias("all_patterns_mandatory")
-    val allPatternsMandatory: Boolean = getBooleanValue(Flags.ALL_PATTERNS_MANDATORY),
-    @field:JsonAlias("default_pattern_values")
-    val defaultPatternValues: Map<String, Any> = emptyMap()
+    val allPatternsMandatory: Boolean? = null,
+    val defaultPatternValues: Map<String, Any> = emptyMap(),
+    val version: SpecmaticConfigVersion? = null
 ) {
     @JsonIgnore
     fun attributeSelectionQueryParamKey(): String {
@@ -140,23 +136,52 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {
-        return (test?.allowExtensibleSchema == true)
+        return test?.allowExtensibleSchema ?: getBooleanValue(EXTENSIBLE_SCHEMA)
     }
+
     @JsonIgnore
     fun isResiliencyTestingEnabled(): Boolean {
-        return (test?.resiliencyTests?.enable != ResiliencyTestSuite.none)
+        return (getResiliencyTestsEnable() != ResiliencyTestSuite.none)
     }
+
     @JsonIgnore
     fun isOnlyPositiveTestingEnabled(): Boolean {
-        return (test?.resiliencyTests?.enable == ResiliencyTestSuite.positiveOnly)
+        return (getResiliencyTestsEnable() == ResiliencyTestSuite.positiveOnly)
     }
+
     @JsonIgnore
     fun isResponseValueValidationEnabled(): Boolean {
-        return (test?.validateResponseValues == true)
+        return test?.validateResponseValues ?: getBooleanValue(VALIDATE_RESPONSE_VALUE)
     }
+
     @JsonIgnore
     fun parsedDefaultPatternValues(): Map<String, Value> {
         return parsedJSONObject(ObjectMapper().writeValueAsString(defaultPatternValues)).jsonObject
+    }
+
+    @JsonIgnore
+    fun getIncludeMandatoryAndRequestedKeysInResponse(): Boolean {
+        return stub.includeMandatoryAndRequestedKeysInResponse ?: true
+    }
+
+    @JsonIgnore
+    fun getResiliencyTestsEnable(): ResiliencyTestSuite {
+        return test?.resiliencyTests?.enable ?: ResiliencyTestSuite.none
+    }
+
+    @JsonIgnore
+    fun getStubGenerative(): Boolean {
+        return stub.generative ?: false
+    }
+
+    @JsonIgnore
+    fun getIgnoreInlineExamples(): Boolean {
+        return ignoreInlineExamples ?: getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES)
+    }
+
+    @JsonIgnore
+    fun getAllPatternsMandatory(): Boolean {
+        return allPatternsMandatory ?: getBooleanValue(Flags.ALL_PATTERNS_MANDATORY)
     }
 }
 
@@ -165,8 +190,8 @@ data class TestConfiguration(
         isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
         isOnlyPositiveFlagEnabled = getBooleanValue(ONLY_POSITIVE)
     ),
-    val validateResponseValues: Boolean? = getBooleanValue(VALIDATE_RESPONSE_VALUE),
-    val allowExtensibleSchema: Boolean? = getBooleanValue(EXTENSIBLE_SCHEMA),
+    val validateResponseValues: Boolean? = null,
+    val allowExtensibleSchema: Boolean? = null,
     val timeoutInMilliseconds: Long? = getLongValue(SPECMATIC_TEST_TIMEOUT)
 )
 
@@ -175,18 +200,21 @@ enum class ResiliencyTestSuite {
 }
 
 data class ResiliencyTestsConfig(
-    val enable: ResiliencyTestSuite = ResiliencyTestSuite.none
+    val enable: ResiliencyTestSuite? = null
 ) {
     constructor(isResiliencyTestFlagEnabled: Boolean, isOnlyPositiveFlagEnabled: Boolean) : this(
         enable = getEnableFrom(isResiliencyTestFlagEnabled, isOnlyPositiveFlagEnabled)
     )
 
     companion object {
-        private fun getEnableFrom(isResiliencyTestFlagEnabled: Boolean, isOnlyPositiveFlagEnabled: Boolean): ResiliencyTestSuite {
+        private fun getEnableFrom(
+            isResiliencyTestFlagEnabled: Boolean,
+            isOnlyPositiveFlagEnabled: Boolean
+        ): ResiliencyTestSuite? {
             return when {
                 isResiliencyTestFlagEnabled -> ResiliencyTestSuite.all
                 isOnlyPositiveFlagEnabled -> ResiliencyTestSuite.positiveOnly
-                else -> ResiliencyTestSuite.none
+                else -> null
             }
         }
     }
@@ -346,7 +374,7 @@ fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
         throw ContractException("Could not find the Specmatic configuration at path ${configFile.canonicalPath}")
     }
     try {
-        return ObjectMapper(YAMLFactory()).readValue(configFile.readText(), SpecmaticConfig::class.java)
+        return configFile.toSpecmaticConfig()
     } catch(e: LinkageError) {
         logger.log(e, "A dependency version conflict has been detected. If you are using Spring in a maven project, a common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.")
         throw e

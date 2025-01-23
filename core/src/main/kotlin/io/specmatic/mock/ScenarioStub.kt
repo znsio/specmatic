@@ -42,6 +42,7 @@ data class ScenarioStub(
 
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()
+        mockInteraction.putAll(data.jsonObject)
 
         mockInteraction[MOCK_HTTP_REQUEST] = request.toJSON()
         mockInteraction[MOCK_HTTP_RESPONSE] = response.toJSON()

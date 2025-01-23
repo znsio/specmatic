@@ -20,7 +20,7 @@ repositories {
 
 def ktor_version = "2.3.12"
 def jgit_version = "7.0.0.202409031743-r"
-def junit_version = "5.11.3"
+def junit_version = "5.11.4"
 
 dependencies {
     // TODO Fix to eliminate vulnerabilities, remove when the enclosing library supports it
@@ -37,7 +37,7 @@ dependencies {
     implementation("io.ktor:ktor-server-double-receive:$ktor_version")
     implementation("io.ktor:ktor-server-content-negotiation:$ktor_version")
     implementation "io.ktor:ktor-serialization-jackson:$ktor_version"
-    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.18.0'
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.18.2'
     implementation 'com.jayway.jsonpath:json-path:2.9.0'
 
 
@@ -47,11 +47,11 @@ dependencies {
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
     implementation 'com.jayway.jsonpath:json-path:2.8.0'
     implementation 'com.fasterxml.jackson.core:jackson-core:2.15.0'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
 
     implementation 'com.flipkart.zjsonpatch:zjsonpatch:0.4.16'
 
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
 
     implementation 'io.swagger.parser.v3:swagger-parser:2.1.24'
 

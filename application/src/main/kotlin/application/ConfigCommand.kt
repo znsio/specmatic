@@ -101,11 +101,11 @@ class ConfigCommand : Callable<Int> {
                     is Collection<*> -> other.all { equals(it) }
                     is Array<*> -> other.all { equals(it) }
                     is String -> other.isBlank()
-                    else -> isDataClassEmpty(other)
+                    else -> isEmptyDataClass(other)
                 }
             }
 
-            private fun isDataClassEmpty(obj: Any): Boolean {
+            private fun isEmptyDataClass(obj: Any): Boolean {
                 val kClass: KClass<*> = obj::class
                 if (!kClass.isData) return false
 

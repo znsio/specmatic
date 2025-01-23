@@ -1,6 +1,11 @@
 package io.specmatic.core
 
-import com.fasterxml.jackson.annotation.*
+import com.fasterxml.jackson.annotation.JsonAlias
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.config.SpecmaticConfigVersion
@@ -131,20 +136,24 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {
-        return (getAllowExtensibleSchema())
+        return test?.allowExtensibleSchema ?: getBooleanValue(EXTENSIBLE_SCHEMA)
     }
+
     @JsonIgnore
     fun isResiliencyTestingEnabled(): Boolean {
         return (getResiliencyTestsEnable() != ResiliencyTestSuite.none)
     }
+
     @JsonIgnore
     fun isOnlyPositiveTestingEnabled(): Boolean {
         return (getResiliencyTestsEnable() == ResiliencyTestSuite.positiveOnly)
     }
+
     @JsonIgnore
     fun isResponseValueValidationEnabled(): Boolean {
-        return (getValidateResponseValues())
+        return test?.validateResponseValues ?: getBooleanValue(VALIDATE_RESPONSE_VALUE)
     }
+
     @JsonIgnore
     fun parsedDefaultPatternValues(): Map<String, Value> {
         return parsedJSONObject(ObjectMapper().writeValueAsString(defaultPatternValues)).jsonObject
@@ -158,16 +167,6 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun getResiliencyTestsEnable(): ResiliencyTestSuite {
         return test?.resiliencyTests?.enable ?: ResiliencyTestSuite.none
-    }
-
-    @JsonIgnore
-    fun getValidateResponseValues(): Boolean {
-        return test?.validateResponseValues ?: getBooleanValue(VALIDATE_RESPONSE_VALUE)
-    }
-
-    @JsonIgnore
-    fun getAllowExtensibleSchema(): Boolean {
-        return test?.allowExtensibleSchema ?: getBooleanValue(EXTENSIBLE_SCHEMA)
     }
 
     @JsonIgnore

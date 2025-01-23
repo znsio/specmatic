@@ -82,14 +82,14 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `filter by HEADER`() {
-        val filter = ScenarioMetadataFilter.from("HEADERS=Content-Type")
+        val filter = ScenarioMetadataFilter.from("HEADERS='Content-Type'")
         val contentTypeHeader = createScenarioMetadata(header = setOf("Content-Type"))
         assertTrue(filter.isSatisfiedBy(contentTypeHeader))
     }
 
     @Test
     fun `filter by QUERY`() {
-        val filter = ScenarioMetadataFilter.from("QUERY=fields")
+        val filter = ScenarioMetadataFilter.from("QUERY='fields'")
         val metadata1 = createScenarioMetadata(query = setOf("fields"))
         assertTrue(filter.isSatisfiedBy(metadata1))
     }

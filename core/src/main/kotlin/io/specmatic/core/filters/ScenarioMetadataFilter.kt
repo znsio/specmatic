@@ -7,7 +7,6 @@ data class ScenarioMetadataFilter(
     val expression: Expression? = null
 ) {
     fun isSatisfiedBy(metadata: ScenarioMetadata): Boolean {
-
         val expression = expression ?: return false
         val expressionWithVariables = expression
             .with(ScenarioFilterTags.METHOD.key, metadata.method)
@@ -26,7 +25,7 @@ data class ScenarioMetadataFilter(
 
     companion object {
         fun from(filterExpression: String): ScenarioMetadataFilter {
-            val evalExExpression = EvalExSyntaxConverter().standardizeExpression(filterExpression)
+            val evalExExpression = CSVFunctionExpressionModifier().standardizeExpression(filterExpression)
             val configuration = ExpressionConfiguration.builder()
                 .singleQuoteStringLiteralsAllowed(true).build()
                 .withAdditionalFunctions(

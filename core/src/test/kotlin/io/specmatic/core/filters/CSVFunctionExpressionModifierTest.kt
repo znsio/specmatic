@@ -3,9 +3,9 @@ package io.specmatic.core.filters
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-class EvalExSyntaxConverterTest {
+class CSVFunctionExpressionModifierTest {
 
-    private val evalExSyntaxConverter = EvalExSyntaxConverter()
+    private val evalExSyntaxConverter = CSVFunctionExpressionModifier()
 
     @Test
     fun `test standard expression with only METHOD expression`() {

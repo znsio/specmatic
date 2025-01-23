@@ -1,6 +1,6 @@
 package io.specmatic.core.filters
 
-class EvalExSyntaxConverter {
+class CSVFunctionExpressionModifier {
 
     companion object {
         const val CSV_FUNCTION = "CSV"

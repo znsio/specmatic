@@ -1,6 +1,5 @@
 package io.specmatic.core.filters
 
-import com.ezylang.evalex.config.ExpressionConfiguration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

@@ -21,33 +21,28 @@ class CSVFunction : AbstractFunction() {
         return EvaluationValue.of(result, ExpressionConfiguration.defaultConfiguration())
     }
 
-    private fun evaluateCondition(label: String, operator: String, values: List<String>, scenarioValue: String): Boolean {
+    private fun evaluateCondition(
+        label: String, operator: String, values: List<String>, scenarioValue: String
+    ): Boolean {
 
-        fun checkCondition(value: String, isMatch: Boolean): Boolean {
-            val matches = when (label) {
-                ScenarioFilterTags.STATUS_CODE.key -> value == scenarioValue || matchesStatusCode(value, scenarioValue)
+        fun checkCondition(value: String): Boolean {
+            return when (label) {
+                ScenarioFilterTags.STATUS_CODE.key -> value == scenarioValue || isInRange(value, scenarioValue)
                 ScenarioFilterTags.PATH.key -> value == scenarioValue || matchesPath(value, scenarioValue)
                 else -> value == scenarioValue
             }
-            return if (isMatch) matches else !matches
         }
 
         return when (operator) {
-            "=" -> values.any { checkCondition(it, isMatch = true) }
-            "!=" -> values.all { checkCondition(it, isMatch = false) }
+            "=" -> values.any { checkCondition(it) }
+            "!=" -> values.all { !checkCondition(it) }
             else -> throw IllegalArgumentException("Unsupported operator: $operator")
         }
     }
 
-
-    private fun matchesStatusCode(value: String, scenarioValue: String): Boolean {
-        return isInRange(value, scenarioValue)
-    }
-
     private fun matchesPath(value: String, scenarioValue: String): Boolean {
-        return value.contains("*") && Pattern.compile(value.replace("*", ".*")).matcher(scenarioValue.toString()).matches()
+        return value.contains("*") && Pattern.compile(value.replace("*", ".*")).matcher(scenarioValue).matches()
     }
-
 
     private fun parseCondition(condition: String): Triple<String, String, List<String>> {
         val operator = if (condition.contains("!=")) "!=" else "="
@@ -64,23 +59,15 @@ class CSVFunction : AbstractFunction() {
         val metadataValue = value.toIntOrNull() ?: return false
 
         return when {
-            range.endsWith("xx") -> {
-                isWithinBounds(range,100, metadataValue)
-            }
-            range.endsWith("x") -> {
-               isWithinBounds(range, 10, metadataValue)
-            }
+            range.endsWith("xx") -> isWithinBounds(range, 100, metadataValue)
+            range.endsWith("x") -> isWithinBounds(range, 10, metadataValue)
             else -> false
         }
     }
 
     private fun isWithinBounds(range: String, multiplier: Int, value: Int): Boolean {
-        val bounds = getRangeBounds(range, multiplier)
-        return bounds?.contains(value) ?: false
-    }
-
-    private fun getRangeBounds(range: String, multiplier: Int): IntRange? {
-        val rangeStart = range.dropLast(multiplier.toString().length-1).toIntOrNull()?.times(multiplier)
-        return rangeStart?.let { it..<it + (multiplier - 1) }
+        val len = multiplier.toString().length - 1
+        val rangeStart = range.dropLast(len).toIntOrNull()?.times(multiplier)
+        return rangeStart?.let { value in it until it + multiplier -1 } ?: false
     }
 }

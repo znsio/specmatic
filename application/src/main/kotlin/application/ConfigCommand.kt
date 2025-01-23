@@ -16,6 +16,9 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import java.io.File
 import java.util.concurrent.Callable
+import kotlin.reflect.KClass
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.isAccessible
 import kotlin.system.exitProcess
 
 private const val SUCCESS_EXIT_CODE = 0
@@ -81,9 +84,37 @@ class ConfigCommand : Callable<Int> {
         }
 
         private fun getObjectMapper(): ObjectMapper {
-            val objectMapper = ObjectMapper(YAMLFactory())
-            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
+            val objectMapper = ObjectMapper(YAMLFactory()).setDefaultPropertyInclusion(
+                JsonInclude.Value.construct(
+                    JsonInclude.Include.CUSTOM,
+                    JsonInclude.Include.CUSTOM
+                ).withValueFilter(EmptyCollectionFilter::class.java)
+            )
             return objectMapper
+        }
+
+        private class EmptyCollectionFilter {
+            override fun equals(other: Any?): Boolean {
+                return when (other) {
+                    null -> true
+                    is Map<*, *> -> other.all { it.key is String && equals(it.value) }
+                    is Collection<*> -> other.all { equals(it) }
+                    is Array<*> -> other.all { equals(it) }
+                    is String -> other.isBlank()
+                    else -> isEmptyDataClass(other)
+                }
+            }
+
+            private fun isEmptyDataClass(obj: Any): Boolean {
+                val kClass: KClass<*> = obj::class
+                if (!kClass.isData) return false
+
+                return kClass.memberProperties.all { prop ->
+                    prop.isAccessible = true
+                    val value = prop.call(obj)
+                    equals(value)
+                }
+            }
         }
 
         private fun exitIfAlreadyUpToDate(existingVersion: SpecmaticConfigVersion?) {

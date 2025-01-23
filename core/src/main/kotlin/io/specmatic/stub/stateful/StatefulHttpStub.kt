@@ -180,7 +180,7 @@ class StatefulHttpStub(
         val updatedResponse = cachedResponse(
             fakeResponse,
             httpRequest,
-            specmaticConfig.stub.includeMandatoryAndRequestedKeysInResponse,
+            specmaticConfig.getIncludeMandatoryAndRequestedKeysInResponse(),
             responses.responseWithStatusCodeStartingWith("404")?.successResponse?.responseBodyPattern
         ) ?: generateHttpResponseFrom(fakeResponse, httpRequest)
 

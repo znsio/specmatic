@@ -4,6 +4,7 @@ import integration_tests.testCount
 import io.ktor.util.reflect.*
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.specmatic.core.*
 import io.specmatic.core.log.CompositePrinter
@@ -11,6 +12,7 @@ import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.LogStrategy
 import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.NumberPattern.Companion.BIG_DECIMAL_INC
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
 import io.specmatic.mock.NoMatchingScenario
@@ -335,9 +337,11 @@ Pet:
     @Test
     fun `scenarios should have examples of type ResponseValueExample leading to response value validation when VALIDATE_RESPONSE_VALUE flag is true and response is not empty`() {
         val openApiFile = "src/test/resources/openapi/response_schema_validation_including_optional_spec.yaml"
+        mockkObject(Flags)
+        every { Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES) } returns false
         val specmaticConfig = mockk<SpecmaticConfig> {
             every { isResponseValueValidationEnabled() } returns true
-            every { ignoreInlineExamples } returns false
+            every { getIgnoreInlineExamples() } returns false
             every { stub.dictionary } returns null
         }
         val openApiSpecification = OpenApiSpecification(

@@ -250,8 +250,6 @@ open class SpecmaticJUnitSupport {
                             suggestionsData,
                             testConfig,
                             specificationPath = it,
-                            filterName = filterName,
-                            filterNotName = filterNotName,
                             specmaticConfig = specmaticConfig,
                             overlayContent = overlayContent
                         )
@@ -283,8 +281,6 @@ open class SpecmaticJUnitSupport {
                             it.branch,
                             it.specificationPath,
                             specmaticConfig?.security,
-                            filterName,
-                            filterNotName,
                             specmaticConfig = specmaticConfig,
                             overlayContent = overlayContent
                         )
@@ -455,8 +451,6 @@ open class SpecmaticJUnitSupport {
         sourceRepositoryBranch: String? = null,
         specificationPath: String? = null,
         securityConfiguration: SecurityConfiguration? = null,
-        filterName: String?,
-        filterNotName: String?,
         specmaticConfig: SpecmaticConfig? = null,
         overlayContent: String = ""
     ): Pair<Sequence<ContractTest>, List<Endpoint>> {
@@ -500,26 +494,14 @@ open class SpecmaticJUnitSupport {
             )
         }
 
-        val filteredScenariosBasedOnName = selectTestsToRun(
-            feature.scenarios.asSequence(),
-            filterName,
-            filterNotName
-        ) { it.testDescription() }
         val filteredScenarios = filterUsing(
-            filteredScenariosBasedOnName,
+            feature.scenarios.asSequence(),
             scenarioMetadataFilter,
             scenarioMetadataExclusionFilter
         ) { it.toScenarioMetadata() }
+
         val tests: Sequence<ContractTest> = feature
             .copy(scenarios = filteredScenarios.toList())
-            .also {
-                if (it.scenarios.isEmpty())
-                    logger.log("All scenarios were filtered out.")
-                else if (it.scenarios.size < feature.scenarios.size) {
-                    logger.debug("Selected scenarios:")
-                    it.scenarios.forEach { scenario -> logger.debug(scenario.testDescription().prependIndent("  ")) }
-                }
-            }
             .generateContractTests(suggestions)
 
         return Pair(tests, allEndpoints)
@@ -618,7 +600,7 @@ fun <T> selectTestsToRun(
     } else
         testScenarios
 
-    val filteredByNotName: Sequence<T> = if(!filterNotName.isNullOrBlank()) {
+    val filteredScenarios: Sequence<T> = if(!filterNotName.isNullOrBlank()) {
         val filterNotNames = filterNotName.split(",").map { it.trim() }
 
         filteredByName.filterNot { test ->
@@ -627,6 +609,18 @@ fun <T> selectTestsToRun(
     } else
         filteredByName
 
-    return filteredByNotName
+    val filteredScenariosCount = filteredScenarios.count()
+
+    when {
+        filteredScenariosCount == 0 -> logger.log("All scenarios were filtered out.")
+        filteredScenariosCount < testScenarios.count() -> {
+            logger.debug("Selected scenarios:")
+            filteredScenarios.forEach { scenario ->
+                logger.debug(getTestDescription(scenario).prependIndent("  "))
+            }
+        }
+    }
+
+    return filteredScenarios
 }
 

@@ -113,7 +113,7 @@ data class SpecmaticConfig(
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
-    val hooks: Map<String, String> = emptyMap(),
+    private val hooks: Map<String, String> = emptyMap(),
     val repository: RepositoryInfo? = null,
     val report: ReportConfiguration? = null,
     val security: SecurityConfiguration? = null,
@@ -182,6 +182,11 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun getAllPatternsMandatory(): Boolean {
         return allPatternsMandatory ?: getBooleanValue(Flags.ALL_PATTERNS_MANDATORY)
+    }
+
+    @JsonIgnore
+    fun getHooks(): Map<String, String> {
+        return hooks
     }
 }
 

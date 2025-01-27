@@ -13,7 +13,7 @@ enum class HookName {
 class CommandHook(private val name: HookName): Hook {
     val command: String? = name.let {
         try {
-            loadSpecmaticConfig().hooks[it.name]
+            loadSpecmaticConfig().getHooks()[it.name]
         } catch (e: ContractException) {
             null
         }

@@ -1,29 +1,61 @@
 package io.specmatic.core
 
-import io.specmatic.conversions.*
-import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.*
-import io.specmatic.core.pattern.Examples.Companion.examplesFrom
-import io.specmatic.core.value.*
-import io.specmatic.mock.NoMatchingScenario
-import io.specmatic.mock.ScenarioStub
-import io.specmatic.stub.HttpStubData
-import io.specmatic.test.*
 import io.cucumber.gherkin.GherkinDocumentBuilder
 import io.cucumber.gherkin.Parser
 import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
-import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
+import io.cucumber.messages.types.FeatureChild
+import io.cucumber.messages.types.GherkinDocument
+import io.cucumber.messages.types.Step
+import io.cucumber.messages.types.TableRow
+import io.cucumber.messages.types.Tag
 import io.ktor.http.*
+import io.specmatic.conversions.ExampleFromFile
+import io.specmatic.conversions.IncludedSpecification
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.conversions.WSDLFile
+import io.specmatic.conversions.WsdlSpecification
+import io.specmatic.conversions.testDirectoryEnvironmentVariable
+import io.specmatic.conversions.testDirectoryProperty
+import io.specmatic.conversions.wsdlContentToFeature
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
-import io.specmatic.core.utilities.*
-import io.swagger.v3.oas.models.*
+import io.specmatic.core.log.logger
+import io.specmatic.core.pattern.*
+import io.specmatic.core.pattern.Examples.Companion.examplesFrom
+import io.specmatic.core.utilities.capitalizeFirstChar
+import io.specmatic.core.utilities.examplesDirFor
+import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.jsonStringToValueMap
+import io.specmatic.core.utilities.readEnvVarOrProperty
+import io.specmatic.core.value.NumberValue
+import io.specmatic.core.value.ScalarValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.True
+import io.specmatic.core.value.Value
+import io.specmatic.mock.NoMatchingScenario
+import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.HttpStubData
+import io.specmatic.test.ContractTest
+import io.specmatic.test.ExamplePostValidator
+import io.specmatic.test.ScenarioAsTest
+import io.specmatic.test.ScenarioTestGenerationException
+import io.specmatic.test.ScenarioTestGenerationFailure
+import io.specmatic.test.TestExecutor
+import io.swagger.v3.oas.models.Components
+import io.swagger.v3.oas.models.OpenAPI
+import io.swagger.v3.oas.models.Operation
+import io.swagger.v3.oas.models.PathItem
+import io.swagger.v3.oas.models.Paths
 import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.info.Info
 import io.swagger.v3.oas.models.media.*
-import io.swagger.v3.oas.models.parameters.*
+import io.swagger.v3.oas.models.parameters.HeaderParameter
+import io.swagger.v3.oas.models.parameters.Parameter
+import io.swagger.v3.oas.models.parameters.PathParameter
+import io.swagger.v3.oas.models.parameters.QueryParameter
+import io.swagger.v3.oas.models.parameters.RequestBody
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
 import java.io.File
@@ -1779,7 +1811,7 @@ data class Feature(
     fun loadExternalisedExamplesAndListUnloadableExamples(): Pair<Feature, Set<String>> {
         val testsDirectory = getTestsDirectory(File(this.path))
         val externalisedExamplesFromDefaultDirectory = loadExternalisedJSONExamples(testsDirectory)
-        val externalisedExampleDirsFromConfig = specmaticConfig.examples
+        val externalisedExampleDirsFromConfig = specmaticConfig.getExamples()
 
         val externalisedExamplesFromExampleDirs = externalisedExampleDirsFromConfig.flatMap { directory ->
             loadExternalisedJSONExamples(File(directory)).entries

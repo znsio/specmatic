@@ -129,7 +129,7 @@ class CSVFunctionExpressionModifierTest {
     @Test
     fun `test standard expression handles spaces`() {
         val expression = "METHOD='GET, POST' && STATUS='200, 400'"
-        val expected = "CSV(METHOD='GET, POST') && CSV(STATUS='200, 400')"
+        val expected = "CSV('METHOD=GET, POST') && CSV('STATUS=200, 400')"
         val standardExpression = converter.standardizeExpression(expression)
         assertEquals(expected, standardExpression)
     }

@@ -123,7 +123,7 @@ data class SpecmaticConfig(
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
     val workflow: WorkflowConfiguration? = null,
     val ignoreInlineExamples: Boolean? = null,
-    val additionalExampleParamsFilePath: String? = getStringValue(Flags.ADDITIONAL_EXAMPLE_PARAMS_FILE),
+    private val additionalExampleParamsFilePath: String? = null,
     val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
     val allPatternsMandatory: Boolean? = null,
     val defaultPatternValues: Map<String, Any> = emptyMap(),
@@ -182,6 +182,11 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun getAllPatternsMandatory(): Boolean {
         return allPatternsMandatory ?: getBooleanValue(Flags.ALL_PATTERNS_MANDATORY)
+    }
+
+    @JsonIgnore
+    fun getAdditionalExampleParamsFilePath(): String? {
+        return additionalExampleParamsFilePath ?: getStringValue(Flags.ADDITIONAL_EXAMPLE_PARAMS_FILE)
     }
 }
 

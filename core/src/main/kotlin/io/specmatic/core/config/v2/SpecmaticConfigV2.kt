@@ -75,7 +75,7 @@ data class SpecmaticConfigV2(
                 examples = config.examples,
                 workflow = config.workflow,
                 ignoreInlineExamples = config.ignoreInlineExamples,
-                additionalExampleParamsFilePath = config.additionalExampleParamsFilePath,
+                additionalExampleParamsFilePath = config.getAdditionalExampleParamsFilePath(),
                 attributeSelectionPattern = config.attributeSelectionPattern,
                 allPatternsMandatory = config.allPatternsMandatory,
                 defaultPatternValues = config.defaultPatternValues

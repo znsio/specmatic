@@ -20,16 +20,26 @@ data class ScenarioMetadataFilter(
     }
 
     companion object {
+        const val ENHANCED_FUNC_NAME = "eFunc"
+
         fun from(filterExpression: String): ScenarioMetadataFilter {
             if (filterExpression.isBlank()) return ScenarioMetadataFilter()
-            val evalExExpression = CSVFunctionExpressionModifier().standardizeExpression(filterExpression)
+            val evalExExpression = standardizeExpression(filterExpression)
             val configuration = ExpressionConfiguration.builder()
                 .singleQuoteStringLiteralsAllowed(true).build()
                 .withAdditionalFunctions(
-                    mapOf(Pair("CSV", CSVFunction())).entries.single()
+                    mapOf(Pair(ENHANCED_FUNC_NAME, EnhancedRHSValueEvalFunction())).entries.single()
                 )
             val finalExpression = Expression(evalExExpression, configuration)
             return ScenarioMetadataFilter(expression = finalExpression)
+        }
+
+        fun standardizeExpression(expression: String): String {
+            val regexPattern = "\\b\\w+(=|!=)('[^']*([,x*])[^']*')".trimIndent().toRegex()
+
+            return regexPattern.replace(expression) { matchResult ->
+                "$ENHANCED_FUNC_NAME('${matchResult.value.filter { it != '\'' }}')"
+            }
         }
 
         fun <T> filterUsing(
@@ -44,10 +54,3 @@ data class ScenarioMetadataFilter(
         }
     }
 }
-
-
-
-
-
-
-

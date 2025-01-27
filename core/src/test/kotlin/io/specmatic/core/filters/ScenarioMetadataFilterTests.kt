@@ -1,10 +1,11 @@
-import io.specmatic.core.filters.*
+package io.specmatic.core.filters
+
+import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.ENHANCED_FUNC_NAME
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 class ScenarioMetadataFilterTests {
-
     private fun createScenarioMetadata(
         method: String = "GET",
         path: String = "/default",
@@ -387,5 +388,148 @@ class ScenarioMetadataFilterTests {
 
         assertTrue(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 521)))
         assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 502)))
+    }
+
+    @Test
+    fun `test standard expression with only METHOD expression`() {
+        val expression = "METHOD='GET'"
+        val expected = "METHOD='GET'"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression with METHOD and STATUS expression`() {
+        val expression = "METHOD='GET' && STATUS='200,400'"
+        val expected = "METHOD='GET' && $ENHANCED_FUNC_NAME('STATUS=200,400')"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression with multiple METHOD and STATUS expression`() {
+        val expression = "METHOD='GET,POST' && STATUS='200,400'"
+        val expected = "$ENHANCED_FUNC_NAME('METHOD=GET,POST') && $ENHANCED_FUNC_NAME('STATUS=200,400')"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression with multiple METHOD and PATH expression`() {
+        val expression = "METHOD='GET,POST' || PATH='/users,/user(id:string)'"
+        val expected = "$ENHANCED_FUNC_NAME('METHOD=GET,POST') || $ENHANCED_FUNC_NAME('PATH=/users,/user(id:string)')"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression with multiple METHOD and single PATH expression`() {
+        val expression = "(METHOD='POST' && PATH='/users') || (METHOD='POST' && PATH='/products')"
+        val expected = "(METHOD='POST' && PATH='/users') || (METHOD='POST' && PATH='/products')"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression with STATUS expression`() {
+        val expression = "STATUS='2xx'"
+        val expected = "$ENHANCED_FUNC_NAME('STATUS=2xx')"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression with PATH expression`() {
+        val expression = "STATUS!=202 && PATH!='/hub,/hub/(id:string)'"
+        val expected = "STATUS!=202 && $ENHANCED_FUNC_NAME('PATH!=/hub,/hub/(id:string)')"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression with QUERY expression`() {
+        val expression = "QUERY='fields'"
+        val expected = "QUERY='fields'"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression with empty expression`() {
+        val expression = ""
+        val expected = ""
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression with multiple QUERY expressions`() {
+        val expression = "QUERY='name,age' && QUERY='location'"
+        val expected = "$ENHANCED_FUNC_NAME('QUERY=name,age') && QUERY='location'"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression with multiple HEADER expressions`() {
+        val expression = "HEADER='Content-Type,Accept' && HEADER='Authorization'"
+        val expected = "$ENHANCED_FUNC_NAME('HEADER=Content-Type,Accept') && HEADER='Authorization'"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression with mixed operators`() {
+        val expression = "METHOD='GET,POST' && STATUS!='200,400'"
+        val expected = "$ENHANCED_FUNC_NAME('METHOD=GET,POST') && $ENHANCED_FUNC_NAME('STATUS!=200,400')"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression with no $ENHANCED_FUNCTION_NAME applicable`() {
+        val expression = "METHOD='GET' && STATUS='200'"
+        val expected = "METHOD='GET' && STATUS='200'"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression with special characters`() {
+        val expression = "PATH='/user(id:string),/user(name:string)'"
+        val expected = "$ENHANCED_FUNC_NAME('PATH=/user(id:string),/user(name:string)')"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression does not handle spaces around =`() {
+        val expression = "METHOD = 'GET, POST' && STATUS = '200, 400'"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expression, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression handles spaces`() {
+        val expression = "METHOD='GET, POST' && STATUS='200, 400'"
+        val expected = "$ENHANCED_FUNC_NAME('METHOD=GET, POST') && $ENHANCED_FUNC_NAME('STATUS=200, 400')"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression with empty $ENHANCED_FUNCTION_NAME`() {
+        val expression = "METHOD='' && STATUS=''"
+        val expected = "METHOD='' && STATUS=''"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
+    }
+
+    @Test
+    fun `test standard expression with single quotes inside`() {
+        val expression = "METHOD='GET' && STATUS='2'00'"
+        val expected = "METHOD='GET' && STATUS='2'00'"
+        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
+        assertEquals(expected, standardExpression)
     }
 }

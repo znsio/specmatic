@@ -6,10 +6,12 @@ import com.ezylang.evalex.data.EvaluationValue
 import com.ezylang.evalex.functions.AbstractFunction
 import com.ezylang.evalex.functions.FunctionParameter
 import com.ezylang.evalex.parser.Token
+import io.specmatic.core.filters.ScenarioFilterTags.PATH
+import io.specmatic.core.filters.ScenarioFilterTags.STATUS_CODE
 import java.util.regex.Pattern
 
 @FunctionParameter(name = "value")
-class CSVFunction : AbstractFunction() {
+class EnhancedRHSValueEvalFunction : AbstractFunction() {
     override fun evaluate(
         expression: Expression, functionToken: Token, vararg parameterValues: EvaluationValue
     ): EvaluationValue {
@@ -27,8 +29,8 @@ class CSVFunction : AbstractFunction() {
 
         fun checkCondition(value: String): Boolean {
             return when (label) {
-                ScenarioFilterTags.STATUS_CODE.key -> value == scenarioValue || isInRange(value, scenarioValue)
-                ScenarioFilterTags.PATH.key -> value == scenarioValue || matchesPath(value, scenarioValue)
+                STATUS_CODE.key -> value == scenarioValue || isInRange(value, scenarioValue)
+                PATH.key -> value == scenarioValue || matchesPath(value, scenarioValue)
                 else -> value == scenarioValue
             }
         }

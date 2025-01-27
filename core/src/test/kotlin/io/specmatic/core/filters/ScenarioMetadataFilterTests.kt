@@ -89,25 +89,19 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `filter by QUERY`() {
         val filter = ScenarioMetadataFilter.from("QUERY='fields'")
-        val metadata1 = createScenarioMetadata(query = setOf("fields"))
-        assertTrue(filter.isSatisfiedBy(metadata1))
+        val getQueryFields = createScenarioMetadata(query = setOf("fields"))
+        assertTrue(filter.isSatisfiedBy(getQueryFields))
     }
 
     @Test
     fun `filter by Relative Path`() {
         val filter = ScenarioMetadataFilter.from("PATH='/products/*/1'")
-        val metadata1 = createScenarioMetadata(path = "/products/car/1")
-        val metadata2 = createScenarioMetadata(path = "/products/bike/1")
-        val metadata3 = createScenarioMetadata(path = "/products/car/bike/1")
-        val metadata4 = createScenarioMetadata(path = "/product/bike/2")
-        val metadata5 = createScenarioMetadata(path = "/products/bike/2")
-        val metadata6 = createScenarioMetadata(path = "/products/bike/1/2")
-        assertTrue(filter.isSatisfiedBy(metadata1))
-        assertTrue(filter.isSatisfiedBy(metadata2))
-        assertTrue(filter.isSatisfiedBy(metadata3))
-        assertFalse(filter.isSatisfiedBy(metadata4))
-        assertFalse(filter.isSatisfiedBy(metadata5))
-        assertFalse(filter.isSatisfiedBy(metadata6))
+        assertTrue(filter.isSatisfiedBy(createScenarioMetadata(path = "/products/car/1")))
+        assertTrue(filter.isSatisfiedBy( createScenarioMetadata(path = "/products/bike/1")))
+        assertTrue(filter.isSatisfiedBy(createScenarioMetadata(path = "/products/car/bike/1")))
+        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(path = "/product/bike/2")))
+        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(path = "/products/bike/2")))
+        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(path = "/products/bike/1/2")))
     }
 
     @Test
@@ -126,189 +120,182 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `filter by STATUS not 200 or 400`() {
         val filter = ScenarioMetadataFilter.from("STATUS!='200,400'")
-        val metadata1 = createScenarioMetadata(statusCode = 500)
-        val metadata2 = createScenarioMetadata(statusCode = 200)
-        val metadata3 = createScenarioMetadata(statusCode = 400)
+        val status500 = createScenarioMetadata(statusCode = 500)
+        val status200 = createScenarioMetadata(statusCode = 200)
+        val status400 = createScenarioMetadata(statusCode = 400)
 
-        assertTrue(filter.isSatisfiedBy(metadata1))
-        assertFalse(filter.isSatisfiedBy(metadata2))
-        assertFalse(filter.isSatisfiedBy(metadata3))
+        assertTrue(filter.isSatisfiedBy(status500))
+        assertFalse(filter.isSatisfiedBy(status200))
+        assertFalse(filter.isSatisfiedBy(status400))
     }
 
     @Test
     fun `filter by STATUS 2xx`() {
         val filter = ScenarioMetadataFilter.from("STATUS='2xx'")
 
-        val metadata1 = createScenarioMetadata(statusCode = 200)
-        val metadata2 = createScenarioMetadata(statusCode = 201)
-        val metadata3 = createScenarioMetadata(statusCode = 500)
+        val status200 = createScenarioMetadata(statusCode = 200)
+        val status201 = createScenarioMetadata(statusCode = 201)
+        val status500 = createScenarioMetadata(statusCode = 500)
 
-        assertTrue(filter.isSatisfiedBy(metadata1))
-        assertTrue(filter.isSatisfiedBy(metadata2))
-        assertFalse(filter.isSatisfiedBy(metadata3))
+        assertTrue(filter.isSatisfiedBy(status200))
+        assertTrue(filter.isSatisfiedBy(status201))
+        assertFalse(filter.isSatisfiedBy(status500))
     }
 
     @Test
     fun `filter by METHOD not GET and PATH not users`() {
         val filter = ScenarioMetadataFilter.from("METHOD!='GET' || PATH!='/users'")
         val postProducts = createScenarioMetadata(method = "POST", path = "/products")
-        val metadata2 = createScenarioMetadata(method = "GET", path = "/products")
-        val metadata3 = createScenarioMetadata(method = "POST", path = "/users")
-        val metadata4 = createScenarioMetadata(method = "GET", path = "/users")
+        val getProducts = createScenarioMetadata(method = "GET", path = "/products")
+        val postUsers = createScenarioMetadata(method = "POST", path = "/users")
+        val getUsers = createScenarioMetadata(method = "GET", path = "/users")
 
 
         assertTrue(filter.isSatisfiedBy(postProducts))
-        assertTrue(filter.isSatisfiedBy(metadata2))
-        assertTrue(filter.isSatisfiedBy(metadata3))
-        assertFalse(filter.isSatisfiedBy(metadata4))
+        assertTrue(filter.isSatisfiedBy(getProducts))
+        assertTrue(filter.isSatisfiedBy(postUsers))
+        assertFalse(filter.isSatisfiedBy(getUsers))
     }
 
     @Test
     fun `complex filter with OR`() {
         val filter = ScenarioMetadataFilter.from("PATH='/products' || METHOD='POST'")
-        val metadata1 = createScenarioMetadata(method = "GET", path = "/products")
+        val getProducts = createScenarioMetadata(method = "GET", path = "/products")
         val postProducts = createScenarioMetadata(method = "POST", path = "/products")
-        val metadata2 = createScenarioMetadata(method = "POST", path = "/users")
-        val metadata3 = createScenarioMetadata(method = "PUT", path = "/users")
+        val postUsers = createScenarioMetadata(method = "POST", path = "/users")
+        val getUsers = createScenarioMetadata(method = "PUT", path = "/users")
 
-        assertTrue(filter.isSatisfiedBy(metadata1))
+        assertTrue(filter.isSatisfiedBy(getProducts))
         assertTrue(filter.isSatisfiedBy(postProducts))
-        assertTrue(filter.isSatisfiedBy(metadata2))
-        assertFalse(filter.isSatisfiedBy(metadata3))
+        assertTrue(filter.isSatisfiedBy(postUsers))
+        assertFalse(filter.isSatisfiedBy(getUsers))
     }
 
     @Test
     fun `exclude scenarios with STATUS 202`() {
         val filter = ScenarioMetadataFilter.from("STATUS!=202")
-        val metadata1 = createScenarioMetadata(statusCode = 200)
-        val metadata2 = createScenarioMetadata(statusCode = 202)
-        val metadata3 = createScenarioMetadata(statusCode = 400)
+        val status200 = createScenarioMetadata(statusCode = 200)
+        val status202 = createScenarioMetadata(statusCode = 202)
+        val status400 = createScenarioMetadata(statusCode = 400)
 
-        assertTrue(filter.isSatisfiedBy(metadata1))
-        assertFalse(filter.isSatisfiedBy(metadata2))
-        assertTrue(filter.isSatisfiedBy(metadata3))
+        assertTrue(filter.isSatisfiedBy(status200))
+        assertFalse(filter.isSatisfiedBy(status202))
+        assertTrue(filter.isSatisfiedBy(status400))
     }
 
     @Test
     fun `exclude scenarios by example name with exact match`() {
         val filter = ScenarioMetadataFilter.from("PATH!='/hub,/hub/(id:string)'")
-        val metadata1 = createScenarioMetadata(path = "/hub")
-        val metadata2 = createScenarioMetadata(path = "/hub/(id:string)")
-        val metadata3 = createScenarioMetadata(path = "/hub/id")
-        val metadata4 = createScenarioMetadata(path = "/hub/string")
-        val metadata5 = createScenarioMetadata(path = "/users")
 
-        assertFalse(filter.isSatisfiedBy(metadata1))
-        assertFalse(filter.isSatisfiedBy(metadata2))
-        assertTrue(filter.isSatisfiedBy(metadata3))
-        assertTrue(filter.isSatisfiedBy(metadata4))
-        assertTrue(filter.isSatisfiedBy(metadata5))
+        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(path = "/hub")))
+        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(path = "/hub/(id:string)")))
+        assertTrue(filter.isSatisfiedBy(createScenarioMetadata(path = "/hub/id")))
+        assertTrue(filter.isSatisfiedBy(createScenarioMetadata(path = "/hub/string")))
+        assertTrue(filter.isSatisfiedBy(createScenarioMetadata(path = "/users")))
     }
 
     @Test
     fun `exclude scenarios with STATUS not in a list`() {
         val filter = ScenarioMetadataFilter.from("STATUS!='202,401,403'")
-        val metadata1 = createScenarioMetadata(statusCode = 200)
-        val metadata2 = createScenarioMetadata(statusCode = 401)
-        val metadata3 = createScenarioMetadata(statusCode = 202)
+        val status200 = createScenarioMetadata(statusCode = 200)
+        val status401 = createScenarioMetadata(statusCode = 401)
+        val status202 = createScenarioMetadata(statusCode = 202)
 
-        assertTrue(filter.isSatisfiedBy(metadata1))
-        assertFalse(filter.isSatisfiedBy(metadata2))
-        assertFalse(filter.isSatisfiedBy(metadata3))
+        assertTrue(filter.isSatisfiedBy(status200))
+        assertFalse(filter.isSatisfiedBy(status401))
+        assertFalse(filter.isSatisfiedBy(status202))
     }
 
 
     @Test
     fun `exclude scenarios by list of status codes including range expression`() {
         val filter = ScenarioMetadataFilter.from("STATUS!='202,401,403,405,5xx'")
-        val metadata1 = createScenarioMetadata(statusCode = 202)
-        val metadata2 = createScenarioMetadata(statusCode = 500)
-        val metadata3 = createScenarioMetadata(statusCode = 201)
+        val status202 = createScenarioMetadata(statusCode = 202)
+        val status500 = createScenarioMetadata(statusCode = 500)
+        val status201 = createScenarioMetadata(statusCode = 201)
 
-        assertFalse(filter.isSatisfiedBy(metadata1))
-        assertFalse(filter.isSatisfiedBy(metadata2))
-        assertTrue(filter.isSatisfiedBy(metadata3))
+        assertFalse(filter.isSatisfiedBy(status202))
+        assertFalse(filter.isSatisfiedBy(status500))
+        assertTrue(filter.isSatisfiedBy(status201))
     }
 
     @Test
     fun `exclude scenarios with combined STATUS and path conditions`() {
         val filter = ScenarioMetadataFilter.from("STATUS!=202 && PATH!='/hub,/hub/(id:string)'")
-        val metadata1 = createScenarioMetadata(statusCode = 200, path = "/users")
-        val metadata2 = createScenarioMetadata(statusCode = 202, path = "/users")
-        val metadata3 = createScenarioMetadata(statusCode = 200, path = "/hub")
-        val metadata4 = createScenarioMetadata(statusCode = 202, path = "/hub")
-        val metadata5 = createScenarioMetadata(statusCode = 202, path = "/hub/(id:string)")
+        val users200 = createScenarioMetadata(statusCode = 200, path = "/users")
+        val users202 = createScenarioMetadata(statusCode = 202, path = "/users")
+        val hub200 = createScenarioMetadata(statusCode = 200, path = "/hub")
+        val hub202 = createScenarioMetadata(statusCode = 202, path = "/hub")
+        val hubWithId202 = createScenarioMetadata(statusCode = 202, path = "/hub/(id:string)")
 
-        assertTrue(filter.isSatisfiedBy(metadata1))
-        assertFalse(filter.isSatisfiedBy(metadata2))
-        assertFalse(filter.isSatisfiedBy(metadata3))
-        assertFalse(filter.isSatisfiedBy(metadata4))
-        assertFalse(filter.isSatisfiedBy(metadata5))
+        assertTrue(filter.isSatisfiedBy(users200))
+        assertFalse(filter.isSatisfiedBy(users202))
+        assertFalse(filter.isSatisfiedBy(hub200))
+        assertFalse(filter.isSatisfiedBy(hub202))
+        assertFalse(filter.isSatisfiedBy(hubWithId202))
     }
 
     @Test
     fun `include scenarios with combined METHOD and PATH conditions`() {
         val filter = ScenarioMetadataFilter.from("(PATH='/users' && METHOD='POST') || (PATH='/products' && METHOD='POST')")
-        val metadata1 = createScenarioMetadata(method = "GET", path = "/products")
-        val metadata2 = createScenarioMetadata(method = "POST", path = "/products")
-        val metadata3 = createScenarioMetadata(method = "GET", path = "/users")
-        val metadata4 = createScenarioMetadata(method = "POST", path = "/users")
-        val metadata5 = createScenarioMetadata(method = "POST", path = "/orders")
+        val getProducts = createScenarioMetadata(method = "GET", path = "/products")
+        val postProducts = createScenarioMetadata(method = "POST", path = "/products")
+        val getUsers = createScenarioMetadata(method = "GET", path = "/users")
+        val postUsers = createScenarioMetadata(method = "POST", path = "/users")
+        val postOrders = createScenarioMetadata(method = "POST", path = "/orders")
 
 
-        assertFalse(filter.isSatisfiedBy(metadata1))
-        assertTrue(filter.isSatisfiedBy(metadata2))
-        assertFalse(filter.isSatisfiedBy(metadata3))
-        assertTrue(filter.isSatisfiedBy(metadata4))
-        assertFalse(filter.isSatisfiedBy(metadata5))
+        assertFalse(filter.isSatisfiedBy(getProducts))
+        assertTrue(filter.isSatisfiedBy(postProducts))
+        assertFalse(filter.isSatisfiedBy(getUsers))
+        assertTrue(filter.isSatisfiedBy(postUsers))
+        assertFalse(filter.isSatisfiedBy(postOrders))
     }
 
     @Test
     fun `include scenarios where nothing matches`() {
         val filter = ScenarioMetadataFilter.from("(PATH='/users' && METHOD='POST') && (PATH='/products' && METHOD='POST')")
-        val metadata1 = createScenarioMetadata(method = "GET", path = "/products")
-        val metadata2 = createScenarioMetadata(method = "POST", path = "/products")
-        val metadata3 = createScenarioMetadata(method = "GET", path = "/users")
-        val metadata4 = createScenarioMetadata(method = "POST", path = "/users")
-        val metadata5 = createScenarioMetadata(method = "POST", path = "/orders")
+        val getProducts = createScenarioMetadata(method = "GET", path = "/products")
+        val postProducts = createScenarioMetadata(method = "POST", path = "/products")
+        val getUsers = createScenarioMetadata(method = "GET", path = "/users")
+        val postUsers = createScenarioMetadata(method = "POST", path = "/users")
+        val postOrders = createScenarioMetadata(method = "POST", path = "/orders")
 
 
-        assertFalse(filter.isSatisfiedBy(metadata1))
-        assertFalse(filter.isSatisfiedBy(metadata2))
-        assertFalse(filter.isSatisfiedBy(metadata3))
-        assertFalse(filter.isSatisfiedBy(metadata4))
-        assertFalse(filter.isSatisfiedBy(metadata5))
+        assertFalse(filter.isSatisfiedBy(getProducts))
+        assertFalse(filter.isSatisfiedBy(postProducts))
+        assertFalse(filter.isSatisfiedBy(getUsers))
+        assertFalse(filter.isSatisfiedBy(postUsers))
+        assertFalse(filter.isSatisfiedBy(postOrders))
     }
 
     @Test
     fun `exclude scenarios with combined METHOD and PATH conditions`() {
         val filter = ScenarioMetadataFilter.from("!(PATH='/users' && METHOD='POST') && !(PATH='/products' && METHOD='POST')")
-        val metadata1 = createScenarioMetadata(method = "GET", path = "/products")
-        val metadata2 = createScenarioMetadata(method = "POST", path = "/products")
-        val metadata3 = createScenarioMetadata(method = "GET", path = "/users")
-        val metadata4 = createScenarioMetadata(method = "POST", path = "/users")
-        val metadata5 = createScenarioMetadata(method = "POST", path = "/orders")
+        val getProducts = createScenarioMetadata(method = "GET", path = "/products")
+        val postProducts = createScenarioMetadata(method = "POST", path = "/products")
+        val getUsers = createScenarioMetadata(method = "GET", path = "/users")
+        val postUsers = createScenarioMetadata(method = "POST", path = "/users")
+        val postOrders = createScenarioMetadata(method = "POST", path = "/orders")
 
 
-        assertTrue(filter.isSatisfiedBy(metadata1))
-        assertFalse(filter.isSatisfiedBy(metadata2))
-        assertTrue(filter.isSatisfiedBy(metadata3))
-        assertFalse(filter.isSatisfiedBy(metadata4))
-        assertTrue(filter.isSatisfiedBy(metadata5))
+        assertTrue(filter.isSatisfiedBy(getProducts))
+        assertFalse(filter.isSatisfiedBy(postProducts))
+        assertTrue(filter.isSatisfiedBy(getUsers))
+        assertFalse(filter.isSatisfiedBy(postUsers))
+        assertTrue(filter.isSatisfiedBy(postOrders))
     }
 
     @Test
     fun `double nested conditions`() {
-        val filter =
-            ScenarioMetadataFilter.from("!(STATUS='202,401,403,405' || STATUS='50x' || (PATH='/monitor' && METHOD='GET') || (PATH='/monitor/(id:string)' && METHOD='GET')) && (PATH='/orders' && METHOD='GET')")
+        val filter = ScenarioMetadataFilter.from("!(STATUS='202,401,403,405' || STATUS='50x' || (PATH='/monitor' && METHOD='GET') || (PATH='/monitor/(id:string)' && METHOD='GET')) && (PATH='/orders' && METHOD='GET')")
         assertTrue(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/orders", statusCode = 200)))
         assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 200)))
     }
 
     @Test
     fun `exclude scenarios with combined METHOD and PATH conditions, in addition also a status condition`() {
-        val filter =
-            ScenarioMetadataFilter.from("!(PATH='/users' && METHOD='POST') && !(PATH='/products' && METHOD='POST') && STATUS!='202,400,500'")
+        val filter = ScenarioMetadataFilter.from("!(PATH='/users' && METHOD='POST') && !(PATH='/products' && METHOD='POST') && STATUS!='202,400,500'")
 
         val getProducts200 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 200)
         val getProducts202 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 202)
@@ -344,8 +331,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `exclude scenarios with combined METHOD and PATH conditions, in addition also a status condition as first condition`() {
-        val filter =
-            ScenarioMetadataFilter.from("(STATUS!='202,400' || (!(PATH='/users' && METHOD='POST')) && !(PATH='/products' && METHOD='POST') && STATUS!='5xx')")
+        val filter = ScenarioMetadataFilter.from("(STATUS!='202,400' || (!(PATH='/users' && METHOD='POST')) && !(PATH='/products' && METHOD='POST') && STATUS!='5xx')")
 
         val getProducts200 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 200)
         val getProducts202 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 202)
@@ -391,145 +377,138 @@ class ScenarioMetadataFilterTests {
     }
 
     @Test
-    fun `test standard expression with only METHOD expression`() {
-        val expression = "METHOD='GET'"
-        val expected = "METHOD='GET'"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with only METHOD expression`() {
+        val filterExpression = "METHOD='GET'"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(enhancedExpression, filterExpression)
     }
 
     @Test
-    fun `test standard expression with METHOD and STATUS expression`() {
-        val expression = "METHOD='GET' && STATUS='200,400'"
-        val expected = "METHOD='GET' && $ENHANCED_FUNC_NAME('STATUS=200,400')"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with METHOD and STATUS expression`() {
+        val filterExpression = "METHOD='GET' && STATUS='200,400'"
+        val expectedEnhancedExpression = "METHOD='GET' && $ENHANCED_FUNC_NAME('STATUS=200,400')"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(enhancedExpression, expectedEnhancedExpression)
     }
 
     @Test
-    fun `test standard expression with multiple METHOD and STATUS expression`() {
-        val expression = "METHOD='GET,POST' && STATUS='200,400'"
-        val expected = "$ENHANCED_FUNC_NAME('METHOD=GET,POST') && $ENHANCED_FUNC_NAME('STATUS=200,400')"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with multiple METHOD and STATUS expression`() {
+        val filterExpression = "METHOD='GET,POST' && STATUS='200,400'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('METHOD=GET,POST') && $ENHANCED_FUNC_NAME('STATUS=200,400')"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(expectedEnhancedExpression, enhancedExpression)
     }
 
     @Test
-    fun `test standard expression with multiple METHOD and PATH expression`() {
-        val expression = "METHOD='GET,POST' || PATH='/users,/user(id:string)'"
-        val expected = "$ENHANCED_FUNC_NAME('METHOD=GET,POST') || $ENHANCED_FUNC_NAME('PATH=/users,/user(id:string)')"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with multiple METHOD and PATH expression`() {
+        val filterExpression = "METHOD='GET,POST' || PATH='/users,/user(id:string)'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('METHOD=GET,POST') || $ENHANCED_FUNC_NAME('PATH=/users,/user(id:string)')"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(enhancedExpression, expectedEnhancedExpression)
     }
 
     @Test
-    fun `test standard expression with multiple METHOD and single PATH expression`() {
-        val expression = "(METHOD='POST' && PATH='/users') || (METHOD='POST' && PATH='/products')"
-        val expected = "(METHOD='POST' && PATH='/users') || (METHOD='POST' && PATH='/products')"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with multiple METHOD and single PATH expression`() {
+        val filterExpression = "(METHOD='POST' && PATH='/users') || (METHOD='POST' && PATH='/products')"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(enhancedExpression, filterExpression)
     }
 
     @Test
-    fun `test standard expression with STATUS expression`() {
-        val expression = "STATUS='2xx'"
-        val expected = "$ENHANCED_FUNC_NAME('STATUS=2xx')"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with STATUS expression`() {
+        val filterExpression = "STATUS='2xx'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('STATUS=2xx')"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(enhancedExpression, expectedEnhancedExpression)
     }
 
     @Test
-    fun `test standard expression with PATH expression`() {
-        val expression = "STATUS!=202 && PATH!='/hub,/hub/(id:string)'"
-        val expected = "STATUS!=202 && $ENHANCED_FUNC_NAME('PATH!=/hub,/hub/(id:string)')"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with PATH expression`() {
+        val filterExpression = "STATUS!=202 && PATH!='/hub,/hub/(id:string)'"
+        val expectedEnhancedExpression = "STATUS!=202 && $ENHANCED_FUNC_NAME('PATH!=/hub,/hub/(id:string)')"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(enhancedExpression, expectedEnhancedExpression)
     }
 
     @Test
-    fun `test standard expression with QUERY expression`() {
-        val expression = "QUERY='fields'"
-        val expected = "QUERY='fields'"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with QUERY expression`() {
+        val filterExpression = "QUERY='fields'"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(enhancedExpression, filterExpression)
     }
 
     @Test
-    fun `test standard expression with empty expression`() {
-        val expression = ""
-        val expected = ""
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with empty expression`() {
+        val filterExpression = ""
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(filterExpression, enhancedExpression)
     }
 
     @Test
-    fun `test standard expression with multiple QUERY expressions`() {
-        val expression = "QUERY='name,age' && QUERY='location'"
-        val expected = "$ENHANCED_FUNC_NAME('QUERY=name,age') && QUERY='location'"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with multiple QUERY expressions`() {
+        val filterExpression = "QUERY='name,age' && QUERY='location'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('QUERY=name,age') && QUERY='location'"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(enhancedExpression, expectedEnhancedExpression)
     }
 
     @Test
-    fun `test standard expression with multiple HEADER expressions`() {
-        val expression = "HEADER='Content-Type,Accept' && HEADER='Authorization'"
-        val expected = "$ENHANCED_FUNC_NAME('HEADER=Content-Type,Accept') && HEADER='Authorization'"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with multiple HEADER expressions`() {
+        val filterExpression = "HEADER='Content-Type,Accept' && HEADER='Authorization'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('HEADER=Content-Type,Accept') && HEADER='Authorization'"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(enhancedExpression, expectedEnhancedExpression)
     }
 
     @Test
-    fun `test standard expression with mixed operators`() {
-        val expression = "METHOD='GET,POST' && STATUS!='200,400'"
-        val expected = "$ENHANCED_FUNC_NAME('METHOD=GET,POST') && $ENHANCED_FUNC_NAME('STATUS!=200,400')"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with mixed operators`() {
+        val filterExpression = "METHOD='GET,POST' && STATUS!='200,400'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('METHOD=GET,POST') && $ENHANCED_FUNC_NAME('STATUS!=200,400')"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(enhancedExpression, expectedEnhancedExpression)
     }
 
     @Test
-    fun `test standard expression with no $ENHANCED_FUNCTION_NAME applicable`() {
-        val expression = "METHOD='GET' && STATUS='200'"
-        val expected = "METHOD='GET' && STATUS='200'"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with no $ENHANCED_FUNCTION_NAME applicable`() {
+        val filterExpression = "METHOD='GET' && STATUS='200'"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(enhancedExpression, filterExpression)
     }
 
     @Test
-    fun `test standard expression with special characters`() {
-        val expression = "PATH='/user(id:string),/user(name:string)'"
-        val expected = "$ENHANCED_FUNC_NAME('PATH=/user(id:string),/user(name:string)')"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with special characters`() {
+        val filterExpression = "PATH='/user(id:string),/user(name:string)'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('PATH=/user(id:string),/user(name:string)')"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(enhancedExpression, expectedEnhancedExpression)
     }
 
     @Test
-    fun `test standard expression does not handle spaces around =`() {
-        val expression = "METHOD = 'GET, POST' && STATUS = '200, 400'"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expression, standardExpression)
+    fun `test enhanced expression does not handle spaces around =`() {
+        val filterExpression = "METHOD = 'GET, POST' && STATUS = '200, 400'"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(filterExpression, enhancedExpression)
     }
 
     @Test
-    fun `test standard expression handles spaces`() {
-        val expression = "METHOD='GET, POST' && STATUS='200, 400'"
-        val expected = "$ENHANCED_FUNC_NAME('METHOD=GET, POST') && $ENHANCED_FUNC_NAME('STATUS=200, 400')"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression handles spaces`() {
+        val filterExpression = "METHOD='GET, POST' && STATUS='200, 400'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('METHOD=GET, POST') && $ENHANCED_FUNC_NAME('STATUS=200, 400')"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(enhancedExpression, expectedEnhancedExpression)
     }
 
     @Test
-    fun `test standard expression with empty $ENHANCED_FUNCTION_NAME`() {
-        val expression = "METHOD='' && STATUS=''"
-        val expected = "METHOD='' && STATUS=''"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with empty $ENHANCED_FUNCTION_NAME`() {
+        val filterExpression = "METHOD='' && STATUS=''"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(filterExpression, enhancedExpression)
     }
 
     @Test
-    fun `test standard expression with single quotes inside`() {
-        val expression = "METHOD='GET' && STATUS='2'00'"
-        val expected = "METHOD='GET' && STATUS='2'00'"
-        val standardExpression = ScenarioMetadataFilter.standardizeExpression(expression)
-        assertEquals(expected, standardExpression)
+    fun `test enhanced expression with single quotes inside`() {
+        val filterExpression = "METHOD='GET' && STATUS='2'00'"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(filterExpression, enhancedExpression)
     }
 }

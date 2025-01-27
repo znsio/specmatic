@@ -18,4 +18,3 @@ perfiz/*_data
 **/*.hprof
 .scannerwork
 .java-version
-**/bin*

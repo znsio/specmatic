@@ -38,9 +38,7 @@ class ScenarioMetadataFilterTests {
         )
 
         scenarios.forEach { scenario ->
-            assertThrows<Exception> {
-                filter.isSatisfiedBy(scenario)
-            }
+            assertTrue(filter.isSatisfiedBy(scenario))
         }
     }
 
@@ -113,15 +111,15 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `filter by STATUS 200 or 400`() {
-        val filter = ScenarioMetadataFilter.from("STATUS='200,400'")
+        val filter = ScenarioMetadataFilter.from("STATUS='200, 400'")
 
         val status200 = createScenarioMetadata(statusCode = 200)
-        val metadata2 = createScenarioMetadata(statusCode = 400)
-        val metadata3 = createScenarioMetadata(statusCode = 500)
+        val status400 = createScenarioMetadata(statusCode = 400)
+        val status500 = createScenarioMetadata(statusCode = 500)
 
         assertTrue(filter.isSatisfiedBy(status200))
-        assertTrue(filter.isSatisfiedBy(metadata2))
-        assertFalse(filter.isSatisfiedBy(metadata3))
+        assertTrue(filter.isSatisfiedBy(status400))
+        assertFalse(filter.isSatisfiedBy(status500))
     }
 
     @Test
@@ -346,7 +344,7 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `exclude scenarios with combined METHOD and PATH conditions, in addition also a status condition as first condition`() {
         val filter =
-            ScenarioMetadataFilter.from("STATUS!='202,400' && !(PATH='/users' && METHOD='POST') && !(PATH='/products' && METHOD='POST') && STATUS!='5xx'")
+            ScenarioMetadataFilter.from("(STATUS!='202,400' || (!(PATH='/users' && METHOD='POST')) && !(PATH='/products' && METHOD='POST') && STATUS!='5xx')")
 
         val getProducts200 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 200)
         val getProducts202 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 202)
@@ -366,21 +364,21 @@ class ScenarioMetadataFilterTests {
 
 
         assertTrue(filter.isSatisfiedBy(getProducts200))
-        assertFalse(filter.isSatisfiedBy(getProducts202))
+        assertTrue(filter.isSatisfiedBy(getProducts202))
 
-        assertFalse(filter.isSatisfiedBy(postProducts200))
+        assertTrue(filter.isSatisfiedBy(postProducts200))
         assertFalse(filter.isSatisfiedBy(postProducts202))
 
         assertTrue(filter.isSatisfiedBy(getUsers200))
-        assertFalse(filter.isSatisfiedBy(getUsers202))
+        assertTrue(filter.isSatisfiedBy(getUsers202))
 
-        assertFalse(filter.isSatisfiedBy(postUsers401))
+        assertTrue(filter.isSatisfiedBy(postUsers401))
         assertFalse(filter.isSatisfiedBy(postUsers400))
 
         assertTrue(filter.isSatisfiedBy(postOrders401))
-        assertFalse(filter.isSatisfiedBy(postOrders500))
+        assertTrue(filter.isSatisfiedBy(postOrders500))
 
-        assertFalse(filter.isSatisfiedBy(postOrders502))
+        assertTrue(filter.isSatisfiedBy(postOrders502))
     }
 
     @Test

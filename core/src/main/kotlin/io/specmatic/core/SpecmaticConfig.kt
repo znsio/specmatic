@@ -110,7 +110,7 @@ data class AttributeSelectionPattern(
 
 data class SpecmaticConfig(
     val sources: List<Source> = emptyList(),
-    val auth: Auth? = null,
+    private val auth: Auth? = null,
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
     val hooks: Map<String, String> = emptyMap(),
@@ -182,6 +182,11 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun getAllPatternsMandatory(): Boolean {
         return allPatternsMandatory ?: getBooleanValue(Flags.ALL_PATTERNS_MANDATORY)
+    }
+
+    @JsonIgnore
+    fun getAuth(): Auth? {
+        return auth
     }
 }
 

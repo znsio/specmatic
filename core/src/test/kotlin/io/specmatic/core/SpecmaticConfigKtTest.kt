@@ -8,8 +8,8 @@ import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
 import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
 import io.specmatic.core.utilities.Flags.Companion.SCHEMA_EXAMPLE_DEFAULT
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_GENERATIVE_TESTS
-import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -36,7 +36,7 @@ internal class SpecmaticConfigKtTest {
         assertThat(sources.first().test).isEqualTo(listOf("com/petstore/1.spec"))
         assertThat(sources.first().stub).isEqualTo(listOf("com/petstore/payment.spec"))
 
-        assertThat(config.auth?.bearerFile).isEqualTo("bearer.txt")
+        assertThat(config.getAuth()?.bearerFile).isEqualTo("bearer.txt")
 
         assertThat(config.pipeline?.provider).isEqualTo(PipelineProvider.azure)
         assertThat(config.pipeline?.organization).isEqualTo("xnsio")
@@ -120,7 +120,7 @@ internal class SpecmaticConfigKtTest {
         assertThat(sources.first().test).isEqualTo(listOf("com/petstore/1.yaml"))
         assertThat(sources.first().stub).isEqualTo(listOf("com/petstore/payment.yaml"))
 
-        assertThat(config.auth?.bearerFile).isEqualTo("bearer.txt")
+        assertThat(config.getAuth()?.bearerFile).isEqualTo("bearer.txt")
 
         assertThat(config.pipeline?.provider).isEqualTo(PipelineProvider.azure)
         assertThat(config.pipeline?.organization).isEqualTo("xnsio")

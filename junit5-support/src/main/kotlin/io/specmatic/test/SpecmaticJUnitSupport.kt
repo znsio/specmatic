@@ -130,7 +130,11 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        fun actuatorFromSwagger(testBaseURL: String, client: TestExecutor? = null) {
+        enum class ActuatorSetupResult(val failed: Boolean) {
+            Success(false), Failure(true)
+        }
+
+        fun actuatorFromSwagger(testBaseURL: String, client: TestExecutor? = null): ActuatorSetupResult {
             val baseURL = Flags.getStringValue(SWAGGER_UI_BASEURL) ?: testBaseURL
             val httpClient = client ?: HttpClient(baseURL, log = ignoreLog)
 
@@ -138,8 +142,7 @@ open class SpecmaticJUnitSupport {
             val response = httpClient.execute(request)
 
             if (response.status != 200) {
-                logger.log("EndpointsAPI and SwaggerUI URL missing; cannot calculate actual coverage")
-                return
+                return ActuatorSetupResult.Failure
             }
 
             val featureFromJson = OpenApiSpecification.fromYAML(response.body.toStringLiteral(), "").toFeature()
@@ -147,9 +150,13 @@ open class SpecmaticJUnitSupport {
 
             openApiCoverageReportInput.addAPIs(apis.distinct())
             openApiCoverageReportInput.setEndpointsAPIFlag(true)
+
+            return ActuatorSetupResult.Success
         }
 
-        fun queryActuator(endpointsAPI: String) {
+        fun queryActuator(): ActuatorSetupResult {
+            val endpointsAPI: String = Flags.getStringValue(ENDPOINTS_API) ?: return ActuatorSetupResult.Failure
+
             val request = HttpRequest("GET")
             val response = HttpClient(endpointsAPI, log = ignoreLog).execute(request)
             logger.debug(response.toLogString())
@@ -180,6 +187,8 @@ open class SpecmaticJUnitSupport {
                 }
             }
             openApiCoverageReportInput.addAPIs(apis)
+
+            return ActuatorSetupResult.Success
         }
 
         val configFile get() = getConfigFilePath()
@@ -346,7 +355,8 @@ open class SpecmaticJUnitSupport {
         timeoutInMilliseconds: Long
     ): Stream<DynamicTest> {
         try {
-            Flags.getStringValue(ENDPOINTS_API)?.let(::queryActuator) ?: actuatorFromSwagger(testBaseURL)
+            if(queryActuator().failed && actuatorFromSwagger(testBaseURL).failed)
+                logger.log("EndpointsAPI and SwaggerUI URL missing; cannot calculate actual coverage")
         } catch (exception: Throwable) {
             logger.log(exception, "Failed to query actuator with error")
         }

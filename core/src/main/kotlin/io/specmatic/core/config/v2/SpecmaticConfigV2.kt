@@ -78,7 +78,7 @@ data class SpecmaticConfigV2(
                 additionalExampleParamsFilePath = config.additionalExampleParamsFilePath,
                 attributeSelectionPattern = config.attributeSelectionPattern,
                 allPatternsMandatory = config.allPatternsMandatory,
-                defaultPatternValues = config.defaultPatternValues
+                defaultPatternValues = config.getDefaultPatternValues()
             )
         }
     }

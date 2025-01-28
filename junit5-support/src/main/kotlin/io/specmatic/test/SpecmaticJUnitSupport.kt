@@ -142,6 +142,7 @@ open class SpecmaticJUnitSupport {
             val response = httpClient.execute(request)
 
             if (response.status != 200) {
+                logger.log("Failed to query swaggerUI, status code: ${response.status}")
                 return ActuatorSetupResult.Failure
             }
 
@@ -156,11 +157,15 @@ open class SpecmaticJUnitSupport {
 
         fun queryActuator(): ActuatorSetupResult {
             val endpointsAPI: String = Flags.getStringValue(ENDPOINTS_API) ?: return ActuatorSetupResult.Failure
-
             val request = HttpRequest("GET")
             val response = HttpClient(endpointsAPI, log = ignoreLog).execute(request)
-            logger.debug(response.toLogString())
 
+            if (response.status != 200) {
+                logger.log("Failed to query actuator, status code: ${response.status}")
+                return ActuatorSetupResult.Failure
+            }
+
+            logger.debug(response.toLogString())
             openApiCoverageReportInput.setEndpointsAPIFlag(true)
             val endpointData = response.body as JSONObjectValue
             val apis: List<API> = endpointData.getJSONObject("contexts").entries.flatMap { entry ->

@@ -1,6 +1,7 @@
 package io.specmatic.test
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
 import io.specmatic.core.filters.ScenarioMetadataFilter
@@ -72,6 +73,7 @@ open class SpecmaticJUnitSupport {
         const val OVERLAY_FILE_PATH = "overlayFilePath"
         const val STRICT_MODE = "strictMode"
         private const val ENDPOINTS_API = "endpointsAPI"
+        private const val SWAGGER_UI_URL = "swaggerUIUrl"
 
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfig: SpecmaticConfig? = null
@@ -128,48 +130,56 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        fun queryActuator() {
-            val endpointsAPI = System.getProperty(ENDPOINTS_API)
+        fun actuatorFromSwagger(testBaseURL: String, client: TestExecutor? = null) {
+            val baseURL = Flags.getStringValue(SWAGGER_UI_URL) ?: testBaseURL
+            val httpClient = client ?: HttpClient(baseURL, log = ignoreLog)
 
-            if(endpointsAPI != null) {
-                val request = HttpRequest("GET")
+            val request = HttpRequest(path = "/swagger/v1/swagger.yaml", method = "GET")
+            val response = httpClient.execute(request)
 
-                val response = HttpClient(endpointsAPI, log = ignoreLog).execute(request)
+            if (response.status != 200) {
+                logger.log("EndpointsAPI and SwaggerUI URL missing; cannot calculate actual coverage")
+                return
+            }
 
-                logger.debug(response.toLogString())
+            val featureFromJson = OpenApiSpecification.fromYAML(response.body.toStringLiteral(), "").toFeature()
+            val apis = featureFromJson.scenarios.map { scenario -> API(scenario.method, scenario.path) }
 
-                openApiCoverageReportInput.setEndpointsAPIFlag(true)
+            openApiCoverageReportInput.addAPIs(apis.distinct())
+            openApiCoverageReportInput.setEndpointsAPIFlag(true)
+        }
 
-                val endpointData = response.body as JSONObjectValue
-                val apis: List<API> = endpointData.getJSONObject("contexts").entries.flatMap { entry ->
-                    val mappings: JSONArrayValue =
-                        (entry.value as JSONObjectValue).findFirstChildByPath("mappings.dispatcherServlets.dispatcherServlet") as JSONArrayValue
-                    mappings.list.map { it as JSONObjectValue }.filter {
-                        it.findFirstChildByPath("details.handlerMethod.className")?.toStringLiteral()
-                            ?.contains("springframework") != true
-                    }.flatMap {
-                        val methods: JSONArrayValue? =
-                            it.findFirstChildByPath("details.requestMappingConditions.methods") as JSONArrayValue?
-                        val paths: JSONArrayValue? =
-                            it.findFirstChildByPath("details.requestMappingConditions.patterns") as JSONArrayValue?
+        fun queryActuator(endpointsAPI: String) {
+            val request = HttpRequest("GET")
+            val response = HttpClient(endpointsAPI, log = ignoreLog).execute(request)
+            logger.debug(response.toLogString())
 
-                        if(methods != null && paths != null) {
-                            methods.list.flatMap { method ->
-                                paths.list.map { path ->
-                                    API(method.toStringLiteral(), path.toStringLiteral())
-                                }
+            openApiCoverageReportInput.setEndpointsAPIFlag(true)
+            val endpointData = response.body as JSONObjectValue
+            val apis: List<API> = endpointData.getJSONObject("contexts").entries.flatMap { entry ->
+                val mappings: JSONArrayValue =
+                    (entry.value as JSONObjectValue).findFirstChildByPath("mappings.dispatcherServlets.dispatcherServlet") as JSONArrayValue
+                mappings.list.map { it as JSONObjectValue }.filter {
+                    it.findFirstChildByPath("details.handlerMethod.className")?.toStringLiteral()
+                        ?.contains("springframework") != true
+                }.flatMap {
+                    val methods: JSONArrayValue? =
+                        it.findFirstChildByPath("details.requestMappingConditions.methods") as JSONArrayValue?
+                    val paths: JSONArrayValue? =
+                        it.findFirstChildByPath("details.requestMappingConditions.patterns") as JSONArrayValue?
+
+                    if(methods != null && paths != null) {
+                        methods.list.flatMap { method ->
+                            paths.list.map { path ->
+                                API(method.toStringLiteral(), path.toStringLiteral())
                             }
-                        } else {
-                            emptyList()
                         }
+                    } else {
+                        emptyList()
                     }
                 }
-
-                openApiCoverageReportInput.addAPIs(apis)
-
-            } else {
-                logger.log("Endpoints API not found, cannot calculate actual coverage")
             }
+            openApiCoverageReportInput.addAPIs(apis)
         }
 
         val configFile get() = getConfigFilePath()
@@ -336,7 +346,7 @@ open class SpecmaticJUnitSupport {
         timeoutInMilliseconds: Long
     ): Stream<DynamicTest> {
         try {
-            queryActuator()
+            Flags.getStringValue(ENDPOINTS_API)?.let(::queryActuator) ?: actuatorFromSwagger(testBaseURL)
         } catch (exception: Throwable) {
             logger.log(exception, "Failed to query actuator with error")
         }

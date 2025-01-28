@@ -73,7 +73,7 @@ open class SpecmaticJUnitSupport {
         const val OVERLAY_FILE_PATH = "overlayFilePath"
         const val STRICT_MODE = "strictMode"
         private const val ENDPOINTS_API = "endpointsAPI"
-        private const val SWAGGER_UI_URL = "swaggerUIUrl"
+        private const val SWAGGER_UI_BASEURL = "swaggerUIBaseURL"
 
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfig: SpecmaticConfig? = null
@@ -131,7 +131,7 @@ open class SpecmaticJUnitSupport {
         }
 
         fun actuatorFromSwagger(testBaseURL: String, client: TestExecutor? = null) {
-            val baseURL = Flags.getStringValue(SWAGGER_UI_URL) ?: testBaseURL
+            val baseURL = Flags.getStringValue(SWAGGER_UI_BASEURL) ?: testBaseURL
             val httpClient = client ?: HttpClient(baseURL, log = ignoreLog)
 
             val request = HttpRequest(path = "/swagger/v1/swagger.yaml", method = "GET")

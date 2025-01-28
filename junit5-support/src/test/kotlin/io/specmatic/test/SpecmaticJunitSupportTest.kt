@@ -154,7 +154,7 @@ class SpecmaticJunitSupportTest {
     }
 
     @Test
-    fun `should be able to get actuator endpoints from swagger json`() {
+    fun `should be able to get actuator endpoints from swaggerUI`() {
         SpecmaticJUnitSupport.actuatorFromSwagger("", object: TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 return HttpResponse(

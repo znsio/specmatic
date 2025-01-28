@@ -62,7 +62,7 @@ internal class SpecmaticConfigAllTest {
     @ParameterizedTest
     fun `should create SpecmaticConfig given SpecmaticConfigV1`(version: SpecmaticConfigVersion, configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
-        assertThat(config.version).isEqualTo(version)
+        assertThat(config.getVersion()).isEqualTo(version)
         assertThat(config.sources.size).isEqualTo(2)
         val expectedSources = listOf(
             Source(provider= SourceProvider.git, repository="https://contracts", branch = "1.0.1", test= listOf("com/petstore/1.yaml"), stub= listOf("com/petstore/payment.yaml")),

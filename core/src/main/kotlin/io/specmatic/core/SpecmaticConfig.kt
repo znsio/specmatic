@@ -185,8 +185,13 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun getAuth(): Auth? {
-        return auth
+    fun getAuthBearerFile(): String? {
+        return auth?.getBearerFile()
+    }
+
+    @JsonIgnore
+    fun getAuthBearerEnvironmentVariable(): String? {
+        return auth?.getBearerEnvironmentVariable()
     }
 }
 
@@ -225,10 +230,18 @@ data class ResiliencyTestsConfig(
     }
 }
 
-data class Auth(
-    @JsonProperty("bearer-file") val bearerFile: String = "bearer.txt",
-    @JsonProperty("bearer-environment-variable") val bearerEnvironmentVariable: String? = null
-)
+class Auth(
+    @JsonProperty("bearer-file") private val bearerFile: String = "bearer.txt",
+    @JsonProperty("bearer-environment-variable") private val bearerEnvironmentVariable: String? = null
+) {
+    fun getBearerFile(): String {
+        return bearerFile
+    }
+
+    fun getBearerEnvironmentVariable(): String? {
+        return bearerEnvironmentVariable
+    }
+}
 
 enum class PipelineProvider { azure }
 

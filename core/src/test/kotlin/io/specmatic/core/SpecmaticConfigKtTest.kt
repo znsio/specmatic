@@ -36,7 +36,7 @@ internal class SpecmaticConfigKtTest {
         assertThat(sources.first().test).isEqualTo(listOf("com/petstore/1.spec"))
         assertThat(sources.first().stub).isEqualTo(listOf("com/petstore/payment.spec"))
 
-        assertThat(config.getAuth()?.bearerFile).isEqualTo("bearer.txt")
+        assertThat(config.getAuthBearerFile()).isEqualTo("bearer.txt")
 
         assertThat(config.pipeline?.provider).isEqualTo(PipelineProvider.azure)
         assertThat(config.pipeline?.organization).isEqualTo("xnsio")
@@ -120,7 +120,7 @@ internal class SpecmaticConfigKtTest {
         assertThat(sources.first().test).isEqualTo(listOf("com/petstore/1.yaml"))
         assertThat(sources.first().stub).isEqualTo(listOf("com/petstore/payment.yaml"))
 
-        assertThat(config.getAuth()?.bearerFile).isEqualTo("bearer.txt")
+        assertThat(config.getAuthBearerFile()).isEqualTo("bearer.txt")
 
         assertThat(config.pipeline?.provider).isEqualTo(PipelineProvider.azure)
         assertThat(config.pipeline?.organization).isEqualTo("xnsio")

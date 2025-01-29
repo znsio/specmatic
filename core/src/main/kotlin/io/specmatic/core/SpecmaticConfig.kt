@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.config.SpecmaticConfigVersion
+import io.specmatic.core.config.SpecmaticConfigVersion.VERSION_1
 import io.specmatic.core.config.toSpecmaticConfig
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
@@ -110,10 +111,10 @@ data class AttributeSelectionPattern(
 
 data class SpecmaticConfig(
     val sources: List<Source> = emptyList(),
-    val auth: Auth? = null,
+    private val auth: Auth? = null,
     private val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
-    val hooks: Map<String, String> = emptyMap(),
+    private val hooks: Map<String, String> = emptyMap(),
     val repository: RepositoryInfo? = null,
     val report: ReportConfiguration? = null,
     val security: SecurityConfiguration? = null,
@@ -123,11 +124,11 @@ data class SpecmaticConfig(
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
     val workflow: WorkflowConfiguration? = null,
     val ignoreInlineExamples: Boolean? = null,
-    val additionalExampleParamsFilePath: String? = getStringValue(Flags.ADDITIONAL_EXAMPLE_PARAMS_FILE),
+    private val additionalExampleParamsFilePath: String? = null,
     val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
     val allPatternsMandatory: Boolean? = null,
-    val defaultPatternValues: Map<String, Any> = emptyMap(),
-    val version: SpecmaticConfigVersion? = null
+    private val defaultPatternValues: Map<String, Any> = emptyMap(),
+    private val version: SpecmaticConfigVersion? = null
 ) {
     @JsonIgnore
     fun attributeSelectionQueryParamKey(): String {
@@ -182,6 +183,40 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun getAllPatternsMandatory(): Boolean {
         return allPatternsMandatory ?: getBooleanValue(Flags.ALL_PATTERNS_MANDATORY)
+    }
+
+    @JsonIgnore
+    fun getAdditionalExampleParamsFilePath(): String? {
+        return additionalExampleParamsFilePath ?: getStringValue(Flags.ADDITIONAL_EXAMPLE_PARAMS_FILE)
+    }
+
+    @JsonIgnore
+    fun getHooks(): Map<String, String> {
+        return hooks
+    }
+
+    @JsonIgnore
+    fun getDefaultPatternValues(): Map<String, Any> {
+        return defaultPatternValues
+    }
+
+    fun getVersion(): SpecmaticConfigVersion {
+        return this.version ?: VERSION_1
+    }
+
+    @JsonIgnore
+    fun getAuth(): Auth? {
+        return auth
+    }
+
+    @JsonIgnore
+    fun getAuthBearerFile(): String? {
+        return auth?.getBearerFile()
+    }
+
+    @JsonIgnore
+    fun getAuthBearerEnvironmentVariable(): String? {
+        return auth?.getBearerEnvironmentVariable()
     }
 
     @JsonIgnore
@@ -245,10 +280,18 @@ data class ResiliencyTestsConfig(
     }
 }
 
-data class Auth(
-    @JsonProperty("bearer-file") val bearerFile: String = "bearer.txt",
-    @JsonProperty("bearer-environment-variable") val bearerEnvironmentVariable: String? = null
-)
+class Auth(
+    @JsonProperty("bearer-file") private val bearerFile: String = "bearer.txt",
+    @JsonProperty("bearer-environment-variable") private val bearerEnvironmentVariable: String? = null
+) {
+    fun getBearerFile(): String {
+        return bearerFile
+    }
+
+    fun getBearerEnvironmentVariable(): String? {
+        return bearerEnvironmentVariable
+    }
+}
 
 enum class PipelineProvider { azure }
 

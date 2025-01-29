@@ -7,7 +7,7 @@
     "status": 200,
     "body": {
       "request": {
-        "method": "POST",
+        "method": "$(ENTITY.method)",
         "body": "$(ENTITY.requestBody)"
       },
       "response": {

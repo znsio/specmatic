@@ -205,6 +205,11 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
+    fun getAuth(): Auth? {
+        return auth
+    }
+
+    @JsonIgnore
     fun getAuthBearerFile(): String? {
         return auth?.getBearerFile()
     }

@@ -260,7 +260,7 @@ data class ResiliencyTestsConfig(
     }
 }
 
-class Auth(
+data class Auth(
     @JsonProperty("bearer-file") private val bearerFile: String = "bearer.txt",
     @JsonProperty("bearer-environment-variable") private val bearerEnvironmentVariable: String? = null
 ) {

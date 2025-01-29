@@ -111,7 +111,7 @@ data class AttributeSelectionPattern(
 
 data class SpecmaticConfig(
     val sources: List<Source> = emptyList(),
-    val auth: Auth? = null,
+    private val auth: Auth? = null,
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
     private val hooks: Map<String, String> = emptyMap(),
@@ -203,6 +203,21 @@ data class SpecmaticConfig(
     fun getVersion(): SpecmaticConfigVersion {
         return this.version ?: VERSION_1
     }
+
+    @JsonIgnore
+    fun getAuth(): Auth? {
+        return auth
+    }
+
+    @JsonIgnore
+    fun getAuthBearerFile(): String? {
+        return auth?.getBearerFile()
+    }
+
+    @JsonIgnore
+    fun getAuthBearerEnvironmentVariable(): String? {
+        return auth?.getBearerEnvironmentVariable()
+    }
 }
 
 data class TestConfiguration(
@@ -240,10 +255,18 @@ data class ResiliencyTestsConfig(
     }
 }
 
-data class Auth(
-    @JsonProperty("bearer-file") val bearerFile: String = "bearer.txt",
-    @JsonProperty("bearer-environment-variable") val bearerEnvironmentVariable: String? = null
-)
+class Auth(
+    @JsonProperty("bearer-file") private val bearerFile: String = "bearer.txt",
+    @JsonProperty("bearer-environment-variable") private val bearerEnvironmentVariable: String? = null
+) {
+    fun getBearerFile(): String {
+        return bearerFile
+    }
+
+    fun getBearerEnvironmentVariable(): String? {
+        return bearerEnvironmentVariable
+    }
+}
 
 enum class PipelineProvider { azure }
 

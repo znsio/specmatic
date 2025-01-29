@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets
 
 const val FORM_FIELDS_JSON_KEY = "form-fields"
 const val MULTIPART_FORMDATA_JSON_KEY = "multipart-formdata"
+const val SPECMATIC_RESPONSE_CODE_HEADER = "Specmatic-Response-Code"
 
 fun urlToQueryParams(uri: URI): Map<String, String> {
     if (uri.query == null)
@@ -65,6 +66,10 @@ data class HttpRequest(
         multiPartFormData = multiPartFormData,
         metadata = metadata
     )
+
+    fun isRequestExpectingAcceptedResponse(): Boolean {
+        return headers[SPECMATIC_RESPONSE_CODE_HEADER] == "202"
+    }
 
     fun addHeader(name: String, value: String): HttpRequest {
         return this.copy(headers = headers.plus(name to value))

@@ -1,5 +1,7 @@
 package io.specmatic.stub.stateful
 
+import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
@@ -7,6 +9,9 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 const val DEFAULT_CACHE_RESPONSE_ID_KEY = "id"
+const val REQUEST_BODY_KEY = "requestBody"
+const val RESPONSE_BODY_KEY = "responseBody"
+const val STATUS_CODE_KEY = "statusCode"
 
 data class CachedResponse(
     val path: String,
@@ -27,6 +32,31 @@ class StubCache {
         if(existingResponse == null) {
             cachedResponses.add(
                 CachedResponse(path, responseBody)
+            )
+        }
+    }
+
+    fun addAcceptedResponse(
+        path: String,
+        requestBody: JSONObjectValue,
+        responseBody: JSONObjectValue,
+        statusCode: Int,
+        idKey: String,
+        idValue: String,
+    ) = lock.withLock {
+        val existingResponse = findResponseFor(path, idKey, idValue)
+        val responseIdKey = responseBody.findFirstChildByPath(DEFAULT_CACHE_RESPONSE_ID_KEY) ?: EmptyString
+        val responseToBeCached = JSONObjectValue(
+            mapOf(
+                DEFAULT_CACHE_RESPONSE_ID_KEY to responseIdKey,
+                REQUEST_BODY_KEY to requestBody,
+                RESPONSE_BODY_KEY to responseBody,
+                STATUS_CODE_KEY to parsedValue(statusCode.toString())
+            )
+        )
+        if(existingResponse == null) {
+            cachedResponses.add(
+                CachedResponse(path, responseToBeCached)
             )
         }
     }

@@ -15,7 +15,7 @@ data class SpecmaticConfigV2(
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
-    private val hooks: Map<String, String> = emptyMap(),
+    val hooks: Map<String, String> = emptyMap(),
     val repository: RepositoryInfo? = null,
     val report: ReportConfiguration? = null,
     val security: SecurityConfiguration? = null,

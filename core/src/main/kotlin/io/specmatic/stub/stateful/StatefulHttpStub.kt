@@ -384,7 +384,7 @@ class StatefulHttpStub(
                 fakeAcceptedResponse,
                 finalResponseBody,
                 httpRequest,
-                generatedResponse.status,
+                generatedResponse,
                 resourcePath
             )
         }
@@ -396,7 +396,7 @@ class StatefulHttpStub(
         fakeAcceptedResponse: ResponseDetails?,
         finalResponseBody: JSONObjectValue,
         httpRequest: HttpRequest,
-        generatedResponseStatusCode: Int,
+        httpResponse: HttpResponse,
         originalResourcePath: String
     ): HttpResponse {
         if(fakeAcceptedResponse == null) throw acceptedResponseSchemaNotFoundException()
@@ -404,9 +404,9 @@ class StatefulHttpStub(
 
         stubCache.addAcceptedResponse(
             path = DEFAULT_ACCEPTED_RESPONSE_QUERY_ENDPOINT,
-            requestBody = httpRequest.body as JSONObjectValue,
-            responseBody = finalResponseBody,
-            statusCode = generatedResponseStatusCode,
+            finalResponseBody = finalResponseBody,
+            httpResponse = httpResponse,
+            httpRequest = httpRequest,
             idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
             idValue = responseIdValue,
         )

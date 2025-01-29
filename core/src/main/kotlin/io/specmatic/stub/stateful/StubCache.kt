@@ -1,5 +1,8 @@
 package io.specmatic.stub.stateful
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.JSONArrayValue
@@ -12,6 +15,9 @@ const val DEFAULT_CACHE_RESPONSE_ID_KEY = "id"
 const val REQUEST_BODY_KEY = "requestBody"
 const val RESPONSE_BODY_KEY = "responseBody"
 const val STATUS_CODE_KEY = "statusCode"
+const val METHOD_KEY = "method"
+const val REQUEST_HEADERS_KEY = "requestHeaders"
+const val RESPONSE_HEADERS_KEY = "responseHeaders"
 
 data class CachedResponse(
     val path: String,
@@ -38,20 +44,25 @@ class StubCache {
 
     fun addAcceptedResponse(
         path: String,
-        requestBody: JSONObjectValue,
-        responseBody: JSONObjectValue,
-        statusCode: Int,
+        finalResponseBody: JSONObjectValue,
+        httpResponse: HttpResponse,
+        httpRequest: HttpRequest,
         idKey: String,
         idValue: String,
     ) = lock.withLock {
+        val requestBody = httpRequest.body as JSONObjectValue
         val existingResponse = findResponseFor(path, idKey, idValue)
-        val responseIdKey = responseBody.findFirstChildByPath(DEFAULT_CACHE_RESPONSE_ID_KEY) ?: EmptyString
+        val responseIdKey = finalResponseBody.findFirstChildByPath(DEFAULT_CACHE_RESPONSE_ID_KEY) ?: EmptyString
+
         val responseToBeCached = JSONObjectValue(
             mapOf(
                 DEFAULT_CACHE_RESPONSE_ID_KEY to responseIdKey,
                 REQUEST_BODY_KEY to requestBody,
-                RESPONSE_BODY_KEY to responseBody,
-                STATUS_CODE_KEY to parsedValue(statusCode.toString())
+                RESPONSE_BODY_KEY to finalResponseBody,
+                STATUS_CODE_KEY to parsedValue(httpResponse.status.toString()),
+                METHOD_KEY to parsedValue(httpRequest.method.orEmpty()),
+                REQUEST_HEADERS_KEY to parsedValue(asString(httpRequest.headers.toHeadersList())),
+                RESPONSE_HEADERS_KEY to parsedValue(asString(httpResponse.headers.toHeadersList())),
             )
         )
         if(existingResponse == null) {
@@ -115,6 +126,14 @@ class StubCache {
             val actualValue = this.getValue(filterKey)
             actualValue.toStringLiteral() == filterValue
         }
+    }
+
+    private fun Map<String, String>.toHeadersList(): List<Map<String, String>> {
+        return entries.map { mapOf("name" to it.key, "value" to it.value) }
+    }
+
+    private fun asString(value: Any): String {
+        return ObjectMapper().writeValueAsString(value).orEmpty()
     }
 
     companion object {

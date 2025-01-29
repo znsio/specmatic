@@ -89,10 +89,6 @@ You can filter tests based on the following keys:
 To specify multiple values for the same filter, separate them with commas. 
 For example, to filter by HTTP methods: 
 --filter="METHOD='GET,POST'"
-
-You can supply multiple filters as well. 
-For example:
---filter="METHOD='GET,POST'" --filter="PATH='/users'"
            """
         ],
         required = false
@@ -174,10 +170,6 @@ You can filter tests based on the following keys:
 To specify multiple values for the same filter, separate them with commas. 
 For example, to filter by HTTP methods: 
 --filter="METHOD=GET,POST"
-
-You can supply multiple filters as well. 
-For example:
---filter="METHOD='GET,POST'" --filter="PATH='/users'"
            """
             ],
             required = false
@@ -449,10 +441,6 @@ You can filter tests based on the following keys:
 To specify multiple values for the same filter, separate them with commas. 
 For example, to filter by HTTP methods: 
 --filter="METHOD='GET,POST'"
-
-You can supply multiple filters as well. 
-For example:
---filter="METHOD='GET,POST'" --filter="PATH='/users'"
            """
             ],
             required = false

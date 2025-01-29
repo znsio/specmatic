@@ -42,6 +42,10 @@ class OpenApiCoverageReportInput(
         endpointsAPISet = isSet
     }
 
+    fun getApplicationAPIs(): List<API> {
+        return applicationAPIs
+    }
+
     fun generate(): OpenAPICoverageConsoleReport {
         val testResults = testResultRecords.filter { testResult -> excludedAPIs.none { it == testResult.path } }
         val testResultsWithNotImplementedEndpoints = identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults)

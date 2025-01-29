@@ -15,7 +15,7 @@ data class SpecmaticConfigV2(
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
-    val hooks: Map<String, String> = emptyMap(),
+    private val hooks: Map<String, String> = emptyMap(),
     val repository: RepositoryInfo? = null,
     val report: ReportConfiguration? = null,
     val security: SecurityConfiguration? = null,
@@ -65,7 +65,7 @@ data class SpecmaticConfigV2(
                 auth = config.auth,
                 pipeline = config.pipeline,
                 environments = config.environments,
-                hooks = config.hooks,
+                hooks = config.getHooks(),
                 repository = config.repository,
                 report = config.report,
                 security = config.security,
@@ -75,10 +75,10 @@ data class SpecmaticConfigV2(
                 examples = config.getExamples(),
                 workflow = config.workflow,
                 ignoreInlineExamples = config.ignoreInlineExamples,
-                additionalExampleParamsFilePath = config.additionalExampleParamsFilePath,
+                additionalExampleParamsFilePath = config.getAdditionalExampleParamsFilePath(),
                 attributeSelectionPattern = config.attributeSelectionPattern,
                 allPatternsMandatory = config.allPatternsMandatory,
-                defaultPatternValues = config.defaultPatternValues
+                defaultPatternValues = config.getDefaultPatternValues()
             )
         }
     }

@@ -66,7 +66,7 @@ data class SpecmaticConfigV2(
                 pipeline = config.pipeline,
                 environments = config.environments,
                 hooks = config.getHooks(),
-                repository = config.repository,
+                repository = config.getRepository(),
                 report = config.report,
                 security = config.security,
                 test = config.test,

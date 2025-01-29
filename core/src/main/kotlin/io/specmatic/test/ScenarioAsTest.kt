@@ -112,7 +112,7 @@ data class ScenarioAsTest(
 
             val responseToCheckAndStore = when(testResult) {
                 is Result.Failure -> {
-                    val awaitedResponse = ResponseMonitor(feature, testScenario, response).waitForResponse(testExecutor)
+                    val awaitedResponse = ResponseMonitor(feature, originalScenario, response).waitForResponse(testExecutor)
                     when (awaitedResponse) {
                         is HasValue -> awaitedResponse.value
                         is HasFailure -> return Pair(awaitedResponse.failure.withBindings(testScenario.bindings, response), response)

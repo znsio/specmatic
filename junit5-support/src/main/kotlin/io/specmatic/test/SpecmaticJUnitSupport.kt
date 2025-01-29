@@ -525,28 +525,7 @@ open class SpecmaticJUnitSupport {
             )
         }
 
-        val filteredScenariosBasedOnName = selectTestsToRun(
-            feature.scenarios.asSequence(),
-            filterName,
-            filterNotName
-        ) { it.testDescription() }
-        val filteredScenarios = filterUsing(
-            filteredScenariosBasedOnName,
-            scenarioMetadataFilter,
-            scenarioMetadataExclusionFilter
-        ) { it.toScenarioMetadata() }
-        val tests: Sequence<ContractTest> = feature
-            .copy(scenarios = filteredScenarios.toList())
-            .also {
-                if (it.scenarios.isEmpty())
-                    logger.log("All scenarios were filtered out.")
-                else if (it.scenarios.size < feature.scenarios.size) {
-                    logger.debug("Selected scenarios:")
-                    it.scenarios.forEach { scenario -> logger.debug(scenario.testDescription().prependIndent("  ")) }
-                }
-            }
-            .generateContractTests(suggestions)
-
+        val tests: Sequence<ContractTest> = feature.generateContractTests(suggestions)
         return Pair(tests, allEndpoints)
     }
 

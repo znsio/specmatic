@@ -624,6 +624,7 @@ data class Feature(
         originalScenario: Scenario
     ) = ScenarioAsTest(
         concreteTestScenario,
+        feature = this,
         flagsBased,
         concreteTestScenario.sourceProvider,
         concreteTestScenario.sourceRepository,

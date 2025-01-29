@@ -185,6 +185,11 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
+    fun getPipeline(): Pipeline? {
+        return pipeline
+    }
+
+    @JsonIgnore
     fun getPipelineProvider(): PipelineProvider? {
         return pipeline?.getProvider()
     }

@@ -63,7 +63,20 @@ data class SpecmaticConfigV2(
                 version = SpecmaticConfigVersion.VERSION_2,
                 contracts = config.sources.map { ContractConfig(it) },
                 auth = config.auth,
-                pipeline = config.pipeline,
+                pipeline = config.getPipelineProvider()?.let { provider ->
+                    config.getPipelineOrganization()?.let { organization ->
+                        config.getPipelineProject()?.let { project ->
+                            config.getPipelineDefinitionId()?.let { definitionId ->
+                                Pipeline(
+                                    provider = provider,
+                                    organization = organization,
+                                    project = project,
+                                    definitionId = definitionId
+                                )
+                            }
+                        }
+                    }
+                },
                 environments = config.environments,
                 hooks = config.hooks,
                 repository = config.repository,

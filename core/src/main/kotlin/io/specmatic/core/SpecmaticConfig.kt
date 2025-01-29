@@ -111,7 +111,7 @@ data class AttributeSelectionPattern(
 data class SpecmaticConfig(
     val sources: List<Source> = emptyList(),
     val auth: Auth? = null,
-    val pipeline: Pipeline? = null,
+    private val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
     val hooks: Map<String, String> = emptyMap(),
     val repository: RepositoryInfo? = null,
@@ -183,6 +183,26 @@ data class SpecmaticConfig(
     fun getAllPatternsMandatory(): Boolean {
         return allPatternsMandatory ?: getBooleanValue(Flags.ALL_PATTERNS_MANDATORY)
     }
+
+    @JsonIgnore
+    fun getPipelineProvider(): PipelineProvider? {
+        return pipeline?.getProvider()
+    }
+
+    @JsonIgnore
+    fun getPipelineDefinitionId(): Int? {
+        return pipeline?.getDefinitionId()
+    }
+
+    @JsonIgnore
+    fun getPipelineOrganization(): String? {
+        return pipeline?.getOrganization()
+    }
+
+    @JsonIgnore
+    fun getPipelineProject(): String? {
+        return pipeline?.getProject()
+    }
 }
 
 data class TestConfiguration(
@@ -228,11 +248,27 @@ data class Auth(
 enum class PipelineProvider { azure }
 
 data class Pipeline(
-    val provider: PipelineProvider = PipelineProvider.azure,
-    val organization: String = "",
-    val project: String = "",
-    val definitionId: Int = 0
-)
+    private val provider: PipelineProvider = PipelineProvider.azure,
+    private val organization: String = "",
+    private val project: String = "",
+    private val definitionId: Int = 0
+) {
+    fun getProvider(): PipelineProvider {
+        return provider
+    }
+
+    fun getOrganization(): String {
+        return organization
+    }
+
+    fun getProject(): String {
+        return project
+    }
+
+    fun getDefinitionId(): Int {
+        return definitionId
+    }
+}
 
 data class Environment(
     val baseurls: Map<String, String>? = null,

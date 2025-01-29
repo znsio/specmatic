@@ -8,8 +8,8 @@ import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
 import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
 import io.specmatic.core.utilities.Flags.Companion.SCHEMA_EXAMPLE_DEFAULT
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_GENERATIVE_TESTS
-import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -38,10 +38,10 @@ internal class SpecmaticConfigKtTest {
 
         assertThat(config.auth?.bearerFile).isEqualTo("bearer.txt")
 
-        assertThat(config.pipeline?.provider).isEqualTo(PipelineProvider.azure)
-        assertThat(config.pipeline?.organization).isEqualTo("xnsio")
-        assertThat(config.pipeline?.project).isEqualTo("XNSIO")
-        assertThat(config.pipeline?.definitionId).isEqualTo(1)
+        assertThat(config.getPipelineProvider()).isEqualTo(PipelineProvider.azure)
+        assertThat(config.getPipelineOrganization()).isEqualTo("xnsio")
+        assertThat(config.getPipelineProject()).isEqualTo("XNSIO")
+        assertThat(config.getPipelineDefinitionId()).isEqualTo(1)
 
         assertThat(config.environments?.get("staging")?.baseurls?.get("auth.spec")).isEqualTo("http://localhost:8080")
         assertThat(config.environments?.get("staging")?.variables?.get("username")).isEqualTo("jackie")
@@ -122,10 +122,10 @@ internal class SpecmaticConfigKtTest {
 
         assertThat(config.auth?.bearerFile).isEqualTo("bearer.txt")
 
-        assertThat(config.pipeline?.provider).isEqualTo(PipelineProvider.azure)
-        assertThat(config.pipeline?.organization).isEqualTo("xnsio")
-        assertThat(config.pipeline?.project).isEqualTo("XNSIO")
-        assertThat(config.pipeline?.definitionId).isEqualTo(1)
+        assertThat(config.getPipelineProvider()).isEqualTo(PipelineProvider.azure)
+        assertThat(config.getPipelineOrganization()).isEqualTo("xnsio")
+        assertThat(config.getPipelineProject()).isEqualTo("XNSIO")
+        assertThat(config.getPipelineDefinitionId()).isEqualTo(1)
 
         assertThat(config.environments?.get("staging")?.baseurls?.get("auth.spec")).isEqualTo("http://localhost:8080")
         assertThat(config.environments?.get("staging")?.variables?.get("username")).isEqualTo("jackie")

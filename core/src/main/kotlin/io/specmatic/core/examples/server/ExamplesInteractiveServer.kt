@@ -67,7 +67,10 @@ class ExamplesInteractiveServer(
     private val serverPort: Int,
     private val testBaseUrl: String?,
     private val inputContractFile: File? = null,
+    private val filterName: String,
+    private val filterNotName: String,
     private val filter: String,
+    private val filterNot: List<String>,
     externalDictionaryFile: File? = null,
     private val allowOnlyMandatoryKeysInJSONObject: Boolean
 ) : Closeable {
@@ -294,7 +297,10 @@ class ExamplesInteractiveServer(
 
     private fun getExamplePageHtmlContent(contractFile: File, hostPort: String): String {
         val feature = ScenarioFilter(
-            filter
+            filterName,
+            filterNotName,
+            filter,
+            filterNot
         ).filter(parseContractFileToFeature(contractFile))
 
         val examplesDir = getExamplesDirPath(contractFile)
@@ -335,15 +341,36 @@ class ExamplesInteractiveServer(
         }
     }
 
-    class ScenarioFilter(filterClauses: String = "") {
+    class ScenarioFilter(filterName: String = "", filterNotName: String = "", filterClauses: String = "", private val filterNotClauses: List<String> = emptyList()) {
         private val filter = filterClauses
+        private val filterNot = filterNotClauses.joinToString(";")
+
+        private val filterNameTokens = if(filterName.isNotBlank()) {
+            filterName.trim().split(",").map { it.trim() }
+        } else emptyList()
+
+        private val filterNotNameTokens = if(filterNotName.isNotBlank()) {
+            filterNotName.trim().split(",").map { it.trim() }
+        } else emptyList()
 
         fun filter(feature: Feature): Feature {
+            val scenariosFilteredByOlderSyntax = feature.scenarios.filter { scenario ->
+                if(filterNameTokens.isNotEmpty()) {
+                    filterNameTokens.any { name -> scenario.testDescription().contains(name) }
+                } else true
+            }.filter { scenario ->
+                if(filterNotNameTokens.isNotEmpty()) {
+                    filterNotNameTokens.none { name -> scenario.testDescription().contains(name) }
+                } else true
+            }
+
             val scenarioFilter = ScenarioMetadataFilter.from(filter)
 
-            val filteredScenarios = filterUsing(feature.scenarios.asSequence(), scenarioFilter) {
+            val filteredScenarios = filterUsing(scenariosFilteredByOlderSyntax.asSequence(), scenarioFilter) {
                 it.toScenarioMetadata()
             }.toList()
+
+
             return feature.copy(scenarios = filteredScenarios)
         }
     }

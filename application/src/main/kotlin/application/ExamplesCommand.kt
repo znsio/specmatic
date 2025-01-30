@@ -93,7 +93,7 @@ For example, to filter by HTTP methods:
         ],
         required = false
     )
-    var filter: List<String> = emptyList()
+    var filter: String = ""
 
     @Option(
         names= ["--filter-not"],
@@ -174,7 +174,7 @@ For example, to filter by HTTP methods:
             ],
             required = false
         )
-        var filter: List<String> = emptyList()
+        var filter: String = ""
 
         @Option(
             names= ["--filter-not"],
@@ -445,7 +445,7 @@ For example, to filter by HTTP methods:
             ],
             required = false
         )
-        var filter: List<String> = emptyList()
+        var filter: String = ""
 
         @Option(
             names= ["--filter-not"],

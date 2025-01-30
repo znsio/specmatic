@@ -107,8 +107,7 @@ For example, to filter by HTTP methods:
         ],
         required = false
     )
-    var filter: List<String> = emptyList()
-
+    var filter: String = ""
     @Option(
         names= ["--filter-not"],
         description = [
@@ -195,7 +194,7 @@ For example:
         System.setProperty(INLINE_SUGGESTIONS, suggestions)
         System.setProperty(ENV_NAME, envName)
         System.setProperty("protocol", protocol)
-        System.setProperty(FILTER, filter.joinToString(";"))
+        System.setProperty(FILTER, filter)
         System.setProperty(FILTER_NOT, filterNot.joinToString(";"))
         System.setProperty(OVERLAY_FILE_PATH, overlayFilePath.orEmpty())
         System.setProperty(STRICT_MODE, strictMode.toString())

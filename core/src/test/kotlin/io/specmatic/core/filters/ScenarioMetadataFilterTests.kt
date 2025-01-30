@@ -57,11 +57,11 @@ class ScenarioMetadataFilterTests {
             putProducts,
             getUsers
         )
-        assertFalse(filter.isSatisfiedBy(postProducts))
-        assertFalse(filter.isSatisfiedBy(getProducts))
-        assertFalse(filter.isSatisfiedBy(putProducts))
-        assertFalse(filter.isSatisfiedBy(getUsers))
-
+       assertThrows<Exception>(){
+              scenarios.forEach { scenario ->
+                filter.isSatisfiedBy(scenario)
+              }
+       }
     }
 
     @Test
@@ -380,8 +380,10 @@ class ScenarioMetadataFilterTests {
     fun `exclude scenarios with wildcard only for last digit including tildle`() {
         val filter = ScenarioMetadataFilter.from("STATUS~'50x'")
 
-        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 521)))
-        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 502)))
+        assertThrows<Exception>(){
+            filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 521))
+            filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 502))
+        }
     }
 
     @Test

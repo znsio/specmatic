@@ -69,7 +69,7 @@ class ExamplesInteractiveServer(
     private val inputContractFile: File? = null,
     private val filterName: String,
     private val filterNotName: String,
-    private val filter: List<String>,
+    private val filter: String,
     private val filterNot: List<String>,
     externalDictionaryFile: File? = null,
     private val allowOnlyMandatoryKeysInJSONObject: Boolean
@@ -341,8 +341,8 @@ class ExamplesInteractiveServer(
         }
     }
 
-    class ScenarioFilter(filterName: String = "", filterNotName: String = "", filterClauses: List<String> = emptyList(), private val filterNotClauses: List<String> = emptyList()) {
-        private val filter = filterClauses.joinToString(";")
+    class ScenarioFilter(filterName: String = "", filterNotName: String = "", filterClauses: String = "", private val filterNotClauses: List<String> = emptyList()) {
+        private val filter = filterClauses
         private val filterNot = filterNotClauses.joinToString(";")
 
         private val filterNameTokens = if(filterName.isNotBlank()) {

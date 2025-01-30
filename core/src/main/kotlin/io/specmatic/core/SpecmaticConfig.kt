@@ -116,7 +116,7 @@ data class SpecmaticConfig(
     val environments: Map<String, Environment>? = null,
     private val hooks: Map<String, String> = emptyMap(),
     val repository: RepositoryInfo? = null,
-    val report: ReportConfiguration? = null,
+    private val report: ReportConfiguration? = null,
     val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
@@ -218,6 +218,21 @@ data class SpecmaticConfig(
     fun getAuthBearerEnvironmentVariable(): String? {
         return auth?.getBearerEnvironmentVariable()
     }
+
+    @JsonIgnore
+    fun getReport(): ReportConfiguration? {
+        return report
+    }
+
+    @JsonIgnore
+    fun getReportFormatters(): List<ReportFormatter>? {
+        return report?.getFormatters()
+    }
+
+    @JsonIgnore
+    fun getReportTypes(): ReportTypes? {
+        return report?.getTypes()
+    }
 }
 
 data class TestConfiguration(
@@ -302,9 +317,17 @@ data class RepositoryInfo(
 )
 
 data class ReportConfiguration(
-    val formatters: List<ReportFormatter>? = null,
-    val types: ReportTypes = ReportTypes()
-)
+    private val formatters: List<ReportFormatter>? = null,
+    private val types: ReportTypes = ReportTypes()
+) {
+    fun getFormatters(): List<ReportFormatter>? {
+        return formatters
+    }
+
+    fun getTypes(): ReportTypes {
+        return types
+    }
+}
 
 data class ReportFormatter(
     var type: ReportFormatterType = ReportFormatterType.TEXT,

@@ -4,9 +4,9 @@ import io.specmatic.core.ReportConfiguration
 import io.specmatic.core.ReportFormatterType
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.logger
+import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 import io.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport
-import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import io.specmatic.test.reports.renderers.CoverageReportHtmlRenderer
 import io.specmatic.test.reports.renderers.CoverageReportTextRenderer
 import io.specmatic.test.reports.renderers.ReportRenderer
@@ -22,9 +22,9 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
     }
 
     override fun process(specmaticConfig: SpecmaticConfig) {
-        val reportConfiguration = specmaticConfig.report!!
+        val reportConfiguration = specmaticConfig.getReport()!!
 
-        openApiCoverageReportInput.addExcludedAPIs(reportConfiguration.types.apiCoverage.openAPI.excludedEndpoints + excludedEndpointsFromEnv())
+        openApiCoverageReportInput.addExcludedAPIs(reportConfiguration.getTypes().apiCoverage.openAPI.excludedEndpoints + excludedEndpointsFromEnv())
         val openAPICoverageReport = openApiCoverageReportInput.generate()
 
         if (openAPICoverageReport.coverageRows.isEmpty()) {
@@ -40,7 +40,7 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
     }
 
     override fun configureReportRenderers(reportConfiguration: ReportConfiguration): List<ReportRenderer<OpenAPICoverageConsoleReport>> {
-        return reportConfiguration.formatters!!.map {
+        return reportConfiguration.getFormatters()!!.map {
             when (it.type) {
                 ReportFormatterType.TEXT -> CoverageReportTextRenderer()
                 ReportFormatterType.HTML -> CoverageReportHtmlRenderer()
@@ -69,7 +69,7 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
         reportConfiguration: ReportConfiguration,
         report: OpenAPICoverageConsoleReport
     ) {
-        val successCriteria = reportConfiguration.types.apiCoverage.openAPI.successCriteria
+        val successCriteria = reportConfiguration.getTypes().apiCoverage.openAPI.successCriteria
         if (successCriteria.enforce) {
             val coverageThresholdNotMetMessage =
                 "Total API coverage: ${report.totalCoveragePercentage}% is less than the specified minimum threshold of ${successCriteria.minThresholdPercentage}%."

@@ -104,7 +104,7 @@ open class SpecmaticJUnitSupport {
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
-            return when (val reportConfiguration = specmaticConfig?.report) {
+            return when (val reportConfiguration = specmaticConfig?.getReport()) {
                 null -> {
                     logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
                     ReportConfiguration(
@@ -116,15 +116,15 @@ open class SpecmaticJUnitSupport {
                 }
 
                 else -> {
-                    val htmlReportFormatter = reportConfiguration.formatters?.firstOrNull {
+                    val htmlReportFormatter = reportConfiguration.getFormatters()?.firstOrNull {
                         it.type == ReportFormatterType.HTML
                     } ?: ReportFormatter(ReportFormatterType.HTML)
-                    val textReportFormatter = reportConfiguration.formatters?.firstOrNull {
+                    val textReportFormatter = reportConfiguration.getFormatters()?.firstOrNull {
                         it.type == ReportFormatterType.TEXT
                     } ?: ReportFormatter(ReportFormatterType.TEXT)
                     ReportConfiguration(
                         formatters = listOf(htmlReportFormatter, textReportFormatter),
-                        types = reportConfiguration.types
+                        types = reportConfiguration.getTypes()
                     )
                 }
             }

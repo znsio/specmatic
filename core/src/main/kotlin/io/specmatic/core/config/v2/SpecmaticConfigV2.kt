@@ -67,7 +67,7 @@ data class SpecmaticConfigV2(
                 environments = config.environments,
                 hooks = config.getHooks(),
                 repository = config.repository,
-                report = config.report,
+                report = config.getReport(),
                 security = config.security,
                 test = config.test,
                 stub = config.stub,

@@ -473,7 +473,9 @@ class StatefulHttpStub(
             isValueMatchingStatusCodeFrom(statusCode, responseDetails)
         }?.value
 
-        if (value == ACCEPTED_STATUS_CODE.toString()) return response ?: throw acceptedResponseSchemaNotFoundException()
+        if (value == ACCEPTED_STATUS_CODE.toString()) {
+            return response ?: this.responseWithStatusCodeStartingWith("2")
+        }
 
         return this.entries.filter { (statusCode, _) ->
             statusCode != ACCEPTED_STATUS_CODE

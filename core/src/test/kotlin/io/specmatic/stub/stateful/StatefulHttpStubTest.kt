@@ -112,7 +112,6 @@ class StatefulHttpStubMonitorPatternForPOSTRequestTest {
     }
 }
 
-
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class StatefulHttpStubMonitorPatternForPATCHRequestTest {
     companion object {
@@ -173,7 +172,6 @@ class StatefulHttpStubMonitorPatternForPATCHRequestTest {
         resourceId = (response.body as JSONObjectValue).getStringValue("id").orEmpty()
     }
 
-
     @Test
     @Order(2)
     fun `should patch a product and get 202`() {
@@ -202,7 +200,7 @@ class StatefulHttpStubMonitorPatternForPATCHRequestTest {
     }
 
     @Test
-    @Order(2)
+    @Order(3)
     fun `should get the current status of previous patch product request from monitor endpoint`() {
         val response = httpStub.client.execute(
             HttpRequest(

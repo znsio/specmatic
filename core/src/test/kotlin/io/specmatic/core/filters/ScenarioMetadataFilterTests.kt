@@ -57,11 +57,11 @@ class ScenarioMetadataFilterTests {
             putProducts,
             getUsers
         )
-        scenarios.forEach { scenario ->
-            assertThrows<Exception> {
-                filter.isSatisfiedBy(scenario)
-            }
-        }
+        assertFalse(filter.isSatisfiedBy(postProducts))
+        assertFalse(filter.isSatisfiedBy(getProducts))
+        assertFalse(filter.isSatisfiedBy(putProducts))
+        assertFalse(filter.isSatisfiedBy(getUsers))
+
     }
 
     @Test

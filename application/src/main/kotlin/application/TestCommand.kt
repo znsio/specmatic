@@ -80,12 +80,6 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--suggestions"], description = ["A json value with scenario name and multiple suggestions"], defaultValue = "")
     var suggestions: String = ""
 
-    @Option(names = ["--filter-name"], description = ["Run only tests with this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NAME}")
-    var filterName: String = ""
-
-    @Option(names = ["--filter-not-name"], description = ["Run only tests which do not have this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}")
-    var filterNotName: String = ""
-
     @Option(
         names= ["--filter"],
         description = [
@@ -108,21 +102,6 @@ For example, to filter by HTTP methods:
         required = false
     )
     var filter: String = ""
-    @Option(
-        names= ["--filter-not"],
-        description = [
-           """
-Filter tests not matching the specified criteria
-
-This option supports the same filtering keys and syntax as the --filter option.
-For example:
---filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
-           """
-        ],
-        required = false
-    )
-    var filterNot: List<String> = emptyList()
-
     @Option(names = ["--env"], description = ["Environment name"])
     var envName: String = ""
 
@@ -195,20 +174,11 @@ For example:
         System.setProperty(ENV_NAME, envName)
         System.setProperty("protocol", protocol)
         System.setProperty(FILTER, filter)
-        System.setProperty(FILTER_NOT, filterNot.joinToString(";"))
         System.setProperty(OVERLAY_FILE_PATH, overlayFilePath.orEmpty())
         System.setProperty(STRICT_MODE, strictMode.toString())
 
         if(exampleDirs.isNotEmpty()) {
             System.setProperty(EXAMPLE_DIRECTORIES, exampleDirs.joinToString(","))
-        }
-
-        if(filterName.isNotBlank()) {
-            System.setProperty(FILTER_NAME_PROPERTY, filterName)
-        }
-
-        if(filterNotName.isNotBlank()) {
-            System.setProperty(FILTER_NOT_NAME_PROPERTY, filterNotName)
         }
 
         variablesFileName?.let {

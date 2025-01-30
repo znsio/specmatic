@@ -39,11 +39,7 @@ data class HttpResponse(
             }
 
     fun withoutSpecmaticTypeHeader(): HttpResponse {
-        return this.copy(
-            headers = this.headers.filterKeys {
-                it != "X-Specmatic-Type"
-            }
-        )
+        return this.copy(headers = this.headers.filterKeys { it != "X-Specmatic-Type" })
     }
 
     fun specmaticResultHeaderValue(): String =

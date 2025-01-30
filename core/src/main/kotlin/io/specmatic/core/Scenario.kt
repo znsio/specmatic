@@ -537,7 +537,7 @@ data class Scenario(
             newBasedOnAttributeSelectionFields(row.requestExample?.queryParams).httpResponsePattern
 
         val fieldsToBeMadeMandatory =
-            getFieldsToBeMadeMandatoryBasedOnAttributeSelection(row.requestExample?.queryParams)
+            fieldsToBeMadeMandatoryBasedOnAttributeSelection(row.requestExample?.queryParams)
         val updatedResolver = if(fieldsToBeMadeMandatory.isNotEmpty()) {
             resolverForExample.copy(mismatchMessages = getMismatchObjectForTestExamples(row))
         } else resolverForExample
@@ -646,7 +646,7 @@ data class Scenario(
     ): Result {
         scenarioBreadCrumb(this) {
             val updatedMismatchMessages =
-                if (getFieldsToBeMadeMandatoryBasedOnAttributeSelection(request.queryParams).isEmpty())
+                if (fieldsToBeMadeMandatoryBasedOnAttributeSelection(request.queryParams).isEmpty())
                     mismatchMessages
                 else StubAndAttributeSelectionMismatchMessages
 
@@ -720,7 +720,7 @@ data class Scenario(
 
     fun newBasedOnAttributeSelectionFields(queryParams: QueryParameters?): Scenario {
         val fieldsToBeMadeMandatory =
-            getFieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams)
+            fieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams)
         val responseBodyPattern = this.httpResponsePattern.body
 
         val updatedResponseBodyPattern = if(responseBodyPattern is PossibleJsonObjectPatternContainer) {
@@ -832,7 +832,7 @@ data class Scenario(
         )
     }
 
-    fun getFieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams: QueryParameters?): Set<String> {
+    fun fieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams: QueryParameters?): Set<String> {
         val defaultAttributeSelectionFields = attributeSelectionPattern.getDefaultFields().toSet()
         val attributeSelectionQueryParamKey = attributeSelectionPattern.getQueryParamKey()
 

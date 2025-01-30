@@ -274,8 +274,6 @@ open class SpecmaticJUnitSupport {
                             suggestionsData,
                             testConfig,
                             specificationPath = it,
-                            filterName = filterName,
-                            filterNotName = filterNotName,
                             specmaticConfig = specmaticConfig,
                             overlayContent = overlayContent
                         )
@@ -307,8 +305,6 @@ open class SpecmaticJUnitSupport {
                             it.branch,
                             it.specificationPath,
                             specmaticConfig?.security,
-                            filterName,
-                            filterNotName,
                             specmaticConfig = specmaticConfig,
                             overlayContent = overlayContent
                         )
@@ -480,8 +476,6 @@ open class SpecmaticJUnitSupport {
         sourceRepositoryBranch: String? = null,
         specificationPath: String? = null,
         securityConfiguration: SecurityConfiguration? = null,
-        filterName: String?,
-        filterNotName: String?,
         specmaticConfig: SpecmaticConfig? = null,
         overlayContent: String = ""
     ): Pair<Sequence<ContractTest>, List<Endpoint>> {
@@ -630,6 +624,13 @@ fun <T> selectTestsToRun(
         }
     } else
         filteredByName
+
+    if (!filteredByNotName.any())
+        logger.log("All scenarios were filtered out.")
+    else {
+        logger.debug("Selected scenarios:")
+        filteredByNotName.forEach { logger.debug(getTestDescription(it).prependIndent("  ")) }
+    }
 
     return filteredByNotName
 }

@@ -102,31 +102,12 @@ You can filter tests based on the following keys:
 
 To specify multiple values for the same filter, separate them with commas. 
 For example, to filter by HTTP methods: 
---filter="METHOD=GET,POST"
-
-You can supply multiple filters as well. 
-For example:
---filter="METHOD=GET,POST" --filter="PATH=/users"
+--filter="METHOD='GET,POST'"
            """
         ],
         required = false
     )
-    var filter: List<String> = emptyList()
-
-    @Option(
-        names= ["--filter-not"],
-        description = [
-           """
-Filter tests not matching the specified criteria
-
-This option supports the same filtering keys and syntax as the --filter option.
-For example:
---filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
-           """
-        ],
-        required = false
-    )
-    var filterNot: List<String> = emptyList()
+    var filter: String = ""
 
     @Option(names = ["--env"], description = ["Environment name"])
     var envName: String = ""
@@ -199,8 +180,7 @@ For example:
         System.setProperty(INLINE_SUGGESTIONS, suggestions)
         System.setProperty(ENV_NAME, envName)
         System.setProperty("protocol", protocol)
-        System.setProperty(FILTER, filter.joinToString(";"))
-        System.setProperty(FILTER_NOT, filterNot.joinToString(";"))
+        System.setProperty(FILTER, filter)
         System.setProperty(OVERLAY_FILE_PATH, overlayFilePath.orEmpty())
         System.setProperty(STRICT_MODE, strictMode.toString())
 

@@ -7,7 +7,6 @@ import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.value.*
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.loadContractStubsFromImplicitPaths
-import io.specmatic.stub.stateful.StatefulHttpStubTest.Companion
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -20,7 +19,7 @@ import java.util.concurrent.Executors
 
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class StatefulHttpStubMonitorPatternTest {
+class StatefulHttpStubMonitorPatternForPOSTRequestTest {
     companion object {
         private lateinit var httpStub: ContractStub
         private const val SPEC_DIR_PATH = "src/test/resources/stateful-stub-monitor-pattern"
@@ -103,10 +102,127 @@ class StatefulHttpStubMonitorPatternTest {
         val requestBodyFromResponse = (responseBody.findFirstChildByPath("request.body") as JSONObjectValue)
         assertThat(requestBodyFromResponse.getStringValue("name")).isEqualTo("Product A")
         assertThat(requestBodyFromResponse.getStringValue("price")).isEqualTo("19.99")
+        assertThat(responseBody.findFirstChildByPath("request.method")?.toStringLiteral()).isEqualTo("POST")
 
         val responseBodyFromResponse = responseBody.findFirstChildByPath("response.body") as JSONObjectValue
         assertThat(responseBodyFromResponse.getStringValue("name")).isEqualTo("Product A")
         assertThat(responseBodyFromResponse.getStringValue("price")).isEqualTo("19.99")
+        assertThat(responseBodyFromResponse.getStringValue("id")).isEqualTo(resourceId)
+    }
+}
+
+
+@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
+class StatefulHttpStubMonitorPatternForPATCHRequestTest {
+    companion object {
+        private lateinit var httpStub: ContractStub
+        private const val SPEC_DIR_PATH = "src/test/resources/stateful-stub-monitor-pattern"
+        private var resourceId = ""
+        private var monitorLink = ""
+
+        @JvmStatic
+        @BeforeAll
+        fun setup() {
+            val specPath = "$SPEC_DIR_PATH/monitor-pattern-spec.yaml"
+            val scenarioStubs = loadContractStubsFromImplicitPaths(
+                contractPathDataList = listOf(ContractPathData("", specPath)),
+                specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml")
+            ).flatMap { it.second }
+
+            assertThat(scenarioStubs).withFailMessage(
+                "Failed while loading the monitor substitution based example"
+            ).isNotEmpty
+
+            httpStub = StatefulHttpStub(
+                specmaticConfigPath = "$SPEC_DIR_PATH/specmatic.yaml",
+                features = listOf(
+                    OpenApiSpecification.fromFile(specPath).toFeature()
+                ),
+                scenarioStubs = scenarioStubs
+            )
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun tearDown() {
+            httpStub.close()
+        }
+    }
+
+    @Test
+    @Order(1)
+    fun `should post a product and get 202`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "POST",
+                path = "/product",
+                body = parsedJSONObject(
+                    """
+                    {
+                      "name": "Product A",
+                      "price": 19.99
+                    }
+                    """.trimIndent()
+                )
+            )
+        )
+
+        assertThat(response.status).isEqualTo(201)
+
+        resourceId = (response.body as JSONObjectValue).getStringValue("id").orEmpty()
+    }
+
+
+    @Test
+    @Order(2)
+    fun `should patch a product and get 202`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "PATCH",
+                path = "/product/$resourceId",
+                headers = mapOf(
+                    SPECMATIC_RESPONSE_CODE_HEADER to "202"
+                ),
+                body = parsedJSONObject(
+                    """
+                    {
+                      "price": 40
+                    }
+                    """.trimIndent()
+                )
+            )
+        )
+
+        assertThat(response.status).isEqualTo(202)
+        assertThat(response.headers).containsKeys("Link")
+
+        monitorLink = response.headers.getValue("Link")
+        resourceId = monitorLink.split("/")[2].substringBefore(">")
+    }
+
+    @Test
+    @Order(2)
+    fun `should get the current status of previous patch product request from monitor endpoint`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/monitor/$resourceId"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+
+        val responseBody = response.body as JSONObjectValue
+
+        assertThat(responseBody.findFirstChildByPath("response.status")?.toStringLiteral()).isEqualTo("200")
+
+        val requestBodyFromResponse = (responseBody.findFirstChildByPath("request.body") as JSONObjectValue)
+        assertThat(requestBodyFromResponse.getStringValue("price")).isEqualTo("40")
+        assertThat(responseBody.findFirstChildByPath("request.method")?.toStringLiteral()).isEqualTo("PATCH")
+
+        val responseBodyFromResponse = responseBody.findFirstChildByPath("response.body") as JSONObjectValue
+        assertThat(responseBodyFromResponse.getStringValue("name")).isEqualTo("Product A")
+        assertThat(responseBodyFromResponse.getStringValue("price")).isEqualTo("40")
         assertThat(responseBodyFromResponse.getStringValue("id")).isEqualTo(resourceId)
     }
 }

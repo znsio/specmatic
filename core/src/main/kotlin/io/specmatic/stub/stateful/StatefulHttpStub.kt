@@ -245,6 +245,7 @@ class StatefulHttpStub(
                 httpRequest = httpRequest,
                 generatedResponse = generatedResponse,
                 fakeResponse = fakeResponse,
+                fakeAcceptedResponse = fakeAcceptedResponse,
                 resourceIdKey = resourceIdKeyFrom(scenario.httpRequestPattern),
                 attributeSelectionKeys = scenario.fieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams)
             )
@@ -318,7 +319,8 @@ class StatefulHttpStub(
         resourceIdKey: String,
         fakeResponse: ResponseDetails,
         generatedResponse: HttpResponse,
-        attributeSelectionKeys: Set<String>
+        attributeSelectionKeys: Set<String>,
+        fakeAcceptedResponse: ResponseDetails?
     ): HttpResponse? {
         val (resourcePath, resourceId) = resourcePathAndIdFrom(httpRequest)
         val responseBody =
@@ -331,6 +333,15 @@ class StatefulHttpStub(
             ) ?: return null
 
         stubCache.updateResponse(resourcePath, responseBody, resourceIdKey, resourceId)
+
+        if (httpRequest.isRequestExpectingAcceptedResponse()) {
+            return updateCacheAndReturnAcceptedResponse(
+                fakeAcceptedResponse,
+                responseBody,
+                httpRequest,
+                generatedResponse
+            )
+        }
         return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
     }
 

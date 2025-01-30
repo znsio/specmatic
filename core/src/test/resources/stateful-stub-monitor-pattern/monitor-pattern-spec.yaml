@@ -46,6 +46,53 @@ paths:
               description: URL to monitor the product creation status
               schema:
                 type: string
+
+  /product/{id}:
+    patch:
+      summary: Update a product
+      operationId: updateProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                price:
+                  type: number
+      responses:
+        "200":
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  price:
+                    type: number
+                required:
+                  - id
+                  - name
+                  - price
+        "202":
+          description: Product updation accepted, processing
+          headers:
+            Link:
+              description: URL to monitor the product updation status
+              schema:
+                type: string
   /monitor/{id}:
     get:
       summary: Get the status of a product creation request

@@ -17,28 +17,47 @@ class ResponseMonitor(
     private val responsePath: String = "response"
 
     fun waitForResponse(executor: TestExecutor): ReturnValue<HttpResponse> {
-        val processingScenario = response.getProcessingScenario() ?: return HasFailure("No processing scenario found in response")
-        if (processingScenario.matches(response) !is Result.Success) return HasFailure("Response does not match processing scenario")
-
-        val monitorLink = response.extractMonitorLinkFromHeader(headerKey)
-        val monitorScenario = monitorLink?.monitorScenario() ?: return HasFailure("No monitor scenario found for link: $monitorLink")
-
+        val (monitorScenario, monitorLink) = when(val result = getScenarioAndLink()) {
+            is HasValue -> result.value
+            is HasException -> return result.cast()
+            is HasFailure -> return result.cast()
+        }
         val baseURL = (executor as? HttpClient)?.baseURL.orEmpty()
+
         repeat(maxRetry) { count ->
             try {
+                val delay = getBackOffDelay(count)
+                Thread.sleep(delay)
+
                 val response = checkStatus(monitorScenario, baseURL, monitorLink)
                 monitorScenario.matches(response).throwOnFailure()
 
-                if (response.isComplete()) {
-                    return HasValue(response.convertToOriginalResponse())
+                val monitorComplete = response.checkCompletion()
+                if (monitorComplete is HasValue) {
+                    val (requestFromMonitor, responseFromMonitor) = monitorComplete.value
+                    val result = originalScenario.matches(requestFromMonitor, responseFromMonitor, DefaultMismatchMessages, feature.flagsBased)
+                    if (result is Result.Failure) {
+                        return HasFailure(result, message = "Monitor request / response doesn't match scenario")
+                    }
+                    return HasValue(responseFromMonitor)
                 }
-
-                val delay = getBackOffDelay(count)
-                Thread.sleep(delay)
             } catch (e: Exception) { return HasException(e) }
         }
 
         return HasFailure("Max retries exceeded, monitor link: $monitorLink")
+    }
+
+    private fun getScenarioAndLink(): ReturnValue<Pair<Scenario, Link>> {
+        val processingScenario = response.getProcessingScenario() ?: return HasFailure("No processing scenario found in response")
+        val processingScenarioResult = processingScenario.matches(response)
+        if (processingScenarioResult is Result.Failure) {
+            return HasFailure(processingScenarioResult, message = "Response doesn't match processing scenario")
+        }
+
+        val monitorLink = response.extractMonitorLinkFromHeader(headerKey)
+        val monitorScenario = monitorLink?.monitorScenario() ?: return HasFailure("No monitor scenario found for link: $monitorLink")
+
+        return HasValue(Pair(monitorScenario, monitorLink))
     }
 
     private fun checkStatus(monitorScenario: Scenario, baseURL: String, monitorLink: Link): HttpResponse {
@@ -71,12 +90,11 @@ class ResponseMonitor(
         return this.body.toRequest()
     }
 
-    private fun HttpResponse.isComplete(): Boolean {
-        return runCatching {
-            val request = this.convertToOriginalRequest()
-            val response = this.convertToOriginalResponse()
-            originalScenario.matches(request, response, DefaultMismatchMessages, feature.flagsBased).isSuccess()
-        }.getOrElse { false }
+    private fun HttpResponse.checkCompletion(): ReturnValue<Pair<HttpRequest, HttpResponse>> {
+        val (request, response) = runCatching {
+            this.convertToOriginalRequest() to this.convertToOriginalResponse()
+        }.getOrElse { return HasException(it) }
+        return HasValue(request to response)
     }
 
     private fun HttpResponse.extractMonitorLinkFromHeader(key: String): Link? {

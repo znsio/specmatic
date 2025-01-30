@@ -117,7 +117,7 @@ data class SpecmaticConfig(
     private val hooks: Map<String, String> = emptyMap(),
     val repository: RepositoryInfo? = null,
     val report: ReportConfiguration? = null,
-    val security: SecurityConfiguration? = null,
+    private val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
     val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
@@ -217,6 +217,16 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun getAuthBearerEnvironmentVariable(): String? {
         return auth?.getBearerEnvironmentVariable()
+    }
+
+    @JsonIgnore
+    fun getSecurityConfiguration(): SecurityConfiguration? {
+        return security
+    }
+
+    @JsonIgnore
+    fun getOpenAPISecurityConfigurationSchemes(): Map<String, SecuritySchemeConfiguration>? {
+        return security?.getOpenAPISecuritySchemes()
     }
 }
 
@@ -353,8 +363,12 @@ data class SuccessCriteria(
 
 data class SecurityConfiguration(
     @JsonProperty("OpenAPI")
-    val OpenAPI:OpenAPISecurityConfiguration?
-)
+    private val OpenAPI: OpenAPISecurityConfiguration?
+) {
+    fun getOpenAPISecuritySchemes(): Map<String, SecuritySchemeConfiguration>? {
+        return OpenAPI?.securitySchemes
+    }
+}
 
 data class OpenAPISecurityConfiguration(
     val securitySchemes: Map<String, SecuritySchemeConfiguration> = emptyMap()

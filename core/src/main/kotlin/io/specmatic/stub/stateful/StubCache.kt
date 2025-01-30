@@ -50,14 +50,15 @@ class StubCache {
         idKey: String,
         idValue: String,
     ) = lock.withLock {
-        val requestBody = httpRequest.body as JSONObjectValue
-        val existingResponse = findResponseFor(path, idKey, idValue)
-        val responseIdKey = finalResponseBody.findFirstChildByPath(DEFAULT_CACHE_RESPONSE_ID_KEY) ?: EmptyString
+        if (findResponseFor(path, idKey, idValue) != null) {
+            deleteResponse(path, idKey, idValue)
+        }
 
+        val responseIdKey = finalResponseBody.findFirstChildByPath(DEFAULT_CACHE_RESPONSE_ID_KEY) ?: EmptyString
         val responseToBeCached = JSONObjectValue(
             mapOf(
                 DEFAULT_CACHE_RESPONSE_ID_KEY to responseIdKey,
-                REQUEST_BODY_KEY to requestBody,
+                REQUEST_BODY_KEY to (httpRequest.body as JSONObjectValue),
                 RESPONSE_BODY_KEY to finalResponseBody,
                 STATUS_CODE_KEY to parsedValue(httpResponse.status.toString()),
                 METHOD_KEY to parsedValue(httpRequest.method.orEmpty()),
@@ -65,11 +66,7 @@ class StubCache {
                 RESPONSE_HEADERS_KEY to parsedValue(httpResponse.headers.toHeadersList().stringify()),
             )
         )
-        if(existingResponse == null) {
-            cachedResponses.add(
-                CachedResponse(path, responseToBeCached)
-            )
-        }
+        cachedResponses.add(CachedResponse(path, responseToBeCached))
     }
 
     fun updateResponse(

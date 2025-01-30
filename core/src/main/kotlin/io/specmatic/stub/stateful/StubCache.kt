@@ -3,6 +3,7 @@ package io.specmatic.stub.stateful
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
+import io.specmatic.core.Resolver
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.JSONArrayValue
@@ -47,17 +48,13 @@ class StubCache {
         finalResponseBody: JSONObjectValue,
         httpResponse: HttpResponse,
         httpRequest: HttpRequest,
-        idKey: String,
-        idValue: String,
-    ) = lock.withLock {
-        if (findResponseFor(path, idKey, idValue) != null) {
-            deleteResponse(path, idKey, idValue)
-        }
-
-        val responseIdKey = finalResponseBody.findFirstChildByPath(DEFAULT_CACHE_RESPONSE_ID_KEY) ?: EmptyString
+        resolver: Resolver
+    ): Value = lock.withLock {
+        val responseId = finalResponseBody.findFirstChildByPath(DEFAULT_CACHE_RESPONSE_ID_KEY) ?: EmptyString
+        val acceptedResponseId = generateValueNotEqualTo(responseId, resolver)
         val responseToBeCached = JSONObjectValue(
             mapOf(
-                DEFAULT_CACHE_RESPONSE_ID_KEY to responseIdKey,
+                DEFAULT_CACHE_RESPONSE_ID_KEY to acceptedResponseId,
                 REQUEST_BODY_KEY to (httpRequest.body as JSONObjectValue),
                 RESPONSE_BODY_KEY to finalResponseBody,
                 STATUS_CODE_KEY to parsedValue(httpResponse.status.toString()),
@@ -67,6 +64,7 @@ class StubCache {
             )
         )
         cachedResponses.add(CachedResponse(path, responseToBeCached))
+        return acceptedResponseId
     }
 
     fun updateResponse(
@@ -114,6 +112,13 @@ class StubCache {
         }
     }
 
+    private fun generateValueNotEqualTo(value: Value, resolver: Resolver): Value {
+        var result = value
+        while(result.toStringLiteral() == value.toStringLiteral()) {
+            result = value.deepPattern().generate(resolver)
+        }
+        return result
+    }
     private fun Map<String, Value>.satisfiesFilter(filter: Map<String, String>): Boolean {
         if(filter.isEmpty()) return true
 

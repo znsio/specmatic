@@ -233,6 +233,7 @@ class StatefulHttpStub(
             scenario.method == "PATCH" && httpRequest.pathSegments().size > 1 -> cachePatchResponseAndReturn(
                 httpRequest = httpRequest,
                 generatedResponse = generatedResponse,
+                scenario = scenario,
                 fakeResponse = fakeResponse,
                 fakeAcceptedResponse = fakeAcceptedResponse,
                 resourceIdKey = resourceIdKeyFrom(scenario.httpRequestPattern),
@@ -309,7 +310,8 @@ class StatefulHttpStub(
         fakeResponse: ResponseDetails,
         generatedResponse: HttpResponse,
         attributeSelectionKeys: Set<String>,
-        fakeAcceptedResponse: ResponseDetails?
+        fakeAcceptedResponse: ResponseDetails?,
+        scenario: Scenario
     ): HttpResponse? {
         val (resourcePath, resourceId) = resourcePathAndIdFrom(httpRequest)
         val responseBody =
@@ -328,7 +330,8 @@ class StatefulHttpStub(
                 fakeAcceptedResponse,
                 responseBody,
                 httpRequest,
-                generatedResponse
+                generatedResponse,
+                scenario.resolver
             )
         }
         return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
@@ -360,7 +363,8 @@ class StatefulHttpStub(
                 fakeAcceptedResponse,
                 finalResponseBody,
                 httpRequest,
-                generatedResponse
+                generatedResponse,
+                scenario.resolver
             )
         }
 
@@ -386,34 +390,39 @@ class StatefulHttpStub(
         fakeAcceptedResponse: ResponseDetails?,
         finalResponseBody: JSONObjectValue,
         httpRequest: HttpRequest,
-        httpResponse: HttpResponse
+        httpResponse: HttpResponse,
+        resolver: Resolver
     ): HttpResponse {
         if(fakeAcceptedResponse == null) throw acceptedResponseSchemaNotFoundException()
         val responseIdValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, finalResponseBody)
 
-        stubCache.addAcceptedResponse(
+        val acceptedResponseIdValue = stubCache.addAcceptedResponse(
             path = DEFAULT_ACCEPTED_RESPONSE_QUERY_ENDPOINT,
             finalResponseBody = finalResponseBody,
             httpResponse = httpResponse,
             httpRequest = httpRequest,
-            idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
-            idValue = responseIdValue,
+            resolver = resolver
         )
         val generatedResponse = generateHttpResponseFrom(fakeAcceptedResponse, httpRequest, true)
 
         return generatedResponse.copy(
             headers = generatedResponse.headers.mapValues {
                 if (it.key.contains("Specmatic")) it.value
-                else createAcceptedResponseQueryLink(resourcePathAndIdFrom(httpRequest).first, responseIdValue)
+                else createAcceptedResponseQueryLink(
+                    resourcePathAndIdFrom(httpRequest).first,
+                    responseIdValue,
+                    acceptedResponseIdValue.toStringLiteral()
+                )
             }
         )
     }
 
     private fun createAcceptedResponseQueryLink(
         originalResourcePath: String,
-        responseIdValue: String
+        responseIdValue: String,
+        acceptedResponseIdValue: String
     ): String {
-        return "<$DEFAULT_ACCEPTED_RESPONSE_QUERY_ENDPOINT/$responseIdValue>;rel=related;title=${DEFAULT_ACCEPTED_RESPONSE_QUERY_ENDPOINT.substringAfterLast("/")},<$originalResourcePath/$responseIdValue>;rel=self,<$originalResourcePath/$responseIdValue>;rel=canonical"
+        return "<$DEFAULT_ACCEPTED_RESPONSE_QUERY_ENDPOINT/$acceptedResponseIdValue>;rel=related;title=${DEFAULT_ACCEPTED_RESPONSE_QUERY_ENDPOINT.substringAfterLast("/")},<$originalResourcePath/$responseIdValue>;rel=self,<$originalResourcePath/$responseIdValue>;rel=canonical"
     }
 
     private fun acceptedResponseSchemaNotFoundException(): ContractException {

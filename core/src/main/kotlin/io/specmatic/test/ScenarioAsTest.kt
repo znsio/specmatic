@@ -106,7 +106,7 @@ data class ScenarioAsTest(
             }
 
             val testResult = testResult(request, response, testScenario, flagsBased)
-            if (testResult is Result.Failure && !response.isProcessingHenceValid()) {
+            if (testResult is Result.Failure && !response.isAcceptedHenceValid()) {
                 return Pair(testResult.withBindings(testScenario.bindings, response), response)
             }
 
@@ -149,12 +149,9 @@ data class ScenarioAsTest(
         return result
     }
 
-    private fun HttpResponse.isProcessingHenceValid(): Boolean {
-        if (originalScenario.status == 202 && this.status == 202) return false
-        return feature.scenarioAssociatedTo(
-            path = originalScenario.path, method = originalScenario.method,
-            responseStatusCode = 202, contentType = originalScenario.requestContentType
-        ) != null
+    private fun HttpResponse.isAcceptedHenceValid(): Boolean {
+        if (scenario.status == 202 && this.status == 202) return false
+        return feature.isAcceptedResponsePossible(scenario)
     }
 }
 

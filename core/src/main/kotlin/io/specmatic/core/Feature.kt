@@ -623,7 +623,7 @@ data class Feature(
         workflow: Workflow,
         originalScenario: Scenario
     ) = ScenarioAsTest(
-        concreteTestScenario,
+        scenario = adjustTestDescription(concreteTestScenario),
         feature = this,
         flagsBased,
         concreteTestScenario.sourceProvider,
@@ -636,6 +636,22 @@ data class Feature(
         workflow = workflow,
         originalScenario = originalScenario
     )
+
+    fun adjustTestDescription(scenario: Scenario): Scenario {
+        if (!isAcceptedResponsePossible(scenario)) return scenario
+        return scenario.copy(
+            descriptionFromPlugin = null,
+            statusInDescription = "${scenario.statusInDescription}/202"
+        )
+    }
+
+    fun isAcceptedResponsePossible(scenario: Scenario): Boolean {
+        if (scenario.status == 202 || scenario.isNegative) return false
+        return this.scenarioAssociatedTo(
+            path = scenario.path, method = scenario.method,
+            responseStatusCode = 202, contentType = scenario.requestContentType
+        ) != null
+    }
 
     private fun getBadRequestsOrDefault(scenario: Scenario): BadRequestOrDefault? {
         val badRequestResponses = scenarios.filter {

@@ -19,7 +19,6 @@ class EnhancedRHSValueEvalFunction : AbstractFunction() {
         val (filterKey, operator, filterValue) = parseCondition(inputString)
         val scenarioValue = expression.dataAccessor.getData(filterKey).value.toString()
         val result = evaluateCondition(filterKey, operator, filterValue, scenarioValue)
-
         return EvaluationValue.of(result, ExpressionConfiguration.defaultConfiguration())
     }
 

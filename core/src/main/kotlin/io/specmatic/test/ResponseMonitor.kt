@@ -8,9 +8,17 @@ import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.StringValue
 import kotlin.math.pow
 
+interface Sleeper {
+    fun sleep(milliSeconds: Long)
+}
+
+val DefaultSleeper = object : Sleeper {
+    override fun sleep(milliSeconds: Long) = Thread.sleep(milliSeconds)
+}
+
 class ResponseMonitor(
     private val feature: Feature, val originalScenario: Scenario, private val response: HttpResponse,
-    private val maxRetry: Int = 3, private val backOffDelay: Long = 1000
+    private val maxRetry: Int = 3, private val backOffDelay: Long = 1000, private val sleeper: Sleeper = DefaultSleeper
 ) {
     private val headerKey: String = "Link"
     private val requestPath: String = "request"
@@ -22,14 +30,10 @@ class ResponseMonitor(
             is HasException -> return result.cast()
             is HasFailure -> return result.cast()
         }
-        val baseURL = (executor as? HttpClient)?.baseURL.orEmpty()
 
         repeat(maxRetry) { count ->
             try {
-                val delay = getBackOffDelay(count)
-                Thread.sleep(delay)
-
-                val response = checkStatus(monitorScenario, baseURL, monitorLink)
+                val response = checkStatus(monitorScenario, executor, monitorLink)
                 monitorScenario.matches(response).throwOnFailure()
 
                 val monitorComplete = response.checkCompletion()
@@ -41,6 +45,9 @@ class ResponseMonitor(
                     }
                     return HasValue(responseFromMonitor)
                 }
+
+                val delay = getBackOffDelay(count)
+                if (count < maxRetry - 1) sleeper.sleep(delay)
             } catch (e: Exception) { return HasException(e) }
         }
 
@@ -48,21 +55,24 @@ class ResponseMonitor(
     }
 
     private fun getScenarioAndLink(): ReturnValue<Pair<Scenario, Link>> {
-        val processingScenario = response.getProcessingScenario() ?: return HasFailure("No processing scenario found in response")
+        val processingScenario = getProcessingScenario() ?:
+            return HasFailure("No accepted response scenario found for ${originalScenario.apiDescription}")
+
         val processingScenarioResult = processingScenario.matches(response)
         if (processingScenarioResult is Result.Failure) {
             return HasFailure(processingScenarioResult, message = "Response doesn't match processing scenario")
         }
 
         val monitorLink = response.extractMonitorLinkFromHeader(headerKey)
-        val monitorScenario = monitorLink?.monitorScenario() ?: return HasFailure("No monitor scenario found for link: $monitorLink")
+        val monitorScenario = monitorLink?.monitorScenario() ?:
+            return HasFailure("No monitor scenario found matching link: $monitorLink")
 
         return HasValue(Pair(monitorScenario, monitorLink))
     }
 
-    private fun checkStatus(monitorScenario: Scenario, baseURL: String, monitorLink: Link): HttpResponse {
+    private fun checkStatus(monitorScenario: Scenario, executor: TestExecutor, monitorLink: Link): HttpResponse {
         val request = monitorScenario.generateHttpRequest().updatePath(monitorLink.toPath())
-        return HttpClient(baseURL).execute(request)
+        return executor.execute(request)
     }
 
     private fun extractLinksFromHeader(headerValue: String): List<Link> {
@@ -104,8 +114,8 @@ class ResponseMonitor(
         }
     }
 
-    private fun HttpResponse.getProcessingScenario(): Scenario? {
-        if (originalScenario.status == 202 && this.status == 202) return null
+    private fun getProcessingScenario(): Scenario? {
+        if (!feature.isAcceptedResponsePossible(originalScenario)) return null
         return feature.scenarioAssociatedTo(
             path = originalScenario.path, method = originalScenario.method,
             responseStatusCode = 202, contentType = originalScenario.requestContentType
@@ -117,7 +127,7 @@ class ResponseMonitor(
             ?: throw ContractException(breadCrumb = requestPath, errorMessage = "Expected a json object")
         return HttpRequest(
             path = originalScenario.path,
-            method = requestObject.jsonObject["method"]?.toStringLiteral(),
+            method = requestObject.getString("method"),
             headers = requestObject.getMapOrEmpty("header"),
             body = requestObject.jsonObject["body"] ?: NullValue
         )
@@ -127,7 +137,7 @@ class ResponseMonitor(
         val responseObject = this.jsonObject[responsePath] as? JSONObjectValue
             ?: throw ContractException(breadCrumb = responsePath, errorMessage = "Expected a json object")
         return HttpResponse(
-            status = responseObject.jsonObject["statusCode"]?.toStringLiteral()?.toInt() ?: DEFAULT_RESPONSE_CODE,
+            status = responseObject.getInt("statusCode"),
             headers = responseObject.getMapOrEmpty("header"),
             body = responseObject.jsonObject["body"] ?: NullValue
         )

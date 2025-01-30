@@ -18,7 +18,7 @@ data class ScenarioMetadataFilter(
         return try {
             expressionWithVariables.evaluate().booleanValue ?: false
         } catch (e: Exception) {
-            val errorMsg = "Error in filter expression: ${e.message?.replace("brace", "bracket")}"
+            val errorMsg = "Error in filter expression: ${e.message?.replace("brace", "bracket")}\n"
             print(errorMsg)
             throw IllegalArgumentException(errorMsg)
         }

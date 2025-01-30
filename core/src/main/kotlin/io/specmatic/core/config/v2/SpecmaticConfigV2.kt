@@ -63,7 +63,7 @@ data class SpecmaticConfigV2(
                 version = SpecmaticConfigVersion.VERSION_2,
                 contracts = config.sources.map { ContractConfig(it) },
                 auth = config.getAuth(),
-                pipeline = config.getPipeline(),
+                pipeline = SpecmaticConfig.getPipeline(config),
                 environments = config.environments,
                 hooks = config.getHooks(),
                 repository = config.repository,

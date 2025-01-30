@@ -108,20 +108,6 @@ For example, to filter by HTTP methods:
         required = false
     )
     var filter: String = ""
-    @Option(
-        names= ["--filter-not"],
-        description = [
-           """
-Filter tests not matching the specified criteria
-
-This option supports the same filtering keys and syntax as the --filter option.
-For example:
---filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
-           """
-        ],
-        required = false
-    )
-    var filterNot: List<String> = emptyList()
 
     @Option(names = ["--env"], description = ["Environment name"])
     var envName: String = ""
@@ -195,7 +181,6 @@ For example:
         System.setProperty(ENV_NAME, envName)
         System.setProperty("protocol", protocol)
         System.setProperty(FILTER, filter)
-        System.setProperty(FILTER_NOT, filterNot.joinToString(";"))
         System.setProperty(OVERLAY_FILE_PATH, overlayFilePath.orEmpty())
         System.setProperty(STRICT_MODE, strictMode.toString())
 

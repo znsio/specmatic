@@ -70,7 +70,6 @@ class ExamplesInteractiveServer(
     private val filterName: String,
     private val filterNotName: String,
     private val filter: String,
-    private val filterNot: List<String>,
     externalDictionaryFile: File? = null,
     private val allowOnlyMandatoryKeysInJSONObject: Boolean
 ) : Closeable {
@@ -299,8 +298,7 @@ class ExamplesInteractiveServer(
         val feature = ScenarioFilter(
             filterName,
             filterNotName,
-            filter,
-            filterNot
+            filter
         ).filter(parseContractFileToFeature(contractFile))
 
         val examplesDir = getExamplesDirPath(contractFile)
@@ -341,9 +339,8 @@ class ExamplesInteractiveServer(
         }
     }
 
-    class ScenarioFilter(filterName: String = "", filterNotName: String = "", filterClauses: String = "", private val filterNotClauses: List<String> = emptyList()) {
+    class ScenarioFilter(filterName: String = "", filterNotName: String = "", filterClauses: String = "") {
         private val filter = filterClauses
-        private val filterNot = filterNotClauses.joinToString(";")
 
         private val filterNameTokens = if(filterName.isNotBlank()) {
             filterName.trim().split(",").map { it.trim() }

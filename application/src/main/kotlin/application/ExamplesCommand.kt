@@ -96,21 +96,6 @@ For example, to filter by HTTP methods:
     var filter: String = ""
 
     @Option(
-        names= ["--filter-not"],
-        description = [
-            """
-Filter tests not matching the specified criteria
-
-This option supports the same filtering keys and syntax as the --filter option.
-For example:
---filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
-           """
-        ],
-        required = false
-    )
-    var filterNot: List<String> = emptyList()
-
-    @Option(
         names = ["--allow-only-mandatory-keys-in-payload"],
         description = ["Generate examples with only mandatory keys in the json request and response payloads"],
         required = false
@@ -136,7 +121,7 @@ For example:
 
             ExamplesInteractiveServer.generate(
                 contractFile!!,
-                ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter, filterNot),
+                ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter),
                 extensive, allowOnlyMandatoryKeysInJSONObject
             )
         } catch (e: Throwable) {
@@ -175,21 +160,6 @@ For example, to filter by HTTP methods:
             required = false
         )
         var filter: String = ""
-
-        @Option(
-            names= ["--filter-not"],
-            description = [
-                """
-Filter tests not matching the specified criteria
-
-This option supports the same filtering keys and syntax as the --filter option.
-For example:
---filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
-           """
-            ],
-            required = false
-        )
-        var filterNot: List<String> = emptyList()
 
         @Option(names = ["--contract-file", "--spec-file"], description = ["Contract file path"], required = false)
         var contractFile: File? = null
@@ -356,7 +326,7 @@ For example:
                         ScenarioStub(request, response)
                     }
                 },
-                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter, filterNot)
+                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter)
             )
         }
 
@@ -364,7 +334,7 @@ For example:
             return ExamplesInteractiveServer.validateExamples(
                 feature,
                 examples = externalExamples,
-                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter, filterNot)
+                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter)
             )
         }
 
@@ -447,21 +417,6 @@ For example, to filter by HTTP methods:
         )
         var filter: String = ""
 
-        @Option(
-            names= ["--filter-not"],
-            description = [
-                """
-Filter tests not matching the specified criteria
-
-This option supports the same filtering keys and syntax as the --filter option.
-For example:
---filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
-           """
-            ],
-            required = false
-        )
-        var filterNot: List<String> = emptyList()
-
         @Option(names = ["--contract-file"], description = ["Contract file path"], required = false)
         var contractFile: File? = null
 
@@ -515,7 +470,6 @@ For example:
                     filterName,
                     filterNotName,
                     filter,
-                    filterNot,
                     dictFile,
                     allowOnlyMandatoryKeysInJSONObject
                 )

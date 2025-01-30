@@ -15,8 +15,11 @@ data class ScenarioMetadataFilter(
             .with(ScenarioFilterTags.HEADER.key, metadata.header.joinToString(","))
             .with(ScenarioFilterTags.QUERY.name, metadata.query.joinToString(","))
             .with(ScenarioFilterTags.EXAMPLE_NAME.name, metadata.exampleName)
-
-        return expressionWithVariables.evaluate().booleanValue ?: false
+        return try {
+            expressionWithVariables.evaluate().booleanValue ?: false
+        } catch (e: Exception) {
+            false
+        }
     }
 
     companion object {

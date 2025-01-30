@@ -377,6 +377,14 @@ class ScenarioMetadataFilterTests {
     }
 
     @Test
+    fun `exclude scenarios with wildcard only for last digit including tildle`() {
+        val filter = ScenarioMetadataFilter.from("STATUS~'50x'")
+
+        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 521)))
+        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 502)))
+    }
+
+    @Test
     fun `test enhanced expression with only METHOD expression`() {
         val filterExpression = "METHOD='GET'"
         val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)

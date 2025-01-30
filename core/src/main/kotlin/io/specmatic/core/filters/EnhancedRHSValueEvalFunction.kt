@@ -36,10 +36,10 @@ class EnhancedRHSValueEvalFunction : AbstractFunction() {
         }
 
         return when (operator) {
-            "=" -> values.any { checkCondition(it) }
-            "!=" -> values.all { !checkCondition(it) }
-            else -> throw IllegalArgumentException("Unsupported operator: $operator")
-        }
+                "=" -> values.any { checkCondition(it) }
+                "!=" -> values.all { !checkCondition(it) }
+                else -> throw IllegalArgumentException("Unsupported operator: $operator")
+            }
     }
 
     private fun matchesPath(value: String, scenarioValue: String): Boolean {

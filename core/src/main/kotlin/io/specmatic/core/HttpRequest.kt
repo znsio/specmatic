@@ -11,6 +11,7 @@ import io.ktor.http.*
 import io.ktor.http.content.*
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_PRETTY_PRINT
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
+import io.specmatic.stub.stateful.ACCEPTED_STATUS_CODE
 import org.apache.http.client.utils.URLEncodedUtils
 import org.apache.http.message.BasicNameValuePair
 import java.io.File
@@ -67,7 +68,7 @@ data class HttpRequest(
     )
 
     fun isRequestExpectingAcceptedResponse(): Boolean {
-        return headers[SPECMATIC_RESPONSE_CODE_HEADER] == "202"
+        return headers[SPECMATIC_RESPONSE_CODE_HEADER] == ACCEPTED_STATUS_CODE.toString()
     }
 
     fun updateQueryParams(otherQueryParams: Map<String, String>): HttpRequest =

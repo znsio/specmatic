@@ -61,8 +61,8 @@ class StubCache {
                 RESPONSE_BODY_KEY to finalResponseBody,
                 STATUS_CODE_KEY to parsedValue(httpResponse.status.toString()),
                 METHOD_KEY to parsedValue(httpRequest.method.orEmpty()),
-                REQUEST_HEADERS_KEY to parsedValue(asString(httpRequest.headers.toHeadersList())),
-                RESPONSE_HEADERS_KEY to parsedValue(asString(httpResponse.headers.toHeadersList())),
+                REQUEST_HEADERS_KEY to parsedValue(httpRequest.headers.toHeadersList().stringify()),
+                RESPONSE_HEADERS_KEY to parsedValue(httpResponse.headers.toHeadersList().stringify()),
             )
         )
         if(existingResponse == null) {
@@ -132,8 +132,8 @@ class StubCache {
         return entries.map { mapOf("name" to it.key, "value" to it.value) }
     }
 
-    private fun asString(value: Any): String {
-        return ObjectMapper().writeValueAsString(value).orEmpty()
+    private fun Any.stringify(): String {
+        return ObjectMapper().writeValueAsString(this).orEmpty()
     }
 
     companion object {

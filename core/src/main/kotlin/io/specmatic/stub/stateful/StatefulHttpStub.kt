@@ -44,7 +44,6 @@ import io.specmatic.stub.ContractStub
 import io.specmatic.stub.CouldNotParseRequest
 import io.specmatic.stub.FoundStubbedResponse
 import io.specmatic.stub.HttpStubResponse
-import io.specmatic.stub.NotStubbed
 import io.specmatic.stub.ResponseDetails
 import io.specmatic.stub.StubbedResponseResult
 import io.specmatic.stub.badRequest
@@ -60,6 +59,8 @@ import io.specmatic.test.HttpClient
 import java.io.File
 
 const val DEFAULT_ACCEPTED_RESPONSE_QUERY_ENDPOINT = "/monitor"
+const val ACCEPTED_STATUS_CODE = 202
+const val NOT_FOUND_STATUS_CODE = 404
 
 class StatefulHttpStub(
     host: String = "127.0.0.1",
@@ -175,133 +176,119 @@ class StatefulHttpStub(
     private fun cachedHttpResponse(
         httpRequest: HttpRequest,
     ): StubbedResponseResult {
-        if (features.isEmpty())
-            return NotStubbed(HttpStubResponse(HttpResponse(400, "No valid API specifications loaded")))
+        return responseDetailsFrom(features, httpRequest).let { responses ->
+            val fakeResponse = responses.responseWithStatusCodeStartingWith(
+                "2"
+            ) ?: return@let badRequestOrFakeResponse(responses, httpRequest)
 
-        val responses: Map<Int, ResponseDetails> = responseDetailsFrom(features, httpRequest)
-        val fakeResponse = responses.responseWithStatusCodeStartingWith(
-            "2"
-        ) ?: return badRequestOrFakeResponse(responses, httpRequest)
+            val fakeAcceptedResponse = if (httpRequest.isRequestExpectingAcceptedResponse())
+                responses.responseWithStatusCodeStartingWith(ACCEPTED_STATUS_CODE.toString())
+            else null
 
-        val fakeAcceptedResponse = responses.responseWithStatusCodeStartingWith(
-            "202",
-            httpRequest.isRequestExpectingAcceptedResponse()
-        )
+            val notFoundResponseBodyPattern = responses.responseWithStatusCodeStartingWith(
+                NOT_FOUND_STATUS_CODE.toString()
+            )?.successResponse?.responseBodyPattern
 
-        val updatedResponse = cachedResponse(
-            fakeResponse,
-            httpRequest,
-            specmaticConfig.getIncludeMandatoryAndRequestedKeysInResponse(),
-            responses.responseWithStatusCodeStartingWith("404")?.successResponse?.responseBodyPattern,
-            fakeAcceptedResponse
-        ) ?: generateHttpResponseFrom(fakeResponse, httpRequest, true)
-
-        return FoundStubbedResponse(
-            HttpStubResponse(
-                updatedResponse,
-                contractPath = fakeResponse.feature.path,
-                feature = fakeResponse.feature,
-                scenario = fakeResponse.successResponse?.scenario
+            return@let FoundStubbedResponse(
+                HttpStubResponse(
+                    response = cachedResponse(
+                        httpRequest,
+                        fakeAcceptedResponse,
+                        fakeResponse,
+                        notFoundResponseBodyPattern
+                    ),
+                    contractPath = fakeResponse.feature.path,
+                    feature = fakeResponse.feature,
+                    scenario = fakeResponse.successResponse?.scenario
+                )
             )
-        )
-    }
-
-    private fun cachedResponse(
-        fakeResponse: ResponseDetails,
-        httpRequest: HttpRequest,
-        includeMandatoryAndRequestedKeysInResponse: Boolean?,
-        notFoundResponseBodyPattern: Pattern?,
-        fakeAcceptedResponse: ResponseDetails?
-    ): HttpResponse? {
-        val scenario = fakeResponse.successResponse?.scenario
-        val method = scenario?.method
-        val pathSegments = httpRequest.pathSegments()
-
-        val generatedResponse = generateHttpResponseFrom(fakeResponse, httpRequest, true)
-
-        if(isUnsupportedResponseBodyForCaching(generatedResponse, method, pathSegments)) return null
-
-        val attributeSelectionKeys: Set<String> =
-            scenario?.getFieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams).orEmpty()
-
-        val (resourcePath, resourceId) = resourcePathAndIdFrom(httpRequest)
-        val notFoundResponse = generate4xxResponseWithMessage(
-            notFoundResponseBodyPattern,
-            scenario,
-            message = "Resource with resourceId '$resourceId' not found",
-            statusCode = 404
-        )
-
-        val resourceIdKey = resourceIdKeyFrom(scenario?.httpRequestPattern)
-        val cachedResponseWithId = stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)?.responseBody
-        if(pathSegments.size > 1 && cachedResponseWithId == null) return notFoundResponse
-
-        return when {
-            method == "POST" -> cachePostResponseAndReturn(
-                generatedResponse,
-                httpRequest,
-                scenario,
-                attributeSelectionKeys,
-                fakeResponse,
-                includeMandatoryAndRequestedKeysInResponse,
-                resourcePath,
-                fakeAcceptedResponse
-            )
-
-            method == "PATCH" && pathSegments.size > 1 -> cachePatchResponseAndReturn(
-                httpRequest,
-                resourcePath,
-                resourceIdKey,
-                resourceId,
-                fakeResponse,
-                generatedResponse,
-                attributeSelectionKeys
-            )
-
-            method == "GET" && pathSegments.size == 1 -> cacheGetAllResponseAndReturn(
-                resourcePath,
-                attributeSelectionKeys,
-                httpRequest,
-                generatedResponse
-            )
-
-            method == "GET" && pathSegments.size > 1 -> cacheGetResponseAndReturn(
-                cachedResponseWithId,
-                notFoundResponse,
-                generatedResponse,
-                attributeSelectionKeys,
-                scenario
-            )
-
-            method == "DELETE" && pathSegments.size > 1 -> cacheDeleteResponseAndReturn(
-                resourcePath,
-                resourceIdKey,
-                resourceId,
-                generatedResponse
-            )
-
-            else -> null
         }
     }
 
+    private fun cachedResponse(
+        httpRequest: HttpRequest,
+        fakeAcceptedResponse: ResponseDetails?,
+        fakeResponse: ResponseDetails,
+        notFoundResponseBodyPattern: Pattern?
+    ): HttpResponse {
+        val generatedResponse = generateHttpResponseFrom(fakeResponse, httpRequest, true)
+        val scenario = fakeResponse.successResponse?.scenario
+
+        if (
+            scenario == null ||
+            isUnsupportedResponseBodyForCaching(generatedResponse, scenario.method, httpRequest.pathSegments())
+        ) return generatedResponse
+
+        if (
+            httpRequest.pathSegments().size > 1
+            && cachedResponseWithIdFor(httpRequest, scenario) == null
+        ) {
+            return generate4xxResponseWithMessage(
+                notFoundResponseBodyPattern,
+                scenario,
+                message = "Resource with resourceId '${resourcePathAndIdFrom(httpRequest).second}' not found",
+                statusCode = 404
+            )
+        }
+
+        return when {
+            scenario.method == "POST" -> cachePostResponseAndReturn(
+                httpRequest = httpRequest,
+                generatedResponse = generatedResponse,
+                scenario = scenario,
+                fakeResponse = fakeResponse,
+                fakeAcceptedResponse = fakeAcceptedResponse,
+                attributeSelectionKeys = scenario.fieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams),
+            )
+
+            scenario.method == "PATCH" && httpRequest.pathSegments().size > 1 -> cachePatchResponseAndReturn(
+                httpRequest = httpRequest,
+                generatedResponse = generatedResponse,
+                fakeResponse = fakeResponse,
+                resourceIdKey = resourceIdKeyFrom(scenario.httpRequestPattern),
+                attributeSelectionKeys = scenario.fieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams)
+            )
+
+            scenario.method == "GET" && httpRequest.pathSegments().size == 1 -> cacheGetAllResponseAndReturn(
+                httpRequest = httpRequest,
+                generatedResponse = generatedResponse,
+                attributeSelectionKeys = scenario.fieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams),
+            )
+
+            scenario.method == "GET" && httpRequest.pathSegments().size > 1 -> cacheGetResponseAndReturn(
+                httpRequest = httpRequest,
+                generatedResponse = generatedResponse,
+                scenario = scenario,
+                attributeSelectionKeys = scenario.fieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams)
+            )
+
+            scenario.method == "DELETE" && httpRequest.pathSegments().size > 1 -> cacheDeleteResponseAndReturn(
+                httpRequest = httpRequest,
+                generatedResponse = generatedResponse,
+                resourceIdKey = resourceIdKeyFrom(scenario.httpRequestPattern),
+            )
+
+            else -> null
+        } ?: generatedResponse
+    }
+
     private fun cacheDeleteResponseAndReturn(
-        resourcePath: String,
+        httpRequest: HttpRequest,
         resourceIdKey: String,
-        resourceId: String,
         generatedResponse: HttpResponse
     ): HttpResponse {
+        val (resourcePath, resourceId) = resourcePathAndIdFrom(httpRequest)
         stubCache.deleteResponse(resourcePath, resourceIdKey, resourceId)
         return generatedResponse
     }
 
     private fun cacheGetResponseAndReturn(
-        cachedResponseWithId: JSONObjectValue?,
-        notFoundResponse: HttpResponse,
+        httpRequest: HttpRequest,
         generatedResponse: HttpResponse,
         attributeSelectionKeys: Set<String>,
         scenario: Scenario
-    ): HttpResponse {
-        if (cachedResponseWithId == null) return notFoundResponse
+    ): HttpResponse? {
+        val cachedResponseWithId = cachedResponseWithIdFor(httpRequest, scenario) ?: return null
 
         val isAcceptedResponseQueryRequest = scenario.path.startsWith(DEFAULT_ACCEPTED_RESPONSE_QUERY_ENDPOINT)
 
@@ -313,29 +300,13 @@ class StatefulHttpStub(
         return generatedResponse.withUpdated(cachedResponseWithId, attributeSelectionKeys)
     }
 
-    private fun responseForAcceptedResponseQueryRequest(
-        scenario: Scenario,
-        cachedResponseWithId: JSONObjectValue
-    ): HttpResponse? {
-        val matchingStub = scenarioStubs.firstOrNull {
-            scenario.matches(httpRequest = it.request, resolver = scenario.resolver)  is Result.Success
-        } ?: return null
-
-        ExampleProcessor.store(
-            cachedResponseWithId,
-            JSONObjectValue(jsonObject = mapOf("${'$'}store" to StringValue("replace")))
-        )
-        return ExampleProcessor.resolve(matchingStub.response, ExampleProcessor::defaultIfNotExits)
-    }
-
     private fun cacheGetAllResponseAndReturn(
-        resourcePath: String,
         attributeSelectionKeys: Set<String>,
         httpRequest: HttpRequest,
         generatedResponse: HttpResponse
     ): HttpResponse {
         val responseBody = stubCache.findAllResponsesFor(
-            resourcePath,
+            resourcePathAndIdFrom(httpRequest).first,
             attributeSelectionKeys,
             httpRequest.queryParams.asMap()
         )
@@ -344,13 +315,12 @@ class StatefulHttpStub(
 
     private fun cachePatchResponseAndReturn(
         httpRequest: HttpRequest,
-        resourcePath: String,
         resourceIdKey: String,
-        resourceId: String,
         fakeResponse: ResponseDetails,
         generatedResponse: HttpResponse,
         attributeSelectionKeys: Set<String>
     ): HttpResponse? {
+        val (resourcePath, resourceId) = resourcePathAndIdFrom(httpRequest)
         val responseBody =
             generatePatchResponse(
                 httpRequest,
@@ -370,22 +340,16 @@ class StatefulHttpStub(
         scenario: Scenario,
         attributeSelectionKeys: Set<String>,
         fakeResponse: ResponseDetails,
-        includeMandatoryAndRequestedKeysInResponse: Boolean?,
-        resourcePath: String,
         fakeAcceptedResponse: ResponseDetails?
     ): HttpResponse? {
         val responseBody = generatePostResponse(generatedResponse, httpRequest, scenario.resolver) ?: return null
 
-        val finalResponseBody = if (attributeSelectionKeys.isEmpty()) {
-            responseBody.includeMandatoryAndRequestedKeys(
-                fakeResponse,
-                httpRequest,
-                includeMandatoryAndRequestedKeysInResponse
-            )
-        } else responseBody
+        val finalResponseBody = if (attributeSelectionKeys.isEmpty())
+            responseBody.includeMandatoryAndRequestedKeys(fakeResponse, httpRequest)
+        else responseBody
 
         stubCache.addResponse(
-            path = resourcePath,
+            path = resourcePathAndIdFrom(httpRequest).first,
             responseBody = finalResponseBody,
             idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
             idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, finalResponseBody)
@@ -396,20 +360,33 @@ class StatefulHttpStub(
                 fakeAcceptedResponse,
                 finalResponseBody,
                 httpRequest,
-                generatedResponse,
-                resourcePath
+                generatedResponse
             )
         }
 
         return generatedResponse.withUpdated(finalResponseBody, attributeSelectionKeys)
     }
 
+    private fun responseForAcceptedResponseQueryRequest(
+        scenario: Scenario,
+        cachedResponseWithId: JSONObjectValue
+    ): HttpResponse? {
+        val matchingStub = scenarioStubs.firstOrNull {
+            scenario.matches(httpRequest = it.request, resolver = scenario.resolver)  is Result.Success
+        } ?: return null
+
+        ExampleProcessor.store(
+            cachedResponseWithId,
+            JSONObjectValue(jsonObject = mapOf("${'$'}store" to StringValue("replace")))
+        )
+        return ExampleProcessor.resolve(matchingStub.response, ExampleProcessor::defaultIfNotExits)
+    }
+
     private fun updateCacheAndReturnAcceptedResponse(
         fakeAcceptedResponse: ResponseDetails?,
         finalResponseBody: JSONObjectValue,
         httpRequest: HttpRequest,
-        httpResponse: HttpResponse,
-        originalResourcePath: String
+        httpResponse: HttpResponse
     ): HttpResponse {
         if(fakeAcceptedResponse == null) throw acceptedResponseSchemaNotFoundException()
         val responseIdValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, finalResponseBody)
@@ -427,7 +404,7 @@ class StatefulHttpStub(
         return generatedResponse.copy(
             headers = generatedResponse.headers.mapValues {
                 if (it.key.contains("Specmatic")) it.value
-                else createAcceptedResponseQueryLink(originalResourcePath, responseIdValue)
+                else createAcceptedResponseQueryLink(resourcePathAndIdFrom(httpRequest).first, responseIdValue)
             }
         )
     }
@@ -441,6 +418,12 @@ class StatefulHttpStub(
 
     private fun acceptedResponseSchemaNotFoundException(): ContractException {
         return ContractException("No 202 (Accepted) response schema found for this request as expected by the request header $SPECMATIC_RESPONSE_CODE_HEADER.")
+    }
+
+    private fun cachedResponseWithIdFor(httpRequest: HttpRequest, scenario: Scenario): JSONObjectValue? {
+        val (resourcePath, resourceId) = resourcePathAndIdFrom(httpRequest)
+        val resourceIdKey = resourceIdKeyFrom(scenario.httpRequestPattern)
+        return stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)?.responseBody
     }
 
     private fun badRequestOrFakeResponse(
@@ -480,19 +463,22 @@ class StatefulHttpStub(
     }
 
     private fun Map<Int, ResponseDetails>.responseWithStatusCodeStartingWith(
-        value: String,
-        isRequestExpectingAcceptedResponse: Boolean = false
+        value: String
     ): ResponseDetails? {
-        val valueMatchesStatusCodeFrom: (Int, ResponseDetails) -> Boolean = { statusCode, responseDetails ->
+        val isValueMatchingStatusCodeFrom: (Int, ResponseDetails) -> Boolean = { statusCode, responseDetails ->
             statusCode.toString().startsWith(value) && responseDetails.successResponse != null
         }
 
-        val response = this.entries.firstOrNull { valueMatchesStatusCodeFrom(it.key, it.value) }?.value
+        val response = this.entries.firstOrNull { (statusCode, responseDetails) ->
+            isValueMatchingStatusCodeFrom(statusCode, responseDetails)
+        }?.value
 
-        if (isRequestExpectingAcceptedResponse) return response ?: throw acceptedResponseSchemaNotFoundException()
+        if (value == ACCEPTED_STATUS_CODE.toString()) return response ?: throw acceptedResponseSchemaNotFoundException()
 
-        return this.entries.filter { it.key != 202 }.firstOrNull {
-            valueMatchesStatusCodeFrom(it.key, it.value)
+        return this.entries.filter { (statusCode, _) ->
+            statusCode != ACCEPTED_STATUS_CODE
+        }.firstOrNull { (statusCode, responseDetails) ->
+            isValueMatchingStatusCodeFrom(statusCode, responseDetails)
         }?.value ?: response
     }
 
@@ -611,15 +597,13 @@ class StatefulHttpStub(
 
     private fun JSONObjectValue.includeMandatoryAndRequestedKeys(
         fakeResponse: ResponseDetails,
-        httpRequest: HttpRequest,
-        includeMandatoryAndRequestedKeysInResponse: Boolean?
+        httpRequest: HttpRequest
     ): JSONObjectValue {
         val responseBodyPattern = fakeResponse.successResponse?.responseBodyPattern ?: return this
         val resolver = fakeResponse.successResponse.resolver ?: return this
-
         val resolvedResponseBodyPattern = responseBodyPatternFrom(fakeResponse) ?: return this
 
-        if (includeMandatoryAndRequestedKeysInResponse == true && httpRequest.body is JSONObjectValue) {
+        if (specmaticConfig.getIncludeMandatoryAndRequestedKeysInResponse() && httpRequest.body is JSONObjectValue) {
             return this.copy(
                 jsonObject = patchAndAppendValuesFromRequestIntoResponse(
                     httpRequest.body,

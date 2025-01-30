@@ -36,6 +36,10 @@ class StatefulHttpStubMonitorPatternTest {
                 specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml")
             ).flatMap { it.second }
 
+            assertThat(scenarioStubs).withFailMessage(
+                "Failed while loading the monitor substitution based example"
+            ).isNotEmpty
+
             httpStub = StatefulHttpStub(
                 specmaticConfigPath = "$SPEC_DIR_PATH/specmatic.yaml",
                 features = listOf(

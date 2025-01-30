@@ -173,7 +173,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `exclude scenarios with STATUS 202`() {
-        val filter = ScenarioMetadataFilter.from("STATUS!=202")
+        val filter = ScenarioMetadataFilter.from("STATUS!='202'")
         val status200 = createScenarioMetadata(statusCode = 200)
         val status202 = createScenarioMetadata(statusCode = 202)
         val status400 = createScenarioMetadata(statusCode = 400)
@@ -221,7 +221,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `exclude scenarios with combined STATUS and path conditions`() {
-        val filter = ScenarioMetadataFilter.from("STATUS!=202 && PATH!='/hub,/hub/(id:string)'")
+        val filter = ScenarioMetadataFilter.from("STATUS!='202' && PATH!='/hub,/hub/(id:string)'")
         val users200 = createScenarioMetadata(statusCode = 200, path = "/users")
         val users202 = createScenarioMetadata(statusCode = 202, path = "/users")
         val hub200 = createScenarioMetadata(statusCode = 200, path = "/hub")

@@ -11,7 +11,7 @@ data class ScenarioMetadataFilter(
         val expressionWithVariables = expression
             .with(ScenarioFilterTags.METHOD.key, metadata.method)
             .with(ScenarioFilterTags.PATH.key, metadata.path)
-            .with(ScenarioFilterTags.STATUS_CODE.key, metadata.statusCode)
+            .with(ScenarioFilterTags.STATUS_CODE.key, metadata.statusCode.toString())
             .with(ScenarioFilterTags.HEADER.key, metadata.header.joinToString(","))
             .with(ScenarioFilterTags.QUERY.name, metadata.query.joinToString(","))
             .with(ScenarioFilterTags.EXAMPLE_NAME.name, metadata.exampleName)

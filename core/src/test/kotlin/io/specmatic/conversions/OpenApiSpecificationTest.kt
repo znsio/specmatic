@@ -8858,8 +8858,8 @@ paths:
                                 type: "string"
             """.trimIndent()
 
-            val tests =
-                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+            val tests = feature.negativeTestScenarios().toList()
             val firstScenario = tests.first().second.value
             val secondScenario = tests.last().second.value
 
@@ -8867,11 +8867,13 @@ paths:
 
             val firstScenarioAsTest = ScenarioAsTest(
                 scenario = firstScenario,
+                feature = feature,
                 originalScenario = firstScenario,
                 flagsBased = DefaultStrategies
             )
             val secondScenarioAsTest = ScenarioAsTest(
                 scenario = secondScenario,
+                feature = feature,
                 originalScenario = secondScenario,
                 flagsBased = DefaultStrategies
             )
@@ -8925,14 +8927,15 @@ paths:
                                     type: "string"
             """.trimIndent()
 
-            val tests =
-                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+            val tests = feature.negativeTestScenarios().toList()
 
             assertThat(tests.size).isEqualTo(1)
 
             val firstScenario = tests.first().second.value
             val firstScenarioAsTest = ScenarioAsTest(
                 scenario = firstScenario,
+                feature = feature,
                 originalScenario = firstScenario,
                 flagsBased = DefaultStrategies
             )
@@ -8993,8 +8996,9 @@ paths:
                                   value: "response" 
 
             """.trimIndent()
-            val tests =
-                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+            val tests = feature.negativeTestScenarios().toList()
 
             assertThat(tests.size).isEqualTo(2)
 
@@ -9002,11 +9006,13 @@ paths:
             val secondScenario = tests.last().second.value
             val firstScenarioAsTest = ScenarioAsTest(
                 scenario = firstScenario,
+                feature = feature,
                 originalScenario = firstScenario,
                 flagsBased = DefaultStrategies
             )
             val secondScenarioAsTest = ScenarioAsTest(
                 scenario = secondScenario,
+                feature = feature,
                 originalScenario = secondScenario,
                 flagsBased = DefaultStrategies
             )
@@ -9065,8 +9071,9 @@ paths:
                               schema:
                                 type: "string"
             """.trimIndent()
-            val tests =
-                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+            val tests = feature.negativeTestScenarios().toList()
 
             assertThat(tests.size).isEqualTo(2)
 
@@ -9074,11 +9081,13 @@ paths:
             val secondScenario = tests.last().second.value
             val firstScenarioAsTest = ScenarioAsTest(
                 scenario = firstScenario,
+                feature = feature,
                 originalScenario = firstScenario,
                 flagsBased = DefaultStrategies
             )
             val secondScenarioAsTest = ScenarioAsTest(
                 scenario = secondScenario,
+                feature = feature,
                 originalScenario = secondScenario,
                 flagsBased = DefaultStrategies
             )
@@ -9153,8 +9162,9 @@ paths:
                                 EXAMPLE:
                                   value: "This is an error response"
             """.trimIndent()
-            val tests =
-                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+            val tests = feature.negativeTestScenarios().toList()
 
             assertThat(tests.size).isEqualTo(2)
 
@@ -9162,11 +9172,13 @@ paths:
             val secondScenario = tests.last().second.value
             val firstScenarioAsTest = ScenarioAsTest(
                 scenario = firstScenario,
+                feature = feature,
                 originalScenario = firstScenario,
                 flagsBased = DefaultStrategies
             )
             val secondScenarioAsTest = ScenarioAsTest(
                 scenario = secondScenario,
+                feature = feature,
                 originalScenario = secondScenario,
                 flagsBased = DefaultStrategies
             )

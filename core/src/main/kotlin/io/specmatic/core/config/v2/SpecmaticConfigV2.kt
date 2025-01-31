@@ -2,6 +2,7 @@ package io.specmatic.core.config.v2
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import io.specmatic.core.*
+import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticVersionedConfig
 import io.specmatic.core.config.SpecmaticVersionedConfigLoader
@@ -68,7 +69,7 @@ data class SpecmaticConfigV2(
                 hooks = config.getHooks(),
                 repository = config.repository,
                 report = config.report,
-                security = config.getSecurityConfiguration(),
+                security = getSecurityConfiguration(config),
                 test = config.test,
                 stub = config.stub,
                 virtualService = config.virtualService,

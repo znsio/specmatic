@@ -130,6 +130,12 @@ data class SpecmaticConfig(
     private val defaultPatternValues: Map<String, Any> = emptyMap(),
     private val version: SpecmaticConfigVersion? = null
 ) {
+    companion object {
+        @JsonIgnore
+        fun getSecurityConfiguration(specmaticConfig: SpecmaticConfig?): SecurityConfiguration? {
+            return specmaticConfig?.security
+        }
+    }
     @JsonIgnore
     fun attributeSelectionQueryParamKey(): String {
         return attributeSelectionPattern.queryParamKey
@@ -217,11 +223,6 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun getAuthBearerEnvironmentVariable(): String? {
         return auth?.getBearerEnvironmentVariable()
-    }
-
-    @JsonIgnore
-    fun getSecurityConfiguration(): SecurityConfiguration? {
-        return security
     }
 
     @JsonIgnore

@@ -327,11 +327,9 @@ class ResponseMonitorTest {
 
         assertThat(result).isInstanceOf(HasFailure::class.java); result as HasFailure
         assertThat(result.failure.reportString()).isEqualToNormalizingWhitespace("""
-        In scenario ""
-        API: POST / -> 201
-        >> RESPONSE.BODY.name
+        >> MONITOR.RESPONSE.BODY.name
         Expected string, actual was 123 (number)
-        >> RESPONSE.BODY.age
+        >> MONITOR.RESPONSE.BODY.age
         Expected number, actual was "John"
         """.trimIndent())
     }

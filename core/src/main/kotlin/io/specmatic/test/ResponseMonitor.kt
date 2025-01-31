@@ -20,9 +20,15 @@ class ResponseMonitor(
     private val feature: Feature, val originalScenario: Scenario, private val response: HttpResponse,
     private val maxRetry: Int = 3, private val backOffDelay: Long = 1000, private val sleeper: Sleeper = DefaultSleeper
 ) {
-    private val headerKey: String = "Link"
-    private val requestPath: String = "request"
-    private val responsePath: String = "response"
+    companion object {
+        private const val headerKey: String = "Link"
+        private const val requestPath: String = "request"
+        private const val responsePath: String = "response"
+
+        fun isMonitorLinkPresent(response: HttpResponse): Boolean {
+            return response.headers.containsKey(headerKey)
+        }
+    }
 
     fun waitForResponse(executor: TestExecutor): ReturnValue<HttpResponse> {
         val (monitorScenario, monitorLink) = when(val result = getScenarioAndLink()) {
@@ -41,7 +47,7 @@ class ResponseMonitor(
                     val (requestFromMonitor, responseFromMonitor) = monitorComplete.value
                     val result = originalScenario.matches(requestFromMonitor, responseFromMonitor, DefaultMismatchMessages, feature.flagsBased)
                     if (result is Result.Failure) {
-                        return HasFailure(result, message = "Monitor request / response doesn't match scenario")
+                        return HasFailure(result.breadCrumb("MONITOR"), message = "Monitor request / response doesn't match scenario")
                     }
                     return HasValue(responseFromMonitor)
                 }

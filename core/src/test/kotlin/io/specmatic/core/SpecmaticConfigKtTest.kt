@@ -39,10 +39,10 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.getAuthBearerFile()).isEqualTo("bearer.txt")
         assertThat(config.getAuthBearerEnvironmentVariable()).isNull()
 
-        assertThat(config.pipeline?.provider).isEqualTo(PipelineProvider.azure)
-        assertThat(config.pipeline?.organization).isEqualTo("xnsio")
-        assertThat(config.pipeline?.project).isEqualTo("XNSIO")
-        assertThat(config.pipeline?.definitionId).isEqualTo(1)
+        assertThat(config.getPipelineProvider()).isEqualTo(PipelineProvider.azure)
+        assertThat(config.getPipelineOrganization()).isEqualTo("xnsio")
+        assertThat(config.getPipelineProject()).isEqualTo("XNSIO")
+        assertThat(config.getPipelineDefinitionId()).isEqualTo(1)
 
         assertThat(config.environments?.get("staging")?.baseurls?.get("auth.spec")).isEqualTo("http://localhost:8080")
         assertThat(config.environments?.get("staging")?.variables?.get("username")).isEqualTo("jackie")
@@ -63,7 +63,7 @@ internal class SpecmaticConfigKtTest {
 
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("BasicAuth") as BasicAuthSecuritySchemeConfiguration).token).isEqualTo("Abc123")
 
-        assertThat(config.examples).isEqualTo(listOf("folder1/examples", "folder2/examples"))
+        assertThat(config.getExamples()).isEqualTo(listOf("folder1/examples", "folder2/examples"))
 
         assertThat(config.isResiliencyTestingEnabled()).isEqualTo(true)
         assertThat(config.isExtensibleSchemaEnabled()).isTrue()
@@ -124,10 +124,10 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.getAuthBearerFile()).isEqualTo("bearer.txt")
         assertThat(config.getAuthBearerEnvironmentVariable()).isNull()
 
-        assertThat(config.pipeline?.provider).isEqualTo(PipelineProvider.azure)
-        assertThat(config.pipeline?.organization).isEqualTo("xnsio")
-        assertThat(config.pipeline?.project).isEqualTo("XNSIO")
-        assertThat(config.pipeline?.definitionId).isEqualTo(1)
+        assertThat(config.getPipelineProvider()).isEqualTo(PipelineProvider.azure)
+        assertThat(config.getPipelineOrganization()).isEqualTo("xnsio")
+        assertThat(config.getPipelineProject()).isEqualTo("XNSIO")
+        assertThat(config.getPipelineDefinitionId()).isEqualTo(1)
 
         assertThat(config.environments?.get("staging")?.baseurls?.get("auth.spec")).isEqualTo("http://localhost:8080")
         assertThat(config.environments?.get("staging")?.variables?.get("username")).isEqualTo("jackie")
@@ -169,7 +169,7 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isOnlyPositiveTestingEnabled()).isFalse()
             assertThat(config.isResponseValueValidationEnabled()).isTrue()
             assertThat(config.isExtensibleSchemaEnabled()).isFalse()
-            assertThat(config.examples).isEqualTo(listOf("folder1/examples", "folder2/examples"))
+            assertThat(config.getExamples()).isEqualTo(listOf("folder1/examples", "folder2/examples"))
             assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
             assertThat(config.test?.timeoutInMilliseconds).isEqualTo(5000)
         } finally {
@@ -218,7 +218,7 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isResiliencyTestingEnabled()).isTrue()
             assertThat(config.isResponseValueValidationEnabled()).isTrue()
             assertThat(config.isExtensibleSchemaEnabled()).isTrue()
-            assertThat(config.examples).isEqualTo(listOf("folder1/examples", "folder2/examples"))
+            assertThat(config.getExamples()).isEqualTo(listOf("folder1/examples", "folder2/examples"))
             assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
             assertThat(config.test?.timeoutInMilliseconds).isEqualTo(3000)
         } finally {

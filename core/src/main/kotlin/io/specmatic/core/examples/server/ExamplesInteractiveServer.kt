@@ -69,8 +69,7 @@ class ExamplesInteractiveServer(
     private val inputContractFile: File? = null,
     private val filterName: String,
     private val filterNotName: String,
-    private val filter: List<String>,
-    private val filterNot: List<String>,
+    private val filter: String,
     externalDictionaryFile: File? = null,
     private val allowOnlyMandatoryKeysInJSONObject: Boolean
 ) : Closeable {
@@ -299,8 +298,7 @@ class ExamplesInteractiveServer(
         val feature = ScenarioFilter(
             filterName,
             filterNotName,
-            filter,
-            filterNot
+            filter
         ).filter(parseContractFileToFeature(contractFile))
 
         val examplesDir = getExamplesDirPath(contractFile)
@@ -341,9 +339,8 @@ class ExamplesInteractiveServer(
         }
     }
 
-    class ScenarioFilter(filterName: String = "", filterNotName: String = "", filterClauses: List<String> = emptyList(), private val filterNotClauses: List<String> = emptyList()) {
-        private val filter = filterClauses.joinToString(";")
-        private val filterNot = filterNotClauses.joinToString(";")
+    class ScenarioFilter(filterName: String = "", filterNotName: String = "", filterClauses: String = "") {
+        private val filter = filterClauses
 
         private val filterNameTokens = if(filterName.isNotBlank()) {
             filterName.trim().split(",").map { it.trim() }
@@ -364,10 +361,9 @@ class ExamplesInteractiveServer(
                 } else true
             }
 
-            val scenarioInclusionFilter = ScenarioMetadataFilter.from(filter)
-            val scenarioExclusionFilter = ScenarioMetadataFilter.from(filterNot)
+            val scenarioFilter = ScenarioMetadataFilter.from(filter)
 
-            val filteredScenarios = filterUsing(scenariosFilteredByOlderSyntax.asSequence(), scenarioInclusionFilter, scenarioExclusionFilter) {
+            val filteredScenarios = filterUsing(scenariosFilteredByOlderSyntax.asSequence(), scenarioFilter) {
                 it.toScenarioMetadata()
             }.toList()
 

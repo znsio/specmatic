@@ -95,8 +95,11 @@ class ConfigCommand : Callable<Int> {
 
         private class EmptyCollectionFilter {
             override fun equals(other: Any?): Boolean {
+                if (other == null) return true
+                if (other.javaClass == this.javaClass)
+                    return true
+
                 return when (other) {
-                    null -> true
                     is Map<*, *> -> other.all { it.key is String && equals(it.value) }
                     is Collection<*> -> other.all { equals(it) }
                     is Array<*> -> other.all { equals(it) }
@@ -114,6 +117,10 @@ class ConfigCommand : Callable<Int> {
                     val value = prop.call(obj)
                     equals(value)
                 }
+            }
+
+            override fun hashCode(): Int {
+                return javaClass.hashCode()
             }
         }
 

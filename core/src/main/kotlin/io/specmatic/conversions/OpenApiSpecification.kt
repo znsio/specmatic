@@ -1129,7 +1129,7 @@ class OpenApiSpecification(
 
     private fun toSecurityScheme(schemeName: String, securityScheme: SecurityScheme): OpenAPISecurityScheme {
         val securitySchemeConfiguration =
-            securityConfiguration?.getOpenAPISecuritySchemes()?.get(schemeName)
+            securityConfiguration?.getOpenAPISecuritySchemes(schemeName)
         if (securityScheme.scheme == BEARER_SECURITY_SCHEME) {
             return toBearerSecurityScheme(securitySchemeConfiguration, schemeName)
         }

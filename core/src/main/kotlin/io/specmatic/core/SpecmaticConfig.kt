@@ -112,7 +112,7 @@ data class AttributeSelectionPattern(
 data class SpecmaticConfig(
     val sources: List<Source> = emptyList(),
     private val auth: Auth? = null,
-    val pipeline: Pipeline? = null,
+    private val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
     private val hooks: Map<String, String> = emptyMap(),
     val repository: RepositoryInfo? = null,
@@ -130,6 +130,13 @@ data class SpecmaticConfig(
     private val defaultPatternValues: Map<String, Any> = emptyMap(),
     private val version: SpecmaticConfigVersion? = null
 ) {
+    companion object {
+        @JsonIgnore
+        fun getPipeline(specmaticConfig: SpecmaticConfig): Pipeline? {
+            return specmaticConfig.pipeline
+        }
+    }
+
     @JsonIgnore
     fun attributeSelectionQueryParamKey(): String {
         return attributeSelectionPattern.queryParamKey
@@ -218,6 +225,26 @@ data class SpecmaticConfig(
     fun getAuthBearerEnvironmentVariable(): String? {
         return auth?.getBearerEnvironmentVariable()
     }
+
+    @JsonIgnore
+    fun getPipelineProvider(): PipelineProvider? {
+        return pipeline?.getProvider()
+    }
+
+    @JsonIgnore
+    fun getPipelineDefinitionId(): Int? {
+        return pipeline?.getDefinitionId()
+    }
+
+    @JsonIgnore
+    fun getPipelineOrganization(): String? {
+        return pipeline?.getOrganization()
+    }
+
+    @JsonIgnore
+    fun getPipelineProject(): String? {
+        return pipeline?.getProject()
+    }
 }
 
 data class TestConfiguration(
@@ -271,11 +298,27 @@ class Auth(
 enum class PipelineProvider { azure }
 
 data class Pipeline(
-    val provider: PipelineProvider = PipelineProvider.azure,
-    val organization: String = "",
-    val project: String = "",
-    val definitionId: Int = 0
-)
+    private val provider: PipelineProvider = PipelineProvider.azure,
+    private val organization: String = "",
+    private val project: String = "",
+    private val definitionId: Int = 0
+) {
+    fun getProvider(): PipelineProvider {
+        return provider
+    }
+
+    fun getOrganization(): String {
+        return organization
+    }
+
+    fun getProject(): String {
+        return project
+    }
+
+    fun getDefinitionId(): Int {
+        return definitionId
+    }
+}
 
 data class Environment(
     val baseurls: Map<String, String>? = null,

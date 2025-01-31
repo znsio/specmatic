@@ -3,6 +3,7 @@ package io.specmatic.test.reports
 import io.specmatic.core.ReportConfiguration
 import io.specmatic.core.ReportFormatterType
 import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.SpecmaticConfig.Companion.getReport
 import io.specmatic.core.log.logger
 import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
@@ -22,7 +23,7 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
     }
 
     override fun process(specmaticConfig: SpecmaticConfig) {
-        val reportConfiguration = specmaticConfig.getReport()!!
+        val reportConfiguration = getReport(specmaticConfig)!!
 
         openApiCoverageReportInput.addExcludedAPIs(reportConfiguration.getTypes().apiCoverage.openAPI.excludedEndpoints + excludedEndpointsFromEnv())
         val openAPICoverageReport = openApiCoverageReportInput.generate()

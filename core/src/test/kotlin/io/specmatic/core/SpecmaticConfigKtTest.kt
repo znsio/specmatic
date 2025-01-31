@@ -63,7 +63,7 @@ internal class SpecmaticConfigKtTest {
 
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("BasicAuth") as BasicAuthSecuritySchemeConfiguration).token).isEqualTo("Abc123")
 
-        assertThat(config.examples).isEqualTo(listOf("folder1/examples", "folder2/examples"))
+        assertThat(config.getExamples()).isEqualTo(listOf("folder1/examples", "folder2/examples"))
 
         assertThat(config.isResiliencyTestingEnabled()).isEqualTo(true)
         assertThat(config.isExtensibleSchemaEnabled()).isTrue()
@@ -169,7 +169,7 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isOnlyPositiveTestingEnabled()).isFalse()
             assertThat(config.isResponseValueValidationEnabled()).isTrue()
             assertThat(config.isExtensibleSchemaEnabled()).isFalse()
-            assertThat(config.examples).isEqualTo(listOf("folder1/examples", "folder2/examples"))
+            assertThat(config.getExamples()).isEqualTo(listOf("folder1/examples", "folder2/examples"))
             assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
             assertThat(config.test?.timeoutInMilliseconds).isEqualTo(5000)
         } finally {
@@ -218,7 +218,7 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isResiliencyTestingEnabled()).isTrue()
             assertThat(config.isResponseValueValidationEnabled()).isTrue()
             assertThat(config.isExtensibleSchemaEnabled()).isTrue()
-            assertThat(config.examples).isEqualTo(listOf("folder1/examples", "folder2/examples"))
+            assertThat(config.getExamples()).isEqualTo(listOf("folder1/examples", "folder2/examples"))
             assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
             assertThat(config.test?.timeoutInMilliseconds).isEqualTo(3000)
         } finally {

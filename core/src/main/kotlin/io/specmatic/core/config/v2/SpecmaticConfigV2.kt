@@ -74,7 +74,7 @@ data class SpecmaticConfigV2(
                 test = config.test,
                 stub = config.stub,
                 virtualService = config.virtualService,
-                examples = config.examples,
+                examples = config.getExamples(),
                 workflow = config.workflow,
                 ignoreInlineExamples = config.ignoreInlineExamples,
                 additionalExampleParamsFilePath = config.getAdditionalExampleParamsFilePath(),

@@ -118,7 +118,7 @@ data class SpecmaticConfig(
     private val repository: RepositoryInfo? = null,
     val report: ReportConfiguration? = null,
     val security: SecurityConfiguration? = null,
-    val test: TestConfiguration? = TestConfiguration(),
+    private val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
     val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     private val examples: List<String>? = null,
@@ -140,6 +140,11 @@ data class SpecmaticConfig(
         fun getPipeline(specmaticConfig: SpecmaticConfig): Pipeline? {
             return specmaticConfig.pipeline
         }
+
+        @JsonIgnore
+        fun getTestConfiguration(specmaticConfig: SpecmaticConfig): TestConfiguration? {
+            return specmaticConfig.test
+        }
     }
 
     @JsonIgnore
@@ -149,7 +154,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {
-        return test?.allowExtensibleSchema ?: getBooleanValue(EXTENSIBLE_SCHEMA)
+        return test?.getAllowExtensibleSchema() ?: getBooleanValue(EXTENSIBLE_SCHEMA)
     }
 
     @JsonIgnore
@@ -164,7 +169,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun isResponseValueValidationEnabled(): Boolean {
-        return test?.validateResponseValues ?: getBooleanValue(VALIDATE_RESPONSE_VALUE)
+        return test?.getValidateResponseValues() ?: getBooleanValue(VALIDATE_RESPONSE_VALUE)
     }
 
     @JsonIgnore
@@ -179,7 +184,12 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun getResiliencyTestsEnable(): ResiliencyTestSuite {
-        return test?.resiliencyTests?.enable ?: ResiliencyTestSuite.none
+        return test?.getResiliencyTests()?.getEnableTestSuite() ?: ResiliencyTestSuite.none
+    }
+
+    @JsonIgnore
+    fun getTestTimeoutInMilliseconds(): Long? {
+        return test?.getTimeoutInMilliseconds()
     }
 
     @JsonIgnore
@@ -268,25 +278,45 @@ data class SpecmaticConfig(
 }
 
 data class TestConfiguration(
-    val resiliencyTests: ResiliencyTestsConfig? = ResiliencyTestsConfig(
+    private val resiliencyTests: ResiliencyTestsConfig? = ResiliencyTestsConfig(
         isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
         isOnlyPositiveFlagEnabled = getBooleanValue(ONLY_POSITIVE)
     ),
-    val validateResponseValues: Boolean? = null,
-    val allowExtensibleSchema: Boolean? = null,
-    val timeoutInMilliseconds: Long? = getLongValue(SPECMATIC_TEST_TIMEOUT)
-)
+    private val validateResponseValues: Boolean? = null,
+    private val allowExtensibleSchema: Boolean? = null,
+    private val timeoutInMilliseconds: Long? = getLongValue(SPECMATIC_TEST_TIMEOUT)
+) {
+    fun getResiliencyTests(): ResiliencyTestsConfig? {
+        return resiliencyTests
+    }
+
+    fun getValidateResponseValues(): Boolean? {
+        return validateResponseValues
+    }
+
+    fun getAllowExtensibleSchema(): Boolean? {
+        return allowExtensibleSchema
+    }
+
+    fun getTimeoutInMilliseconds(): Long? {
+        return timeoutInMilliseconds
+    }
+}
 
 enum class ResiliencyTestSuite {
     all, positiveOnly, none
 }
 
 data class ResiliencyTestsConfig(
-    val enable: ResiliencyTestSuite? = null
+    private val enable: ResiliencyTestSuite? = null
 ) {
     constructor(isResiliencyTestFlagEnabled: Boolean, isOnlyPositiveFlagEnabled: Boolean) : this(
         enable = getEnableFrom(isResiliencyTestFlagEnabled, isOnlyPositiveFlagEnabled)
     )
+
+    fun getEnableTestSuite(): ResiliencyTestSuite? {
+        return enable
+    }
 
     companion object {
         private fun getEnableFrom(

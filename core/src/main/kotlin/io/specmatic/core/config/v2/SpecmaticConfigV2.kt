@@ -2,6 +2,7 @@ package io.specmatic.core.config.v2
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import io.specmatic.core.*
+import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticVersionedConfig
@@ -16,7 +17,7 @@ data class SpecmaticConfigV2(
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
-    private val hooks: Map<String, String> = emptyMap(),
+    val hooks: Map<String, String> = emptyMap(),
     val repository: RepositoryInfo? = null,
     val report: ReportConfiguration? = null,
     val security: SecurityConfiguration? = null,
@@ -64,7 +65,7 @@ data class SpecmaticConfigV2(
                 version = SpecmaticConfigVersion.VERSION_2,
                 contracts = config.sources.map { ContractConfig(it) },
                 auth = config.getAuth(),
-                pipeline = config.pipeline,
+                pipeline = getPipeline(config),
                 environments = config.environments,
                 hooks = config.getHooks(),
                 repository = getRepository(config),

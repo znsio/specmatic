@@ -84,8 +84,12 @@ data class StubConfiguration(
 )
 
 data class VirtualServiceConfiguration(
-    val nonPatchableKeys: Set<String> = emptySet()
-)
+    private val nonPatchableKeys: Set<String> = emptySet()
+) {
+    fun getNonPatchableKeys(): Set<String> {
+        return nonPatchableKeys
+    }
+}
 
 data class WorkflowIDOperation(
     val extract: String? = null,
@@ -120,7 +124,7 @@ data class SpecmaticConfig(
     val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
-    val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
+    private val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     private val examples: List<String>? = null,
     val workflow: WorkflowConfiguration? = null,
     val ignoreInlineExamples: Boolean? = null,
@@ -139,6 +143,11 @@ data class SpecmaticConfig(
         @JsonIgnore
         fun getPipeline(specmaticConfig: SpecmaticConfig): Pipeline? {
             return specmaticConfig.pipeline
+        }
+
+        @JsonIgnore
+        fun getVirtualServiceConfiguration(specmaticConfig: SpecmaticConfig): VirtualServiceConfiguration {
+            return specmaticConfig.virtualService
         }
     }
 
@@ -264,6 +273,11 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun getPipelineProject(): String? {
         return pipeline?.getProject()
+    }
+
+    @JsonIgnore
+    fun getVirtualServiceNonPatchableKeys(): Set<String> {
+        return virtualService.getNonPatchableKeys()
     }
 }
 

@@ -46,8 +46,21 @@ class GraphCommand: Callable<Unit> {
             )
         )
 
-        if (specmaticConfig.getRepositoryProvider().equals(AZURE)) {
-            val collection = specmaticConfig.getRepositoryCollectionName()
+        val exitMessage = """specmatic.json needs to contain a the repository information, as below:
+                    |{
+                    |  "repository": {
+                    |    "provider": "azure"
+                    |    "collectionName": "NameOfTheCollectionContainingThisProject"
+                    |  }
+                    |}
+                """.trimMargin()
+
+        val repositoryProvider = specmaticConfig.getRepositoryProvider() ?: exitWithMessage(exitMessage)
+        if(repositoryProvider != AZURE) {
+            exitWithMessage(exitMessage)
+        }
+
+        val collection = specmaticConfig.getRepositoryCollectionName()
             ?: exitWithMessage(
                 """specmatic.json needs to contain a the repository information, as below:
                     |{
@@ -59,28 +72,27 @@ class GraphCommand: Callable<Unit> {
                 """.trimMargin()
             )
 
-            val azure = AzureAPI(azureAuthToken, azureBaseURL, collection)
+        val azure = AzureAPI(azureAuthToken, azureBaseURL, collection)
 
-            logger.log("Dependency projects")
-            logger.log("-------------------")
+        logger.log("Dependency projects")
+        logger.log("-------------------")
 
-            specmaticConfig.sources.forEach { source ->
-                logger.log("In central repo ${source.repository}")
+        specmaticConfig.sources.forEach { source ->
+            logger.log("In central repo ${source.repository}")
 
-                source.test?.forEach { relativeContractPath ->
-                    logger.log("  Consumers of $relativeContractPath")
-                    val consumers = azure.referencesToContract(relativeContractPath)
+            source.test?.forEach { relativeContractPath ->
+                logger.log("  Consumers of $relativeContractPath")
+                val consumers = azure.referencesToContract(relativeContractPath)
 
-                    if (consumers.isEmpty()) {
-                        logger.log("    ** no consumers found **")
-                    } else {
-                        consumers.forEach {
-                            logger.log("  - ${it.description}")
-                        }
+                if (consumers.isEmpty()) {
+                    logger.log("    ** no consumers found **")
+                } else {
+                    consumers.forEach {
+                        logger.log("  - ${it.description}")
                     }
-
-                    logger.newLine()
                 }
+
+                logger.newLine()
             }
         }
     }

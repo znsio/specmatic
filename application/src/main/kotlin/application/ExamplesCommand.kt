@@ -45,14 +45,16 @@ class ExamplesCommand : Callable<Int> {
     @Option(
         names = ["--filter-name"],
         description = ["Use only APIs with this value in their name"],
-        defaultValue = "\${env:SPECMATIC_FILTER_NAME}"
+        defaultValue = "\${env:SPECMATIC_FILTER_NAME}",
+        hidden = true
     )
     var filterName: String = ""
 
     @Option(
         names = ["--filter-not-name"],
         description = ["Use only APIs which do not have this value in their name"],
-        defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}"
+        defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}",
+        hidden = true
     )
     var filterNotName: String = ""
 
@@ -88,31 +90,12 @@ You can filter tests based on the following keys:
 
 To specify multiple values for the same filter, separate them with commas. 
 For example, to filter by HTTP methods: 
---filter="METHOD=GET,POST"
-
-You can supply multiple filters as well. 
-For example:
---filter="METHOD=GET,POST" --filter="PATH=/users"
+--filter="METHOD='GET,POST'"
            """
         ],
         required = false
     )
-    var filter: List<String> = emptyList()
-
-    @Option(
-        names= ["--filter-not"],
-        description = [
-            """
-Filter tests not matching the specified criteria
-
-This option supports the same filtering keys and syntax as the --filter option.
-For example:
---filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
-           """
-        ],
-        required = false
-    )
-    var filterNot: List<String> = emptyList()
+    var filter: String = ""
 
     @Option(
         names = ["--allow-only-mandatory-keys-in-payload"],
@@ -140,7 +123,7 @@ For example:
 
             ExamplesInteractiveServer.generate(
                 contractFile!!,
-                ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter, filterNot),
+                ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter),
                 extensive, allowOnlyMandatoryKeysInJSONObject
             )
         } catch (e: Throwable) {
@@ -174,30 +157,11 @@ You can filter tests based on the following keys:
 To specify multiple values for the same filter, separate them with commas. 
 For example, to filter by HTTP methods: 
 --filter="METHOD=GET,POST"
-
-You can supply multiple filters as well. 
-For example:
---filter="METHOD=GET,POST" --filter="PATH=/users"
            """
             ],
             required = false
         )
-        var filter: List<String> = emptyList()
-
-        @Option(
-            names= ["--filter-not"],
-            description = [
-                """
-Filter tests not matching the specified criteria
-
-This option supports the same filtering keys and syntax as the --filter option.
-For example:
---filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
-           """
-            ],
-            required = false
-        )
-        var filterNot: List<String> = emptyList()
+        var filter: String = ""
 
         @Option(names = ["--contract-file", "--spec-file"], description = ["Contract file path"], required = false)
         var contractFile: File? = null
@@ -224,14 +188,16 @@ For example:
         @Option(
             names = ["--filter-name"],
             description = ["Validate examples of only APIs with this value in their name"],
-            defaultValue = "\${env:SPECMATIC_FILTER_NAME}"
+            defaultValue = "\${env:SPECMATIC_FILTER_NAME}",
+            hidden = true
         )
         var filterName: String = ""
 
         @Option(
             names = ["--filter-not-name"],
             description = ["Validate examples of only APIs which do not have this value in their name"],
-            defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}"
+            defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}",
+            hidden = true
         )
         var filterNotName: String = ""
 
@@ -364,7 +330,7 @@ For example:
                         ScenarioStub(request, response)
                     }
                 },
-                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter, filterNot)
+                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter)
             )
         }
 
@@ -372,7 +338,7 @@ For example:
             return ExamplesInteractiveServer.validateExamples(
                 feature,
                 examples = externalExamples,
-                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter, filterNot)
+                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter)
             )
         }
 
@@ -448,31 +414,12 @@ You can filter tests based on the following keys:
 
 To specify multiple values for the same filter, separate them with commas. 
 For example, to filter by HTTP methods: 
---filter="METHOD=GET,POST"
-
-You can supply multiple filters as well. 
-For example:
---filter="METHOD=GET,POST" --filter="PATH=/users"
+--filter="METHOD='GET,POST'"
            """
             ],
             required = false
         )
-        var filter: List<String> = emptyList()
-
-        @Option(
-            names= ["--filter-not"],
-            description = [
-                """
-Filter tests not matching the specified criteria
-
-This option supports the same filtering keys and syntax as the --filter option.
-For example:
---filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
-           """
-            ],
-            required = false
-        )
-        var filterNot: List<String> = emptyList()
+        var filter: String = ""
 
         @Option(names = ["--contract-file"], description = ["Contract file path"], required = false)
         var contractFile: File? = null
@@ -480,14 +427,16 @@ For example:
         @Option(
             names = ["--filter-name"],
             description = ["Use only APIs with this value in their name"],
-            defaultValue = "\${env:SPECMATIC_FILTER_NAME}"
+            defaultValue = "\${env:SPECMATIC_FILTER_NAME}",
+            hidden = true
         )
         var filterName: String = ""
 
         @Option(
             names = ["--filter-not-name"],
             description = ["Use only APIs which do not have this value in their name"],
-            defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}"
+            defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}",
+            hidden = true
         )
         var filterNotName: String = ""
 
@@ -527,7 +476,6 @@ For example:
                     filterName,
                     filterNotName,
                     filter,
-                    filterNot,
                     dictFile,
                     allowOnlyMandatoryKeysInJSONObject
                 )

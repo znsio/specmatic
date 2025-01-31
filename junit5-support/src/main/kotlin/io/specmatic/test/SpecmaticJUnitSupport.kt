@@ -93,10 +93,6 @@ open class SpecmaticJUnitSupport {
         private var specmaticConfig: SpecmaticConfig? = null
         val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
         private val scenarioMetadataFilter = ScenarioMetadataFilter.from(readEnvVarOrProperty(FILTER, FILTER).orEmpty())
-        private val scenarioMetadataExclusionFilter = ScenarioMetadataFilter.from(
-            readEnvVarOrProperty(FILTER_NOT, FILTER_NOT).orEmpty()
-        )
-
 
         private val threads: Vector<String> = Vector<String>()
 
@@ -343,7 +339,7 @@ open class SpecmaticJUnitSupport {
                 filterNotName
             ) { it.testDescription() }
 
-            filterUsing(filteredTestsBasedOnName, scenarioMetadataFilter, scenarioMetadataExclusionFilter) {
+            filterUsing(filteredTestsBasedOnName, scenarioMetadataFilter) {
                 it.toScenarioMetadata()
             }
         } catch(e: ContractException) {
@@ -546,8 +542,7 @@ open class SpecmaticJUnitSupport {
         ) { it.testDescription() }
         val filteredScenarios = filterUsing(
             filteredScenariosBasedOnName,
-            scenarioMetadataFilter,
-            scenarioMetadataExclusionFilter
+            scenarioMetadataFilter
         ) { it.toScenarioMetadata() }
         val tests: Sequence<ContractTest> = feature
             .copy(scenarios = filteredScenarios.toList())

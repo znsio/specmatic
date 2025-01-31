@@ -1779,7 +1779,7 @@ data class Feature(
     fun loadExternalisedExamplesAndListUnloadableExamples(): Pair<Feature, Set<String>> {
         val testsDirectory = getTestsDirectory(File(this.path))
         val externalisedExamplesFromDefaultDirectory = loadExternalisedJSONExamples(testsDirectory)
-        val externalisedExampleDirsFromConfig = specmaticConfig.examples
+        val externalisedExampleDirsFromConfig = specmaticConfig.getExamples()
 
         val externalisedExamplesFromExampleDirs = externalisedExampleDirsFromConfig.flatMap { directory ->
             loadExternalisedJSONExamples(File(directory)).entries

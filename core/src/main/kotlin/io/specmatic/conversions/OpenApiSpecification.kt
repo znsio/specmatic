@@ -12,7 +12,6 @@ import io.specmatic.core.overlay.OverlayMerger
 import io.specmatic.core.overlay.OverlayParser
 import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.Discriminator
-import io.specmatic.core.pattern.withoutOptionality
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.IGNORE_INLINE_EXAMPLE_WARNINGS
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
@@ -72,7 +71,7 @@ class OpenApiSpecification(
     private val specificationPath: String? = null,
     private val securityConfiguration: SecurityConfiguration? = null,
     private val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-    private val dictionary: Map<String, Value> = loadDictionary(openApiFilePath, specmaticConfig.stub.dictionary),
+    private val dictionary: Map<String, Value> = loadDictionary(openApiFilePath, specmaticConfig.getStubDictionary()),
     private val strictMode: Boolean = false
 ) : IncludedSpecification, ApiSpecification {
     init {

@@ -69,7 +69,7 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.isExtensibleSchemaEnabled()).isTrue()
         assertThat(config.isResponseValueValidationEnabled()).isTrue()
 
-        assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
+        assertThat(config.getStubDelayInMilliseconds()).isEqualTo(1000L)
         assertThat(config.getStubGenerative()).isEqualTo(false)
 
         val htmlConfig = config.report?.formatters?.first { it.type == ReportFormatterType.HTML }
@@ -170,7 +170,7 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isResponseValueValidationEnabled()).isTrue()
             assertThat(config.isExtensibleSchemaEnabled()).isFalse()
             assertThat(config.getExamples()).isEqualTo(listOf("folder1/examples", "folder2/examples"))
-            assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
+            assertThat(config.getStubDelayInMilliseconds()).isEqualTo(1000L)
             assertThat(config.test?.timeoutInMilliseconds).isEqualTo(5000)
         } finally {
             properties.forEach { System.clearProperty(it.key) }
@@ -219,7 +219,7 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isResponseValueValidationEnabled()).isTrue()
             assertThat(config.isExtensibleSchemaEnabled()).isTrue()
             assertThat(config.getExamples()).isEqualTo(listOf("folder1/examples", "folder2/examples"))
-            assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
+            assertThat(config.getStubDelayInMilliseconds()).isEqualTo(1000L)
             assertThat(config.test?.timeoutInMilliseconds).isEqualTo(3000)
         } finally {
             props.forEach { System.clearProperty(it.key) }

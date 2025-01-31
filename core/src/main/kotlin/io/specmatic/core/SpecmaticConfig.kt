@@ -77,11 +77,27 @@ fun String.loadContract(): Feature {
 }
 
 data class StubConfiguration(
-    val generative: Boolean? = null,
-    val delayInMilliseconds: Long? = getLongValue(SPECMATIC_STUB_DELAY),
-    val dictionary: String? = getStringValue(SPECMATIC_STUB_DICTIONARY),
-    val includeMandatoryAndRequestedKeysInResponse: Boolean? = null
-)
+    private val generative: Boolean? = null,
+    private val delayInMilliseconds: Long? = getLongValue(SPECMATIC_STUB_DELAY),
+    private val dictionary: String? = getStringValue(SPECMATIC_STUB_DICTIONARY),
+    private val includeMandatoryAndRequestedKeysInResponse: Boolean? = null
+) {
+    fun getGenerative(): Boolean? {
+        return generative
+    }
+
+    fun getDelayInMilliseconds(): Long? {
+        return delayInMilliseconds
+    }
+
+    fun getDictionary(): String? {
+        return dictionary
+    }
+
+    fun getIncludeMandatoryAndRequestedKeysInResponse(): Boolean? {
+        return includeMandatoryAndRequestedKeysInResponse
+    }
+}
 
 data class VirtualServiceConfiguration(
     val nonPatchableKeys: Set<String> = emptySet()
@@ -119,7 +135,7 @@ data class SpecmaticConfig(
     val report: ReportConfiguration? = null,
     val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
-    val stub: StubConfiguration = StubConfiguration(),
+    private val stub: StubConfiguration = StubConfiguration(),
     val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     private val examples: List<String>? = null,
     val workflow: WorkflowConfiguration? = null,
@@ -139,6 +155,11 @@ data class SpecmaticConfig(
         @JsonIgnore
         fun getPipeline(specmaticConfig: SpecmaticConfig): Pipeline? {
             return specmaticConfig.pipeline
+        }
+
+        @JsonIgnore
+        fun getStubConfiguration(specmaticConfig: SpecmaticConfig): StubConfiguration {
+            return specmaticConfig.stub
         }
     }
 
@@ -173,18 +194,28 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun getIncludeMandatoryAndRequestedKeysInResponse(): Boolean {
-        return stub.includeMandatoryAndRequestedKeysInResponse ?: true
-    }
-
-    @JsonIgnore
     fun getResiliencyTestsEnable(): ResiliencyTestSuite {
         return test?.resiliencyTests?.enable ?: ResiliencyTestSuite.none
     }
 
     @JsonIgnore
+    fun getStubIncludeMandatoryAndRequestedKeysInResponse(): Boolean {
+        return stub.getIncludeMandatoryAndRequestedKeysInResponse() ?: true
+    }
+
+    @JsonIgnore
     fun getStubGenerative(): Boolean {
-        return stub.generative ?: false
+        return stub.getGenerative() ?: false
+    }
+
+    @JsonIgnore
+    fun getStubDelayInMilliseconds(): Long? {
+        return stub.getDelayInMilliseconds()
+    }
+
+    @JsonIgnore
+    fun getStubDictionary(): String? {
+        return stub.getDictionary()
     }
 
     @JsonIgnore

@@ -39,10 +39,10 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.getAuthBearerFile()).isEqualTo("bearer.txt")
         assertThat(config.getAuthBearerEnvironmentVariable()).isNull()
 
-        assertThat(config.pipeline?.provider).isEqualTo(PipelineProvider.azure)
-        assertThat(config.pipeline?.organization).isEqualTo("xnsio")
-        assertThat(config.pipeline?.project).isEqualTo("XNSIO")
-        assertThat(config.pipeline?.definitionId).isEqualTo(1)
+        assertThat(config.getPipelineProvider()).isEqualTo(PipelineProvider.azure)
+        assertThat(config.getPipelineOrganization()).isEqualTo("xnsio")
+        assertThat(config.getPipelineProject()).isEqualTo("XNSIO")
+        assertThat(config.getPipelineDefinitionId()).isEqualTo(1)
 
         assertThat(config.environments?.get("staging")?.baseurls?.get("auth.spec")).isEqualTo("http://localhost:8080")
         assertThat(config.environments?.get("staging")?.variables?.get("username")).isEqualTo("jackie")
@@ -124,10 +124,10 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.getAuthBearerFile()).isEqualTo("bearer.txt")
         assertThat(config.getAuthBearerEnvironmentVariable()).isNull()
 
-        assertThat(config.pipeline?.provider).isEqualTo(PipelineProvider.azure)
-        assertThat(config.pipeline?.organization).isEqualTo("xnsio")
-        assertThat(config.pipeline?.project).isEqualTo("XNSIO")
-        assertThat(config.pipeline?.definitionId).isEqualTo(1)
+        assertThat(config.getPipelineProvider()).isEqualTo(PipelineProvider.azure)
+        assertThat(config.getPipelineOrganization()).isEqualTo("xnsio")
+        assertThat(config.getPipelineProject()).isEqualTo("XNSIO")
+        assertThat(config.getPipelineDefinitionId()).isEqualTo(1)
 
         assertThat(config.environments?.get("staging")?.baseurls?.get("auth.spec")).isEqualTo("http://localhost:8080")
         assertThat(config.environments?.get("staging")?.variables?.get("username")).isEqualTo("jackie")

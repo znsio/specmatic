@@ -2,6 +2,7 @@ package io.specmatic.core.config.v2
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import io.specmatic.core.*
+import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticVersionedConfig
 import io.specmatic.core.config.SpecmaticVersionedConfigLoader
@@ -63,7 +64,7 @@ data class SpecmaticConfigV2(
                 version = SpecmaticConfigVersion.VERSION_2,
                 contracts = config.sources.map { ContractConfig(it) },
                 auth = config.getAuth(),
-                pipeline = SpecmaticConfig.getPipeline(config),
+                pipeline = getPipeline(config),
                 environments = config.environments,
                 hooks = config.getHooks(),
                 repository = config.repository,

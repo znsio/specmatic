@@ -273,7 +273,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun getOpenAPISecurityConfigurationScheme(scheme: String): SecuritySchemeConfiguration? {
-        return security?.getOpenAPISecuritySchemes(scheme)
+        return security?.getOpenAPISecurityScheme(scheme)
     }
 }
 
@@ -436,7 +436,7 @@ data class SecurityConfiguration(
     @JsonProperty("OpenAPI")
     private val OpenAPI: OpenAPISecurityConfiguration?
 ) {
-    fun getOpenAPISecuritySchemes(scheme: String): SecuritySchemeConfiguration? {
+    fun getOpenAPISecurityScheme(scheme: String): SecuritySchemeConfiguration? {
         return OpenAPI?.securitySchemes?.get(scheme)
     }
 }

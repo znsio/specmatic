@@ -106,14 +106,13 @@ data class ScenarioAsTest(
             }
 
             val testResult = testResult(request, response, testScenario, flagsBased)
-            if (testResult is Result.Failure && !response.isAcceptedHenceValid()) {
+            if (testResult is Result.Failure && !(response.isAcceptedHenceValid() && ResponseMonitor.isMonitorLinkPresent(response))) {
                 return Pair(testResult.withBindings(testScenario.bindings, response), response)
             }
 
             val responseToCheckAndStore = when(testResult) {
                 is Result.Failure -> {
-                    val executor = HttpClient((testExecutor as? HttpClient)?.baseURL.orEmpty())
-                    val awaitedResponse = ResponseMonitor(feature, originalScenario, response).waitForResponse(executor)
+                    val awaitedResponse = ResponseMonitor(feature, originalScenario, response).waitForResponse(testExecutor)
                     when (awaitedResponse) {
                         is HasValue -> awaitedResponse.value
                         is HasFailure -> return Pair(awaitedResponse.failure.withBindings(testScenario.bindings, response), response)

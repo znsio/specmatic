@@ -115,7 +115,7 @@ data class SpecmaticConfig(
     private val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
     private val hooks: Map<String, String> = emptyMap(),
-    val repository: RepositoryInfo? = null,
+    private val repository: RepositoryInfo? = null,
     val report: ReportConfiguration? = null,
     val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
@@ -131,6 +131,11 @@ data class SpecmaticConfig(
     private val version: SpecmaticConfigVersion? = null
 ) {
     companion object {
+        @JsonIgnore
+        fun getRepository(specmaticConfig: SpecmaticConfig): RepositoryInfo? {
+            return specmaticConfig.repository
+        }
+
         @JsonIgnore
         fun getPipeline(specmaticConfig: SpecmaticConfig): Pipeline? {
             return specmaticConfig.pipeline
@@ -224,6 +229,16 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun getAuthBearerEnvironmentVariable(): String? {
         return auth?.getBearerEnvironmentVariable()
+    }
+
+    @JsonIgnore
+    fun getRepositoryProvider(): String? {
+        return repository?.getProvider()
+    }
+
+    @JsonIgnore
+    fun getRepositoryCollectionName(): String? {
+        return repository?.getCollectionName()
     }
 
     @JsonIgnore
@@ -340,9 +355,17 @@ data class Source(
 )
 
 data class RepositoryInfo(
-    val provider: String,
-    val collectionName: String
-)
+    private val provider: String,
+    private val collectionName: String
+) {
+    fun getProvider(): String {
+        return provider
+    }
+
+    fun getCollectionName(): String {
+        return collectionName
+    }
+}
 
 data class ReportConfiguration(
     val formatters: List<ReportFormatter>? = null,

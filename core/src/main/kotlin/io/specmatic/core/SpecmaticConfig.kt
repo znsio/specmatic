@@ -277,8 +277,13 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun getReportTypes(): ReportTypes? {
-        return report?.getTypes()
+    fun getOpenAPICoverageConfigurationSuccessCriteria(): SuccessCriteria? {
+        return report?.getTypes()?.getApiCoverage()?.getOpenAPICoverageConfiguration()?.getSuccessCriteria()
+    }
+
+    @JsonIgnore
+    fun getOpenAPICoverageConfigurationExcludedEndpoints(): List<String>? {
+        return report?.getTypes()?.getApiCoverage()?.getOpenAPICoverageConfiguration()?.getExcludedEndpoints()
     }
 }
 
@@ -426,18 +431,34 @@ enum class ReportFormatterLayout {
 
 data class ReportTypes (
     @JsonProperty("APICoverage")
-    val apiCoverage: APICoverage = APICoverage()
-)
+    private val apiCoverage: APICoverage = APICoverage()
+) {
+    fun getApiCoverage(): APICoverage {
+        return apiCoverage
+    }
+}
 
 data class APICoverage (
     @JsonProperty("OpenAPI")
-    val openAPI: APICoverageConfiguration = APICoverageConfiguration()
-)
+    private val openAPI: APICoverageConfiguration = APICoverageConfiguration()
+) {
+    fun getOpenAPICoverageConfiguration(): APICoverageConfiguration {
+        return openAPI
+    }
+}
 
 data class APICoverageConfiguration(
-    val successCriteria: SuccessCriteria = SuccessCriteria(),
-    val excludedEndpoints: List<String> = emptyList()
-)
+    private val successCriteria: SuccessCriteria = SuccessCriteria(),
+    private val excludedEndpoints: List<String> = emptyList()
+) {
+    fun getSuccessCriteria(): SuccessCriteria {
+        return successCriteria
+    }
+
+    fun getExcludedEndpoints(): List<String> {
+        return excludedEndpoints
+    }
+}
 
 data class SuccessCriteria(
     val minThresholdPercentage: Int = 0,

@@ -50,11 +50,11 @@ internal class SpecmaticConfigKtTest {
 
         assertThat(config.getReportFormatters()?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
         assertThat(config.getReportFormatters()?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
-        assertThat(config.getReportTypes()?.apiCoverage?.openAPI?.successCriteria?.minThresholdPercentage).isEqualTo(70)
-        assertThat(config.getReportTypes()?.apiCoverage?.openAPI?.successCriteria?.maxMissedEndpointsInSpec).isEqualTo(3)
-        assertThat(config.getReportTypes()?.apiCoverage?.openAPI?.successCriteria?.enforce).isTrue()
-        assertThat(config.getReportTypes()?.apiCoverage?.openAPI?.excludedEndpoints?.get(0)).isEqualTo("/heartbeat")
-        assertThat(config.getReportTypes()?.apiCoverage?.openAPI?.excludedEndpoints?.get(1)).isEqualTo("/health")
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.minThresholdPercentage).isEqualTo(70)
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.maxMissedEndpointsInSpec).isEqualTo(3)
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.enforce).isTrue()
+        assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(0)).isEqualTo("/heartbeat")
+        assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(1)).isEqualTo("/health")
 
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("oAuth2AuthCode") as OAuth2SecuritySchemeConfiguration).token).isEqualTo("OAUTH1234")
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("BearerAuth") as BearerSecuritySchemeConfiguration).token).isEqualTo("BEARER1234")
@@ -135,11 +135,11 @@ internal class SpecmaticConfigKtTest {
 
         assertThat(config.getReportFormatters()?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
         assertThat(config.getReportFormatters()?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
-        assertThat(config.getReportTypes()?.apiCoverage?.openAPI?.successCriteria?.minThresholdPercentage).isEqualTo(70)
-        assertThat(config.getReportTypes()?.apiCoverage?.openAPI?.successCriteria?.maxMissedEndpointsInSpec).isEqualTo(3)
-        assertThat(config.getReportTypes()?.apiCoverage?.openAPI?.successCriteria?.enforce).isTrue()
-        assertThat(config.getReportTypes()?.apiCoverage?.openAPI?.excludedEndpoints?.get(0)).isEqualTo("/heartbeat")
-        assertThat(config.getReportTypes()?.apiCoverage?.openAPI?.excludedEndpoints?.get(1)).isEqualTo("/health")
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.minThresholdPercentage).isEqualTo(70)
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.maxMissedEndpointsInSpec).isEqualTo(3)
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.enforce).isTrue()
+        assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(0)).isEqualTo("/heartbeat")
+        assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(1)).isEqualTo("/health")
 
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("oAuth2AuthCode") as OAuth2SecuritySchemeConfiguration).token).isEqualTo("OAUTH1234")
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("BearerAuth") as BearerSecuritySchemeConfiguration).token).isEqualTo("BEARER1234")

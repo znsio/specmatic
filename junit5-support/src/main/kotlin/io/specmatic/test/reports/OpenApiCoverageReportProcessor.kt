@@ -25,7 +25,10 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
     override fun process(specmaticConfig: SpecmaticConfig) {
         val reportConfiguration = getReport(specmaticConfig)!!
 
-        openApiCoverageReportInput.addExcludedAPIs(reportConfiguration.getTypes().apiCoverage.openAPI.excludedEndpoints + excludedEndpointsFromEnv())
+        openApiCoverageReportInput.addExcludedAPIs(
+            reportConfiguration.getTypes().getApiCoverage().getOpenAPICoverageConfiguration()
+                .getExcludedEndpoints() + excludedEndpointsFromEnv()
+        )
         val openAPICoverageReport = openApiCoverageReportInput.generate()
 
         if (openAPICoverageReport.coverageRows.isEmpty()) {
@@ -70,7 +73,8 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
         reportConfiguration: ReportConfiguration,
         report: OpenAPICoverageConsoleReport
     ) {
-        val successCriteria = reportConfiguration.getTypes().apiCoverage.openAPI.successCriteria
+        val successCriteria =
+            reportConfiguration.getTypes().getApiCoverage().getOpenAPICoverageConfiguration().getSuccessCriteria()
         if (successCriteria.enforce) {
             val coverageThresholdNotMetMessage =
                 "Total API coverage: ${report.totalCoveragePercentage}% is less than the specified minimum threshold of ${successCriteria.minThresholdPercentage}%."

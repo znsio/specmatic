@@ -90,6 +90,10 @@ data class HasValue<T>(override val value: T, val valueDetails: List<ValueDetail
         }
     }
 
+    override fun getValue(breadCrumb: String): T {
+        return value
+    }
+
     override fun addDetails(message: String, breadCrumb: String): ReturnValue<T> {
         if(message.isBlank() && breadCrumb.isBlank())
             return this

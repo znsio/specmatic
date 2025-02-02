@@ -107,15 +107,19 @@ fun Pattern.isDiscriminator(): Boolean {
 
 fun Pattern.parsedElseString(value: Value, resolver: Resolver): ReturnValue<Value> {
     return when (value) {
-        is StringValue -> try {
-            HasValue(this.parse(value.string, resolver))
-        } catch(e: Throwable) {
-            if(resolvedHop(this, resolver) is XMLPattern) {
-                HasFailure(Result.Failure("Failed to parse XML: ${e.localizedMessage}", breadCrumb = "RESPONSE.BODY"))
-            } else {
-                HasValue(value)
-            }
-        }
+        is StringValue -> this.parsedElseString(value.string, resolver)
         else -> HasValue(value)
+    }
+}
+
+fun Pattern.parsedElseString(value: String, resolver: Resolver): ReturnValue<Value> {
+    return try {
+        HasValue(this.parse(value, resolver))
+    } catch(e: Throwable) {
+        if(resolvedHop(this, resolver) is XMLPattern) {
+            HasFailure(Result.Failure("Failed to parse XML: ${e.localizedMessage}"))
+        } else {
+            HasValue(StringValue(value))
+        }
     }
 }

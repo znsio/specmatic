@@ -4,6 +4,7 @@ import io.specmatic.core.Result
 
 sealed interface ReturnValue<T> {
     val value: T
+    fun getValue(breadCrumb: String): T
 
     fun <U> withDefault(default: U, fn: (T) -> U): U
 

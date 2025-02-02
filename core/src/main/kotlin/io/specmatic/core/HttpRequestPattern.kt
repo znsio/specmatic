@@ -1,19 +1,19 @@
 package io.specmatic.core
 
+import io.ktor.util.*
 import io.specmatic.conversions.NoSecurityScheme
 import io.specmatic.conversions.OpenAPISecurityScheme
 import io.specmatic.core.Result.Failure
 import io.specmatic.core.Result.Success
-import io.specmatic.core.pattern.*
-import io.specmatic.core.value.StringValue
-import io.ktor.util.*
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorBasedValueGenerator
 import io.specmatic.core.discriminator.DiscriminatorMetadata
+import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.StringValue
 
 private const val MULTIPART_FORMDATA_BREADCRUMB = "MULTIPART-FORMDATA"
 const val METHOD_BREAD_CRUMB = "METHOD"
@@ -612,7 +612,12 @@ data class HttpRequestPattern(
                         sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
                     } else if (row.containsField("(REQUEST-BODY)")) {
                         val example = row.getField("(REQUEST-BODY)")
-                        val value = it.parse(example, resolver)
+                        val parseResult = it.parsedElseString(example, resolver)
+
+                        if(parseResult is ReturnFailure)
+                            return@let sequenceOf(parseResult.cast())
+
+                        val value = parseResult.value
 
                         val requestBodyAsIs = if (!isInvalidRequestResponse(status)) {
                             val result = resolver.matchesPattern(null, body, value)
@@ -639,20 +644,20 @@ data class HttpRequestPattern(
             val newFormDataPartLists: Sequence<ReturnValue<List<MultiPartFormDataPattern>>> =
                 newMultiPartBasedOn(multiPartFormDataPattern, row, resolver).map { HasValue(it) }
 
-            newHttpPathPatterns.flatMap("PATH") { newPathParamPattern ->
-                newQueryParamsPatterns.flatMap("QUERY") { newQueryParamPattern ->
-                    newBodies.flatMap("BODY") { newBody ->
-                        newHeadersPattern.flatMap("HEADERS") { newHeadersPattern ->
-                            newFormFieldsPatterns.flatMap("FORM-FIELDS") { newFormFieldsPattern ->
-                                newFormDataPartLists.flatMap("FORM-DATA") { newFormDataPartList ->
+            newHttpPathPatterns.flatMap { newPathParamPattern ->
+                newQueryParamsPatterns.flatMap { newQueryParamPattern ->
+                    newBodies.flatMap { newBody ->
+                        newHeadersPattern.flatMap { newHeadersPattern ->
+                            newFormFieldsPatterns.flatMap { newFormFieldsPattern ->
+                                newFormDataPartLists.flatMap { newFormDataPartList ->
                                     val newRequestPattern = HttpRequestPattern(
-                                        headersPattern = newHeadersPattern.value,
-                                        httpPathPattern = newPathParamPattern.value,
-                                        httpQueryParamPattern = newQueryParamPattern.value,
+                                        headersPattern = newHeadersPattern.getValue("HEADERS"),
+                                        httpPathPattern = newPathParamPattern.getValue("PATH"),
+                                        httpQueryParamPattern = newQueryParamPattern.getValue("QUERY"),
                                         method = method,
-                                        body = newBody.value,
-                                        formFieldsPattern = newFormFieldsPattern.value,
-                                        multiPartFormDataPattern = newFormDataPartList.value
+                                        body = newBody.getValue("BODY"),
+                                        formFieldsPattern = newFormFieldsPattern.getValue("FORM-FIELDS"),
+                                        multiPartFormDataPattern = newFormDataPartList.getValue("FORM-DATA")
                                     )
 
                                     val schemeInRow = securitySchemes.find { it.isInRow(row) }
@@ -679,7 +684,7 @@ data class HttpRequestPattern(
         }
     }
 
-    fun <T, U> Sequence<T>.flatMap(breadCrumb: String = "", fn: (T) -> Sequence<ReturnValue<U>>): Sequence<ReturnValue<U>> {
+    fun <T, U> Sequence<T>.flatMap(fn: (T) -> Sequence<ReturnValue<U>>): Sequence<ReturnValue<U>> {
         val iterator = this.iterator()
 
         return sequence {
@@ -692,7 +697,7 @@ data class HttpRequestPattern(
                     yieldAll(results)
                 }
             } catch(t: Throwable) {
-                yield(HasException(t, breadCrumb = breadCrumb))
+                yield(HasException(t))
             }
         }
     }

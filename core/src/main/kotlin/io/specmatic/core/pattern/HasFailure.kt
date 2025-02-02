@@ -32,6 +32,10 @@ data class HasFailure<T>(val failure: Result.Failure, val message: String = "") 
     override val value: T
         get() = throw ContractException(failure.toFailureReport())
 
+    override fun getValue(breadCrumb: String): T {
+        throw ContractException(failure.toFailureReport()).copy(breadCrumb = breadCrumb)
+    }
+
     override fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U> {
         return cast()
     }

@@ -45,6 +45,10 @@ data class HasException<T>(val t: Throwable, val message: String = "", val bread
     override val value: T
         get() = throw t
 
+    override fun getValue(breadCrumb: String): T {
+        throw ContractException(breadCrumb = breadCrumb, exceptionCause = t)
+    }
+
     override fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U> {
         return cast()
     }

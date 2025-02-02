@@ -10,6 +10,7 @@ import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
+import io.specmatic.trimmedLinesString
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import java.net.URI
@@ -710,6 +711,29 @@ internal class HttpRequestPatternTest {
         }
 
         assertThat(testDescriptions.count { it.matches(Regex("^.*HEADER.*enum.*$")) }).isEqualTo(4)
+    }
+
+    @Test
+    fun `when a request body in an example does not have a valid xml value but the pattern is an XMlPattern then an error should be returned as test generation time showing the xml parse error`() {
+        val requestPattern = HttpRequestPattern(
+            method = "POST",
+            httpPathPattern = buildHttpPathPattern(URI("/")),
+            body = XMLPattern("<name>(string)</name>")
+        )
+
+        val result = requestPattern.newBasedOn(Row(mapOf("(REQUEST-BODY)" to "not an XML value")), Resolver()).toList()
+
+        val returnValue = result.first()
+        returnValue as ReturnFailure
+        assertThat(returnValue.toFailure().reportString().trimmedLinesString()).isEqualToIgnoringNewLines(
+            """
+            >> REQUEST.BODY
+            
+            Failed to parse XML: Content is not allowed in prolog.
+            """.trimIndent()
+        )
+
+        assertThat(result.first()).isInstanceOf(HasException::class.java)
     }
 
     @Nested

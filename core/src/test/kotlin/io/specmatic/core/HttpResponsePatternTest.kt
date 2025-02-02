@@ -6,6 +6,7 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
+import io.specmatic.stub.captureStandardOutput
 import org.junit.jupiter.api.Nested
 
 internal class HttpResponsePatternTest {
@@ -72,6 +73,22 @@ internal class HttpResponsePatternTest {
         assertThat(response.status).isEqualTo(203)
         assertThat(response.headers["Content-Type"]).isNull()
         assertThat(response.body).isEqualTo(NoBodyValue)
+    }
+
+    @Test
+    fun `when a response body does not have a parseable XML string but the pattern does then an attempt to match the response body should return a parse error`() {
+        val responsePattern = HttpResponsePattern(
+            status = 200,
+            body = XMLPattern("<name>(string)</name>")
+        )
+
+        val response = HttpResponse(200, emptyMap(), StringValue("not an XML string"))
+
+        val result = responsePattern.matchesResponse(response, Resolver())
+
+        println(result.reportString())
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
     }
 
     @Nested

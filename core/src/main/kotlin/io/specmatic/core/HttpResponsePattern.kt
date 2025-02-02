@@ -6,6 +6,8 @@ import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
+import io.specmatic.core.value.XMLValue
+import io.specmatic.core.value.toXMLNode
 import io.specmatic.stub.softCastValueToXML
 
 const val DEFAULT_RESPONSE_CODE = 1000
@@ -121,9 +123,15 @@ data class HttpResponsePattern(
     private fun matchResponseBodySchema(parameters: Triple<HttpResponse, Resolver, List<Result.Failure>>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
         val (response, resolver, failures) = parameters
 
-        val parsedValue = when (response.body) {
-            is StringValue -> try { body.parse(response.body.string, resolver) } catch(e: Throwable) { response.body }
-            else -> response.body
+        val parsedValue = body.parsedElseString(response.body, resolver).let {
+            when(it) {
+                is HasValue<Value> -> it.value
+                else -> {
+                    it as ReturnFailure
+                    val failure = it.toFailure()
+                    return MatchSuccess(Triple(response, resolver, failures.plus(failure)))
+                }
+            }
         }
 
         val result = resolver.matchesPattern(null, body, parsedValue)

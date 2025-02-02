@@ -104,3 +104,18 @@ interface Pattern {
 fun Pattern.isDiscriminator(): Boolean {
     return this is ExactValuePattern && this.discriminator
 }
+
+fun Pattern.parsedElseString(value: Value, resolver: Resolver): ReturnValue<Value> {
+    return when (value) {
+        is StringValue -> try {
+            HasValue(this.parse(value.string, resolver))
+        } catch(e: Throwable) {
+            if(resolvedHop(this, resolver) is XMLPattern) {
+                HasFailure(Result.Failure("Failed to parse XML: ${e.localizedMessage}", breadCrumb = "RESPONSE.BODY"))
+            } else {
+                HasValue(value)
+            }
+        }
+        else -> HasValue(value)
+    }
+}

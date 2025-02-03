@@ -288,16 +288,16 @@ data class SpecmaticConfig(
 }
 
 data class TestConfiguration(
-    private val resiliencyTests: ResiliencyTestsConfig? = ResiliencyTestsConfig(
-        isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
-        isOnlyPositiveFlagEnabled = getBooleanValue(ONLY_POSITIVE)
-    ),
+    private val resiliencyTests: ResiliencyTestsConfig? = null,
     private val validateResponseValues: Boolean? = null,
     private val allowExtensibleSchema: Boolean? = null,
-    private val timeoutInMilliseconds: Long? = getLongValue(SPECMATIC_TEST_TIMEOUT)
+    private val timeoutInMilliseconds: Long? = null
 ) {
-    fun getResiliencyTests(): ResiliencyTestsConfig? {
-        return resiliencyTests
+    fun getResiliencyTests(): ResiliencyTestsConfig {
+        return resiliencyTests ?: ResiliencyTestsConfig(
+            isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
+            isOnlyPositiveFlagEnabled = getBooleanValue(ONLY_POSITIVE)
+        )
     }
 
     fun getValidateResponseValues(): Boolean? {
@@ -309,7 +309,7 @@ data class TestConfiguration(
     }
 
     fun getTimeoutInMilliseconds(): Long? {
-        return timeoutInMilliseconds
+        return timeoutInMilliseconds ?: getLongValue(SPECMATIC_TEST_TIMEOUT)
     }
 }
 

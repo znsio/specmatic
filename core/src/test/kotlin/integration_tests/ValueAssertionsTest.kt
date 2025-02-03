@@ -2,8 +2,10 @@ package integration_tests
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.AttributeSelectionPattern
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.SpecmaticConfig
@@ -25,6 +27,8 @@ class ValueAssertionsTest {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResponseValueValidationEnabled() } returns true
         }
+        mockkObject(SpecmaticConfig.Companion)
+        every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
 
         val feature = OpenApiSpecification.fromYAML(
             """
@@ -107,6 +111,8 @@ paths:
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResponseValueValidationEnabled() } returns true
         }
+        mockkObject(SpecmaticConfig.Companion)
+        every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
 
         val feature = OpenApiSpecification.fromYAML(
             """
@@ -166,6 +172,8 @@ paths:
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResponseValueValidationEnabled() } returns true
         }
+        mockkObject(SpecmaticConfig.Companion)
+        every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
 
         val feature = OpenApiSpecification.fromYAML(
             """
@@ -233,6 +241,8 @@ paths:
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResponseValueValidationEnabled() } returns true
         }
+        mockkObject(SpecmaticConfig.Companion)
+        every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
 
         val feature = OpenApiSpecification.fromYAML(
             """
@@ -308,6 +318,8 @@ paths:
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResponseValueValidationEnabled() } returns true
         }
+        mockkObject(SpecmaticConfig.Companion)
+        every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
 
         val feature = OpenApiSpecification.fromYAML(
             """

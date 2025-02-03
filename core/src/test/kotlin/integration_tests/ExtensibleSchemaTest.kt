@@ -2,6 +2,7 @@ package integration_tests
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
@@ -24,6 +25,8 @@ class ExtensibleSchemaTest {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isExtensibleSchemaEnabled() } returns true
         }
+        mockkObject(SpecmaticConfig.Companion)
+        every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
         val feature =
             OpenApiSpecification.fromYAML(
                 """
@@ -80,6 +83,9 @@ paths:
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isExtensibleSchemaEnabled() } returns true
         }
+        mockkObject(SpecmaticConfig.Companion)
+        every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
+
         val feature =
             OpenApiSpecification.fromYAML(
                 """

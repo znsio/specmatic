@@ -637,7 +637,7 @@ class ExamplesInteractiveServer(
 
         private fun HttpRequest.removeAttrSelection(attributeSelectionPattern: AttributeSelectionPattern): HttpRequest {
             return this.copy(
-                queryParams = this.queryParams.remove(attributeSelectionPattern.queryParamKey)
+                queryParams = this.queryParams.remove(attributeSelectionPattern.getQueryParamKey())
             )
         }
 

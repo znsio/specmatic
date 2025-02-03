@@ -98,22 +98,22 @@ data class WorkflowConfiguration(
 
 data class AttributeSelectionPattern(
     @field:JsonAlias("default_fields")
-    private val defaultFields: List<String> = readEnvVarOrProperty(
-        ATTRIBUTE_SELECTION_DEFAULT_FIELDS,
-        ATTRIBUTE_SELECTION_DEFAULT_FIELDS
-    ).orEmpty().split(",").filter { it.isNotBlank() },
+    private val defaultFields: List<String>? = null,
     @field:JsonAlias("query_param_key")
-    private val queryParamKey: String = readEnvVarOrProperty(
-        ATTRIBUTE_SELECTION_QUERY_PARAM_KEY,
-        ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
-    ).orEmpty()
+    private val queryParamKey: String? = null
 ) {
     fun getDefaultFields(): List<String> {
-        return defaultFields
+        return defaultFields ?: readEnvVarOrProperty(
+            ATTRIBUTE_SELECTION_DEFAULT_FIELDS,
+            ATTRIBUTE_SELECTION_DEFAULT_FIELDS
+        ).orEmpty().split(",").filter { it.isNotBlank() }
     }
 
     fun getQueryParamKey(): String {
-        return queryParamKey
+        return queryParamKey ?: readEnvVarOrProperty(
+            ATTRIBUTE_SELECTION_QUERY_PARAM_KEY,
+            ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
+        ).orEmpty()
     }
 }
 

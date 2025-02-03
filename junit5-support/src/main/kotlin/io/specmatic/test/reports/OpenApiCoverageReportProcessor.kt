@@ -75,14 +75,16 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
     ) {
         val successCriteria =
             reportConfiguration.getTypes().getApiCoverage().getOpenAPICoverageConfiguration().getSuccessCriteria()
-        if (successCriteria.enforce) {
+        if (successCriteria.getEnforce()) {
             val coverageThresholdNotMetMessage =
-                "Total API coverage: ${report.totalCoveragePercentage}% is less than the specified minimum threshold of ${successCriteria.minThresholdPercentage}%."
+                "Total API coverage: ${report.totalCoveragePercentage}% is less than the specified minimum threshold of ${successCriteria.getMinThresholdPercentage()}%."
             val missedEndpointsCountExceededMessage =
-                "Total missed endpoints count: ${report.missedEndpointsCount} is greater than the maximum threshold of ${successCriteria.maxMissedEndpointsInSpec}.\n(Note: Specmatic will consider an endpoint as 'covered' only if it is documented in the open api spec with at least one example for each operation and response code.\nIf it is present in the spec, but does not have an example, Specmatic will still report the particular operation and response code as 'missing in spec'.)"
+                "Total missed endpoints count: ${report.missedEndpointsCount} is greater than the maximum threshold of ${successCriteria.getMaxMissedEndpointsInSpec()}.\n(Note: Specmatic will consider an endpoint as 'covered' only if it is documented in the open api spec with at least one example for each operation and response code.\nIf it is present in the spec, but does not have an example, Specmatic will still report the particular operation and response code as 'missing in spec'.)"
 
-            val minCoverageThresholdCriteriaMet = report.totalCoveragePercentage >= successCriteria.minThresholdPercentage
-            val maxMissingEndpointsExceededCriteriaMet = report.missedEndpointsCount <= successCriteria.maxMissedEndpointsInSpec
+            val minCoverageThresholdCriteriaMet =
+                report.totalCoveragePercentage >= successCriteria.getMinThresholdPercentage()
+            val maxMissingEndpointsExceededCriteriaMet =
+                report.missedEndpointsCount <= successCriteria.getMaxMissedEndpointsInSpec()
             val coverageReportSuccessCriteriaMet = minCoverageThresholdCriteriaMet && maxMissingEndpointsExceededCriteriaMet
             if(!coverageReportSuccessCriteriaMet){
                 logger.newLine()

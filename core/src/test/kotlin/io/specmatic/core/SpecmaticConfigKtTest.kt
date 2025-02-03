@@ -50,9 +50,9 @@ internal class SpecmaticConfigKtTest {
 
         assertThat(config.getReportFormatters()?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
         assertThat(config.getReportFormatters()?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
-        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.minThresholdPercentage).isEqualTo(70)
-        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.maxMissedEndpointsInSpec).isEqualTo(3)
-        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.enforce).isTrue()
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.getMinThresholdPercentage()).isEqualTo(70)
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.getMaxMissedEndpointsInSpec()).isEqualTo(3)
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.getEnforce()).isTrue()
         assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(0)).isEqualTo("/heartbeat")
         assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(1)).isEqualTo("/health")
 
@@ -145,9 +145,9 @@ internal class SpecmaticConfigKtTest {
 
         assertThat(config.getReportFormatters()?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
         assertThat(config.getReportFormatters()?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
-        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.minThresholdPercentage).isEqualTo(70)
-        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.maxMissedEndpointsInSpec).isEqualTo(3)
-        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.enforce).isTrue()
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.getMinThresholdPercentage()).isEqualTo(70)
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.getMaxMissedEndpointsInSpec()).isEqualTo(3)
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.getEnforce()).isTrue()
         assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(0)).isEqualTo("/heartbeat")
         assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(1)).isEqualTo("/health")
 

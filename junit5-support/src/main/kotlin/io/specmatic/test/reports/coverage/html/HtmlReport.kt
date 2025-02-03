@@ -59,7 +59,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
             "totalTests" to totalTests,
             "totalDuration" to reportData.totalTestDuration,
             "actuatorEnabled" to reportData.actuatorEnabled,
-            "minimumCoverage" to apiSuccessCriteria.minThresholdPercentage,
+            "minimumCoverage" to apiSuccessCriteria.getMinThresholdPercentage(),
             "successCriteriaPassed" to successCriteria,
             "testCriteriaPassed" to testCriteria,
             "tableConfig" to htmlReportInformation.tableConfig,
@@ -110,7 +110,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
     }
 
     private fun successCriteriaPassed(totalCoveragePercentage: Int): Boolean {
-        return totalCoveragePercentage >= apiSuccessCriteria.minThresholdPercentage || !apiSuccessCriteria.enforce
+        return totalCoveragePercentage >= apiSuccessCriteria.getMinThresholdPercentage() || !apiSuccessCriteria.getEnforce()
     }
 
     private fun calculateTestGroupCounts(scenarioData: Map<String, Map<String, Map<String, List<ScenarioData>>>>) {

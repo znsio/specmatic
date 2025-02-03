@@ -471,10 +471,22 @@ data class APICoverageConfiguration(
 }
 
 data class SuccessCriteria(
-    val minThresholdPercentage: Int = 0,
-    val maxMissedEndpointsInSpec: Int = 0,
-    val enforce: Boolean = false
-)
+    private val minThresholdPercentage: Int? = null,
+    private val maxMissedEndpointsInSpec: Int? = null,
+    private val enforce: Boolean? = null
+) {
+    fun getMinThresholdPercentage(): Int {
+        return minThresholdPercentage ?: 0
+    }
+
+    fun getMaxMissedEndpointsInSpec(): Int {
+        return maxMissedEndpointsInSpec ?: 0
+    }
+
+    fun getEnforce(): Boolean {
+        return enforce ?: false
+    }
+}
 
 data class SecurityConfiguration(
     @JsonProperty("OpenAPI")

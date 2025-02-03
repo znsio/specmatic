@@ -5,6 +5,7 @@ import io.specmatic.core.*
 import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
+import io.specmatic.core.SpecmaticConfig.Companion.getWorkflowConfiguration
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticVersionedConfig
 import io.specmatic.core.config.SpecmaticVersionedConfigLoader
@@ -76,7 +77,7 @@ data class SpecmaticConfigV2(
                 stub = config.stub,
                 virtualService = config.virtualService,
                 examples = config.getExamples(),
-                workflow = config.workflow,
+                workflow = getWorkflowConfiguration(config),
                 ignoreInlineExamples = config.ignoreInlineExamples,
                 additionalExampleParamsFilePath = config.getAdditionalExampleParamsFilePath(),
                 attributeSelectionPattern = config.attributeSelectionPattern,

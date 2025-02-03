@@ -126,7 +126,7 @@ data class SpecmaticConfig(
     val ignoreInlineExamples: Boolean? = null,
     private val additionalExampleParamsFilePath: String? = null,
     val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
-    val allPatternsMandatory: Boolean? = null,
+    private val allPatternsMandatory: Boolean? = null,
     private val defaultPatternValues: Map<String, Any> = emptyMap(),
     private val version: SpecmaticConfigVersion? = null
 ) {
@@ -144,6 +144,11 @@ data class SpecmaticConfig(
         @JsonIgnore
         fun getSecurityConfiguration(specmaticConfig: SpecmaticConfig?): SecurityConfiguration? {
             return specmaticConfig?.security
+        }
+
+        @JsonIgnore
+        fun getAllPatternsMandatory(specmaticConfig: SpecmaticConfig): Boolean? {
+            return specmaticConfig.allPatternsMandatory
         }
     }
 

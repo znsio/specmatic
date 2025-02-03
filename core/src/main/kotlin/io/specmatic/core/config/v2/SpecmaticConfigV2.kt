@@ -5,6 +5,7 @@ import io.specmatic.core.*
 import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
+import io.specmatic.core.SpecmaticConfig.Companion.getSources
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticVersionedConfig
 import io.specmatic.core.config.SpecmaticVersionedConfigLoader
@@ -64,7 +65,7 @@ data class SpecmaticConfigV2(
         override fun loadFrom(config: SpecmaticConfig): SpecmaticVersionedConfig {
             return SpecmaticConfigV2(
                 version = SpecmaticConfigVersion.VERSION_2,
-                contracts = config.sources.map { ContractConfig(it) },
+                contracts = getSources(config).map { ContractConfig(it) },
                 auth = config.getAuth(),
                 pipeline = getPipeline(config),
                 environments = config.environments,

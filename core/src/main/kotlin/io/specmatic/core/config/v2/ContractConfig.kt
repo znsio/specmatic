@@ -21,10 +21,10 @@ data class ContractConfig(
     val consumes: List<String>? = null
 ) {
     constructor(source: Source) : this(
-        contractSource = GitContractSource(source).takeIf { source.provider == SourceProvider.git }
+        contractSource = GitContractSource(source).takeIf { source.getProvider() == SourceProvider.git }
             ?: FileSystemContractSource(source),
-        provides = source.test,
-        consumes = source.stub
+        provides = source.getTest(),
+        consumes = source.getStub()
     )
 
     fun transform(): Source {
@@ -40,7 +40,7 @@ data class ContractConfig(
         val url: String? = null,
         val branch: String? = null
     ) : ContractSource {
-        constructor(source: Source) : this(source.repository, source.branch)
+        constructor(source: Source) : this(source.getRepository(), source.getBranch())
 
         override fun write(gen: JsonGenerator) {
             gen.writeObjectFieldStart("git")
@@ -63,7 +63,7 @@ data class ContractConfig(
     data class FileSystemContractSource(
         val directory: String = "."
     ) : ContractSource {
-        constructor(source: Source) : this(source.directory ?: ".")
+        constructor(source: Source) : this(source.getDirectory() ?: ".")
 
         override fun write(gen: JsonGenerator) {
             gen.writeObjectFieldStart("filesystem")

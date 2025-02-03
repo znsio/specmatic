@@ -8,12 +8,16 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.core.Configuration.Companion.configFilePath
+import io.specmatic.core.SourceProvider.filesystem
+import io.specmatic.core.SourceProvider.git
+import io.specmatic.core.SourceProvider.web
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.VERSION_1
 import io.specmatic.core.config.toSpecmaticConfig
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.utilities.ContractSource
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
@@ -25,6 +29,10 @@ import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
+import io.specmatic.core.utilities.GitMonoRepo
+import io.specmatic.core.utilities.GitRepo
+import io.specmatic.core.utilities.LocalFileSystemSource
+import io.specmatic.core.utilities.WebSource
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.Value
@@ -110,7 +118,7 @@ data class AttributeSelectionPattern(
 )
 
 data class SpecmaticConfig(
-    val sources: List<Source> = emptyList(),
+    private val sources: List<Source> = emptyList(),
     private val auth: Auth? = null,
     private val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
@@ -132,6 +140,11 @@ data class SpecmaticConfig(
 ) {
     companion object {
         @JsonIgnore
+        fun getSources(specmaticConfig: SpecmaticConfig): List<Source> {
+            return specmaticConfig.sources
+        }
+
+        @JsonIgnore
         fun getRepository(specmaticConfig: SpecmaticConfig): RepositoryInfo? {
             return specmaticConfig.repository
         }
@@ -145,6 +158,56 @@ data class SpecmaticConfig(
         fun getSecurityConfiguration(specmaticConfig: SpecmaticConfig?): SecurityConfiguration? {
             return specmaticConfig?.security
         }
+    }
+
+    @JsonIgnore
+    fun getGitContracts(): List<ContractSource> {
+        return sources
+            .filter { it.getProvider() == git }
+            .map { source ->
+                val stubPaths = source.getStub() ?: emptyList()
+                val testPaths = source.getTest() ?: emptyList()
+
+                when (val repository = source.getRepository()) {
+                    null -> GitMonoRepo(testPaths, stubPaths, source.getProvider().toString())
+                    else -> GitRepo(
+                        repository,
+                        source.getBranch(),
+                        testPaths,
+                        stubPaths,
+                        source.getProvider().toString()
+                    )
+                }
+            }
+    }
+
+    @JsonIgnore
+    fun getFileSystemContracts(): List<ContractSource> {
+        return sources
+            .filter { it.getProvider() == filesystem }
+            .map { source ->
+                val stubPaths = source.getStub() ?: emptyList()
+                val testPaths = source.getTest() ?: emptyList()
+
+                LocalFileSystemSource(source.getDirectory() ?: ".", testPaths, stubPaths)
+            }
+    }
+
+    @JsonIgnore
+    fun getWebContracts(): List<ContractSource> {
+        return sources
+            .filter { it.getProvider() == web }
+            .map { source ->
+                val stubPaths = source.getStub() ?: emptyList()
+                val testPaths = source.getTest() ?: emptyList()
+
+                WebSource(testPaths, stubPaths)
+            }
+    }
+
+    @JsonIgnore
+    fun getAllContracts(): List<ContractSource> {
+        return getGitContracts() + getWebContracts() + getFileSystemContracts()
     }
 
     @JsonIgnore
@@ -359,15 +422,39 @@ enum class SourceProvider { git, filesystem, web }
 
 data class Source(
     @field:JsonAlias("type")
-    val provider: SourceProvider = SourceProvider.filesystem,
-    val repository: String? = null,
-    val branch: String? = null,
+    private val provider: SourceProvider = filesystem,
+    private val repository: String? = null,
+    private val branch: String? = null,
     @field:JsonAlias("provides")
-    val test: List<String>? = null,
+    private val test: List<String>? = null,
     @field:JsonAlias("consumes")
-    val stub: List<String>? = null,
-    val directory: String? = null,
-)
+    private val stub: List<String>? = null,
+    private val directory: String? = null,
+) {
+    fun getProvider(): SourceProvider {
+        return provider
+    }
+
+    fun getRepository(): String? {
+        return repository
+    }
+
+    fun getBranch(): String? {
+        return branch
+    }
+
+    fun getTest(): List<String>? {
+        return test
+    }
+
+    fun getStub(): List<String>? {
+        return stub
+    }
+
+    fun getDirectory(): String? {
+        return directory
+    }
+}
 
 data class RepositoryInfo(
     private val provider: String,

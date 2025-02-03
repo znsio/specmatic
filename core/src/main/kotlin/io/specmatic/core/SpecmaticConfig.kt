@@ -198,6 +198,17 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
+    fun copyResiliencyTestsConfig(onlyPositive: Boolean): SpecmaticConfig {
+        return this.copy(
+            test = test?.copy(
+                resiliencyTests = test.getResiliencyTests().copy(
+                    enable = if (onlyPositive) ResiliencyTestSuite.positiveOnly else ResiliencyTestSuite.all
+                )
+            )
+        )
+    }
+
+    @JsonIgnore
     fun getStubGenerative(): Boolean {
         return stub.generative ?: false
     }

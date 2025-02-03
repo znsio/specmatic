@@ -16,7 +16,6 @@ import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
 import io.ktor.http.*
-import io.specmatic.core.SpecmaticConfig.Companion.getTestConfiguration
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.*
@@ -129,14 +128,7 @@ data class Feature(
     val strictMode: Boolean = false
 ): IFeature {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
-        val testConfiguration = getTestConfiguration(specmaticConfig)
-        val updatedSpecmaticConfig = specmaticConfig.copy(
-            test = testConfiguration?.copy(
-                resiliencyTests = testConfiguration.getResiliencyTests()?.copy(
-                    enable = if(onlyPositive) ResiliencyTestSuite.positiveOnly else ResiliencyTestSuite.all
-                )
-            )
-        )
+        val updatedSpecmaticConfig = specmaticConfig.copyResiliencyTestsConfig(onlyPositive)
 
         return this.copy(flagsBased = this.flagsBased.copy(
             generation = GenerativeTestsEnabled(onlyPositive),

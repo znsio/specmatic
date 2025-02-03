@@ -338,7 +338,7 @@ data class Scenario(
     }
 
     private fun isRequestAttributeSelected(httpRequest: HttpRequest): Boolean {
-        return httpRequest.queryParams.containsKey(attributeSelectionPattern.queryParamKey)
+        return httpRequest.queryParams.containsKey(attributeSelectionPattern.getQueryParamKey())
     }
 
     fun matches(httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
@@ -827,8 +827,8 @@ data class Scenario(
     }
 
     fun getFieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams: QueryParameters?): Set<String> {
-        val defaultAttributeSelectionFields = attributeSelectionPattern.defaultFields.toSet()
-        val attributeSelectionQueryParamKey =  attributeSelectionPattern.queryParamKey
+        val defaultAttributeSelectionFields = attributeSelectionPattern.getDefaultFields().toSet()
+        val attributeSelectionQueryParamKey = attributeSelectionPattern.getQueryParamKey()
 
         if(queryParams?.containsKey(attributeSelectionQueryParamKey) != true) return emptySet()
 

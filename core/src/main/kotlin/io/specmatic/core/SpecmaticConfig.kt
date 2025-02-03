@@ -98,16 +98,24 @@ data class WorkflowConfiguration(
 
 data class AttributeSelectionPattern(
     @field:JsonAlias("default_fields")
-    val defaultFields: List<String> = readEnvVarOrProperty(
+    private val defaultFields: List<String> = readEnvVarOrProperty(
         ATTRIBUTE_SELECTION_DEFAULT_FIELDS,
         ATTRIBUTE_SELECTION_DEFAULT_FIELDS
     ).orEmpty().split(",").filter { it.isNotBlank() },
     @field:JsonAlias("query_param_key")
-    val queryParamKey: String = readEnvVarOrProperty(
+    private val queryParamKey: String = readEnvVarOrProperty(
         ATTRIBUTE_SELECTION_QUERY_PARAM_KEY,
         ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
     ).orEmpty()
-)
+) {
+    fun getDefaultFields(): List<String> {
+        return defaultFields
+    }
+
+    fun getQueryParamKey(): String {
+        return queryParamKey
+    }
+}
 
 data class SpecmaticConfig(
     val sources: List<Source> = emptyList(),
@@ -154,7 +162,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun attributeSelectionQueryParamKey(): String {
-        return attributeSelectionPattern.queryParamKey
+        return attributeSelectionPattern.getQueryParamKey()
     }
 
     @JsonIgnore

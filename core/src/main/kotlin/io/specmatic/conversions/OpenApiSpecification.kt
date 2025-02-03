@@ -38,6 +38,7 @@ import io.swagger.v3.oas.models.parameters.RequestBody
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
 import io.swagger.v3.oas.models.security.SecurityScheme
+import io.swagger.v3.oas.models.servers.Server
 import io.swagger.v3.parser.OpenAPIV3Parser
 import io.swagger.v3.parser.core.models.ParseOptions
 import io.swagger.v3.parser.core.models.SwaggerParseResult
@@ -223,8 +224,9 @@ class OpenApiSpecification(
             return OverlayMerger().merge(this, OverlayParser.parse(overlayContent))
         }
 
-        fun fromOpenApi(openAPI: OpenAPI): OpenApiSpecification {
-            return OpenApiSpecification(openApiFilePath = "", parsedOpenApi = openAPI)
+        @Suppress("MemberVisibilityCanBePrivate")
+        fun fromOpenApi(openAPI: OpenAPI, filePath: String): OpenApiSpecification {
+            return OpenApiSpecification(openApiFilePath = filePath, parsedOpenApi = openAPI)
         }
     }
 
@@ -264,6 +266,11 @@ class OpenApiSpecification(
         return openApiSchemas().filterNot { withPatternDelimiters(it.key) in patterns }.map {
             withPatternDelimiters(it.key) to toSpecmaticPattern(it.value, emptyList(), it.key)
         }.toMap()
+    }
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    fun getServers(): List<Server> {
+        return parsedOpenApi.servers.orEmpty()
     }
 
     override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {

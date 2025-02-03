@@ -16,6 +16,7 @@ import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
 import io.ktor.http.*
+import io.specmatic.core.SpecmaticConfig.Companion.getWorkflowConfiguration
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.*
@@ -572,7 +573,7 @@ data class Feature(
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
     fun generateContractTests(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<ContractTest> {
-        val workflow = Workflow(specmaticConfig.workflow ?: WorkflowConfiguration())
+        val workflow = Workflow(getWorkflowConfiguration(specmaticConfig) ?: WorkflowConfiguration())
 
         return generateContractTestScenarios(suggestions, fn).map { (originalScenario, returnValue) ->
             returnValue.realise(

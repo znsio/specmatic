@@ -10,7 +10,7 @@ class Workflow(
     var id: Value? = null
 
     fun extractDataFrom(response: HttpResponse, originalScenario: Scenario) {
-        val operation = workflow.ids[originalScenario.apiDescription] ?: return
+        val operation = workflow.getOperation(originalScenario.apiDescription) ?: return
 
         val extractLocation = operation.extract
 
@@ -47,7 +47,7 @@ class Workflow(
         if(originalScenario.isNegative)
             return request
 
-        val operation = workflow.ids[originalScenario.apiDescription] ?: workflow.ids["*"]
+        val operation = workflow.getOperation(originalScenario.apiDescription) ?: workflow.getOperation("*")
 
         if(operation == null)
             return request

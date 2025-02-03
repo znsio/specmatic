@@ -93,8 +93,12 @@ data class WorkflowIDOperation(
 )
 
 data class WorkflowConfiguration(
-    val ids: Map<String, WorkflowIDOperation> = emptyMap()
-)
+    private val ids: Map<String, WorkflowIDOperation> = emptyMap()
+) {
+    fun getOperation(operationId: String): WorkflowIDOperation? {
+        return ids[operationId]
+    }
+}
 
 data class AttributeSelectionPattern(
     @field:JsonAlias("default_fields")
@@ -122,7 +126,7 @@ data class SpecmaticConfig(
     val stub: StubConfiguration = StubConfiguration(),
     val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     private val examples: List<String>? = null,
-    val workflow: WorkflowConfiguration? = null,
+    private val workflow: WorkflowConfiguration? = null,
     val ignoreInlineExamples: Boolean? = null,
     private val additionalExampleParamsFilePath: String? = null,
     val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
@@ -144,6 +148,11 @@ data class SpecmaticConfig(
         @JsonIgnore
         fun getSecurityConfiguration(specmaticConfig: SpecmaticConfig?): SecurityConfiguration? {
             return specmaticConfig?.security
+        }
+
+        @JsonIgnore
+        fun getWorkflowConfiguration(specmaticConfig: SpecmaticConfig): WorkflowConfiguration? {
+            return specmaticConfig.workflow
         }
     }
 

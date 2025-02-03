@@ -48,13 +48,13 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.environments?.get("staging")?.variables?.get("username")).isEqualTo("jackie")
         assertThat(config.environments?.get("staging")?.variables?.get("password")).isEqualTo("PaSsWoRd")
 
-        assertThat(config.report?.formatters?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
-        assertThat(config.report?.formatters?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
-        assertThat(config.report?.types?.apiCoverage?.openAPI?.successCriteria?.minThresholdPercentage).isEqualTo(70)
-        assertThat(config.report?.types?.apiCoverage?.openAPI?.successCriteria?.maxMissedEndpointsInSpec).isEqualTo(3)
-        assertThat(config.report?.types?.apiCoverage?.openAPI?.successCriteria?.enforce).isTrue()
-        assertThat(config.report?.types?.apiCoverage?.openAPI?.excludedEndpoints?.get(0)).isEqualTo("/heartbeat")
-        assertThat(config.report?.types?.apiCoverage?.openAPI?.excludedEndpoints?.get(1)).isEqualTo("/health")
+        assertThat(config.getReportFormatters()?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
+        assertThat(config.getReportFormatters()?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.getMinThresholdPercentage()).isEqualTo(70)
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.getMaxMissedEndpointsInSpec()).isEqualTo(3)
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.getEnforce()).isTrue()
+        assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(0)).isEqualTo("/heartbeat")
+        assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(1)).isEqualTo("/health")
 
         assertThat(
             (config.getOpenAPISecurityConfigurationScheme("oAuth2AuthCode") as OAuth2SecuritySchemeConfiguration).token
@@ -82,7 +82,7 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
         assertThat(config.getStubGenerative()).isEqualTo(false)
 
-        val htmlConfig = config.report?.formatters?.first { it.type == ReportFormatterType.HTML }
+        val htmlConfig = config.getReportFormatters()?.first { it.type == ReportFormatterType.HTML }
         assertThat(htmlConfig?.title).isEqualTo("Test Report")
         assertThat(htmlConfig?.heading).isEqualTo("Test Results")
         assertThat(htmlConfig?.outputDirectory).isEqualTo("output")
@@ -143,13 +143,13 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.environments?.get("staging")?.variables?.get("username")).isEqualTo("jackie")
         assertThat(config.environments?.get("staging")?.variables?.get("password")).isEqualTo("PaSsWoRd")
 
-        assertThat(config.report?.formatters?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
-        assertThat(config.report?.formatters?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
-        assertThat(config.report?.types?.apiCoverage?.openAPI?.successCriteria?.minThresholdPercentage).isEqualTo(70)
-        assertThat(config.report?.types?.apiCoverage?.openAPI?.successCriteria?.maxMissedEndpointsInSpec).isEqualTo(3)
-        assertThat(config.report?.types?.apiCoverage?.openAPI?.successCriteria?.enforce).isTrue()
-        assertThat(config.report?.types?.apiCoverage?.openAPI?.excludedEndpoints?.get(0)).isEqualTo("/heartbeat")
-        assertThat(config.report?.types?.apiCoverage?.openAPI?.excludedEndpoints?.get(1)).isEqualTo("/health")
+        assertThat(config.getReportFormatters()?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
+        assertThat(config.getReportFormatters()?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.getMinThresholdPercentage()).isEqualTo(70)
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.getMaxMissedEndpointsInSpec()).isEqualTo(3)
+        assertThat(config.getOpenAPICoverageConfigurationSuccessCriteria()?.getEnforce()).isTrue()
+        assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(0)).isEqualTo("/heartbeat")
+        assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(1)).isEqualTo("/health")
 
         assertThat(
             (config.getOpenAPISecurityConfigurationScheme("oAuth2AuthCode") as OAuth2SecuritySchemeConfiguration).token

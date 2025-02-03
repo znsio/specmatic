@@ -116,7 +116,7 @@ data class SpecmaticConfig(
     val environments: Map<String, Environment>? = null,
     private val hooks: Map<String, String> = emptyMap(),
     private val repository: RepositoryInfo? = null,
-    val report: ReportConfiguration? = null,
+    private val report: ReportConfiguration? = null,
     private val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
@@ -144,6 +144,11 @@ data class SpecmaticConfig(
         @JsonIgnore
         fun getSecurityConfiguration(specmaticConfig: SpecmaticConfig?): SecurityConfiguration? {
             return specmaticConfig?.security
+        }
+
+        @JsonIgnore
+        fun getReport(specmaticConfig: SpecmaticConfig?): ReportConfiguration? {
+            return specmaticConfig?.report
         }
     }
 
@@ -275,6 +280,21 @@ data class SpecmaticConfig(
     fun getOpenAPISecurityConfigurationScheme(scheme: String): SecuritySchemeConfiguration? {
         return security?.getOpenAPISecurityScheme(scheme)
     }
+
+    @JsonIgnore
+    fun getReportFormatters(): List<ReportFormatter>? {
+        return report?.getFormatters()
+    }
+
+    @JsonIgnore
+    fun getOpenAPICoverageConfigurationSuccessCriteria(): SuccessCriteria? {
+        return report?.getTypes()?.getApiCoverage()?.getOpenAPICoverageConfiguration()?.getSuccessCriteria()
+    }
+
+    @JsonIgnore
+    fun getOpenAPICoverageConfigurationExcludedEndpoints(): List<String>? {
+        return report?.getTypes()?.getApiCoverage()?.getOpenAPICoverageConfiguration()?.getExcludedEndpoints()
+    }
 }
 
 data class TestConfiguration(
@@ -383,9 +403,17 @@ data class RepositoryInfo(
 }
 
 data class ReportConfiguration(
-    val formatters: List<ReportFormatter>? = null,
-    val types: ReportTypes = ReportTypes()
-)
+    private val formatters: List<ReportFormatter>? = null,
+    private val types: ReportTypes = ReportTypes()
+) {
+    fun getFormatters(): List<ReportFormatter>? {
+        return formatters
+    }
+
+    fun getTypes(): ReportTypes {
+        return types
+    }
+}
 
 data class ReportFormatter(
     var type: ReportFormatterType = ReportFormatterType.TEXT,
@@ -413,24 +441,52 @@ enum class ReportFormatterLayout {
 
 data class ReportTypes (
     @JsonProperty("APICoverage")
-    val apiCoverage: APICoverage = APICoverage()
-)
+    private val apiCoverage: APICoverage = APICoverage()
+) {
+    fun getApiCoverage(): APICoverage {
+        return apiCoverage
+    }
+}
 
 data class APICoverage (
     @JsonProperty("OpenAPI")
-    val openAPI: APICoverageConfiguration = APICoverageConfiguration()
-)
+    private val openAPI: APICoverageConfiguration = APICoverageConfiguration()
+) {
+    fun getOpenAPICoverageConfiguration(): APICoverageConfiguration {
+        return openAPI
+    }
+}
 
 data class APICoverageConfiguration(
-    val successCriteria: SuccessCriteria = SuccessCriteria(),
-    val excludedEndpoints: List<String> = emptyList()
-)
+    private val successCriteria: SuccessCriteria = SuccessCriteria(),
+    private val excludedEndpoints: List<String> = emptyList()
+) {
+    fun getSuccessCriteria(): SuccessCriteria {
+        return successCriteria
+    }
+
+    fun getExcludedEndpoints(): List<String> {
+        return excludedEndpoints
+    }
+}
 
 data class SuccessCriteria(
-    val minThresholdPercentage: Int = 0,
-    val maxMissedEndpointsInSpec: Int = 0,
-    val enforce: Boolean = false
-)
+    private val minThresholdPercentage: Int? = null,
+    private val maxMissedEndpointsInSpec: Int? = null,
+    private val enforce: Boolean? = null
+) {
+    fun getMinThresholdPercentage(): Int {
+        return minThresholdPercentage ?: 0
+    }
+
+    fun getMaxMissedEndpointsInSpec(): Int {
+        return maxMissedEndpointsInSpec ?: 0
+    }
+
+    fun getEnforce(): Boolean {
+        return enforce ?: false
+    }
+}
 
 data class SecurityConfiguration(
     @JsonProperty("OpenAPI")

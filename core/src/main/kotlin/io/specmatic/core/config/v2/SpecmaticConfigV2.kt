@@ -5,6 +5,7 @@ import io.specmatic.core.*
 import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
+import io.specmatic.core.SpecmaticConfig.Companion.getReport
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticVersionedConfig
 import io.specmatic.core.config.SpecmaticVersionedConfigLoader
@@ -70,7 +71,7 @@ data class SpecmaticConfigV2(
                 environments = config.environments,
                 hooks = config.getHooks(),
                 repository = getRepository(config),
-                report = config.report,
+                report = getReport(config),
                 security = getSecurityConfiguration(config),
                 test = config.test,
                 stub = config.stub,

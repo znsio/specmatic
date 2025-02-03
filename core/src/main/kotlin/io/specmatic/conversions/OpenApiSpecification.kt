@@ -6,6 +6,7 @@ import io.cucumber.messages.types.Step
 import io.ktor.util.reflect.*
 import io.specmatic.core.*
 import io.specmatic.core.Result.Failure
+import io.specmatic.core.SpecmaticConfig.Companion.getAttributeSelectionPattern
 import io.specmatic.core.log.LogStrategy
 import io.specmatic.core.log.logger
 import io.specmatic.core.overlay.OverlayMerger
@@ -238,7 +239,7 @@ class OpenApiSpecification(
         val updatedScenarios = scenarioInfos.map {
             Scenario(it).copy(
                 dictionary = dictionary.plus(specmaticConfig.parsedDefaultPatternValues()),
-                attributeSelectionPattern = specmaticConfig.attributeSelectionPattern,
+                attributeSelectionPattern = getAttributeSelectionPattern(specmaticConfig),
                 patterns = it.patterns + unreferencedSchemaPatterns
             )
         }

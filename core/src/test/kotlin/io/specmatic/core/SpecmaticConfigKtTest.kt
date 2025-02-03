@@ -56,12 +56,22 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(0)).isEqualTo("/heartbeat")
         assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(1)).isEqualTo("/health")
 
-        assertThat((config.security?.OpenAPI?.securitySchemes?.get("oAuth2AuthCode") as OAuth2SecuritySchemeConfiguration).token).isEqualTo("OAUTH1234")
-        assertThat((config.security?.OpenAPI?.securitySchemes?.get("BearerAuth") as BearerSecuritySchemeConfiguration).token).isEqualTo("BEARER1234")
-        assertThat((config.security?.OpenAPI?.securitySchemes?.get("ApiKeyAuthHeader") as APIKeySecuritySchemeConfiguration).value).isEqualTo("API-HEADER-USER")
-        assertThat((config.security?.OpenAPI?.securitySchemes?.get("ApiKeyAuthQuery") as APIKeySecuritySchemeConfiguration).value).isEqualTo("API-QUERY-PARAM-USER")
+        assertThat(
+            (config.getOpenAPISecurityConfigurationScheme("oAuth2AuthCode") as OAuth2SecuritySchemeConfiguration).token
+        ).isEqualTo("OAUTH1234")
+        assertThat(
+            (config.getOpenAPISecurityConfigurationScheme("BearerAuth") as BearerSecuritySchemeConfiguration).token
+        ).isEqualTo("BEARER1234")
+        assertThat(
+            (config.getOpenAPISecurityConfigurationScheme("ApiKeyAuthHeader") as APIKeySecuritySchemeConfiguration).value
+        ).isEqualTo("API-HEADER-USER")
+        assertThat(
+            (config.getOpenAPISecurityConfigurationScheme("ApiKeyAuthQuery") as APIKeySecuritySchemeConfiguration).value
+        ).isEqualTo("API-QUERY-PARAM-USER")
 
-        assertThat((config.security?.OpenAPI?.securitySchemes?.get("BasicAuth") as BasicAuthSecuritySchemeConfiguration).token).isEqualTo("Abc123")
+        assertThat(
+            (config.getOpenAPISecurityConfigurationScheme("BasicAuth") as BasicAuthSecuritySchemeConfiguration).token
+        ).isEqualTo("Abc123")
 
         assertThat(config.getExamples()).isEqualTo(listOf("folder1/examples", "folder2/examples"))
 
@@ -141,12 +151,22 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(0)).isEqualTo("/heartbeat")
         assertThat(config.getOpenAPICoverageConfigurationExcludedEndpoints()?.get(1)).isEqualTo("/health")
 
-        assertThat((config.security?.OpenAPI?.securitySchemes?.get("oAuth2AuthCode") as OAuth2SecuritySchemeConfiguration).token).isEqualTo("OAUTH1234")
-        assertThat((config.security?.OpenAPI?.securitySchemes?.get("BearerAuth") as BearerSecuritySchemeConfiguration).token).isEqualTo("BEARER1234")
-        assertThat((config.security?.OpenAPI?.securitySchemes?.get("ApiKeyAuthHeader") as APIKeySecuritySchemeConfiguration).value).isEqualTo("API-HEADER-USER")
-        assertThat((config.security?.OpenAPI?.securitySchemes?.get("ApiKeyAuthQuery") as APIKeySecuritySchemeConfiguration).value).isEqualTo("API-QUERY-PARAM-USER")
+        assertThat(
+            (config.getOpenAPISecurityConfigurationScheme("oAuth2AuthCode") as OAuth2SecuritySchemeConfiguration).token
+        ).isEqualTo("OAUTH1234")
+        assertThat(
+            (config.getOpenAPISecurityConfigurationScheme("BearerAuth") as BearerSecuritySchemeConfiguration).token
+        ).isEqualTo("BEARER1234")
+        assertThat(
+            (config.getOpenAPISecurityConfigurationScheme("ApiKeyAuthHeader") as APIKeySecuritySchemeConfiguration).value
+        ).isEqualTo("API-HEADER-USER")
+        assertThat(
+            (config.getOpenAPISecurityConfigurationScheme("ApiKeyAuthQuery") as APIKeySecuritySchemeConfiguration).value
+        ).isEqualTo("API-QUERY-PARAM-USER")
 
-        assertThat((config.security?.OpenAPI?.securitySchemes?.get("BasicAuth") as BasicAuthSecuritySchemeConfiguration).token).isEqualTo("Abc123")
+        assertThat(
+            (config.getOpenAPISecurityConfigurationScheme("BasicAuth") as BasicAuthSecuritySchemeConfiguration).token
+        ).isEqualTo("Abc123")
     }
 
     @Test

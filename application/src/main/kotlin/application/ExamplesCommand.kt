@@ -45,14 +45,16 @@ class ExamplesCommand : Callable<Int> {
     @Option(
         names = ["--filter-name"],
         description = ["Use only APIs with this value in their name"],
-        defaultValue = "\${env:SPECMATIC_FILTER_NAME}"
+        defaultValue = "\${env:SPECMATIC_FILTER_NAME}",
+        hidden = true
     )
     var filterName: String = ""
 
     @Option(
         names = ["--filter-not-name"],
         description = ["Use only APIs which do not have this value in their name"],
-        defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}"
+        defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}",
+        hidden = true
     )
     var filterNotName: String = ""
 
@@ -186,14 +188,16 @@ For example, to filter by HTTP methods:
         @Option(
             names = ["--filter-name"],
             description = ["Validate examples of only APIs with this value in their name"],
-            defaultValue = "\${env:SPECMATIC_FILTER_NAME}"
+            defaultValue = "\${env:SPECMATIC_FILTER_NAME}",
+            hidden = true
         )
         var filterName: String = ""
 
         @Option(
             names = ["--filter-not-name"],
             description = ["Validate examples of only APIs which do not have this value in their name"],
-            defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}"
+            defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}",
+            hidden = true
         )
         var filterNotName: String = ""
 
@@ -423,14 +427,16 @@ For example, to filter by HTTP methods:
         @Option(
             names = ["--filter-name"],
             description = ["Use only APIs with this value in their name"],
-            defaultValue = "\${env:SPECMATIC_FILTER_NAME}"
+            defaultValue = "\${env:SPECMATIC_FILTER_NAME}",
+            hidden = true
         )
         var filterName: String = ""
 
         @Option(
             names = ["--filter-not-name"],
             description = ["Use only APIs which do not have this value in their name"],
-            defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}"
+            defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}",
+            hidden = true
         )
         var filterNotName: String = ""
 

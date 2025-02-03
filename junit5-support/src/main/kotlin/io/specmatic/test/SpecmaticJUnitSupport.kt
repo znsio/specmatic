@@ -5,20 +5,34 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
 import io.specmatic.core.SpecmaticConfig.Companion.getReport
+import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.ignoreLog
 import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.*
-import io.specmatic.core.utilities.*
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.Examples
+import io.specmatic.core.pattern.Row
+import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.getLongValue
+import io.specmatic.core.utilities.contractTestPathsFrom
+import io.specmatic.core.utilities.createIfDoesNotExist
+import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.exitIfAnyDoNotExist
+import io.specmatic.core.utilities.exitWithMessage
+import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.stub.hasOpenApiFileExtension
 import io.specmatic.stub.isOpenAPI
-import io.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.*
+import io.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.InvalidPortError
+import io.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.InvalidURLSchemeError
+import io.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.Success
+import io.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.URIParsingError
 import io.specmatic.test.reports.OpenApiCoverageReportProcessor
 import io.specmatic.test.reports.coverage.Endpoint
 import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
@@ -303,7 +317,7 @@ open class SpecmaticJUnitSupport {
                             it.repository,
                             it.branch,
                             it.specificationPath,
-                            specmaticConfig?.security,
+                            getSecurityConfiguration(specmaticConfig),
                             filterName,
                             filterNotName,
                             specmaticConfig = specmaticConfig,

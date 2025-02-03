@@ -28,6 +28,8 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.io.File
 import java.net.ServerSocket
+import java.nio.file.Files
+import java.nio.file.Paths
 
 private const val testSystemProperty = "THIS_PROPERTY_EXISTS"
 
@@ -398,32 +400,32 @@ internal class UtilitiesTest {
         val specSourcePort = ServerSocket(0).use { it.localPort }
 
         val spec = """
-                openapi: 3.0.1
-                info:
-                  title: Random
-                  version: "1"
-                paths:
-                  /random:
-                    post:
-                      summary: Random
-                      parameters: []
-                      requestBody:
-                        content:
-                          application/json:
-                            schema:
-                              required:
-                              - id
-                              properties:
-                                id:
-                                  type: number
-                      responses:
-                        "200":
-                          description: Random
-                          content:
-                            text/plain:
-                              schema:
-                                type: string
-            """.trimIndent()
+        openapi: 3.0.1
+        info:
+          title: Random
+          version: "1"
+        paths:
+          /random:
+            post:
+              summary: Random
+              parameters: []
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      required:
+                      - id
+                      properties:
+                        id:
+                          type: number
+              responses:
+                "200":
+                  description: Random
+                  content:
+                    text/plain:
+                      schema:
+                        type: string
+    """.trimIndent()
 
         val server = embeddedServer(Netty, port = specSourcePort) {
             routing {
@@ -435,21 +437,20 @@ internal class UtilitiesTest {
 
         server.start(wait = false)
 
-        val specmaticJSON = File("./specmatic.json")
+        val specmaticJSON = Paths.get("./specmatic.json").toAbsolutePath().toFile()
 
         try {
             specmaticJSON.createNewFile()
-
             specmaticJSON.writeText("""
-                {
-                    "sources": [
-                        {
-                            "provider": "web",
-                            "stub": ["http://localhost:$specSourcePort/random.yaml"]
-                        }
-                    ]
-                }
-            """.trimIndent())
+            {
+                "sources": [
+                    {
+                        "provider": "web",
+                        "stub": ["http://localhost:$specSourcePort/random.yaml"]
+                    }
+                ]
+            }
+        """.trimIndent())
 
             val stubPort = ServerSocket(0).use { it.localPort }
 
@@ -459,12 +460,14 @@ internal class UtilitiesTest {
             }
 
         } finally {
-            if(specmaticJSON.exists())
+            if (specmaticJSON.exists()) {
                 specmaticJSON.delete()
+            }
 
-            File(".specmatic/web/localhost/random.yaml").delete()
+            val downloadedSpecPath = Paths.get(".specmatic/web/localhost/random.yaml").toAbsolutePath()
+            Files.deleteIfExists(downloadedSpecPath)
 
-            server.stop(0, 0)
+            server.stop(1000, 10000)
         }
     }
 

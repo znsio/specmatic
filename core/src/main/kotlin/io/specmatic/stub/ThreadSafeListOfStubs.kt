@@ -6,12 +6,26 @@ import io.specmatic.core.Result
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 import io.specmatic.mock.ScenarioStub
+import java.io.File
 
-class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
+class ThreadSafeListOfStubs(
+    private val httpStubs: MutableList<HttpStubData>,
+    private val specToPortMap: Map<String, Int>
+) {
     val size: Int
         get() {
             return httpStubs.size
         }
+
+    fun portToListOfStubsMap(defaultPort: Int): Map<Int, ThreadSafeListOfStubs> {
+        synchronized(this) {
+            return httpStubs.groupBy { File(it.contractPath).canonicalPath }.mapKeys {
+                specToPortMap[it.key] ?: defaultPort
+            }.mapValues {
+                ThreadSafeListOfStubs(it.value as MutableList<HttpStubData>, specToPortMap)
+            }
+        }
+    }
 
     fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {
         synchronized(this) {
@@ -53,7 +67,6 @@ class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
             result is Result.Success
         } ?: return null
 
-        this.remove(queueMock)
         return Pair(queueMock, queueMatchResults)
     }
 

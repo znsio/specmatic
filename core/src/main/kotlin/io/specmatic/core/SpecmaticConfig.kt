@@ -7,10 +7,13 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.VERSION_1
 import io.specmatic.core.config.toSpecmaticConfig
+import io.specmatic.core.config.v3.Consumes
+import io.specmatic.core.config.v3.ConsumesDeserializer
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
@@ -148,6 +151,23 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
+    fun specToStubPortMap(defaultPort: Int, relativeTo: File = File(".")): Map<String, Int> {
+        return sources.flatMap { it.specToStubPortMap(defaultPort, relativeTo).entries }.associate { it.key to it.value }
+    }
+    
+    @JsonIgnore
+    fun stubPorts(defaultPort: Int): List<Int> {
+        return sources.flatMap {
+            it.stub.orEmpty().map { consumes ->
+                when(consumes) {
+                    is Consumes.StringValue -> defaultPort
+                    is Consumes.ObjectValue -> consumes.port
+                }
+            }
+        }.plus(defaultPort).distinct()
+    }
+
+    @JsonIgnore
     fun attributeSelectionQueryParamKey(): String {
         return attributeSelectionPattern.queryParamKey
     }
@@ -275,6 +295,20 @@ data class SpecmaticConfig(
     fun getOpenAPISecurityConfigurationScheme(scheme: String): SecuritySchemeConfiguration? {
         return security?.getOpenAPISecurityScheme(scheme)
     }
+
+    @JsonIgnore
+    fun stubContracts(relativeTo: File = File(".")): List<String> {
+        return sources.flatMap {
+            it.stub.orEmpty().flatMap { stub ->
+                when (stub) {
+                    is Consumes.StringValue -> listOf(stub.value)
+                    is Consumes.ObjectValue -> stub.specs
+                }
+            }
+        }.map {
+            relativeTo.parentFile?.resolve(it)?.canonicalPath ?: File(it).canonicalPath
+        }
+    }
 }
 
 data class TestConfiguration(
@@ -365,9 +399,34 @@ data class Source(
     @field:JsonAlias("provides")
     val test: List<String>? = null,
     @field:JsonAlias("consumes")
-    val stub: List<String>? = null,
+    @JsonDeserialize(using = ConsumesDeserializer::class)
+    val stub: List<Consumes>? = null,
     val directory: String? = null,
-)
+) {
+    fun specsUsedAsStub(): List<String> {
+        return stub.orEmpty().flatMap {
+            when (it) {
+                is Consumes.StringValue -> listOf(it.value)
+                is Consumes.ObjectValue -> it.specs
+            }
+        }
+    }
+
+    fun specToStubPortMap(defaultPort: Int, relativeTo: File = File(".")): Map<String, Int> {
+        return stub.orEmpty().flatMap {
+            when (it) {
+                is Consumes.StringValue -> listOf(it.value.canonicalPath(relativeTo) to defaultPort)
+                is Consumes.ObjectValue -> it.specs.map { specPath ->
+                    specPath.canonicalPath(relativeTo) to it.port
+                }
+            }
+        }.toMap()
+    }
+
+    private fun String.canonicalPath(relativeTo: File): String {
+        return relativeTo.parentFile?.resolve(this)?.canonicalPath ?: File(this).canonicalPath
+    }
+}
 
 data class RepositoryInfo(
     private val provider: String,

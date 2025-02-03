@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
+import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.ignoreLog
@@ -302,7 +303,7 @@ open class SpecmaticJUnitSupport {
                             it.repository,
                             it.branch,
                             it.specificationPath,
-                            specmaticConfig?.security,
+                            getSecurityConfiguration(specmaticConfig),
                             filterName,
                             filterNotName,
                             specmaticConfig = specmaticConfig,

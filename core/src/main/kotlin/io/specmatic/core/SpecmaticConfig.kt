@@ -78,8 +78,8 @@ fun String.loadContract(): Feature {
 
 data class StubConfiguration(
     private val generative: Boolean? = null,
-    private val delayInMilliseconds: Long? = getLongValue(SPECMATIC_STUB_DELAY),
-    private val dictionary: String? = getStringValue(SPECMATIC_STUB_DICTIONARY),
+    private val delayInMilliseconds: Long? = null,
+    private val dictionary: String? = null,
     private val includeMandatoryAndRequestedKeysInResponse: Boolean? = null
 ) {
     fun getGenerative(): Boolean? {
@@ -87,11 +87,11 @@ data class StubConfiguration(
     }
 
     fun getDelayInMilliseconds(): Long? {
-        return delayInMilliseconds
+        return delayInMilliseconds ?: getLongValue(SPECMATIC_STUB_DELAY)
     }
 
     fun getDictionary(): String? {
-        return dictionary
+        return dictionary ?: getStringValue(SPECMATIC_STUB_DICTIONARY)
     }
 
     fun getIncludeMandatoryAndRequestedKeysInResponse(): Boolean? {

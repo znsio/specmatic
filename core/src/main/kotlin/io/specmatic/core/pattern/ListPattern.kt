@@ -155,7 +155,14 @@ data class ListPattern(
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(NullPattern))
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
+        return pattern.negativeBasedOn(row, resolver, config)
+            .map { negativePatternValue ->
+                negativePatternValue.ifValue { pattern ->
+                    ListPattern(pattern) as Pattern
+                }
+            }
+    }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONArray(value, resolver.mismatchMessages)
 

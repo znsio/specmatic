@@ -7,45 +7,22 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.cors.*
+import io.ktor.server.plugins.cors.CORS
+import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
-import io.specmatic.core.APPLICATION_NAME
-import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import io.specmatic.core.ContractAndStubMismatchMessages
-import io.specmatic.core.Feature
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.KeyData
-import io.specmatic.core.MismatchMessages
-import io.specmatic.core.MissingDataException
-import io.specmatic.core.MultiPartContent
-import io.specmatic.core.MultiPartContentValue
-import io.specmatic.core.MultiPartFileValue
-import io.specmatic.core.MultiPartFormDataValue
-import io.specmatic.core.NoBodyValue
-import io.specmatic.core.QueryParameters
-import io.specmatic.core.ResponseBuilder
-import io.specmatic.core.Result
-import io.specmatic.core.Results
-import io.specmatic.core.SPECMATIC_RESULT_HEADER
-import io.specmatic.core.Scenario
-import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.WorkingDirectory
-import io.specmatic.core.listOfExcludedHeaders
-import io.specmatic.core.loadSpecmaticConfig
+import io.specmatic.core.*
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.LogTail
 import io.specmatic.core.log.dontPrintToConsole
 import io.specmatic.core.log.logger
-import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
-import io.specmatic.core.urlDecodePathSegments
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.jsonStringToValueMap
@@ -790,7 +767,7 @@ internal suspend fun respondToKtorHttpResponse(
         call.response.headers.append(name, value)
     }
 
-    val delayInMs = delayInMilliSeconds ?: specmaticConfig?.stub?.delayInMilliseconds
+    val delayInMs = delayInMilliSeconds ?: specmaticConfig?.getStubDelayInMilliseconds()
     if (delayInMs != null) {
         delay(delayInMs)
     }

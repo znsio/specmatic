@@ -14,18 +14,33 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.NumberPattern.Companion.BIG_DECIMAL_INC
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.value.*
+import io.specmatic.core.value.EmptyString
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NumberValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.stub.*
+import io.specmatic.stub.HttpStub
+import io.specmatic.stub.HttpStubData
+import io.specmatic.stub.captureStandardOutput
+import io.specmatic.stub.createStub
+import io.specmatic.stub.createStubFromContracts
+import io.specmatic.stub.stringToMockScenario
 import io.specmatic.test.ScenarioAsTest
 import io.specmatic.test.TestExecutor
 import io.specmatic.trimmedLinesString
 import io.swagger.v3.core.util.Yaml
 import io.swagger.v3.oas.models.OpenAPI
-import org.assertj.core.api.Assertions.*
-import org.junit.jupiter.api.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatCode
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledOnOs
 import org.junit.jupiter.api.condition.OS
 import org.junit.jupiter.api.io.CleanupMode
@@ -342,7 +357,7 @@ Pet:
         val specmaticConfig = mockk<SpecmaticConfig> {
             every { isResponseValueValidationEnabled() } returns true
             every { getIgnoreInlineExamples() } returns false
-            every { stub.dictionary } returns null
+            every { getStubDictionary() } returns null
         }
         val openApiSpecification = OpenApiSpecification(
             openApiFilePath = openApiFile,

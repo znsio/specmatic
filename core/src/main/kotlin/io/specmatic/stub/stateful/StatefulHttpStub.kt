@@ -6,6 +6,8 @@ import io.ktor.server.engine.*
 import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.cors.*
+import io.ktor.server.plugins.cors.CORS
+import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -37,21 +39,7 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.stub.ContractAndRequestsMismatch
-import io.specmatic.stub.ContractStub
-import io.specmatic.stub.CouldNotParseRequest
-import io.specmatic.stub.FoundStubbedResponse
-import io.specmatic.stub.HttpStubResponse
-import io.specmatic.stub.NotStubbed
-import io.specmatic.stub.ResponseDetails
-import io.specmatic.stub.StubbedResponseResult
-import io.specmatic.stub.badRequest
-import io.specmatic.stub.endPointFromHostAndPort
-import io.specmatic.stub.fakeHttpResponse
-import io.specmatic.stub.generateHttpResponseFrom
-import io.specmatic.stub.internalServerError
-import io.specmatic.stub.ktorHttpRequestToHttpRequest
-import io.specmatic.stub.respondToKtorHttpResponse
+import io.specmatic.stub.*
 import io.specmatic.stub.stateful.StubCache.Companion.idValueFor
 import io.specmatic.test.HttpClient
 import java.io.File
@@ -180,7 +168,7 @@ class StatefulHttpStub(
         val updatedResponse = cachedResponse(
             fakeResponse,
             httpRequest,
-            specmaticConfig.getIncludeMandatoryAndRequestedKeysInResponse(),
+            specmaticConfig.getStubIncludeMandatoryAndRequestedKeysInResponse(),
             responses.responseWithStatusCodeStartingWith("404")?.successResponse?.responseBodyPattern
         ) ?: generateHttpResponseFrom(fakeResponse, httpRequest)
 

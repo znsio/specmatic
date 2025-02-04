@@ -45,11 +45,7 @@
             "minThresholdPercentage": 70,
             "maxMissedEndpointsInSpec": 3,
             "enforce": true
-          },
-          "excludedEndpoints": [
-            "/heartbeat",
-            "/health"
-          ]
+          }
         }
       }
     }

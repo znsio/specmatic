@@ -52,10 +52,10 @@ data class ScenarioMetadataFilter(
             scenarioMetadataFilter: ScenarioMetadataFilter,
             toScenarioMetadata: (T) -> ScenarioMetadata
         ): Sequence<T> {
-            val returnItems = items.filter {
+            val filteredItems = items.filter {
                 scenarioMetadataFilter.isSatisfiedBy(toScenarioMetadata(it))
             }
-            return returnItems
+            return filteredItems
         }
     }
 }

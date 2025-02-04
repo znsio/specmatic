@@ -15,6 +15,11 @@ data class HttpPathPattern(
     val pathSegmentPatterns: List<URLPathSegmentPattern>,
     val path: String
 ) {
+    companion object {
+        fun toOpenApiPath(path: String): String {
+            return path.replace("(", "{").replace(""":[a-z,A-Z]*?\)""".toRegex(), "}")
+        }
+    }
     fun encompasses(otherHttpPathPattern: HttpPathPattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         if (this.matches(URI.create(otherHttpPathPattern.path), resolver=thisResolver) is Success)
             return Success()
@@ -168,10 +173,6 @@ data class HttpPathPattern(
 
     override fun toString(): String {
         return path
-    }
-
-    fun toOpenApiPath(): String {
-        return this.path.replace("(", "{").replace(""":[a-z,A-Z]*?\)""".toRegex(), "}")
     }
 
     fun pathParameters(): List<URLPathSegmentPattern> {

@@ -1152,7 +1152,7 @@ data class Feature(
         }
 
         val paths: List<Pair<String, PathItem>> = rawCombinedScenarios.fold(emptyList()) { acc, scenario ->
-            val pathName = scenario.httpRequestPattern.httpPathPattern!!.toOpenApiPath()
+            val pathName = HttpPathPattern.toOpenApiPath(scenario.httpRequestPattern.httpPathPattern!!.path);
 
             val existingPathItem = acc.find { it.first == pathName }?.second
             val pathItem = existingPathItem ?: PathItem()

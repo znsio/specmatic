@@ -260,7 +260,7 @@ open class SpecmaticJUnitSupport {
             return loadExceptionAsTestError(e)
         }
         val testScenarios = try {
-            val (testScenarios, allEndpoints) = when {
+            val (testScenarios) = when {
                 contractPaths != null -> {
                     val testScenariosAndEndpointsPairList = contractPaths.split(",").filter {
                         File(it).extension in CONTRACT_EXTENSIONS
@@ -318,7 +318,8 @@ open class SpecmaticJUnitSupport {
                     Pair(tests, endpoints)
                 }
             }
-            openApiCoverageReportInput.addEndpoints(allEndpoints)
+            val testPaths: List<Endpoint> = testScenarios.map { Endpoint(path = HttpPathPattern.toOpenApiPath(it.toScenarioMetadata().path), method = it.toScenarioMetadata().method, responseStatus = it.toScenarioMetadata().statusCode) }.toList()
+            openApiCoverageReportInput.addEndpoints(testPaths)
 
             val filteredTestsBasedOnName = selectTestsToRun(
                 testScenarios,

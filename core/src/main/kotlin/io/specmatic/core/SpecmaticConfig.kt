@@ -424,6 +424,7 @@ data class Source(
     }
 
     private fun String.canonicalPath(relativeTo: File): String {
+        if (provider == SourceProvider.web) return this
         return relativeTo.parentFile?.resolve(this)?.canonicalPath ?: File(this).canonicalPath
     }
 }

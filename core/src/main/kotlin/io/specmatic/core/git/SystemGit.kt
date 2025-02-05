@@ -8,6 +8,8 @@ import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.ExternalCommand
 import io.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File
+import java.nio.file.Paths
+import kotlin.io.path.absolutePathString
 
 class SystemGit(override val workingDirectory: String = ".", private val prefix: String = "- ", val authCredentials: AuthCredentials = NoGitAuthCredentials) : GitCommand {
     private fun executeWithAuth(vararg command: String): String {
@@ -98,6 +100,8 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
 
         return (committedLocalChanges + uncommittedChanges).map {
             it.split("\t").last()
+        }.filter { it.isNotBlank() }.map {
+            Paths.get("$workingDirectory${File.separator}$it").absolutePathString()
         }.distinct()
     }
 

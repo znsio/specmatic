@@ -5,15 +5,16 @@ import io.specmatic.core.Results
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.logger
-import io.specmatic.core.utilities.exitWithMessage
 import picocli.CommandLine.Option
 import java.io.File
+import java.nio.file.Paths
 import java.util.concurrent.Callable
 import java.util.regex.Pattern
+import kotlin.io.path.absolutePathString
 import kotlin.system.exitProcess
 
 abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
-    private val gitCommand: GitCommand = SystemGit()
+    private lateinit var gitCommand: GitCommand
     private val newLine = System.lineSeparator()
     private var areLocalChangesStashed = false
 
@@ -34,6 +35,13 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     )
     var targetPath: String = ""
 
+    @Option(
+        names = ["--repo-dir"],
+        description = ["Specify the repository directory path where the backward compatibility check should run"],
+        required = false
+    )
+    var repoDir: String = "."
+
     abstract fun checkBackwardCompatibility(oldFeature: IFeature, newFeature: IFeature): Results
     abstract fun File.isValidSpec(): Boolean
     abstract fun getFeatureFromSpecPath(path: String): IFeature
@@ -47,6 +55,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     open fun getUnusedExamples(feature: IFeature): Set<String> = emptySet()
 
     final override fun call() {
+        gitCommand = SystemGit(workingDirectory = Paths.get(repoDir).absolutePathString())
         addShutdownHook()
         val filteredSpecs = getChangedSpecs(logSpecs = true)
         val result = try {
@@ -119,7 +128,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     }
 
     internal fun allSpecFiles(): List<File> {
-        return File(".").walk().toList().filterNot {
+        return File(repoDir).walk().toList().filterNot {
             ".git" in it.path
         }.filter { it.isFile && it.isValidSpec() }
     }

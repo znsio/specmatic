@@ -72,7 +72,7 @@ private fun toConcretePath(
     pathParams: Map<String, String>,
     httpPathPattern: HttpPathPattern
 ): String {
-    val path = pathParams.entries.fold(HttpPathPattern.toOpenApiPath(httpPathPattern.path)) { acc, (key, value) ->
+    val path = pathParams.entries.fold(httpPathPattern.toOpenApiPath()) { acc, (key, value) ->
         acc.replace("{$key}", value)
     }
     return path

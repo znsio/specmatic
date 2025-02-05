@@ -175,6 +175,10 @@ data class HttpPathPattern(
         return path
     }
 
+    fun toOpenApiPath(): String {
+        return toOpenApiPath(this.path)
+    }
+
     fun pathParameters(): List<URLPathSegmentPattern> {
         return pathSegmentPatterns.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
     }

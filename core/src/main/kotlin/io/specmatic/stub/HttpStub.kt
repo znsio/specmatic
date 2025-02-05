@@ -157,7 +157,7 @@ class HttpStub(
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(
         httpStubs = staticHttpStubData(rawHttpStubs),
-        specToPortMap = specmaticConfig.specToStubPortMap(port,  relativeTo = specmaticConfigFile())
+        specToPortMap = specToStubPortMap
     )
 
     private val requestHandlers: MutableList<RequestHandler> = mutableListOf()
@@ -216,7 +216,7 @@ class HttpStub(
     private val threadSafeHttpStubQueue =
         ThreadSafeListOfStubs(
             httpStubs = rawHttpStubs.filter { it.stubToken != null }.reversed().toMutableList(),
-            specToPortMap = specmaticConfig.specToStubPortMap(port, relativeTo = specmaticConfigFile())
+            specToPortMap = specToStubPortMap
         )
 
     private val _logs: MutableList<StubEndpoint> = Collections.synchronizedList(ArrayList())

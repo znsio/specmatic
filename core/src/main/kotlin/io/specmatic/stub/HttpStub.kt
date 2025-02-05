@@ -130,7 +130,7 @@ class HttpStub(
                     mismatchMessages
                 )
 
-                tier1Match.scenario ?: throw ContractException("Expected scenario after stub matched for:${System.lineSeparator()}${stub.toJSON()}")
+                val matchedScenario = tier1Match.scenario ?: throw ContractException("Expected scenario after stub matched for:${System.lineSeparator()}${stub.toJSON()}")
 
                 val stubWithSubstitutionsResolved = stub.resolveDataSubstitutions().map { scenarioStub ->
                     feature.matchingStub(scenarioStub, ContractAndStubMismatchMessages)

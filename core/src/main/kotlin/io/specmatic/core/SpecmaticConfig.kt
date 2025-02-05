@@ -298,16 +298,22 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun stubContracts(relativeTo: File = File(".")): List<String> {
-        return sources.flatMap {
-            it.stub.orEmpty().flatMap { stub ->
+        return sources.flatMap { source ->
+            source.stub.orEmpty().flatMap { stub ->
                 when (stub) {
                     is Consumes.StringValue -> listOf(stub.value)
                     is Consumes.ObjectValue -> stub.specs
                 }
+            }.map { spec ->
+                if (source.provider == SourceProvider.web) spec
+                else spec.canonicalPath(relativeTo)
             }
-        }.map {
-            relativeTo.parentFile?.resolve(it)?.canonicalPath ?: File(it).canonicalPath
         }
+    }
+
+    @JsonIgnore
+    private fun String.canonicalPath(relativeTo: File): String {
+        return relativeTo.parentFile?.resolve(this)?.canonicalPath ?: File(this).canonicalPath
     }
 }
 

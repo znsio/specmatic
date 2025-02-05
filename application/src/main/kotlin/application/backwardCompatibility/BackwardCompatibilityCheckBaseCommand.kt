@@ -37,7 +37,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
 
     @Option(
         names = ["--repo-dir"],
-        description = ["Specify the repository directory path where the backward compatibility check should run"],
+        description = ["Specify the repository directory path where the backward compatibility check should run. If not provided, the check will run in the current working directory."],
         required = false
     )
     var repoDir: String = "."

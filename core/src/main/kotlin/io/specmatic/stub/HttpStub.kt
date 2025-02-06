@@ -11,6 +11,7 @@ import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
+import io.ktor.util.pipeline.*
 import io.specmatic.core.APPLICATION_NAME
 import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.ContractAndStubMismatchMessages
@@ -87,11 +88,11 @@ import kotlin.text.toCharArray
 class HttpStub(
     private val features: List<Feature>,
     rawHttpStubs: List<HttpStubData> = emptyList(),
-    host: String = "127.0.0.1",
-    port: Int = 9000,
+    val host: String = "127.0.0.1",
+    private val port: Int = 9000,
     private val log: (event: LogMessage) -> Unit = dontPrintToConsole,
     private val strictMode: Boolean = false,
-    keyData: KeyData? = null,
+    val keyData: KeyData? = null,
     val passThroughTargetBase: String = "",
     val httpClientFactory: HttpClientFactory = HttpClientFactory(),
     val workingDirectory: WorkingDirectory? = null,
@@ -154,13 +155,20 @@ class HttpStub(
         else
             SpecmaticConfig()
 
-    private val threadSafeHttpStubs = ThreadSafeListOfStubs(staticHttpStubData(rawHttpStubs))
+    private val threadSafeHttpStubs = ThreadSafeListOfStubs(
+        httpStubs = staticHttpStubData(rawHttpStubs),
+        specToPortMap = specToStubPortMap
+    )
 
     private val requestHandlers: MutableList<RequestHandler> = mutableListOf()
 
     //used by graphql / plugins
     fun registerHandler(requestHandler: RequestHandler) {
         requestHandlers.add(requestHandler)
+    }
+
+    private fun specmaticConfigFile(): File {
+        return if(specmaticConfigPath == null) File(".") else File(specmaticConfigPath)
     }
 
     private fun staticHttpStubData(rawHttpStubs: List<HttpStubData>): MutableList<HttpStubData> {
@@ -206,7 +214,10 @@ class HttpStub(
     }
 
     private val threadSafeHttpStubQueue =
-        ThreadSafeListOfStubs(rawHttpStubs.filter { it.stubToken != null }.reversed().toMutableList())
+        ThreadSafeListOfStubs(
+            httpStubs = rawHttpStubs.filter { it.stubToken != null }.reversed().toMutableList(),
+            specToPortMap = specToStubPortMap
+        )
 
     private val _logs: MutableList<StubEndpoint> = Collections.synchronizedList(ArrayList())
     private val _allEndpoints: List<StubEndpoint> = extractALlEndpoints()
@@ -218,6 +229,11 @@ class HttpStub(
     val stubCount: Int
         get() {
             return threadSafeHttpStubs.size
+        }
+
+    val specToStubPortMap: Map<String, Int>
+        get() {
+            return specmaticConfig.specToStubPortMap(port, relativeTo = specmaticConfigFile())
         }
 
     val transientStubCount: Int
@@ -248,41 +264,23 @@ class HttpStub(
     private val environment = applicationEngineEnvironment {
         module {
             install(DoubleReceive)
-
-            install(CORS) {
-                allowMethod(HttpMethod.Options)
-                allowMethod(HttpMethod.Get)
-                allowMethod(HttpMethod.Post)
-                allowMethod(HttpMethod.Put)
-                allowMethod(HttpMethod.Delete)
-                allowMethod(HttpMethod.Patch)
-
-                allowHeaders {
-                    true
-                }
-
-                allowCredentials = true
-                allowNonSimpleContentTypes = true
-
-                anyHost()
-            }
+            configure(CORS)
 
             intercept(ApplicationCallPipeline.Call) {
-                val httpLogMessage = HttpLogMessage()
+                val httpLogMessage = HttpLogMessage(targetServer = "port '${call.request.local.localPort}'")
 
                 try {
-                    val rawHttpRequest = ktorHttpRequestToHttpRequest(call)
-                    httpLogMessage.addRequest(rawHttpRequest)
-
-                    if(rawHttpRequest.isHealthCheckRequest()) return@intercept
+                    val rawHttpRequest = ktorHttpRequestToHttpRequest(call).also {
+                        httpLogMessage.addRequest(it)
+                        if(it.isHealthCheckRequest()) return@intercept
+                    }
 
                     val httpRequest = requestInterceptors.fold(rawHttpRequest) { request, requestInterceptor ->
                         requestInterceptor.interceptRequest(request) ?: request
                     }
 
-                    val responseFromRequestHandler = requestHandlers.map {
-                        it.handleRequest(httpRequest)
-                    }.filterNotNull().firstOrNull()
+                    val responseFromRequestHandler =
+                        requestHandlers.firstNotNullOfOrNull { it.handleRequest(httpRequest) }
 
                     val httpStubResponse: HttpStubResponse = when {
                         isFetchLogRequest(httpRequest) -> handleFetchLogRequest()
@@ -293,7 +291,7 @@ class HttpStub(
                         isSseExpectationCreation(httpRequest) -> handleSseExpectationCreationRequest(httpRequest)
                         isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
                         isFlushTransientStubsRequest(httpRequest) -> handleFlushTransientStubsRequest(httpRequest)
-                        else -> serveStubResponse(httpRequest)
+                        else -> serveStubResponse(httpRequest, port = call.request.local.localPort, defaultPort = port)
                     }
 
                     val httpResponse = responseInterceptors.fold(httpStubResponse.response) { response, responseInterceptor ->
@@ -301,36 +299,7 @@ class HttpStub(
                     }
 
                     if (httpRequest.path!!.startsWith("""/features/default""")) {
-                        logger.log("Incoming subscription on URL path ${httpRequest.path} ")
-                        val channel: Channel<SseEvent> = Channel(10, BufferOverflow.DROP_OLDEST)
-                        val broadcastChannel: BroadcastChannel<SseEvent> = channel.broadcast()
-                        broadcastChannels.add(broadcastChannel)
-
-                        val events: ReceiveChannel<SseEvent> = broadcastChannel.openSubscription()
-
-                        try {
-                            call.respondSse(events, sseBuffer, httpRequest)
-
-                            broadcastChannels.remove(broadcastChannel)
-
-                            close(
-                                events,
-                                channel,
-                                "Events handle was already closed after handling all events",
-                                "Channel was already handled after handling all events"
-                            )
-                        } catch (e: Throwable) {
-                            logger.log(e, "Exception in the SSE module")
-
-                            broadcastChannels.remove(broadcastChannel)
-
-                            close(
-                                events,
-                                channel,
-                                "Events handle threw an exception on closing",
-                                "Channel through an exception on closing"
-                            )
-                        }
+                        handleSse(httpRequest, this@HttpStub, this)
                     } else {
                         val updatedHttpStubResponse = httpStubResponse.copy(response = httpResponse)
                         respondToKtorHttpResponse(call, updatedHttpStubResponse.response, updatedHttpStubResponse.delayInMilliSeconds, specmaticConfig)
@@ -360,38 +329,113 @@ class HttpStub(
             configureHealthCheckModule()
         }
 
-        when (keyData) {
-            null -> connector {
-                this.host = host
-                this.port = port
-            }
+        configureHostPorts()
+    }
 
-            else -> sslConnector(
-                keyStore = keyData.keyStore,
-                keyAlias = keyData.keyAlias,
-                privateKeyPassword = { keyData.keyPassword.toCharArray() },
-                keyStorePassword = { keyData.keyPassword.toCharArray() }) {
-                this.host = host
-                this.port = port
-            }
+    private suspend fun handleSse(
+        httpRequest: HttpRequest,
+        httpStub: HttpStub,
+        pipelineContext: PipelineContext<Unit, ApplicationCall>
+    ) {
+        logger.log("Incoming subscription on URL path ${httpRequest.path} ")
+        val channel: Channel<SseEvent> = Channel(10, BufferOverflow.DROP_OLDEST)
+        val broadcastChannel: BroadcastChannel<SseEvent> = channel.broadcast()
+        httpStub.broadcastChannels.add(broadcastChannel)
+
+        val events: ReceiveChannel<SseEvent> = broadcastChannel.openSubscription()
+
+        try {
+            pipelineContext.call.respondSse(events, sseBuffer, httpRequest)
+
+            httpStub.broadcastChannels.remove(broadcastChannel)
+
+            close(
+                events,
+                channel,
+                "Events handle was already closed after handling all events",
+                "Channel was already handled after handling all events"
+            )
+        } catch (e: Throwable) {
+            logger.log(e, "Exception in the SSE module")
+
+            httpStub.broadcastChannels.remove(broadcastChannel)
+
+            close(
+                events,
+                channel,
+                "Events handle threw an exception on closing",
+                "Channel through an exception on closing"
+            )
         }
     }
 
-    fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse {
-        val result: StubbedResponseResult = getHttpResponse(
-            httpRequest,
-            features,
-            threadSafeHttpStubs,
-            threadSafeHttpStubQueue,
-            strictMode,
-            passThroughTargetBase,
-            httpClientFactory,
-            specmaticConfig,
-        )
+    private fun ApplicationEngineEnvironmentBuilder.configureHostPorts() {
+        when (keyData) {
+            null -> connectors.addAll(
+                specmaticConfig.stubPorts(this@HttpStub.port).map { stubPort ->
+                    EngineConnectorBuilder().also {
+                        it.host = host
+                        it.port = stubPort
+                    }
+                }
+            )
 
-        result.log(_logs, httpRequest)
+            else -> connectors.addAll(
+                specmaticConfig.stubPorts(this@HttpStub.port).map { stubPort ->
+                    EngineSSLConnectorBuilder(
+                        keyStore = keyData.keyStore,
+                        keyAlias = keyData.keyAlias,
+                        privateKeyPassword = { keyData.keyPassword.toCharArray() },
+                        keyStorePassword = { keyData.keyPassword.toCharArray() }
+                    ).also {
+                        it.host = host
+                        it.port = stubPort
+                    }
+                }
+            )
+        }
+    }
 
-        return result.response
+    private fun Application.configure(CORS: ApplicationPlugin<CORSConfig>) {
+        install(CORS) {
+            allowMethod(HttpMethod.Options)
+            allowMethod(HttpMethod.Get)
+            allowMethod(HttpMethod.Post)
+            allowMethod(HttpMethod.Put)
+            allowMethod(HttpMethod.Delete)
+            allowMethod(HttpMethod.Patch)
+
+            allowHeaders {
+                true
+            }
+
+            allowCredentials = true
+            allowNonSimpleContentTypes = true
+
+            anyHost()
+        }
+    }
+
+    fun serveStubResponse(
+        httpRequest: HttpRequest,
+        port: Int,
+        defaultPort: Int
+    ): HttpStubResponse {
+        return getHttpResponse(
+            httpRequest = httpRequest,
+            features = features,
+            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(defaultPort, port) ?: threadSafeHttpStubs,
+            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(defaultPort, port) ?: threadSafeHttpStubQueue,
+            strictMode = strictMode,
+            passThroughTargetBase = passThroughTargetBase,
+            httpClientFactory = httpClientFactory,
+            specmaticConfig = specmaticConfig,
+        ).also {
+            if(it is FoundStubbedResponse) {
+                it.response.mock?.let { mock -> threadSafeHttpStubQueue.remove(mock) }
+            }
+            it.log(_logs, httpRequest)
+        }.response
     }
 
     private fun handleFlushTransientStubsRequest(httpRequest: HttpRequest): HttpStubResponse {
@@ -890,7 +934,8 @@ private fun stubbedResponse(
             it.contractPath,
             examplePath = it.examplePath,
             feature = mock.feature,
-            scenario = mock.scenario
+            scenario = mock.scenario,
+            mock = mock
         ) to it
     }
 

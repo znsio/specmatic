@@ -1,0 +1,54 @@
+openapi: 3.0.3
+info:
+  title: Exported Product API
+  version: 1.0.0
+paths:
+  /products:
+    get:
+      summary: Get exported products
+      description: Retrieve a list of exported products along with their destination country.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    destinationCountry:
+                      type: string
+    post:
+      summary: Add a new product
+      description: Create a new product entry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                category:
+                  type: string
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  category:
+                    type: string
+

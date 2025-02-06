@@ -79,7 +79,7 @@ data class SpecmaticConfigV3(
                 workflow = config.workflow,
                 ignoreInlineExamples = SpecmaticConfig.getIgnoreInlineExamples(config),
                 additionalExampleParamsFilePath = config.getAdditionalExampleParamsFilePath(),
-                attributeSelectionPattern = config.attributeSelectionPattern,
+                attributeSelectionPattern = SpecmaticConfig.getAttributeSelectionPattern(config),
                 allPatternsMandatory = SpecmaticConfig.getAllPatternsMandatory(config),
                 defaultPatternValues = config.getDefaultPatternValues()
             )

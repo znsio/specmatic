@@ -147,10 +147,10 @@ data class SpecmaticConfig(
     private val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     private val examples: List<String>? = null,
     val workflow: WorkflowConfiguration? = null,
-    val ignoreInlineExamples: Boolean? = null,
+    private val ignoreInlineExamples: Boolean? = null,
     private val additionalExampleParamsFilePath: String? = null,
     private val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
-    val allPatternsMandatory: Boolean? = null,
+    private val allPatternsMandatory: Boolean? = null,
     private val defaultPatternValues: Map<String, Any> = emptyMap(),
     private val version: SpecmaticConfigVersion? = null
 ) {
@@ -173,6 +173,16 @@ data class SpecmaticConfig(
         @JsonIgnore
         fun getVirtualServiceConfiguration(specmaticConfig: SpecmaticConfig): VirtualServiceConfiguration {
             return specmaticConfig.virtualService
+        }
+
+        @JsonIgnore
+        fun getAllPatternsMandatory(specmaticConfig: SpecmaticConfig): Boolean? {
+            return specmaticConfig.allPatternsMandatory
+        }
+
+        @JsonIgnore
+        fun getIgnoreInlineExamples(specmaticConfig: SpecmaticConfig): Boolean? {
+            return specmaticConfig.ignoreInlineExamples
         }
 
         @JsonIgnore

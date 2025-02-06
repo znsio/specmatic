@@ -3,6 +3,7 @@ package io.specmatic.core.config.v2
 import com.fasterxml.jackson.annotation.JsonAlias
 import io.specmatic.core.*
 import io.specmatic.core.SpecmaticConfig.Companion.getAttributeSelectionPattern
+import io.specmatic.core.SpecmaticConfig.Companion.getAllPatternsMandatory
 import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
@@ -79,10 +80,10 @@ data class SpecmaticConfigV2(
                 virtualService = getVirtualServiceConfiguration(config),
                 examples = config.getExamples(),
                 workflow = config.workflow,
-                ignoreInlineExamples = config.ignoreInlineExamples,
+                ignoreInlineExamples = SpecmaticConfig.getIgnoreInlineExamples(config),
                 additionalExampleParamsFilePath = config.getAdditionalExampleParamsFilePath(),
                 attributeSelectionPattern = getAttributeSelectionPattern(config),
-                allPatternsMandatory = config.allPatternsMandatory,
+                allPatternsMandatory = getAllPatternsMandatory(config),
                 defaultPatternValues = config.getDefaultPatternValues()
             )
         }

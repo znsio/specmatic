@@ -435,4 +435,54 @@ internal class SpecmaticConfigAllTest {
         assertThat(configV2.attributeSelectionPattern.getDefaultFields()).containsExactly("description", "url")
         assertThat(configV2.attributeSelectionPattern.getQueryParamKey()).isEqualTo("web")
     }
+
+    @Test
+    fun `should deserialize SpecmaticConfig successfully when AllPatternsMandatory is present`(@TempDir tempDir: File) {
+        val configFile = tempDir.resolve("specmatic.yaml")
+        val configYaml = """
+            allPatternsMandatory: true
+        """.trimIndent()
+        configFile.writeText(configYaml)
+
+        val specmaticConfig = configFile.toSpecmaticConfig()
+
+        assertThat(specmaticConfig.getAllPatternsMandatory()).isEqualTo(true)
+    }
+
+    @Test
+    fun `should serialize SpecmaticConfig successfully when AllPatternsMandatory key is present`() {
+        val configYaml = """
+            allPatternsMandatory: true
+        """.trimIndent()
+
+        val config = objectMapper.readValue(configYaml, SpecmaticConfigV1::class.java).transform()
+        val configV2 = SpecmaticConfigV2.loadFrom(config) as SpecmaticConfigV2
+
+        assertThat(configV2.allPatternsMandatory).isTrue()
+    }
+
+    @Test
+    fun `should deserialize SpecmaticConfig successfully when IgnoreInlineExamples key is present`(@TempDir tempDir: File) {
+        val configFile = tempDir.resolve("specmatic.yaml")
+        val configYaml = """
+            ignoreInlineExamples: true
+        """.trimIndent()
+        configFile.writeText(configYaml)
+
+        val specmaticConfig = configFile.toSpecmaticConfig()
+
+        assertThat(specmaticConfig.getIgnoreInlineExamples()).isTrue()
+    }
+
+    @Test
+    fun `should serialize SpecmaticConfig successfully when IgnoreInlineExamples key is present`() {
+        val configYaml = """
+            ignoreInlineExamples: true
+        """.trimIndent()
+
+        val config = objectMapper.readValue(configYaml, SpecmaticConfigV1::class.java).transform()
+        val configV2 = SpecmaticConfigV2.loadFrom(config) as SpecmaticConfigV2
+
+        assertThat(configV2.ignoreInlineExamples).isTrue()
+    }
 }

@@ -1181,6 +1181,7 @@ class GenerativeTests {
     fun `the flag SPECMATIC_GENERATIVE_TESTS should be used`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResiliencyTestingEnabled() } returns true
+            every { getWorkflowDetails() } returns null
         }
         mockkObject(SpecmaticConfig.Companion)
         every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
@@ -1269,6 +1270,7 @@ class GenerativeTests {
             val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
                 every { isResiliencyTestingEnabled() } returns true
                 every { isOnlyPositiveTestingEnabled() } returns true
+                every { getWorkflowDetails() } returns null
             }
             mockkObject(SpecmaticConfig.Companion)
             every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()

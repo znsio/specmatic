@@ -24,6 +24,7 @@ class ExtensibleSchemaTest {
     fun `when extensible schema is enabled, a JSON request object with unexpected keys should be accepted when running tests`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isExtensibleSchemaEnabled() } returns true
+            every { getWorkflowDetails() } returns null
         }
         mockkObject(SpecmaticConfig.Companion)
         every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
@@ -82,6 +83,7 @@ paths:
     fun `when extensible schema is enabled, a JSON response object with unexpected keys should be accepted when running tests`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isExtensibleSchemaEnabled() } returns true
+            every { getWorkflowDetails() } returns null
         }
         mockkObject(SpecmaticConfig.Companion)
         every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()

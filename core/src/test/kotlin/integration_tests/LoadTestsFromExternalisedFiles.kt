@@ -343,6 +343,7 @@ class LoadTestsFromExternalisedFiles {
     fun `tests from external examples validate response values when the VALIDATE_RESPONSE_VALUE flag is true`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResponseValueValidationEnabled() } returns true
+            every { getWorkflowDetails() } returns null
         }
         mockkObject(SpecmaticConfig.Companion)
         every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
@@ -376,6 +377,7 @@ class LoadTestsFromExternalisedFiles {
     fun `tests from external examples reject responses with values different from the example when the VALIDATE_RESPONSE_VALUE flag is true`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResponseValueValidationEnabled() } returns true
+            every { getWorkflowDetails() } returns null
         }
         mockkObject(SpecmaticConfig.Companion)
         every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()

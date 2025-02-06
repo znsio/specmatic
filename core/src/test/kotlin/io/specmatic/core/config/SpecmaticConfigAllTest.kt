@@ -384,7 +384,7 @@ internal class SpecmaticConfigAllTest {
     }
 
     @Test
-    fun `should serialize SpecmaticConfig successfully when VirtualService key is present`() {
+    fun `should convert config with VirtualService from v1 to v2`() {
         val configYaml = """
             virtualService:
                 nonPatchableKeys:
@@ -420,7 +420,7 @@ internal class SpecmaticConfigAllTest {
     }
 
     @Test
-    fun `should serialize SpecmaticConfig successfully when AttributeSelectionPattern key is present`() {
+    fun `should convert config with AttributeSelectionPattern from v1 to v2`() {
         val configYaml = """
             attributeSelectionPattern:
                 default_fields:

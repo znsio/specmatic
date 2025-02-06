@@ -4,9 +4,7 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import io.specmatic.core.Source
-import io.specmatic.core.SourceProvider
-import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.*
 import io.specmatic.core.config.v1.SpecmaticConfigV1
 import io.specmatic.core.config.v2.ContractConfig
 import io.specmatic.core.config.v2.ContractConfig.FileSystemContractSource
@@ -15,7 +13,6 @@ import io.specmatic.core.config.v2.SpecmaticConfigV2
 import io.specmatic.core.config.v3.Consumes
 import io.specmatic.core.config.v3.ContractConfigV2
 import io.specmatic.core.config.v3.SpecmaticConfigV3
-import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSON
 import org.assertj.core.api.Assertions.assertThat
@@ -450,7 +447,7 @@ internal class SpecmaticConfigAllTest {
     }
 
     @Test
-    fun `should serialize SpecmaticConfig successfully when AllPatternsMandatory key is present`() {
+    fun `should convert config from v1 to v2 when AllPatternsMandatory key is present`() {
         val configYaml = """
             allPatternsMandatory: true
         """.trimIndent()
@@ -475,7 +472,7 @@ internal class SpecmaticConfigAllTest {
     }
 
     @Test
-    fun `should serialize SpecmaticConfig successfully when IgnoreInlineExamples key is present`() {
+    fun `should convert config from v1 to v2 when IgnoreInlineExamples key is present`() {
         val configYaml = """
             ignoreInlineExamples: true
         """.trimIndent()
@@ -484,5 +481,50 @@ internal class SpecmaticConfigAllTest {
         val configV2 = SpecmaticConfigV2.loadFrom(config) as SpecmaticConfigV2
 
         assertThat(configV2.ignoreInlineExamples).isTrue()
+    }
+
+    @Test
+    fun `should deserialize test configuration in SpecmaticConfig successfully key`(@TempDir tempDir: File) {
+        val configFile = tempDir.resolve("specmatic.yaml")
+        val configYaml = """
+            test:
+                resiliencyTests:
+                    enable: all
+                validateResponseValues: true
+                allowExtensibleSchema: true
+                timeoutInMilliseconds: 10
+        """.trimIndent()
+        configFile.writeText(configYaml)
+
+        val specmaticConfig = configFile.toSpecmaticConfig()
+
+        specmaticConfig.apply {
+            assertThat(isResiliencyTestingEnabled()).isTrue()
+            assertThat(isResponseValueValidationEnabled()).isTrue()
+            assertThat(isExtensibleSchemaEnabled()).isTrue()
+            assertThat(getTestTimeoutInMilliseconds()).isEqualTo(10)
+        }
+    }
+
+    @Test
+    fun `should convert config from v1 to v2 when test configuration is present`() {
+        val configYaml = """
+            test:
+                resiliencyTests:
+                    enable: all
+                validateResponseValues: true
+                allowExtensibleSchema: true
+                timeoutInMilliseconds: 10
+        """.trimIndent()
+
+        val configFromV1 = objectMapper.readValue(configYaml, SpecmaticConfigV1::class.java).transform()
+        val configV2 = SpecmaticConfigV2.loadFrom(configFromV1) as SpecmaticConfigV2
+
+        configV2.test!!.apply {
+            assertThat(getResiliencyTests().getEnableTestSuite()).isEqualTo(ResiliencyTestSuite.all)
+            assertThat(getValidateResponseValues()).isTrue()
+            assertThat(getAllowExtensibleSchema()).isTrue()
+            assertThat(getTimeoutInMilliseconds()).isEqualTo(10)
+        }
     }
 }

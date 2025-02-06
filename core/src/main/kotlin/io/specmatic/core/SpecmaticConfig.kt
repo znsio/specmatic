@@ -230,12 +230,12 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun isResiliencyTestingEnabled(): Boolean {
-        return (getResiliencyTestsEnable() != ResiliencyTestSuite.none)
+        return (getResiliencyTestsEnabled() != ResiliencyTestSuite.none)
     }
 
     @JsonIgnore
     fun isOnlyPositiveTestingEnabled(): Boolean {
-        return (getResiliencyTestsEnable() == ResiliencyTestSuite.positiveOnly)
+        return (getResiliencyTestsEnabled() == ResiliencyTestSuite.positiveOnly)
     }
 
     @JsonIgnore
@@ -254,7 +254,7 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun getResiliencyTestsEnable(): ResiliencyTestSuite {
+    fun getResiliencyTestsEnabled(): ResiliencyTestSuite {
         return test?.getResiliencyTests()?.getEnableTestSuite() ?: ResiliencyTestSuite.none
     }
 

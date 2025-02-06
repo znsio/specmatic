@@ -88,7 +88,7 @@ import kotlin.text.toCharArray
 class HttpStub(
     private val features: List<Feature>,
     rawHttpStubs: List<HttpStubData> = emptyList(),
-    host: String = "127.0.0.1",
+    val host: String = "127.0.0.1",
     private val port: Int = 9000,
     private val log: (event: LogMessage) -> Unit = dontPrintToConsole,
     private val strictMode: Boolean = false,
@@ -329,7 +329,7 @@ class HttpStub(
             configureHealthCheckModule()
         }
 
-        configureHostPorts(keyData, host, port)
+        configureHostPorts()
     }
 
     private suspend fun handleSse(
@@ -369,11 +369,7 @@ class HttpStub(
         }
     }
 
-    private fun ApplicationEngineEnvironmentBuilder.configureHostPorts(
-        keyData: KeyData?,
-        host: String,
-        port: Int
-    ) {
+    private fun ApplicationEngineEnvironmentBuilder.configureHostPorts() {
         when (keyData) {
             null -> connectors.addAll(
                 specmaticConfig.stubPorts(this@HttpStub.port).map { stubPort ->
@@ -384,14 +380,19 @@ class HttpStub(
                 }
             )
 
-            else -> sslConnector(
-                keyStore = keyData.keyStore,
-                keyAlias = keyData.keyAlias,
-                privateKeyPassword = { keyData.keyPassword.toCharArray() },
-                keyStorePassword = { keyData.keyPassword.toCharArray() }) {
-                this.host = host
-                this.port = port
-            }
+            else -> connectors.addAll(
+                specmaticConfig.stubPorts(this@HttpStub.port).map { stubPort ->
+                    EngineSSLConnectorBuilder(
+                        keyStore = keyData.keyStore,
+                        keyAlias = keyData.keyAlias,
+                        privateKeyPassword = { keyData.keyPassword.toCharArray() },
+                        keyStorePassword = { keyData.keyPassword.toCharArray() }
+                    ).also {
+                        it.host = host
+                        it.port = stubPort
+                    }
+                }
+            )
         }
     }
 

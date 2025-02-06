@@ -7,10 +7,13 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.VERSION_1
 import io.specmatic.core.config.toSpecmaticConfig
+import io.specmatic.core.config.v3.Consumes
+import io.specmatic.core.config.v3.ConsumesDeserializer
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
@@ -77,15 +80,35 @@ fun String.loadContract(): Feature {
 }
 
 data class StubConfiguration(
-    val generative: Boolean? = null,
-    val delayInMilliseconds: Long? = getLongValue(SPECMATIC_STUB_DELAY),
-    val dictionary: String? = getStringValue(SPECMATIC_STUB_DICTIONARY),
-    val includeMandatoryAndRequestedKeysInResponse: Boolean? = null
-)
+    private val generative: Boolean? = null,
+    private val delayInMilliseconds: Long? = null,
+    private val dictionary: String? = null,
+    private val includeMandatoryAndRequestedKeysInResponse: Boolean? = null
+) {
+    fun getGenerative(): Boolean? {
+        return generative
+    }
+
+    fun getDelayInMilliseconds(): Long? {
+        return delayInMilliseconds ?: getLongValue(SPECMATIC_STUB_DELAY)
+    }
+
+    fun getDictionary(): String? {
+        return dictionary ?: getStringValue(SPECMATIC_STUB_DICTIONARY)
+    }
+
+    fun getIncludeMandatoryAndRequestedKeysInResponse(): Boolean? {
+        return includeMandatoryAndRequestedKeysInResponse
+    }
+}
 
 data class VirtualServiceConfiguration(
-    val nonPatchableKeys: Set<String> = emptySet()
-)
+    private val nonPatchableKeys: Set<String> = emptySet()
+) {
+    fun getNonPatchableKeys(): Set<String> {
+        return nonPatchableKeys
+    }
+}
 
 data class WorkflowIDOperation(
     val extract: String? = null,
@@ -100,18 +123,35 @@ data class WorkflowConfiguration(
     }
 }
 
+interface AttributeSelectionPatternDetails {
+    fun getDefaultFields(): List<String>
+    fun getQueryParamKey(): String
+
+    companion object {
+        val default: AttributeSelectionPatternDetails = AttributeSelectionPattern()
+    }
+}
+
 data class AttributeSelectionPattern(
     @field:JsonAlias("default_fields")
-    val defaultFields: List<String> = readEnvVarOrProperty(
-        ATTRIBUTE_SELECTION_DEFAULT_FIELDS,
-        ATTRIBUTE_SELECTION_DEFAULT_FIELDS
-    ).orEmpty().split(",").filter { it.isNotBlank() },
+    private val defaultFields: List<String>? = null,
     @field:JsonAlias("query_param_key")
-    val queryParamKey: String = readEnvVarOrProperty(
-        ATTRIBUTE_SELECTION_QUERY_PARAM_KEY,
-        ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
-    ).orEmpty()
-)
+    private val queryParamKey: String? = null
+) : AttributeSelectionPatternDetails {
+    override fun getDefaultFields(): List<String> {
+        return defaultFields ?: readEnvVarOrProperty(
+            ATTRIBUTE_SELECTION_DEFAULT_FIELDS,
+            ATTRIBUTE_SELECTION_DEFAULT_FIELDS
+        ).orEmpty().split(",").filter { it.isNotBlank() }
+    }
+
+    override fun getQueryParamKey(): String {
+        return queryParamKey ?: readEnvVarOrProperty(
+            ATTRIBUTE_SELECTION_QUERY_PARAM_KEY,
+            ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
+        ).orEmpty()
+    }
+}
 
 data class SpecmaticConfig(
     val sources: List<Source> = emptyList(),
@@ -122,15 +162,15 @@ data class SpecmaticConfig(
     private val repository: RepositoryInfo? = null,
     val report: ReportConfiguration? = null,
     private val security: SecurityConfiguration? = null,
-    val test: TestConfiguration? = TestConfiguration(),
-    val stub: StubConfiguration = StubConfiguration(),
-    val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
+    private val test: TestConfiguration? = TestConfiguration(),
+    private val stub: StubConfiguration = StubConfiguration(),
+    private val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     private val examples: List<String>? = null,
     private val workflow: WorkflowConfiguration? = null,
-    val ignoreInlineExamples: Boolean? = null,
+    private val ignoreInlineExamples: Boolean? = null,
     private val additionalExampleParamsFilePath: String? = null,
-    val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
-    val allPatternsMandatory: Boolean? = null,
+    private val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
+    private val allPatternsMandatory: Boolean? = null,
     private val defaultPatternValues: Map<String, Any> = emptyMap(),
     private val version: SpecmaticConfigVersion? = null
 ) {
@@ -154,31 +194,83 @@ data class SpecmaticConfig(
         fun getWorkflowConfiguration(specmaticConfig: SpecmaticConfig): WorkflowConfiguration? {
             return specmaticConfig.workflow
         }
+
+        @JsonIgnore
+        fun getTestConfiguration(specmaticConfig: SpecmaticConfig): TestConfiguration? {
+            return specmaticConfig.test
+        }
+
+        @JsonIgnore
+        fun getVirtualServiceConfiguration(specmaticConfig: SpecmaticConfig): VirtualServiceConfiguration {
+            return specmaticConfig.virtualService
+        }
+
+        @JsonIgnore
+        fun getAllPatternsMandatory(specmaticConfig: SpecmaticConfig): Boolean? {
+            return specmaticConfig.allPatternsMandatory
+        }
+
+        @JsonIgnore
+        fun getIgnoreInlineExamples(specmaticConfig: SpecmaticConfig): Boolean? {
+            return specmaticConfig.ignoreInlineExamples
+        }
+
+        @JsonIgnore
+        fun getAttributeSelectionPattern(specmaticConfig: SpecmaticConfig): AttributeSelectionPattern {
+            return specmaticConfig.attributeSelectionPattern
+        }
+
+        @JsonIgnore
+        fun getStubConfiguration(specmaticConfig: SpecmaticConfig): StubConfiguration {
+            return specmaticConfig.stub
+        }
+    }
+
+    @JsonIgnore
+    fun getAttributeSelectionPattern(): AttributeSelectionPatternDetails {
+        return attributeSelectionPattern
+    }
+
+    @JsonIgnore
+    fun specToStubPortMap(defaultPort: Int, relativeTo: File = File(".")): Map<String, Int> {
+        return sources.flatMap { it.specToStubPortMap(defaultPort, relativeTo).entries }.associate { it.key to it.value }
+    }
+
+    @JsonIgnore
+    fun stubPorts(defaultPort: Int): List<Int> {
+        return sources.flatMap {
+            it.stub.orEmpty().map { consumes ->
+                when(consumes) {
+                    is Consumes.StringValue -> defaultPort
+                    is Consumes.ObjectValue -> consumes.port
+                }
+            }
+        }.plus(defaultPort).distinct()
     }
 
     @JsonIgnore
     fun attributeSelectionQueryParamKey(): String {
-        return attributeSelectionPattern.queryParamKey
+        return attributeSelectionPattern.getQueryParamKey()
     }
 
     @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {
-        return test?.allowExtensibleSchema ?: getBooleanValue(EXTENSIBLE_SCHEMA)
+        return test?.getAllowExtensibleSchema() ?: getBooleanValue(EXTENSIBLE_SCHEMA)
     }
 
     @JsonIgnore
     fun isResiliencyTestingEnabled(): Boolean {
-        return (getResiliencyTestsEnable() != ResiliencyTestSuite.none)
+        return (getResiliencyTestsEnabled() != ResiliencyTestSuite.none)
     }
 
     @JsonIgnore
     fun isOnlyPositiveTestingEnabled(): Boolean {
-        return (getResiliencyTestsEnable() == ResiliencyTestSuite.positiveOnly)
+        return (getResiliencyTestsEnabled() == ResiliencyTestSuite.positiveOnly)
     }
 
     @JsonIgnore
     fun isResponseValueValidationEnabled(): Boolean {
-        return test?.validateResponseValues ?: getBooleanValue(VALIDATE_RESPONSE_VALUE)
+        return test?.getValidateResponseValues() ?: getBooleanValue(VALIDATE_RESPONSE_VALUE)
     }
 
     @JsonIgnore
@@ -187,18 +279,44 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun getIncludeMandatoryAndRequestedKeysInResponse(): Boolean {
-        return stub.includeMandatoryAndRequestedKeysInResponse ?: true
+    fun getResiliencyTestsEnabled(): ResiliencyTestSuite {
+        return test?.getResiliencyTests()?.getEnableTestSuite() ?: ResiliencyTestSuite.none
     }
 
     @JsonIgnore
-    fun getResiliencyTestsEnable(): ResiliencyTestSuite {
-        return test?.resiliencyTests?.enable ?: ResiliencyTestSuite.none
+    fun getTestTimeoutInMilliseconds(): Long? {
+        return test?.getTimeoutInMilliseconds()
+    }
+
+    @JsonIgnore
+    fun copyResiliencyTestsConfig(onlyPositive: Boolean): SpecmaticConfig {
+        return this.copy(
+            test = test?.copy(
+                resiliencyTests = test.getResiliencyTests().copy(
+                    enable = if (onlyPositive) ResiliencyTestSuite.positiveOnly else ResiliencyTestSuite.all
+                )
+            )
+        )
+    }
+
+    @JsonIgnore
+    fun getStubIncludeMandatoryAndRequestedKeysInResponse(): Boolean {
+        return stub.getIncludeMandatoryAndRequestedKeysInResponse() ?: true
     }
 
     @JsonIgnore
     fun getStubGenerative(): Boolean {
-        return stub.generative ?: false
+        return stub.getGenerative() ?: false
+    }
+
+    @JsonIgnore
+    fun getStubDelayInMilliseconds(): Long? {
+        return stub.getDelayInMilliseconds()
+    }
+
+    @JsonIgnore
+    fun getStubDictionary(): String? {
+        return stub.getDictionary()
     }
 
     @JsonIgnore
@@ -284,28 +402,73 @@ data class SpecmaticConfig(
     fun getOpenAPISecurityConfigurationScheme(scheme: String): SecuritySchemeConfiguration? {
         return security?.getOpenAPISecurityScheme(scheme)
     }
+
+    @JsonIgnore
+    fun getVirtualServiceNonPatchableKeys(): Set<String> {
+        return virtualService.getNonPatchableKeys()
+    }
+
+    @JsonIgnore
+    fun stubContracts(relativeTo: File = File(".")): List<String> {
+        return sources.flatMap { source ->
+            source.stub.orEmpty().flatMap { stub ->
+                when (stub) {
+                    is Consumes.StringValue -> listOf(stub.value)
+                    is Consumes.ObjectValue -> stub.specs
+                }
+            }.map { spec ->
+                if (source.provider == SourceProvider.web) spec
+                else spec.canonicalPath(relativeTo)
+            }
+        }
+    }
+
+    @JsonIgnore
+    private fun String.canonicalPath(relativeTo: File): String {
+        return relativeTo.parentFile?.resolve(this)?.canonicalPath ?: File(this).canonicalPath
+    }
 }
 
 data class TestConfiguration(
-    val resiliencyTests: ResiliencyTestsConfig? = ResiliencyTestsConfig(
-        isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
-        isOnlyPositiveFlagEnabled = getBooleanValue(ONLY_POSITIVE)
-    ),
-    val validateResponseValues: Boolean? = null,
-    val allowExtensibleSchema: Boolean? = null,
-    val timeoutInMilliseconds: Long? = getLongValue(SPECMATIC_TEST_TIMEOUT)
-)
+    private val resiliencyTests: ResiliencyTestsConfig? = null,
+    private val validateResponseValues: Boolean? = null,
+    private val allowExtensibleSchema: Boolean? = null,
+    private val timeoutInMilliseconds: Long? = null
+) {
+    fun getResiliencyTests(): ResiliencyTestsConfig {
+        return resiliencyTests ?: ResiliencyTestsConfig(
+            isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
+            isOnlyPositiveFlagEnabled = getBooleanValue(ONLY_POSITIVE)
+        )
+    }
+
+    fun getValidateResponseValues(): Boolean? {
+        return validateResponseValues
+    }
+
+    fun getAllowExtensibleSchema(): Boolean? {
+        return allowExtensibleSchema
+    }
+
+    fun getTimeoutInMilliseconds(): Long? {
+        return timeoutInMilliseconds ?: getLongValue(SPECMATIC_TEST_TIMEOUT)
+    }
+}
 
 enum class ResiliencyTestSuite {
     all, positiveOnly, none
 }
 
 data class ResiliencyTestsConfig(
-    val enable: ResiliencyTestSuite? = null
+    private val enable: ResiliencyTestSuite? = null
 ) {
     constructor(isResiliencyTestFlagEnabled: Boolean, isOnlyPositiveFlagEnabled: Boolean) : this(
         enable = getEnableFrom(isResiliencyTestFlagEnabled, isOnlyPositiveFlagEnabled)
     )
+
+    fun getEnableTestSuite(): ResiliencyTestSuite? {
+        return enable
+    }
 
     companion object {
         private fun getEnableFrom(
@@ -374,9 +537,35 @@ data class Source(
     @field:JsonAlias("provides")
     val test: List<String>? = null,
     @field:JsonAlias("consumes")
-    val stub: List<String>? = null,
+    @JsonDeserialize(using = ConsumesDeserializer::class)
+    val stub: List<Consumes>? = null,
     val directory: String? = null,
-)
+) {
+    fun specsUsedAsStub(): List<String> {
+        return stub.orEmpty().flatMap {
+            when (it) {
+                is Consumes.StringValue -> listOf(it.value)
+                is Consumes.ObjectValue -> it.specs
+            }
+        }
+    }
+
+    fun specToStubPortMap(defaultPort: Int, relativeTo: File = File(".")): Map<String, Int> {
+        return stub.orEmpty().flatMap {
+            when (it) {
+                is Consumes.StringValue -> listOf(it.value.canonicalPath(relativeTo) to defaultPort)
+                is Consumes.ObjectValue -> it.specs.map { specPath ->
+                    specPath.canonicalPath(relativeTo) to it.port
+                }
+            }
+        }.toMap()
+    }
+
+    private fun String.canonicalPath(relativeTo: File): String {
+        if (provider == SourceProvider.web) return this
+        return relativeTo.parentFile?.resolve(this)?.canonicalPath ?: File(this).canonicalPath
+    }
+}
 
 data class RepositoryInfo(
     private val provider: String,

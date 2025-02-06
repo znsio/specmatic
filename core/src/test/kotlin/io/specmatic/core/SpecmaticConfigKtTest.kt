@@ -2,6 +2,7 @@ package io.specmatic.core
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import io.specmatic.core.config.v3.Consumes
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
@@ -12,9 +13,11 @@ import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import java.io.File
 
 internal class SpecmaticConfigKtTest {
 
@@ -34,7 +37,7 @@ internal class SpecmaticConfigKtTest {
         assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
         assertThat(sources.first().repository).isEqualTo("https://contracts")
         assertThat(sources.first().test).isEqualTo(listOf("com/petstore/1.spec"))
-        assertThat(sources.first().stub).isEqualTo(listOf("com/petstore/payment.spec"))
+        assertThat(sources.first().specsUsedAsStub()).isEqualTo(listOf("com/petstore/payment.spec"))
 
         assertThat(config.getAuthBearerFile()).isEqualTo("bearer.txt")
         assertThat(config.getAuthBearerEnvironmentVariable()).isNull()
@@ -79,7 +82,7 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.isExtensibleSchemaEnabled()).isTrue()
         assertThat(config.isResponseValueValidationEnabled()).isTrue()
 
-        assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
+        assertThat(config.getStubDelayInMilliseconds()).isEqualTo(1000L)
         assertThat(config.getStubGenerative()).isEqualTo(false)
 
         val htmlConfig = config.report?.formatters?.first { it.type == ReportFormatterType.HTML }
@@ -87,7 +90,7 @@ internal class SpecmaticConfigKtTest {
         assertThat(htmlConfig?.heading).isEqualTo("Test Results")
         assertThat(htmlConfig?.outputDirectory).isEqualTo("output")
 
-        assertThat(config.test?.timeoutInMilliseconds).isEqualTo(3000)
+        assertThat(config.getTestTimeoutInMilliseconds()).isEqualTo(3000)
     }
 
     @Test
@@ -129,7 +132,7 @@ internal class SpecmaticConfigKtTest {
         assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
         assertThat(sources.first().repository).isEqualTo("https://contracts")
         assertThat(sources.first().test).isEqualTo(listOf("com/petstore/1.yaml"))
-        assertThat(sources.first().stub).isEqualTo(listOf("com/petstore/payment.yaml"))
+        assertThat(sources.first().specsUsedAsStub()).isEqualTo(listOf("com/petstore/payment.yaml"))
 
         assertThat(config.getAuthBearerFile()).isEqualTo("bearer.txt")
         assertThat(config.getAuthBearerEnvironmentVariable()).isNull()
@@ -190,8 +193,8 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isResponseValueValidationEnabled()).isTrue()
             assertThat(config.isExtensibleSchemaEnabled()).isFalse()
             assertThat(config.getExamples()).isEqualTo(listOf("folder1/examples", "folder2/examples"))
-            assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
-            assertThat(config.test?.timeoutInMilliseconds).isEqualTo(5000)
+            assertThat(config.getTestTimeoutInMilliseconds()).isEqualTo(5000)
+            assertThat(config.getStubDelayInMilliseconds()).isEqualTo(1000L)
         } finally {
             properties.forEach { System.clearProperty(it.key) }
         }
@@ -239,10 +242,157 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isResponseValueValidationEnabled()).isTrue()
             assertThat(config.isExtensibleSchemaEnabled()).isTrue()
             assertThat(config.getExamples()).isEqualTo(listOf("folder1/examples", "folder2/examples"))
-            assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
-            assertThat(config.test?.timeoutInMilliseconds).isEqualTo(3000)
+            assertThat(config.getStubDelayInMilliseconds()).isEqualTo(1000L)
+            assertThat(config.getTestTimeoutInMilliseconds()).isEqualTo(3000)
         } finally {
             props.forEach { System.clearProperty(it.key) }
+        }
+    }
+
+    @Nested
+    inner class StubPortConfigTests {
+        @Test
+        fun `should return the spec to stub port map from sources`() {
+            val source1 = Source(
+                stub = listOf(
+                    Consumes.StringValue("9000_first.yaml"),
+                    Consumes.StringValue("9000_second.yaml"),
+                    Consumes.ObjectValue(
+                        specs = listOf("9001_first.yaml", "9001_second.yaml"),
+                        port = 9001
+                    ),
+                    Consumes.ObjectValue(
+                        specs = listOf("9002_first.yaml"),
+                        port = 9002
+                    ),
+                )
+            )
+
+            val source2 = Source(
+                stub = listOf(
+                    Consumes.StringValue("9000_third.yaml"),
+                    Consumes.ObjectValue(
+                        specs = listOf("9001_third.yaml", "9001_fourth.yaml"),
+                        port = 9001
+                    ),
+                    Consumes.ObjectValue(
+                        specs = listOf("9002_second.yaml"),
+                        port = 9002
+                    ),
+                )
+            )
+
+            val specmaticConfig = SpecmaticConfig(
+                sources = listOf(source1, source2)
+            )
+
+            val expectedMap = mapOf(
+                "9000_first.yaml" to 9000,
+                "9000_second.yaml" to 9000,
+                "9000_third.yaml" to 9000,
+                "9001_first.yaml" to 9001,
+                "9001_second.yaml" to 9001,
+                "9001_third.yaml" to 9001,
+                "9001_fourth.yaml" to 9001,
+                "9002_first.yaml" to 9002,
+                "9002_second.yaml" to 9002,
+            )
+
+            assertThat(
+                specmaticConfig.specToStubPortMap(
+                    9000
+                ).mapKeys { it.key.substringAfterLast(File.separator) }
+            ).isEqualTo(expectedMap)
+        }
+
+        @Test
+        fun `should return all stub ports from sources`() {
+            val source1 = Source(
+                stub = listOf(
+                    Consumes.StringValue("9000_first.yaml"),
+                    Consumes.StringValue("9000_second.yaml"),
+                    Consumes.ObjectValue(
+                        specs = listOf("9001_first.yaml", "9001_second.yaml"),
+                        port = 9001
+                    ),
+                    Consumes.ObjectValue(
+                        specs = listOf("9002_first.yaml"),
+                        port = 9002
+                    ),
+                )
+            )
+
+            val source2 = Source(
+                stub = listOf(
+                    Consumes.StringValue("9000_third.yaml"),
+                    Consumes.ObjectValue(
+                        specs = listOf("9001_third.yaml", "9001_fourth.yaml"),
+                        port = 9001
+                    ),
+                    Consumes.ObjectValue(
+                        specs = listOf("9002_second.yaml"),
+                        port = 9002
+                    ),
+                )
+            )
+
+            val specmaticConfig = SpecmaticConfig(
+                sources = listOf(source1, source2)
+            )
+
+            assertThat(specmaticConfig.stubPorts(9000)).isEqualTo(listOf(9000, 9001, 9002))
+        }
+
+        @Test
+        fun `should return all stub contracts from sources`() {
+            val source1 = Source(
+                stub = listOf(
+                    Consumes.StringValue("9000_first.yaml"),
+                    Consumes.StringValue("9000_second.yaml"),
+                    Consumes.ObjectValue(
+                        specs = listOf("9001_first.yaml", "9001_second.yaml"),
+                        port = 9001
+                    ),
+                    Consumes.ObjectValue(
+                        specs = listOf("9002_first.yaml"),
+                        port = 9002
+                    ),
+                )
+            )
+
+            val source2 = Source(
+                stub = listOf(
+                    Consumes.StringValue("9000_third.yaml"),
+                    Consumes.ObjectValue(
+                        specs = listOf("9001_third.yaml", "9001_fourth.yaml"),
+                        port = 9001
+                    ),
+                    Consumes.ObjectValue(
+                        specs = listOf("9002_second.yaml"),
+                        port = 9002
+                    ),
+                )
+            )
+
+            val specmaticConfig = SpecmaticConfig(
+                sources = listOf(source1, source2)
+            )
+
+            assertThat(
+                specmaticConfig.stubContracts().map { it.substringAfterLast(File.separator) }
+            ).isEqualTo(
+                listOf(
+                    "9000_first.yaml",
+                    "9000_second.yaml",
+                    "9001_first.yaml",
+                    "9001_second.yaml",
+                    "9002_first.yaml",
+                    "9000_third.yaml",
+                    "9001_third.yaml",
+                    "9001_fourth.yaml",
+                    "9002_second.yaml"
+                )
+            )
         }
     }
 }

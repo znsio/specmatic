@@ -129,19 +129,11 @@ data class Feature(
     val strictMode: Boolean = false
 ): IFeature {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
-        val updatedSpecmaticConfig = specmaticConfig.copy(
-            test = specmaticConfig.test?.copy(
-                resiliencyTests = specmaticConfig.test.resiliencyTests?.copy(
-                    enable = if(onlyPositive) ResiliencyTestSuite.positiveOnly else ResiliencyTestSuite.all
-                )
-            )
-        )
-
         return this.copy(flagsBased = this.flagsBased.copy(
             generation = GenerativeTestsEnabled(onlyPositive),
             positivePrefix = POSITIVE_TEST_DESCRIPTION_PREFIX,
             negativePrefix = NEGATIVE_TEST_DESCRIPTION_PREFIX),
-            specmaticConfig = updatedSpecmaticConfig
+            specmaticConfig = specmaticConfig.copyResiliencyTestsConfig(onlyPositive)
         )
     }
 

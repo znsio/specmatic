@@ -2,6 +2,7 @@ package integration_tests
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
@@ -343,6 +344,8 @@ class LoadTestsFromExternalisedFiles {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResponseValueValidationEnabled() } returns true
         }
+        mockkObject(SpecmaticConfig.Companion)
+        every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
         val feature = OpenApiSpecification
             .fromFile("src/test/resources/openapi/has_inline_and_external_examples.yaml", specmaticConfig)
             .toFeature()
@@ -374,6 +377,8 @@ class LoadTestsFromExternalisedFiles {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResponseValueValidationEnabled() } returns true
         }
+        mockkObject(SpecmaticConfig.Companion)
+        every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
 
         val feature = OpenApiSpecification
             .fromFile(

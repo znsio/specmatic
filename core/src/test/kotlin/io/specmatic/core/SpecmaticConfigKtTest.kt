@@ -3,6 +3,7 @@ package io.specmatic.core
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import io.specmatic.core.SpecmaticConfig.Companion.getSources
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
@@ -12,8 +13,6 @@ import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_GENERATIVE_TESTS
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
-import io.specmatic.core.utilities.GitMonoRepo
-import io.specmatic.core.utilities.GitRepo
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -30,13 +29,13 @@ internal class SpecmaticConfigKtTest {
     fun `parse specmatic config file with all values`(configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
 
-        assertThat(config.getGitContracts()).isNotEmpty
-        assertThat(config.getGitContracts().first()).isInstanceOf(GitRepo::class.java)
-        val gitContracts = config.getGitContracts().first() as GitRepo
-        assertThat(gitContracts.type).isEqualTo(SourceProvider.git.toString())
-        assertThat(gitContracts.gitRepositoryURL).isEqualTo("https://contracts")
-        assertThat(gitContracts.testContracts).isEqualTo(listOf("com/petstore/1.spec"))
-        assertThat(gitContracts.stubContracts).isEqualTo(listOf("com/petstore/payment.spec"))
+        val sources = getSources(config)
+        assertThat(sources).isNotEmpty
+
+        assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
+        assertThat(sources.first().repository).isEqualTo("https://contracts")
+        assertThat(sources.first().test).isEqualTo(listOf("com/petstore/1.spec"))
+        assertThat(sources.first().stub).isEqualTo(listOf("com/petstore/payment.spec"))
 
         assertThat(config.getAuthBearerFile()).isEqualTo("bearer.txt")
         assertThat(config.getAuthBearerEnvironmentVariable()).isNull()
@@ -108,12 +107,11 @@ internal class SpecmaticConfigKtTest {
             }
         """.trimIndent(), SpecmaticConfig::class.java)
 
-        assertThat(config.getGitContracts()).isNotEmpty
+        val sources = getSources(config)
+        assertThat(sources).isNotEmpty
 
-        val gitContracts = config.getGitContracts().first() as GitMonoRepo
-
-        assertThat(gitContracts.type).isEqualTo(SourceProvider.git.toString())
-        assertThat(gitContracts.testContracts).isEqualTo(listOf("path/to/contract.spec"))
+        assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
+        assertThat(sources.first().test).isEqualTo(listOf("path/to/contract.spec"))
     }
 
     @CsvSource(
@@ -125,14 +123,13 @@ internal class SpecmaticConfigKtTest {
     fun `parse specmatic config file with aliases`(configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
 
-        assertThat(config.getGitContracts()).isNotEmpty
+        val sources = getSources(config)
+        assertThat(sources).isNotEmpty
 
-        val gitContracts = config.getGitContracts().first() as GitRepo
-
-        assertThat(gitContracts.type).isEqualTo(SourceProvider.git.toString())
-        assertThat(gitContracts.gitRepositoryURL).isEqualTo("https://contracts")
-        assertThat(gitContracts.testContracts).isEqualTo(listOf("com/petstore/1.yaml"))
-        assertThat(gitContracts.stubContracts).isEqualTo(listOf("com/petstore/payment.yaml"))
+        assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
+        assertThat(sources.first().repository).isEqualTo("https://contracts")
+        assertThat(sources.first().test).isEqualTo(listOf("com/petstore/1.yaml"))
+        assertThat(sources.first().stub).isEqualTo(listOf("com/petstore/payment.yaml"))
 
         assertThat(config.getAuthBearerFile()).isEqualTo("bearer.txt")
         assertThat(config.getAuthBearerEnvironmentVariable()).isNull()

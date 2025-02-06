@@ -1,5 +1,6 @@
 package application
 
+import io.specmatic.core.SpecmaticConfig.Companion.getSources
 import io.specmatic.core.azure.AzureAPI
 import io.specmatic.core.azure.PersonalAccessToken
 import io.specmatic.core.git.getPersonalAccessToken
@@ -8,7 +9,6 @@ import io.specmatic.core.log.CompositePrinter
 import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.utilities.GitRepo
 import io.specmatic.core.utilities.exitWithMessage
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -78,11 +78,10 @@ class GraphCommand: Callable<Unit> {
         logger.log("Dependency projects")
         logger.log("-------------------")
 
-        specmaticConfig.getGitContracts().forEach { contracts ->
-            contracts as GitRepo
-            logger.log("In central repo ${contracts.gitRepositoryURL}")
+        getSources(specmaticConfig).forEach { source ->
+            logger.log("In central repo ${source.repository}")
 
-            contracts.testContracts.forEach { relativeContractPath ->
+            source.test?.forEach { relativeContractPath ->
                 logger.log("  Consumers of $relativeContractPath")
                 val consumers = azure.referencesToContract(relativeContractPath)
 

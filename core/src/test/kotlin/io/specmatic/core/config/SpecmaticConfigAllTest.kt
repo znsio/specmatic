@@ -3,15 +3,16 @@ package io.specmatic.core.config
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import io.specmatic.core.SourceProvider
+import io.specmatic.core.Source
+import io.specmatic.core.SourceProvider.filesystem
+import io.specmatic.core.SourceProvider.git
 import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.SpecmaticConfig.Companion.getSources
 import io.specmatic.core.config.v2.ContractConfig
 import io.specmatic.core.config.v2.SpecmaticConfigV2
 import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSON
-import io.specmatic.core.utilities.GitRepo
-import io.specmatic.core.utilities.LocalFileSystemSource
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -64,27 +65,24 @@ internal class SpecmaticConfigAllTest {
     fun `should create SpecmaticConfig given SpecmaticConfigV1`(version: SpecmaticConfigVersion, configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
         assertThat(config.getVersion()).isEqualTo(version)
-        assertThat(config.getGitContracts().size).isEqualTo(1)
-        assertThat(config.getFileSystemContracts().size).isEqualTo(1)
-
-        val gitContract = config.getGitContracts().first() as GitRepo
-        val filesystemContract = config.getFileSystemContracts().first() as LocalFileSystemSource
-
-        assertThat(gitContract.type).isEqualTo(SourceProvider.git.toString())
-        assertThat(gitContract.gitRepositoryURL).isEqualTo("https://contracts")
-        assertThat(gitContract.branchName).isEqualTo("1.0.1")
-        assertThat(gitContract.testContracts).isEqualTo(listOf("com/petstore/1.yaml"))
-        assertThat(gitContract.stubContracts).isEqualTo(listOf("com/petstore/payment.yaml"))
-
-        assertThat(filesystemContract.type).isEqualTo(SourceProvider.filesystem.toString())
-        assertThat(filesystemContract.directory).isEqualTo("contracts")
-        assertThat(filesystemContract.testContracts).isEqualTo(listOf("com/petstore/1.yaml"))
-        assertThat(filesystemContract.stubContracts).isEqualTo(
-            listOf(
-                "com/petstore/payment.yaml",
-                "com/petstore/order.yaml"
+        val sources = getSources(config)
+        assertThat(sources.size).isEqualTo(2)
+        val expectedSources = listOf(
+            Source(
+                provider = git,
+                repository = "https://contracts",
+                branch = "1.0.1",
+                test = listOf("com/petstore/1.yaml"),
+                stub = listOf("com/petstore/payment.yaml")
+            ),
+            Source(
+                provider = filesystem,
+                test = listOf("com/petstore/1.yaml"),
+                stub = listOf("com/petstore/payment.yaml", "com/petstore/order.yaml"),
+                directory = "contracts"
             )
         )
+        assertThat(sources).containsAll(expectedSources)
     }
 
     @CsvSource(

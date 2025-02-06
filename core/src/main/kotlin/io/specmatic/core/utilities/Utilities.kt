@@ -5,6 +5,7 @@ package io.specmatic.core.utilities
 import io.specmatic.core.*
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.configFilePath
+import io.specmatic.core.SpecmaticConfig.Companion.getSources
 import io.specmatic.core.azure.AzureAuthCredentials
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
@@ -159,7 +160,33 @@ fun loadConfigJSON(configFile: File): JSONObjectValue {
 }
 
 fun loadSources(specmaticConfig: SpecmaticConfig): List<ContractSource> {
-    return specmaticConfig.getAllContracts()
+    return getSources(specmaticConfig).map { source ->
+        when (source.provider) {
+            SourceProvider.git -> {
+                val stubPaths = source.stub ?: emptyList()
+                val testPaths = source.test ?: emptyList()
+
+                when (source.repository) {
+                    null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
+                    else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
+                }
+            }
+
+            SourceProvider.filesystem -> {
+                val stubPaths = source.stub ?: emptyList()
+                val testPaths = source.test ?: emptyList()
+
+                LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
+            }
+
+            SourceProvider.web -> {
+                val stubPaths = source.stub ?: emptyList()
+                val testPaths = source.test ?: emptyList()
+
+                WebSource(testPaths, stubPaths)
+            }
+        }
+    }
 }
 
 fun loadSources(configJson: JSONObjectValue): List<ContractSource> {

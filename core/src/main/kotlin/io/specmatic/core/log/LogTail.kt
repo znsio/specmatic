@@ -18,8 +18,9 @@ object LogTail {
     }
 
     fun storeSnapshot() {
-        snapshot = logs.toList()
+        synchronized(this) { snapshot = logs.toList() }
     }
+
     fun getString(): String = logs.joinToString("\n") { it.toLogString() }
 
     fun getSnapshot(): String = snapshot.joinToString("\n") { it.toLogString() }

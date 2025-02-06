@@ -99,17 +99,28 @@ class ContractConfigDeserializer : StdDeserializer<ContractConfig>(ContractConfi
 
         val contractSource = when {
             node.has("git") -> {
-                val gitNode = node.get("git")
+                val gitNode = node["git"]
+                val url = gitNode["url"]
+                    .takeIf { it != null && it.asText().isNotBlank() } ?: throw JsonMappingException.from(
+                    parser,
+                    "Git contract source must have 'url' field"
+                )
+                val branch = gitNode["branch"]
                 ContractConfig.GitContractSource(
-                    url = gitNode.get("url").asText(),
-                    branch = gitNode.get("branch").asText()
+                    url = url.asText(),
+                    branch = branch?.asText()
                 )
             }
 
             node.has("filesystem") -> {
-                val filesystemNode = node.get("filesystem")
+                val filesystemNode = node["filesystem"]
+                val directory = filesystemNode["directory"]
+                    .takeIf { it != null && it.asText().isNotBlank() } ?: throw JsonMappingException.from(
+                    parser,
+                    "Filesystem contract source must have 'directory' field"
+                )
                 ContractConfig.FileSystemContractSource(
-                    directory = filesystemNode.get("directory").asText()
+                    directory = directory.asText()
                 )
             }
 
@@ -119,8 +130,8 @@ class ContractConfigDeserializer : StdDeserializer<ContractConfig>(ContractConfi
             )
         }
 
-        val provides = node.get("provides").map { it.asText() }
-        val consumes = node.get("consumes").map { it.asText() }
+        val provides = node["provides"]?.map { it.asText() }
+        val consumes = node["consumes"]?.map { it.asText() }
 
         return ContractConfig(contractSource, provides, consumes)
     }

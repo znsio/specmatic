@@ -397,4 +397,42 @@ internal class SpecmaticConfigAllTest {
 
         assertThat(configV2.virtualService.getNonPatchableKeys()).containsExactly("description", "url")
     }
+
+    @Test
+    fun `should deserialize SpecmaticConfig successfully when AttributeSelectionPattern key is present`(@TempDir tempDir: File) {
+        val configFile = tempDir.resolve("specmatic.yaml")
+        val configYaml = """
+            attributeSelectionPattern:
+                default_fields:
+                    - description
+                    - url
+                query_param_key: web
+        """.trimIndent()
+        configFile.writeText(configYaml)
+
+        val specmaticConfig = configFile.toSpecmaticConfig()
+
+        assertThat(specmaticConfig.getAttributeSelectionPattern().getDefaultFields()).containsExactly(
+            "description",
+            "url"
+        )
+        assertThat(specmaticConfig.getAttributeSelectionPattern().getQueryParamKey()).isEqualTo("web")
+    }
+
+    @Test
+    fun `should serialize SpecmaticConfig successfully when AttributeSelectionPattern key is present`() {
+        val configYaml = """
+            attributeSelectionPattern:
+                default_fields:
+                    - description
+                    - url
+                query_param_key: web
+        """.trimIndent()
+
+        val config = objectMapper.readValue(configYaml, SpecmaticConfigV1::class.java).transform()
+        val configV2 = SpecmaticConfigV2.loadFrom(config) as SpecmaticConfigV2
+
+        assertThat(configV2.attributeSelectionPattern.getDefaultFields()).containsExactly("description", "url")
+        assertThat(configV2.attributeSelectionPattern.getQueryParamKey()).isEqualTo("web")
+    }
 }

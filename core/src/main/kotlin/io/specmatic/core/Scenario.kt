@@ -82,7 +82,7 @@ data class Scenario(
     val disambiguate: () -> String = { "" },
     val descriptionFromPlugin: String? = null,
     val dictionary: Map<String, Value> = emptyMap(),
-    val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
+    val attributeSelectionPattern: AttributeSelectionPatternDetails = AttributeSelectionPatternDetails.default,
     val exampleRow: Row? = null
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(

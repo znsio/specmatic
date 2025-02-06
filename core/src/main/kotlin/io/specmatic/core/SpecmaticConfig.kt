@@ -103,20 +103,29 @@ data class WorkflowConfiguration(
     val ids: Map<String, WorkflowIDOperation> = emptyMap()
 )
 
+interface AttributeSelectionPatternDetails {
+    fun getDefaultFields(): List<String>
+    fun getQueryParamKey(): String
+
+    companion object {
+        val default: AttributeSelectionPatternDetails = AttributeSelectionPattern()
+    }
+}
+
 data class AttributeSelectionPattern(
     @field:JsonAlias("default_fields")
     private val defaultFields: List<String>? = null,
     @field:JsonAlias("query_param_key")
     private val queryParamKey: String? = null
-) {
-    fun getDefaultFields(): List<String> {
+) : AttributeSelectionPatternDetails {
+    override fun getDefaultFields(): List<String> {
         return defaultFields ?: readEnvVarOrProperty(
             ATTRIBUTE_SELECTION_DEFAULT_FIELDS,
             ATTRIBUTE_SELECTION_DEFAULT_FIELDS
         ).orEmpty().split(",").filter { it.isNotBlank() }
     }
 
-    fun getQueryParamKey(): String {
+    override fun getQueryParamKey(): String {
         return queryParamKey ?: readEnvVarOrProperty(
             ATTRIBUTE_SELECTION_QUERY_PARAM_KEY,
             ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
@@ -170,6 +179,11 @@ data class SpecmaticConfig(
         fun getAttributeSelectionPattern(specmaticConfig: SpecmaticConfig): AttributeSelectionPattern {
             return specmaticConfig.attributeSelectionPattern
         }
+    }
+
+    @JsonIgnore
+    fun getAttributeSelectionPattern(): AttributeSelectionPatternDetails {
+        return attributeSelectionPattern
     }
 
     @JsonIgnore

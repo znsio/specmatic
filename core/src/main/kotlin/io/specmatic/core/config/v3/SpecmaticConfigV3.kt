@@ -1,15 +1,10 @@
-package io.specmatic.core.config.v2
+package io.specmatic.core.config.v3
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import io.specmatic.core.*
-import io.specmatic.core.SpecmaticConfig.Companion.getAttributeSelectionPattern
-import io.specmatic.core.SpecmaticConfig.Companion.getAllPatternsMandatory
 import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
-import io.specmatic.core.SpecmaticConfig.Companion.getVirtualServiceConfiguration
-import io.specmatic.core.SpecmaticConfig.Companion.getTestConfiguration
-import io.specmatic.core.SpecmaticConfig.Companion.getStubConfiguration
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticVersionedConfig
 import io.specmatic.core.config.SpecmaticVersionedConfigLoader
@@ -17,9 +12,9 @@ import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
 
-data class SpecmaticConfigV2(
+data class SpecmaticConfigV3(
     val version: SpecmaticConfigVersion,
-    val contracts: List<ContractConfig> = emptyList(),
+    val contracts: List<ContractConfigV2> = emptyList(),
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
@@ -40,10 +35,10 @@ data class SpecmaticConfigV2(
     val allPatternsMandatory: Boolean? = null,
     @field:JsonAlias("default_pattern_values")
     val defaultPatternValues: Map<String, Any> = emptyMap()
-) : SpecmaticVersionedConfig {
+): SpecmaticVersionedConfig {
     override fun transform(): SpecmaticConfig {
         return SpecmaticConfig(
-            version = SpecmaticConfigVersion.VERSION_2,
+            version = SpecmaticConfigVersion.VERSION_3,
             sources = this.contracts.map { contract -> contract.transform() },
             auth = this.auth,
             pipeline = this.pipeline,
@@ -65,11 +60,11 @@ data class SpecmaticConfigV2(
         )
     }
 
-    companion object : SpecmaticVersionedConfigLoader {
+    companion object: SpecmaticVersionedConfigLoader {
         override fun loadFrom(config: SpecmaticConfig): SpecmaticVersionedConfig {
-            return SpecmaticConfigV2(
-                version = SpecmaticConfigVersion.VERSION_2,
-                contracts = config.sources.map { ContractConfig(it) },
+            return SpecmaticConfigV3(
+                version = SpecmaticConfigVersion.VERSION_3,
+                contracts = config.sources.map { ContractConfigV2(it) },
                 auth = config.getAuth(),
                 pipeline = getPipeline(config),
                 environments = config.environments,
@@ -77,17 +72,18 @@ data class SpecmaticConfigV2(
                 repository = getRepository(config),
                 report = config.report,
                 security = getSecurityConfiguration(config),
-                test = getTestConfiguration(config),
-                stub = getStubConfiguration(config),
-                virtualService = getVirtualServiceConfiguration(config),
+                test = SpecmaticConfig.getTestConfiguration(config),
+                stub = config.stub,
+                virtualService = SpecmaticConfig.getVirtualServiceConfiguration(config),
                 examples = config.getExamples(),
                 workflow = config.workflow,
                 ignoreInlineExamples = SpecmaticConfig.getIgnoreInlineExamples(config),
                 additionalExampleParamsFilePath = config.getAdditionalExampleParamsFilePath(),
-                attributeSelectionPattern = getAttributeSelectionPattern(config),
-                allPatternsMandatory = getAllPatternsMandatory(config),
+                attributeSelectionPattern = SpecmaticConfig.getAttributeSelectionPattern(config),
+                allPatternsMandatory = SpecmaticConfig.getAllPatternsMandatory(config),
                 defaultPatternValues = config.getDefaultPatternValues()
             )
         }
+
     }
 }

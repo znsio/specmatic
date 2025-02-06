@@ -493,7 +493,7 @@ class StatefulHttpStub(
         return patchValuesFromRequestIntoResponse(
             requestBody,
             responseBody,
-            specmaticConfig.virtualService.nonPatchableKeys
+            specmaticConfig.getVirtualServiceNonPatchableKeys()
         ).plus(entriesFromRequestMissingInTheResponse)
     }
 

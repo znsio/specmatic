@@ -160,7 +160,7 @@ fun loadSources(specmaticConfig: SpecmaticConfig): List<ContractSource> {
     return specmaticConfig.sources.map { source ->
         when(source.provider) {
             SourceProvider.git -> {
-                val stubPaths = source.stub ?: emptyList()
+                val stubPaths = source.specsUsedAsStub()
                 val testPaths = source.test ?: emptyList()
 
                 when (source.repository) {
@@ -169,13 +169,13 @@ fun loadSources(specmaticConfig: SpecmaticConfig): List<ContractSource> {
                 }
             }
             SourceProvider.filesystem -> {
-                val stubPaths = source.stub ?: emptyList()
+                val stubPaths = source.specsUsedAsStub()
                 val testPaths = source.test ?: emptyList()
 
                 LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
             }
             SourceProvider.web -> {
-                val stubPaths = source.stub ?: emptyList()
+                val stubPaths = source.specsUsedAsStub()
                 val testPaths = source.test ?: emptyList()
 
                 WebSource(testPaths, stubPaths)

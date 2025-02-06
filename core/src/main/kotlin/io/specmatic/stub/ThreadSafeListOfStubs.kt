@@ -17,8 +17,8 @@ class ThreadSafeListOfStubs(
             return httpStubs.size
         }
 
-    fun stubAssociatedTo(defaultPort: Int, port: Int): ThreadSafeListOfStubs {
-        return portToListOfStubsMap(defaultPort)[port] ?: this
+    fun stubAssociatedTo(defaultPort: Int, port: Int): ThreadSafeListOfStubs? {
+        return portToListOfStubsMap(defaultPort)[port]
     }
 
     fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {

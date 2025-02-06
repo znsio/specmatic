@@ -79,7 +79,7 @@ data class SpecmaticConfigV2(
                 virtualService = getVirtualServiceConfiguration(config),
                 examples = config.getExamples(),
                 workflow = config.workflow,
-                ignoreInlineExamples = config.ignoreInlineExamples,
+                ignoreInlineExamples = SpecmaticConfig.getIgnoreInlineExamples(config),
                 additionalExampleParamsFilePath = config.getAdditionalExampleParamsFilePath(),
                 attributeSelectionPattern = config.attributeSelectionPattern,
                 allPatternsMandatory = getAllPatternsMandatory(config),

@@ -4,7 +4,10 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import io.specmatic.core.*
+import io.specmatic.core.ResiliencyTestSuite
+import io.specmatic.core.Source
+import io.specmatic.core.SourceProvider
+import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.config.v1.SpecmaticConfigV1
 import io.specmatic.core.config.v2.ContractConfig
 import io.specmatic.core.config.v2.ContractConfig.FileSystemContractSource
@@ -13,6 +16,7 @@ import io.specmatic.core.config.v2.SpecmaticConfigV2
 import io.specmatic.core.config.v3.Consumes
 import io.specmatic.core.config.v3.ContractConfigV2
 import io.specmatic.core.config.v3.SpecmaticConfigV3
+import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSON
 import org.assertj.core.api.Assertions.assertThat
@@ -525,6 +529,49 @@ internal class SpecmaticConfigAllTest {
             assertThat(getValidateResponseValues()).isTrue()
             assertThat(getAllowExtensibleSchema()).isTrue()
             assertThat(getTimeoutInMilliseconds()).isEqualTo(10)
+        }
+    }
+
+    @Test
+    fun `should deserialize stub configuration in SpecmaticConfig successfully key`(@TempDir tempDir: File) {
+        val configFile = tempDir.resolve("specmatic.yaml")
+        val configYaml = """
+            stub:
+                generative: true
+                delayInMilliseconds: 1000
+                dictionary: stubDictionary
+                includeMandatoryAndRequestedKeysInResponse: true
+        """.trimIndent()
+        configFile.writeText(configYaml)
+
+        val specmaticConfig = configFile.toSpecmaticConfig()
+
+        specmaticConfig.apply {
+            assertThat(getStubGenerative()).isTrue()
+            assertThat(getStubDelayInMilliseconds()).isEqualTo(1000L)
+            assertThat(getStubDictionary()).isEqualTo("stubDictionary")
+            assertThat(getStubIncludeMandatoryAndRequestedKeysInResponse()).isTrue()
+        }
+    }
+
+    @Test
+    fun `should convert config from v1 to v2 when stub configuration is present`() {
+        val configYaml = """
+            stub:
+                generative: true
+                delayInMilliseconds: 1000
+                dictionary: stubDictionary
+                includeMandatoryAndRequestedKeysInResponse: true
+        """.trimIndent()
+
+        val configFromV1 = objectMapper.readValue(configYaml, SpecmaticConfigV1::class.java).transform()
+        val configV2 = SpecmaticConfigV2.loadFrom(configFromV1) as SpecmaticConfigV2
+
+        configV2.stub.apply {
+            assertThat(getGenerative()).isTrue()
+            assertThat(getDelayInMilliseconds()).isEqualTo(1000L)
+            assertThat(getDictionary()).isEqualTo("stubDictionary")
+            assertThat(getIncludeMandatoryAndRequestedKeysInResponse()).isTrue()
         }
     }
 }

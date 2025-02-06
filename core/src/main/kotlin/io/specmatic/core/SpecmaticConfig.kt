@@ -80,11 +80,27 @@ fun String.loadContract(): Feature {
 }
 
 data class StubConfiguration(
-    val generative: Boolean? = null,
-    val delayInMilliseconds: Long? = null,
-    val dictionary: String? = null,
-    val includeMandatoryAndRequestedKeysInResponse: Boolean? = null
-)
+    private val generative: Boolean? = null,
+    private val delayInMilliseconds: Long? = null,
+    private val dictionary: String? = null,
+    private val includeMandatoryAndRequestedKeysInResponse: Boolean? = null
+) {
+    fun getGenerative(): Boolean? {
+        return generative
+    }
+
+    fun getDelayInMilliseconds(): Long? {
+        return delayInMilliseconds ?: getLongValue(SPECMATIC_STUB_DELAY)
+    }
+
+    fun getDictionary(): String? {
+        return dictionary ?: getStringValue(SPECMATIC_STUB_DICTIONARY)
+    }
+
+    fun getIncludeMandatoryAndRequestedKeysInResponse(): Boolean? {
+        return includeMandatoryAndRequestedKeysInResponse
+    }
+}
 
 data class VirtualServiceConfiguration(
     private val nonPatchableKeys: Set<String> = emptySet()
@@ -276,22 +292,22 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun getStubIncludeMandatoryAndRequestedKeysInResponse(): Boolean {
-        return stub.includeMandatoryAndRequestedKeysInResponse ?: true
+        return stub.getIncludeMandatoryAndRequestedKeysInResponse() ?: true
     }
 
     @JsonIgnore
     fun getStubGenerative(): Boolean {
-        return stub.generative ?: false
+        return stub.getGenerative() ?: false
     }
 
     @JsonIgnore
     fun getStubDelayInMilliseconds(): Long? {
-        return stub.delayInMilliseconds ?: getLongValue(SPECMATIC_STUB_DELAY)
+        return stub.getDelayInMilliseconds()
     }
 
     @JsonIgnore
     fun getStubDictionary(): String? {
-        return stub.dictionary ?: getStringValue(SPECMATIC_STUB_DICTIONARY)
+        return stub.getDictionary()
     }
 
     @JsonIgnore

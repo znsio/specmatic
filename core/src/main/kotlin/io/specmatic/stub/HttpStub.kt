@@ -424,8 +424,8 @@ class HttpStub(
         return getHttpResponse(
             httpRequest = httpRequest,
             features = features,
-            threadSafeStubs = threadSafeHttpStubs.portToListOfStubsMap(defaultPort)[port] ?: threadSafeHttpStubs,
-            threadSafeStubQueue = threadSafeHttpStubQueue.portToListOfStubsMap(defaultPort)[port] ?: threadSafeHttpStubQueue,
+            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(defaultPort, port),
+            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(defaultPort, port),
             strictMode = strictMode,
             passThroughTargetBase = passThroughTargetBase,
             httpClientFactory = httpClientFactory,

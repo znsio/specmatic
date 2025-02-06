@@ -111,7 +111,7 @@ data class AttributeSelectionPattern(
 )
 
 data class SpecmaticConfig(
-    private val sources: List<Source> = emptyList(),
+    val sources: List<Source> = emptyList(),
     private val auth: Auth? = null,
     private val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
@@ -132,11 +132,6 @@ data class SpecmaticConfig(
     private val version: SpecmaticConfigVersion? = null
 ) {
     companion object {
-        @JsonIgnore
-        fun getSources(specmaticConfig: SpecmaticConfig): List<Source> {
-            return specmaticConfig.sources
-        }
-
         @JsonIgnore
         fun getRepository(specmaticConfig: SpecmaticConfig): RepositoryInfo? {
             return specmaticConfig.repository

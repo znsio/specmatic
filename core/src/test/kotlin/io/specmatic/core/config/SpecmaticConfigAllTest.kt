@@ -8,7 +8,6 @@ import io.specmatic.core.Source
 import io.specmatic.core.SourceProvider.filesystem
 import io.specmatic.core.SourceProvider.git
 import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.SpecmaticConfig.Companion.getSources
 import io.specmatic.core.config.v2.ContractConfig
 import io.specmatic.core.config.v2.ContractConfig.FileSystemContractSource
 import io.specmatic.core.config.v2.ContractConfig.GitContractSource
@@ -71,7 +70,7 @@ internal class SpecmaticConfigAllTest {
     fun `should create SpecmaticConfig given SpecmaticConfigV1`(version: SpecmaticConfigVersion, configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
         assertThat(config.getVersion()).isEqualTo(version)
-        val sources = getSources(config)
+        val sources = config.sources
         assertThat(sources.size).isEqualTo(2)
         val expectedSources = listOf(
             Source(

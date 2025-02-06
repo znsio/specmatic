@@ -5,7 +5,6 @@ package io.specmatic.core.utilities
 import io.specmatic.core.*
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.configFilePath
-import io.specmatic.core.SpecmaticConfig.Companion.getSources
 import io.specmatic.core.azure.AzureAuthCredentials
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
@@ -160,7 +159,7 @@ fun loadConfigJSON(configFile: File): JSONObjectValue {
 }
 
 fun loadSources(specmaticConfig: SpecmaticConfig): List<ContractSource> {
-    return getSources(specmaticConfig).map { source ->
+    return specmaticConfig.sources.map { source ->
         when (source.provider) {
             SourceProvider.git -> {
                 val stubPaths = source.stub ?: emptyList()

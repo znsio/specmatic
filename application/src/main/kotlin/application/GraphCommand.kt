@@ -1,6 +1,5 @@
 package application
 
-import io.specmatic.core.SpecmaticConfig.Companion.getSources
 import io.specmatic.core.azure.AzureAPI
 import io.specmatic.core.azure.PersonalAccessToken
 import io.specmatic.core.git.getPersonalAccessToken
@@ -78,7 +77,7 @@ class GraphCommand: Callable<Unit> {
         logger.log("Dependency projects")
         logger.log("-------------------")
 
-        getSources(specmaticConfig).forEach { source ->
+        specmaticConfig.sources.forEach { source ->
             logger.log("In central repo ${source.repository}")
 
             source.test?.forEach { relativeContractPath ->

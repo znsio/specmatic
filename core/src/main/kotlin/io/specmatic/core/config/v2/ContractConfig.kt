@@ -28,7 +28,7 @@ data class ContractConfig(
     )
 
     fun transform(): Source {
-        return this.contractSource?.transform(provides, consumes) ?: Source()
+        return this.contractSource?.transform(provides, consumes) ?: Source(test = provides, stub = consumes)
     }
 
     interface ContractSource {
@@ -123,10 +123,7 @@ class ContractConfigDeserializer : StdDeserializer<ContractConfig>(ContractConfi
                 )
             }
 
-            else -> throw JsonMappingException.from(
-                parser,
-                "Contracts field must have either 'git' or 'filesystem' field"
-            )
+            else -> null
         }
 
         val provides = node["provides"]?.map { it.asText() }

@@ -72,7 +72,7 @@ data class SpecmaticConfigV3(
                 repository = getRepository(config),
                 report = config.report,
                 security = getSecurityConfiguration(config),
-                test = config.test,
+                test = SpecmaticConfig.getTestConfiguration(config),
                 stub = config.stub,
                 virtualService = SpecmaticConfig.getVirtualServiceConfiguration(config),
                 examples = config.getExamples(),

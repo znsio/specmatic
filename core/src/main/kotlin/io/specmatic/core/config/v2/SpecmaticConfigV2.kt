@@ -2,7 +2,6 @@ package io.specmatic.core.config.v2
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import io.specmatic.core.*
-import io.specmatic.core.SpecmaticConfig.Companion.getIgnoreInlineExamples
 import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
@@ -79,7 +78,7 @@ data class SpecmaticConfigV2(
                 virtualService = getVirtualServiceConfiguration(config),
                 examples = config.getExamples(),
                 workflow = config.workflow,
-                ignoreInlineExamples = getIgnoreInlineExamples(config),
+                ignoreInlineExamples = SpecmaticConfig.getIgnoreInlineExamples(config),
                 additionalExampleParamsFilePath = config.getAdditionalExampleParamsFilePath(),
                 attributeSelectionPattern = config.attributeSelectionPattern,
                 allPatternsMandatory = config.allPatternsMandatory,

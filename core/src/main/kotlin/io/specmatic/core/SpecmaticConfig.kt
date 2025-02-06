@@ -157,6 +157,11 @@ data class SpecmaticConfig(
         fun getVirtualServiceConfiguration(specmaticConfig: SpecmaticConfig): VirtualServiceConfiguration {
             return specmaticConfig.virtualService
         }
+
+        @JsonIgnore
+        fun getIgnoreInlineExamples(specmaticConfig: SpecmaticConfig): Boolean? {
+            return specmaticConfig.ignoreInlineExamples
+        }
     }
 
     @JsonIgnore
@@ -174,11 +179,6 @@ data class SpecmaticConfig(
                 }
             }
         }.plus(defaultPort).distinct()
-
-        @JsonIgnore
-        fun getIgnoreInlineExamples(specmaticConfig: SpecmaticConfig): Boolean? {
-            return specmaticConfig.ignoreInlineExamples
-        }
     }
 
     @JsonIgnore

@@ -8,6 +8,7 @@ import io.specmatic.core.Source
 import io.specmatic.core.SourceProvider.filesystem
 import io.specmatic.core.SourceProvider.git
 import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.config.v1.SpecmaticConfigV1
 import io.specmatic.core.config.v2.ContractConfig
 import io.specmatic.core.config.v2.ContractConfig.FileSystemContractSource
 import io.specmatic.core.config.v2.ContractConfig.GitContractSource
@@ -250,5 +251,22 @@ internal class SpecmaticConfigAllTest {
         assertThat((contractConfig.contractSource as GitContractSource).url).isEqualTo("https://contracts")
         assertThat(contractConfig.provides).containsOnly("com/petstore/1.yaml")
         assertThat(contractConfig.consumes).isNull()
+    }
+
+    @Test
+    fun `when the source v1 config has a source of filesystem type with no directory it gets converted to v2 with no source` () {
+        val contractConfigYaml = """
+            sources:
+              - provides:
+                - com/petstore/1.yaml
+        """.trimIndent()
+
+        val configV1 = objectMapper.readValue(contractConfigYaml, SpecmaticConfigV1::class.java)
+
+        val dslConfig = configV1.transform()
+
+        val configV2 = SpecmaticConfigV2.loadFrom(dslConfig) as SpecmaticConfigV2
+
+        assertThat(configV2.contracts.first().contractSource).isNull()
     }
 }

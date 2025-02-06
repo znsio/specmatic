@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import io.specmatic.core.Source
 import io.specmatic.core.SourceProvider
+import io.specmatic.core.pattern.containsKey
 
 @JsonSerialize(using = ContractConfigSerializer::class)
 @JsonDeserialize(using = ContractConfigDeserializer::class)
@@ -21,8 +22,12 @@ data class ContractConfig(
     val consumes: List<String>? = null
 ) {
     constructor(source: Source) : this(
-        contractSource = GitContractSource(source).takeIf { source.provider == SourceProvider.git }
-            ?: FileSystemContractSource(source),
+        contractSource =
+            when {
+                source.provider == SourceProvider.git -> GitContractSource(source)
+                source.directory != null -> FileSystemContractSource(source)
+                else -> null
+            },
         provides = source.test,
         consumes = source.stub
     )
@@ -34,6 +39,7 @@ data class ContractConfig(
     interface ContractSource {
         fun write(gen: JsonGenerator)
         fun transform(provides: List<String>?, consumes: List<String>?): Source
+        fun hasDirectory(): Boolean
     }
 
     data class GitContractSource(
@@ -58,6 +64,10 @@ data class ContractConfig(
                 stub = consumes
             )
         }
+
+        override fun hasDirectory(): Boolean {
+            return false
+        }
     }
 
     data class FileSystemContractSource(
@@ -79,13 +89,21 @@ data class ContractConfig(
                 stub = consumes
             )
         }
+
+        override fun hasDirectory(): Boolean {
+            return directory.isNotBlank() && directory != "."
+        }
     }
 }
 
 class ContractConfigSerializer : StdSerializer<ContractConfig>(ContractConfig::class.java) {
     override fun serialize(contract: ContractConfig, gen: JsonGenerator, provider: SerializerProvider) {
         gen.writeStartObject()
-        contract.contractSource?.write(gen)
+
+        if(contract.contractSource?.hasDirectory() == true) {
+            contract.contractSource.write(gen)
+        }
+
         gen.writeObjectField("provides", contract.provides)
         gen.writeObjectField("consumes", contract.consumes)
         gen.writeEndObject()

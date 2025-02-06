@@ -1,21 +1,10 @@
 package io.specmatic.core.config.v3
 
 import com.fasterxml.jackson.annotation.JsonAlias
-import io.specmatic.core.AttributeSelectionPattern
-import io.specmatic.core.Auth
-import io.specmatic.core.Environment
-import io.specmatic.core.Pipeline
-import io.specmatic.core.ReportConfiguration
-import io.specmatic.core.RepositoryInfo
-import io.specmatic.core.SecurityConfiguration
-import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.*
 import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
-import io.specmatic.core.StubConfiguration
-import io.specmatic.core.TestConfiguration
-import io.specmatic.core.VirtualServiceConfiguration
-import io.specmatic.core.WorkflowConfiguration
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticVersionedConfig
 import io.specmatic.core.config.SpecmaticVersionedConfigLoader
@@ -91,7 +80,7 @@ data class SpecmaticConfigV3(
                 ignoreInlineExamples = config.ignoreInlineExamples,
                 additionalExampleParamsFilePath = config.getAdditionalExampleParamsFilePath(),
                 attributeSelectionPattern = config.attributeSelectionPattern,
-                allPatternsMandatory = config.allPatternsMandatory,
+                allPatternsMandatory = config.getAllPatternsMandatory(),
                 defaultPatternValues = config.getDefaultPatternValues()
             )
         }

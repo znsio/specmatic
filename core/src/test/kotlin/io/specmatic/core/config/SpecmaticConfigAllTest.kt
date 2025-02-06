@@ -204,4 +204,38 @@ internal class SpecmaticConfigAllTest {
         }
         assertThat(exception.message).startsWith("Filesystem contract source must have 'directory' field")
     }
+
+    @Test
+    fun `should deserialize ContractConfig successfully when provides is absent`() {
+        val contractConfigYaml = """
+            git:
+              url: https://contracts
+            consumes:
+              - com/petstore/payment.yaml
+        """.trimIndent()
+
+        val contractConfig = objectMapper.readValue(contractConfigYaml, ContractConfig::class.java)
+
+        assertThat(contractConfig.contractSource).isInstanceOf(GitContractSource::class.java)
+        assertThat((contractConfig.contractSource as GitContractSource).url).isEqualTo("https://contracts")
+        assertThat(contractConfig.provides).isNull()
+        assertThat(contractConfig.consumes).containsOnly("com/petstore/payment.yaml")
+    }
+
+    @Test
+    fun `should deserialize ContractConfig successfully when consumes is absent`() {
+        val contractConfigYaml = """
+            git:
+              url: https://contracts
+            provides:
+              - com/petstore/1.yaml
+        """.trimIndent()
+
+        val contractConfig = objectMapper.readValue(contractConfigYaml, ContractConfig::class.java)
+
+        assertThat(contractConfig.contractSource).isInstanceOf(GitContractSource::class.java)
+        assertThat((contractConfig.contractSource as GitContractSource).url).isEqualTo("https://contracts")
+        assertThat(contractConfig.provides).containsOnly("com/petstore/1.yaml")
+        assertThat(contractConfig.consumes).isNull()
+    }
 }

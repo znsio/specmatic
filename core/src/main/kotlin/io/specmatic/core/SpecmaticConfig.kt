@@ -80,11 +80,27 @@ fun String.loadContract(): Feature {
 }
 
 data class StubConfiguration(
-    val generative: Boolean? = null,
-    val delayInMilliseconds: Long? = getLongValue(SPECMATIC_STUB_DELAY),
-    val dictionary: String? = getStringValue(SPECMATIC_STUB_DICTIONARY),
-    val includeMandatoryAndRequestedKeysInResponse: Boolean? = null
-)
+    private val generative: Boolean? = null,
+    private val delayInMilliseconds: Long? = null,
+    private val dictionary: String? = null,
+    private val includeMandatoryAndRequestedKeysInResponse: Boolean? = null
+) {
+    fun getGenerative(): Boolean? {
+        return generative
+    }
+
+    fun getDelayInMilliseconds(): Long? {
+        return delayInMilliseconds ?: getLongValue(SPECMATIC_STUB_DELAY)
+    }
+
+    fun getDictionary(): String? {
+        return dictionary ?: getStringValue(SPECMATIC_STUB_DICTIONARY)
+    }
+
+    fun getIncludeMandatoryAndRequestedKeysInResponse(): Boolean? {
+        return includeMandatoryAndRequestedKeysInResponse
+    }
+}
 
 data class VirtualServiceConfiguration(
     private val nonPatchableKeys: Set<String> = emptySet()
@@ -143,7 +159,7 @@ data class SpecmaticConfig(
     val report: ReportConfiguration? = null,
     private val security: SecurityConfiguration? = null,
     private val test: TestConfiguration? = TestConfiguration(),
-    val stub: StubConfiguration = StubConfiguration(),
+    private val stub: StubConfiguration = StubConfiguration(),
     private val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     private val examples: List<String>? = null,
     val workflow: WorkflowConfiguration? = null,
@@ -193,6 +209,11 @@ data class SpecmaticConfig(
         @JsonIgnore
         fun getAttributeSelectionPattern(specmaticConfig: SpecmaticConfig): AttributeSelectionPattern {
             return specmaticConfig.attributeSelectionPattern
+        }
+
+        @JsonIgnore
+        fun getStubConfiguration(specmaticConfig: SpecmaticConfig): StubConfiguration {
+            return specmaticConfig.stub
         }
     }
 
@@ -249,11 +270,6 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun getIncludeMandatoryAndRequestedKeysInResponse(): Boolean {
-        return stub.includeMandatoryAndRequestedKeysInResponse ?: true
-    }
-
-    @JsonIgnore
     fun getResiliencyTestsEnabled(): ResiliencyTestSuite {
         return test?.getResiliencyTests()?.getEnableTestSuite() ?: ResiliencyTestSuite.none
     }
@@ -275,8 +291,23 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
+    fun getStubIncludeMandatoryAndRequestedKeysInResponse(): Boolean {
+        return stub.getIncludeMandatoryAndRequestedKeysInResponse() ?: true
+    }
+
+    @JsonIgnore
     fun getStubGenerative(): Boolean {
-        return stub.generative ?: false
+        return stub.getGenerative() ?: false
+    }
+
+    @JsonIgnore
+    fun getStubDelayInMilliseconds(): Long? {
+        return stub.getDelayInMilliseconds()
+    }
+
+    @JsonIgnore
+    fun getStubDictionary(): String? {
+        return stub.getDictionary()
     }
 
     @JsonIgnore

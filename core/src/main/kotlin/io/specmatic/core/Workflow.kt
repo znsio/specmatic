@@ -10,36 +10,31 @@ class Workflow(
     var id: Value? = null
 
     fun extractDataFrom(response: HttpResponse, originalScenario: Scenario) {
-        val operation = workflow.getOperation(originalScenario.apiDescription) ?: return
+        val extractLocation = workflow.getExtractForAPI(originalScenario.apiDescription) ?: return
 
-        val extractLocation = operation.extract
+        val locationPath = extractLocation.split(".")
+        if(locationPath.isEmpty())
+            return
 
-        if(extractLocation != null) {
-            val locationPath = extractLocation.split(".")
-            if(locationPath.isEmpty())
-                return
+        val area = locationPath[0]
 
-            val area = locationPath[0]
+        val path = locationPath.drop(1)
 
-            val path = locationPath.drop(1)
+        when(area.uppercase()) {
+            "BODY" -> {
+                val responseBody = response.body
 
-            when(area.uppercase()) {
-                "BODY" -> {
-                    val responseBody = response.body
-
-                    if(path.isEmpty()) {
-                        id = responseBody
-                    } else if(responseBody is JSONObjectValue) {
-                        val data = responseBody.findFirstChildByPath(path.joinToString("."))
-                        if(data != null)
-                            id = data
-                    }
-                }
-                else -> {
-                    throw ContractException("Cannot extract data from $area yet")
+                if(path.isEmpty()) {
+                    id = responseBody
+                } else if(responseBody is JSONObjectValue) {
+                    val data = responseBody.findFirstChildByPath(path.joinToString("."))
+                    if(data != null)
+                        id = data
                 }
             }
-
+            else -> {
+                throw ContractException("Cannot extract data from $area yet")
+            }
         }
     }
 
@@ -47,12 +42,7 @@ class Workflow(
         if(originalScenario.isNegative)
             return request
 
-        val operation = workflow.getOperation(originalScenario.apiDescription) ?: workflow.getOperation("*")
-
-        if(operation == null)
-            return request
-
-        val useLocation = operation.use ?: return request
+        val useLocation = workflow.getUseForAPI(originalScenario.apiDescription) ?: return request
 
         val locationPath = useLocation.split(".")
         if(locationPath.isEmpty())

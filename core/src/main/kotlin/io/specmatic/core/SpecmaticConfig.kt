@@ -121,6 +121,15 @@ data class WorkflowConfiguration(
     fun getOperation(operationId: String): WorkflowIDOperation? {
         return ids[operationId]
     }
+
+    fun getExtractForAPI(apiDescription: String): String? {
+        return getOperation(apiDescription)?.extract
+    }
+
+    fun getUseForAPI(apiDescription: String): String? {
+        val operation = getOperation(apiDescription) ?: getOperation("*")
+        return operation?.use
+    }
 }
 
 interface AttributeSelectionPatternDetails {

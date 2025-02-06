@@ -7,6 +7,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.specmatic.core.Source
 import io.specmatic.core.SourceProvider
 import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.config.v1.SpecmaticConfigV1
 import io.specmatic.core.config.v2.ContractConfig
 import io.specmatic.core.config.v2.ContractConfig.FileSystemContractSource
 import io.specmatic.core.config.v2.ContractConfig.GitContractSource
@@ -20,6 +21,7 @@ import io.specmatic.core.pattern.parsedJSON
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
@@ -361,5 +363,38 @@ internal class SpecmaticConfigAllTest {
         assertThat((contractConfig.contractSource as GitContractSource).url).isEqualTo("https://contracts")
         assertThat(contractConfig.provides).containsOnly("com/petstore/1.yaml")
         assertThat(contractConfig.consumes).isNull()
+    }
+
+    @Test
+    fun `should deserialize SpecmaticConfig successfully when VirtualService key is present`(@TempDir tempDir: File) {
+        val configFile = tempDir.resolve("specmatic.yaml")
+        val configYaml = """
+            virtualService:
+                nonPatchableKeys:
+                    - description
+                    - url
+        """.trimIndent()
+        configFile.writeText(configYaml)
+
+        val specmaticConfig = configFile.toSpecmaticConfig()
+
+        val nonPatchableKeys = specmaticConfig.getVirtualServiceNonPatchableKeys()
+        assertThat(nonPatchableKeys.size).isEqualTo(2)
+        assertThat(nonPatchableKeys).containsExactly("description", "url")
+    }
+
+    @Test
+    fun `should serialize SpecmaticConfig successfully when VirtualService key is present`() {
+        val configYaml = """
+            virtualService:
+                nonPatchableKeys:
+                    - description
+                    - url
+        """.trimIndent()
+
+        val config = objectMapper.readValue(configYaml, SpecmaticConfigV1::class.java).transform()
+        val configV2 = SpecmaticConfigV2.loadFrom(config) as SpecmaticConfigV2
+
+        assertThat(configV2.virtualService.getNonPatchableKeys()).containsExactly("description", "url")
     }
 }

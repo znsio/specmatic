@@ -7,6 +7,7 @@ import io.specmatic.core.SpecmaticConfig.Companion.getAllPatternsMandatory
 import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
+import io.specmatic.core.SpecmaticConfig.Companion.getWorkflowConfiguration
 import io.specmatic.core.SpecmaticConfig.Companion.getVirtualServiceConfiguration
 import io.specmatic.core.SpecmaticConfig.Companion.getTestConfiguration
 import io.specmatic.core.SpecmaticConfig.Companion.getStubConfiguration
@@ -81,7 +82,7 @@ data class SpecmaticConfigV2(
                 stub = getStubConfiguration(config),
                 virtualService = getVirtualServiceConfiguration(config),
                 examples = config.getExamples(),
-                workflow = config.workflow,
+                workflow = getWorkflowConfiguration(config),
                 ignoreInlineExamples = SpecmaticConfig.getIgnoreInlineExamples(config),
                 additionalExampleParamsFilePath = config.getAdditionalExampleParamsFilePath(),
                 attributeSelectionPattern = getAttributeSelectionPattern(config),

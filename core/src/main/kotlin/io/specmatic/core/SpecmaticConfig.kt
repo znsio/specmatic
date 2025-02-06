@@ -115,9 +115,31 @@ data class WorkflowIDOperation(
     val use: String? = null
 )
 
+interface WorkflowDetails {
+    fun getExtractForAPI(apiDescription: String): String?
+    fun getUseForAPI(apiDescription: String): String?
+
+    companion object {
+        val default: WorkflowDetails = WorkflowConfiguration()
+    }
+}
+
 data class WorkflowConfiguration(
-    val ids: Map<String, WorkflowIDOperation> = emptyMap()
-)
+    private val ids: Map<String, WorkflowIDOperation> = emptyMap()
+) : WorkflowDetails {
+    private fun getOperation(operationId: String): WorkflowIDOperation? {
+        return ids[operationId]
+    }
+
+    override fun getExtractForAPI(apiDescription: String): String? {
+        return getOperation(apiDescription)?.extract
+    }
+
+    override fun getUseForAPI(apiDescription: String): String? {
+        val operation = getOperation(apiDescription) ?: getOperation("*")
+        return operation?.use
+    }
+}
 
 interface AttributeSelectionPatternDetails {
     fun getDefaultFields(): List<String>
@@ -162,7 +184,7 @@ data class SpecmaticConfig(
     private val stub: StubConfiguration = StubConfiguration(),
     private val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     private val examples: List<String>? = null,
-    val workflow: WorkflowConfiguration? = null,
+    private val workflow: WorkflowConfiguration? = null,
     private val ignoreInlineExamples: Boolean? = null,
     private val additionalExampleParamsFilePath: String? = null,
     private val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
@@ -184,6 +206,11 @@ data class SpecmaticConfig(
         @JsonIgnore
         fun getSecurityConfiguration(specmaticConfig: SpecmaticConfig?): SecurityConfiguration? {
             return specmaticConfig?.security
+        }
+
+        @JsonIgnore
+        fun getWorkflowConfiguration(specmaticConfig: SpecmaticConfig): WorkflowConfiguration? {
+            return specmaticConfig.workflow
         }
 
         @JsonIgnore
@@ -215,6 +242,11 @@ data class SpecmaticConfig(
         fun getStubConfiguration(specmaticConfig: SpecmaticConfig): StubConfiguration {
             return specmaticConfig.stub
         }
+    }
+
+    @JsonIgnore
+    fun getWorkflowDetails(): WorkflowDetails? {
+        return workflow
     }
 
     @JsonIgnore

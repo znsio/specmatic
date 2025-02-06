@@ -76,7 +76,7 @@ data class SpecmaticConfigV3(
                 stub = SpecmaticConfig.getStubConfiguration(config),
                 virtualService = SpecmaticConfig.getVirtualServiceConfiguration(config),
                 examples = config.getExamples(),
-                workflow = config.workflow,
+                workflow = SpecmaticConfig.getWorkflowConfiguration(config),
                 ignoreInlineExamples = SpecmaticConfig.getIgnoreInlineExamples(config),
                 additionalExampleParamsFilePath = config.getAdditionalExampleParamsFilePath(),
                 attributeSelectionPattern = SpecmaticConfig.getAttributeSelectionPattern(config),

@@ -90,7 +90,7 @@ internal class SpecmaticConfigKtTest {
         assertThat(htmlConfig?.heading).isEqualTo("Test Results")
         assertThat(htmlConfig?.outputDirectory).isEqualTo("output")
 
-        assertThat(config.test?.timeoutInMilliseconds).isEqualTo(3000)
+        assertThat(config.getTestTimeoutInMilliseconds()).isEqualTo(3000)
     }
 
     @Test
@@ -194,7 +194,7 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isExtensibleSchemaEnabled()).isFalse()
             assertThat(config.getExamples()).isEqualTo(listOf("folder1/examples", "folder2/examples"))
             assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
-            assertThat(config.test?.timeoutInMilliseconds).isEqualTo(5000)
+            assertThat(config.getTestTimeoutInMilliseconds()).isEqualTo(5000)
         } finally {
             properties.forEach { System.clearProperty(it.key) }
         }
@@ -243,7 +243,7 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isExtensibleSchemaEnabled()).isTrue()
             assertThat(config.getExamples()).isEqualTo(listOf("folder1/examples", "folder2/examples"))
             assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
-            assertThat(config.test?.timeoutInMilliseconds).isEqualTo(3000)
+            assertThat(config.getTestTimeoutInMilliseconds()).isEqualTo(3000)
         } finally {
             props.forEach { System.clearProperty(it.key) }
         }

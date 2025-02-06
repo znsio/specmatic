@@ -8,6 +8,7 @@ import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
 import io.specmatic.core.SpecmaticConfig.Companion.getVirtualServiceConfiguration
+import io.specmatic.core.SpecmaticConfig.Companion.getTestConfiguration
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticVersionedConfig
 import io.specmatic.core.config.SpecmaticVersionedConfigLoader
@@ -75,7 +76,7 @@ data class SpecmaticConfigV2(
                 repository = getRepository(config),
                 report = config.report,
                 security = getSecurityConfiguration(config),
-                test = config.test,
+                test = getTestConfiguration(config),
                 stub = config.stub,
                 virtualService = getVirtualServiceConfiguration(config),
                 examples = config.getExamples(),

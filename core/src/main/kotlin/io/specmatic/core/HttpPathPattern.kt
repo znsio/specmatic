@@ -5,6 +5,7 @@ import io.specmatic.core.Result.Success
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.StringValue
 import io.ktor.util.reflect.*
+import io.specmatic.conversions.convertPathParameterStyle
 import java.net.URI
 
 val OMIT = listOf("(OMIT)", "(omit)")
@@ -15,11 +16,6 @@ data class HttpPathPattern(
     val pathSegmentPatterns: List<URLPathSegmentPattern>,
     val path: String
 ) {
-    companion object {
-        fun toOpenApiPath(path: String): String {
-            return path.replace("(", "{").replace(""":[a-z,A-Z]*?\)""".toRegex(), "}")
-        }
-    }
     fun encompasses(otherHttpPathPattern: HttpPathPattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         if (this.matches(URI.create(otherHttpPathPattern.path), resolver=thisResolver) is Success)
             return Success()
@@ -176,7 +172,7 @@ data class HttpPathPattern(
     }
 
     fun toOpenApiPath(): String {
-        return toOpenApiPath(this.path)
+        return convertPathParameterStyle(this.path)
     }
 
     fun pathParameters(): List<URLPathSegmentPattern> {

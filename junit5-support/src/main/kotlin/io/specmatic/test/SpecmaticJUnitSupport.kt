@@ -536,7 +536,7 @@ open class SpecmaticJUnitSupport {
             filteredScenarios.contains(scenario)
         }
         val excludedEndpoints = remainingScenarios.map {
-            HttpPathPattern.toOpenApiPath(it.toScenarioMetadata().path)
+            convertPathParameterStyle(it.toScenarioMetadata().path)
         }
         openApiCoverageReportInput.addExcludedAPIs(excludedEndpoints);
         val tests: Sequence<ContractTest> = feature

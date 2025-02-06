@@ -488,7 +488,7 @@ internal class SpecmaticConfigAllTest {
     }
 
     @Test
-    fun `should deserialize test configuration in SpecmaticConfig successfully key`(@TempDir tempDir: File) {
+    fun `should deserialize test configuration in SpecmaticConfig successfully`(@TempDir tempDir: File) {
         val configFile = tempDir.resolve("specmatic.yaml")
         val configYaml = """
             test:
@@ -533,7 +533,7 @@ internal class SpecmaticConfigAllTest {
     }
 
     @Test
-    fun `should deserialize stub configuration in SpecmaticConfig successfully key`(@TempDir tempDir: File) {
+    fun `should deserialize stub configuration in SpecmaticConfig successfully`(@TempDir tempDir: File) {
         val configFile = tempDir.resolve("specmatic.yaml")
         val configYaml = """
             stub:
@@ -572,6 +572,47 @@ internal class SpecmaticConfigAllTest {
             assertThat(getDelayInMilliseconds()).isEqualTo(1000L)
             assertThat(getDictionary()).isEqualTo("stubDictionary")
             assertThat(getIncludeMandatoryAndRequestedKeysInResponse()).isTrue()
+        }
+    }
+
+    @Test
+    fun `should deserialize workflow configuration in SpecmaticConfig successfully`(@TempDir tempDir: File) {
+        val configFile = tempDir.resolve("specmatic.yaml")
+        val configYaml = """
+            workflow:
+              ids:
+                "POST / -> 201":
+                  extract: "BODY.id"
+                "*":
+                  use: "PATH.id"
+        """.trimIndent()
+        configFile.writeText(configYaml)
+
+        val specmaticConfig = configFile.toSpecmaticConfig()
+
+        specmaticConfig.apply {
+            assertThat(specmaticConfig.getWorkflowDetails()?.getUseForAPI("*")).isEqualTo("PATH.id")
+            assertThat(specmaticConfig.getWorkflowDetails()?.getExtractForAPI("POST / -> 201")).isEqualTo("BODY.id")
+        }
+    }
+
+    @Test
+    fun `should convert config from v1 to v2 when workflow configuration is present`() {
+        val configYaml = """
+            workflow:
+              ids:
+                "POST / -> 201":
+                  extract: "BODY.id"
+                "*":
+                  use: "PATH.id"
+        """.trimIndent()
+
+        val configFromV1 = objectMapper.readValue(configYaml, SpecmaticConfigV1::class.java).transform()
+        val configV2 = SpecmaticConfigV2.loadFrom(configFromV1) as SpecmaticConfigV2
+
+        configV2.workflow!!.apply {
+            assertThat(getUseForAPI("*")).isEqualTo("PATH.id")
+            assertThat(getExtractForAPI("POST / -> 201")).isEqualTo("BODY.id")
         }
     }
 }

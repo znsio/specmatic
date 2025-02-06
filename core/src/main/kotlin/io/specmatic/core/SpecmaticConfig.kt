@@ -186,7 +186,7 @@ data class SpecmaticConfig(
                     val testPaths = source.test ?: emptyList()
 
                     when (source.repository) {
-                        null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
+                        null -> GitMonoRepo(testPaths, stubPaths, source.provider.name)
                         else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
                     }
                 }

@@ -5,8 +5,8 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
-import io.specmatic.core.filters.ScenarioMetadataFilter
-import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
+import io.specmatic.core.filters.Filter
+import io.specmatic.core.filters.Filter.Companion.filterUsing
 import io.specmatic.core.log.ignoreLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
@@ -79,7 +79,7 @@ open class SpecmaticJUnitSupport {
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfig: SpecmaticConfig? = null
         val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
-        private val scenarioMetadataFilter = ScenarioMetadataFilter.from(readEnvVarOrProperty(FILTER, FILTER).orEmpty())
+        private val testFilter = Filter.from(readEnvVarOrProperty(FILTER, FILTER).orEmpty())
 
         private val threads: Vector<String> = Vector<String>()
 
@@ -326,7 +326,7 @@ open class SpecmaticJUnitSupport {
                 filterNotName
             ) { it.testDescription() }
 
-            filterUsing(filteredTestsBasedOnName, scenarioMetadataFilter) {
+            filterUsing(filteredTestsBasedOnName, testFilter) {
                 it.toScenarioMetadata()
             }
         } catch (e: ContractException) {
@@ -373,7 +373,7 @@ open class SpecmaticJUnitSupport {
 
                 try {
                     testResult = contractTest.runTest(testBaseURL, timeoutInMilliseconds)
-                    val (result, response) = testResult
+                    val (result) = testResult
 
                     if (result is Result.Success && result.isPartialSuccess()) {
                         partialSuccesses.add(result)
@@ -529,7 +529,7 @@ open class SpecmaticJUnitSupport {
         ) { it.testDescription() }
         val filteredScenarios = filterUsing(
             filteredScenariosBasedOnName,
-            scenarioMetadataFilter
+            testFilter
         )
         { it.toScenarioMetadata() }
         val remainingScenarios = feature.scenarios.filterNot { scenario ->

@@ -3,7 +3,10 @@ package io.specmatic.test.reports.coverage
 import io.specmatic.conversions.SERVICE_TYPE_HTTP
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.TestResult
+import io.specmatic.core.filters.Filter
+import io.specmatic.core.filters.Filter.Companion.filterUsing
 import io.specmatic.test.API
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER
 import io.specmatic.test.TestResultRecord
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
@@ -157,7 +160,9 @@ class OpenApiCoverageReportInput(
     }
 
     private fun addTestResultsForMissingEndpoints(testResults: List<TestResultRecord>): List<TestResultRecord> {
-        val testReportRecordsIncludingMissingAPIs = testResults.toMutableList()
+        var testReportRecordsIncludingMissingAPIs = testResults.toMutableList()
+        val filterExpression = System.getProperty(FILTER, FILTER)
+        val filter = Filter.from(filterExpression);
         if(endpointsAPISet) {
             applicationAPIs.forEach { api ->
                 if (allEndpoints.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it == api.path }) {
@@ -172,6 +177,8 @@ class OpenApiCoverageReportInput(
                     )
                 }
             }
+            val filteredItems = filterUsing(testReportRecordsIncludingMissingAPIs.asSequence(), filter) { it }
+            testReportRecordsIncludingMissingAPIs = filteredItems.toMutableList()
         }
         return testReportRecordsIncludingMissingAPIs
     }

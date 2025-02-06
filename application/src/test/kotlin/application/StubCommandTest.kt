@@ -10,6 +10,7 @@ import io.specmatic.core.utilities.StubServerWatcher
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpClientFactory
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -119,7 +120,11 @@ internal class StubCommandTest {
                     workingDirectory = any(),
                     gracefulRestartTimeoutInMs = any()
                 )
-            }.returns(null)
+            }.returns(
+                mockk {
+                   every { close() } returns Unit
+                }
+            )
 
             every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
             every { fileOperations.isFile(contractPath) }.returns(true)
@@ -229,7 +234,11 @@ internal class StubCommandTest {
                     workingDirectory = any(),
                     gracefulRestartTimeoutInMs = any()
                 )
-            }.returns(null)
+            }.returns(
+                mockk {
+                    every { close() } returns Unit
+                }
+            )
 
             every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
             every { fileOperations.isFile(contractPath) }.returns(true)

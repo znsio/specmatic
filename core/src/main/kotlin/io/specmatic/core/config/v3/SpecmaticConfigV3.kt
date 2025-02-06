@@ -80,7 +80,7 @@ data class SpecmaticConfigV3(
                 ignoreInlineExamples = config.ignoreInlineExamples,
                 additionalExampleParamsFilePath = config.getAdditionalExampleParamsFilePath(),
                 attributeSelectionPattern = config.attributeSelectionPattern,
-                allPatternsMandatory = config.getAllPatternsMandatory(),
+                allPatternsMandatory = SpecmaticConfig.getAllPatternsMandatory(config),
                 defaultPatternValues = config.getDefaultPatternValues()
             )
         }

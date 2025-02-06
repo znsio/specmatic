@@ -5,7 +5,7 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 
 class Workflow(
-    val workflow: WorkflowConfiguration = WorkflowConfiguration(),
+    val workflow: WorkflowDetails = WorkflowDetails.default,
 ) {
     var id: Value? = null
 

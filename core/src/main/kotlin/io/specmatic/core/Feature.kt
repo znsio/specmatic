@@ -565,7 +565,7 @@ data class Feature(
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
     fun generateContractTests(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<ContractTest> {
-        val workflow = Workflow(getWorkflowConfiguration(specmaticConfig) ?: WorkflowConfiguration())
+        val workflow = Workflow(specmaticConfig.getWorkflowDetails() ?: WorkflowDetails.default)
 
         return generateContractTestScenarios(suggestions, fn).map { (originalScenario, returnValue) ->
             returnValue.realise(

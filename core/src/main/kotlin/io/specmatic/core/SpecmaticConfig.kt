@@ -115,18 +115,27 @@ data class WorkflowIDOperation(
     val use: String? = null
 )
 
+interface WorkflowDetails {
+    fun getExtractForAPI(apiDescription: String): String?
+    fun getUseForAPI(apiDescription: String): String?
+
+    companion object {
+        val default: WorkflowDetails = WorkflowConfiguration()
+    }
+}
+
 data class WorkflowConfiguration(
     private val ids: Map<String, WorkflowIDOperation> = emptyMap()
-) {
-    fun getOperation(operationId: String): WorkflowIDOperation? {
+) : WorkflowDetails {
+    private fun getOperation(operationId: String): WorkflowIDOperation? {
         return ids[operationId]
     }
 
-    fun getExtractForAPI(apiDescription: String): String? {
+    override fun getExtractForAPI(apiDescription: String): String? {
         return getOperation(apiDescription)?.extract
     }
 
-    fun getUseForAPI(apiDescription: String): String? {
+    override fun getUseForAPI(apiDescription: String): String? {
         val operation = getOperation(apiDescription) ?: getOperation("*")
         return operation?.use
     }
@@ -233,6 +242,11 @@ data class SpecmaticConfig(
         fun getStubConfiguration(specmaticConfig: SpecmaticConfig): StubConfiguration {
             return specmaticConfig.stub
         }
+    }
+
+    @JsonIgnore
+    fun getWorkflowDetails(): WorkflowDetails? {
+        return workflow
     }
 
     @JsonIgnore

@@ -1,5 +1,6 @@
 package application
 
+import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.azure.AzureAPI
 import io.specmatic.core.azure.PersonalAccessToken
 import io.specmatic.core.git.getPersonalAccessToken
@@ -74,27 +75,7 @@ class GraphCommand: Callable<Unit> {
 
         val azure = AzureAPI(azureAuthToken, azureBaseURL, collection)
 
-        logger.log("Dependency projects")
-        logger.log("-------------------")
-
-        specmaticConfig.sources.forEach { source ->
-            logger.log("In central repo ${source.repository}")
-
-            source.test?.forEach { relativeContractPath ->
-                logger.log("  Consumers of $relativeContractPath")
-                val consumers = azure.referencesToContract(relativeContractPath)
-
-                if (consumers.isEmpty()) {
-                    logger.log("    ** no consumers found **")
-                } else {
-                    consumers.forEach {
-                        logger.log("  - ${it.description}")
-                    }
-                }
-
-                logger.newLine()
-            }
-        }
+        specmaticConfig.logDependencyProjects(azure)
     }
 
     override fun call() {

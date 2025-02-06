@@ -9,13 +9,14 @@ import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.SourceProvider.filesystem
+import io.specmatic.core.azure.AzureAPI
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.VERSION_1
 import io.specmatic.core.config.toSpecmaticConfig
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
-import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.*
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
@@ -26,8 +27,6 @@ import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
-import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.Value
 import java.io.File
 
@@ -111,7 +110,7 @@ data class AttributeSelectionPattern(
 )
 
 data class SpecmaticConfig(
-    val sources: List<Source> = emptyList(),
+    private val sources: List<Source> = emptyList(),
     private val auth: Auth? = null,
     private val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
@@ -133,6 +132,11 @@ data class SpecmaticConfig(
 ) {
     companion object {
         @JsonIgnore
+        fun getSources(specmaticConfig: SpecmaticConfig): List<Source> {
+            return specmaticConfig.sources
+        }
+
+        @JsonIgnore
         fun getRepository(specmaticConfig: SpecmaticConfig): RepositoryInfo? {
             return specmaticConfig.repository
         }
@@ -145,6 +149,62 @@ data class SpecmaticConfig(
         @JsonIgnore
         fun getSecurityConfiguration(specmaticConfig: SpecmaticConfig?): SecurityConfiguration? {
             return specmaticConfig?.security
+        }
+    }
+
+    fun logDependencyProjects(azure: AzureAPI) {
+        logger.log("Dependency projects")
+        logger.log("-------------------")
+
+        sources.forEach { source ->
+            logger.log("In central repo ${source.repository}")
+
+            source.test?.forEach { relativeContractPath ->
+                logger.log("  Consumers of $relativeContractPath")
+                val consumers = azure.referencesToContract(relativeContractPath)
+
+                if (consumers.isEmpty()) {
+                    logger.log("    ** no consumers found **")
+                } else {
+                    consumers.forEach {
+                        logger.log("  - ${it.description}")
+                    }
+                }
+
+                logger.newLine()
+            }
+        }
+    }
+
+
+    @JsonIgnore
+    fun loadSources(): List<ContractSource> {
+        return sources.map { source ->
+            when (source.provider) {
+                SourceProvider.git -> {
+                    val stubPaths = source.stub ?: emptyList()
+                    val testPaths = source.test ?: emptyList()
+
+                    when (source.repository) {
+                        null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
+                        else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
+                    }
+                }
+
+                SourceProvider.filesystem -> {
+                    val stubPaths = source.stub ?: emptyList()
+                    val testPaths = source.test ?: emptyList()
+
+                    LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
+                }
+
+                SourceProvider.web -> {
+                    val stubPaths = source.stub ?: emptyList()
+                    val testPaths = source.test ?: emptyList()
+
+                    WebSource(testPaths, stubPaths)
+                }
+            }
         }
     }
 

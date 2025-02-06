@@ -28,7 +28,7 @@ internal class SpecmaticConfigKtTest {
     fun `parse specmatic config file with all values`(configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
 
-        val sources = config.sources
+        val sources = SpecmaticConfig.getSources(config)
         assertThat(sources).isNotEmpty
 
         assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
@@ -106,7 +106,7 @@ internal class SpecmaticConfigKtTest {
             }
         """.trimIndent(), SpecmaticConfig::class.java)
 
-        val sources = config.sources
+        val sources = SpecmaticConfig.getSources(config)
         assertThat(sources).isNotEmpty
 
         assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
@@ -122,7 +122,7 @@ internal class SpecmaticConfigKtTest {
     fun `parse specmatic config file with aliases`(configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
 
-        val sources = config.sources
+        val sources = SpecmaticConfig.getSources(config)
         assertThat(sources).isNotEmpty
 
         assertThat(sources.first().provider).isEqualTo(SourceProvider.git)

@@ -70,7 +70,7 @@ internal class SpecmaticConfigAllTest {
     fun `should create SpecmaticConfig given SpecmaticConfigV1`(version: SpecmaticConfigVersion, configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
         assertThat(config.getVersion()).isEqualTo(version)
-        val sources = config.sources
+        val sources = SpecmaticConfig.getSources(config)
         assertThat(sources.size).isEqualTo(2)
         val expectedSources = listOf(
             Source(

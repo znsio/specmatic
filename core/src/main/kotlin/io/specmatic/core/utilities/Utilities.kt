@@ -142,7 +142,7 @@ fun strings(list: List<Value>): List<String> {
     }
 }
 
-fun loadSources(configFilePath: String): List<ContractSource> = loadSources(loadSpecmaticConfig(configFilePath))
+fun loadSources(configFilePath: String): List<ContractSource> = loadSpecmaticConfig(configFilePath).loadSources()
 
 fun loadConfigJSON(configFile: File): JSONObjectValue {
     val configJson = try {
@@ -156,36 +156,6 @@ fun loadConfigJSON(configFile: File): JSONObjectValue {
         throw ContractException("The contents of $configFilePath must be a json object")
 
     return configJson
-}
-
-fun loadSources(specmaticConfig: SpecmaticConfig): List<ContractSource> {
-    return specmaticConfig.sources.map { source ->
-        when (source.provider) {
-            SourceProvider.git -> {
-                val stubPaths = source.stub ?: emptyList()
-                val testPaths = source.test ?: emptyList()
-
-                when (source.repository) {
-                    null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
-                    else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
-                }
-            }
-
-            SourceProvider.filesystem -> {
-                val stubPaths = source.stub ?: emptyList()
-                val testPaths = source.test ?: emptyList()
-
-                LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
-            }
-
-            SourceProvider.web -> {
-                val stubPaths = source.stub ?: emptyList()
-                val testPaths = source.test ?: emptyList()
-
-                WebSource(testPaths, stubPaths)
-            }
-        }
-    }
 }
 
 fun loadSources(configJson: JSONObjectValue): List<ContractSource> {

@@ -260,7 +260,7 @@ open class SpecmaticJUnitSupport {
             return loadExceptionAsTestError(e)
         }
         val testScenarios = try {
-            val (testScenarios) = when {
+            val (testScenarios, allEndpoints) = when {
                 contractPaths != null -> {
                     val testScenariosAndEndpointsPairList = contractPaths.split(",").filter {
                         File(it).extension in CONTRACT_EXTENSIONS
@@ -318,14 +318,7 @@ open class SpecmaticJUnitSupport {
                     Pair(tests, endpoints)
                 }
             }
-            val testPaths: List<Endpoint> = testScenarios.map {
-                Endpoint(
-                    path = HttpPathPattern.toOpenApiPath(it.toScenarioMetadata().path),
-                    method = it.toScenarioMetadata().method,
-                    responseStatus = it.toScenarioMetadata().statusCode
-                )
-            }.toList()
-            openApiCoverageReportInput.addEndpoints(testPaths)
+            openApiCoverageReportInput.addEndpoints(allEndpoints)
 
             val filteredTestsBasedOnName = selectTestsToRun(
                 testScenarios,
@@ -537,7 +530,15 @@ open class SpecmaticJUnitSupport {
         val filteredScenarios = filterUsing(
             filteredScenariosBasedOnName,
             scenarioMetadataFilter
-        ) { it.toScenarioMetadata() }
+        )
+        { it.toScenarioMetadata() }
+        val remainingScenarios = feature.scenarios.filterNot { scenario ->
+            filteredScenarios.contains(scenario)
+        }
+        val excludedEndpoints = remainingScenarios.map {
+            HttpPathPattern.toOpenApiPath(it.toScenarioMetadata().path)
+        }
+        openApiCoverageReportInput.addExcludedAPIs(excludedEndpoints);
         val tests: Sequence<ContractTest> = feature
             .copy(scenarios = filteredScenarios.toList())
             .also {

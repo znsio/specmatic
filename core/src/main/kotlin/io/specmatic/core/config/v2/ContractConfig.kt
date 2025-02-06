@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import io.specmatic.core.Source
 import io.specmatic.core.SourceProvider
-import io.specmatic.core.pattern.containsKey
 
 @JsonSerialize(using = ContractConfigSerializer::class)
 @JsonDeserialize(using = ContractConfigDeserializer::class)
@@ -39,7 +38,7 @@ data class ContractConfig(
     interface ContractSource {
         fun write(gen: JsonGenerator)
         fun transform(provides: List<String>?, consumes: List<String>?): Source
-        fun hasDirectory(): Boolean
+        fun shouldWriteContractSource(): Boolean
     }
 
     data class GitContractSource(
@@ -65,8 +64,8 @@ data class ContractConfig(
             )
         }
 
-        override fun hasDirectory(): Boolean {
-            return false
+        override fun shouldWriteContractSource(): Boolean {
+            return true
         }
     }
 
@@ -90,7 +89,7 @@ data class ContractConfig(
             )
         }
 
-        override fun hasDirectory(): Boolean {
+        override fun shouldWriteContractSource(): Boolean {
             return directory.isNotBlank() && directory != "."
         }
     }
@@ -100,7 +99,7 @@ class ContractConfigSerializer : StdSerializer<ContractConfig>(ContractConfig::c
     override fun serialize(contract: ContractConfig, gen: JsonGenerator, provider: SerializerProvider) {
         gen.writeStartObject()
 
-        if(contract.contractSource?.hasDirectory() == true) {
+        if(contract.contractSource?.shouldWriteContractSource() == true) {
             contract.contractSource.write(gen)
         }
 

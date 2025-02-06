@@ -269,4 +269,27 @@ internal class SpecmaticConfigAllTest {
 
         assertThat(configV2.contracts.first().contractSource).isNull()
     }
+
+    @Test
+    fun `when the source v1 config has a source of git type with no directory it gets converted to v2 with git source written out` () {
+        val contractConfigYaml = """
+            sources:
+              - provider: git
+                repository: http://source.in
+                provides:
+                - com/petstore/1.yaml
+        """.trimIndent()
+
+        val configV1 = objectMapper.readValue(contractConfigYaml, SpecmaticConfigV1::class.java)
+
+        val dslConfig = configV1.transform()
+
+        val configV2 = SpecmaticConfigV2.loadFrom(dslConfig) as SpecmaticConfigV2
+
+        val contractSource = configV2.contracts.first().contractSource
+
+        assertThat(contractSource).isNotNull()
+        assertThat(contractSource).isInstanceOf(GitContractSource::class.java)
+
+    }
 }

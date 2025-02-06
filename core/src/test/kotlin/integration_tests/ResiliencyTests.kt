@@ -2,9 +2,11 @@ package integration_tests
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.specmatic.GENERATION
 import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.AttributeSelectionPattern
 import io.specmatic.core.Feature
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
@@ -1180,6 +1182,8 @@ class GenerativeTests {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResiliencyTestingEnabled() } returns true
         }
+        mockkObject(SpecmaticConfig.Companion)
+        every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
 
         val feature = OpenApiSpecification.fromYAML(
             """
@@ -1266,6 +1270,8 @@ class GenerativeTests {
                 every { isResiliencyTestingEnabled() } returns true
                 every { isOnlyPositiveTestingEnabled() } returns true
             }
+            mockkObject(SpecmaticConfig.Companion)
+            every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
 
 
             val feature = OpenApiSpecification.fromYAML(

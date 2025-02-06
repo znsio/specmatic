@@ -7,10 +7,13 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.VERSION_1
 import io.specmatic.core.config.toSpecmaticConfig
+import io.specmatic.core.config.v3.Consumes
+import io.specmatic.core.config.v3.ConsumesDeserializer
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
@@ -84,8 +87,12 @@ data class StubConfiguration(
 )
 
 data class VirtualServiceConfiguration(
-    val nonPatchableKeys: Set<String> = emptySet()
-)
+    private val nonPatchableKeys: Set<String> = emptySet()
+) {
+    fun getNonPatchableKeys(): Set<String> {
+        return nonPatchableKeys
+    }
+}
 
 data class WorkflowIDOperation(
     val extract: String? = null,
@@ -96,18 +103,35 @@ data class WorkflowConfiguration(
     val ids: Map<String, WorkflowIDOperation> = emptyMap()
 )
 
+interface AttributeSelectionPatternDetails {
+    fun getDefaultFields(): List<String>
+    fun getQueryParamKey(): String
+
+    companion object {
+        val default: AttributeSelectionPatternDetails = AttributeSelectionPattern()
+    }
+}
+
 data class AttributeSelectionPattern(
     @field:JsonAlias("default_fields")
-    val defaultFields: List<String> = readEnvVarOrProperty(
-        ATTRIBUTE_SELECTION_DEFAULT_FIELDS,
-        ATTRIBUTE_SELECTION_DEFAULT_FIELDS
-    ).orEmpty().split(",").filter { it.isNotBlank() },
+    private val defaultFields: List<String>? = null,
     @field:JsonAlias("query_param_key")
-    val queryParamKey: String = readEnvVarOrProperty(
-        ATTRIBUTE_SELECTION_QUERY_PARAM_KEY,
-        ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
-    ).orEmpty()
-)
+    private val queryParamKey: String? = null
+) : AttributeSelectionPatternDetails {
+    override fun getDefaultFields(): List<String> {
+        return defaultFields ?: readEnvVarOrProperty(
+            ATTRIBUTE_SELECTION_DEFAULT_FIELDS,
+            ATTRIBUTE_SELECTION_DEFAULT_FIELDS
+        ).orEmpty().split(",").filter { it.isNotBlank() }
+    }
+
+    override fun getQueryParamKey(): String {
+        return queryParamKey ?: readEnvVarOrProperty(
+            ATTRIBUTE_SELECTION_QUERY_PARAM_KEY,
+            ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
+        ).orEmpty()
+    }
+}
 
 data class SpecmaticConfig(
     val sources: List<Source> = emptyList(),
@@ -120,13 +144,13 @@ data class SpecmaticConfig(
     private val security: SecurityConfiguration? = null,
     private val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
-    val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
+    private val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     private val examples: List<String>? = null,
     val workflow: WorkflowConfiguration? = null,
-    val ignoreInlineExamples: Boolean? = null,
+    private val ignoreInlineExamples: Boolean? = null,
     private val additionalExampleParamsFilePath: String? = null,
-    val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
-    val allPatternsMandatory: Boolean? = null,
+    private val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
+    private val allPatternsMandatory: Boolean? = null,
     private val defaultPatternValues: Map<String, Any> = emptyMap(),
     private val version: SpecmaticConfigVersion? = null
 ) {
@@ -150,11 +174,53 @@ data class SpecmaticConfig(
         fun getTestConfiguration(specmaticConfig: SpecmaticConfig): TestConfiguration? {
             return specmaticConfig.test
         }
+
+        @JsonIgnore
+        fun getVirtualServiceConfiguration(specmaticConfig: SpecmaticConfig): VirtualServiceConfiguration {
+            return specmaticConfig.virtualService
+        }
+
+        @JsonIgnore
+        fun getAllPatternsMandatory(specmaticConfig: SpecmaticConfig): Boolean? {
+            return specmaticConfig.allPatternsMandatory
+        }
+
+        @JsonIgnore
+        fun getIgnoreInlineExamples(specmaticConfig: SpecmaticConfig): Boolean? {
+            return specmaticConfig.ignoreInlineExamples
+        }
+
+        @JsonIgnore
+        fun getAttributeSelectionPattern(specmaticConfig: SpecmaticConfig): AttributeSelectionPattern {
+            return specmaticConfig.attributeSelectionPattern
+        }
+    }
+
+    @JsonIgnore
+    fun getAttributeSelectionPattern(): AttributeSelectionPatternDetails {
+        return attributeSelectionPattern
+    }
+
+    @JsonIgnore
+    fun specToStubPortMap(defaultPort: Int, relativeTo: File = File(".")): Map<String, Int> {
+        return sources.flatMap { it.specToStubPortMap(defaultPort, relativeTo).entries }.associate { it.key to it.value }
+    }
+
+    @JsonIgnore
+    fun stubPorts(defaultPort: Int): List<Int> {
+        return sources.flatMap {
+            it.stub.orEmpty().map { consumes ->
+                when(consumes) {
+                    is Consumes.StringValue -> defaultPort
+                    is Consumes.ObjectValue -> consumes.port
+                }
+            }
+        }.plus(defaultPort).distinct()
     }
 
     @JsonIgnore
     fun attributeSelectionQueryParamKey(): String {
-        return attributeSelectionPattern.queryParamKey
+        return attributeSelectionPattern.getQueryParamKey()
     }
 
     @JsonIgnore
@@ -296,6 +362,31 @@ data class SpecmaticConfig(
     fun getOpenAPISecurityConfigurationScheme(scheme: String): SecuritySchemeConfiguration? {
         return security?.getOpenAPISecurityScheme(scheme)
     }
+
+    @JsonIgnore
+    fun getVirtualServiceNonPatchableKeys(): Set<String> {
+        return virtualService.getNonPatchableKeys()
+    }
+
+    @JsonIgnore
+    fun stubContracts(relativeTo: File = File(".")): List<String> {
+        return sources.flatMap { source ->
+            source.stub.orEmpty().flatMap { stub ->
+                when (stub) {
+                    is Consumes.StringValue -> listOf(stub.value)
+                    is Consumes.ObjectValue -> stub.specs
+                }
+            }.map { spec ->
+                if (source.provider == SourceProvider.web) spec
+                else spec.canonicalPath(relativeTo)
+            }
+        }
+    }
+
+    @JsonIgnore
+    private fun String.canonicalPath(relativeTo: File): String {
+        return relativeTo.parentFile?.resolve(this)?.canonicalPath ?: File(this).canonicalPath
+    }
 }
 
 data class TestConfiguration(
@@ -406,9 +497,35 @@ data class Source(
     @field:JsonAlias("provides")
     val test: List<String>? = null,
     @field:JsonAlias("consumes")
-    val stub: List<String>? = null,
+    @JsonDeserialize(using = ConsumesDeserializer::class)
+    val stub: List<Consumes>? = null,
     val directory: String? = null,
-)
+) {
+    fun specsUsedAsStub(): List<String> {
+        return stub.orEmpty().flatMap {
+            when (it) {
+                is Consumes.StringValue -> listOf(it.value)
+                is Consumes.ObjectValue -> it.specs
+            }
+        }
+    }
+
+    fun specToStubPortMap(defaultPort: Int, relativeTo: File = File(".")): Map<String, Int> {
+        return stub.orEmpty().flatMap {
+            when (it) {
+                is Consumes.StringValue -> listOf(it.value.canonicalPath(relativeTo) to defaultPort)
+                is Consumes.ObjectValue -> it.specs.map { specPath ->
+                    specPath.canonicalPath(relativeTo) to it.port
+                }
+            }
+        }.toMap()
+    }
+
+    private fun String.canonicalPath(relativeTo: File): String {
+        if (provider == SourceProvider.web) return this
+        return relativeTo.parentFile?.resolve(this)?.canonicalPath ?: File(this).canonicalPath
+    }
+}
 
 data class RepositoryInfo(
     private val provider: String,

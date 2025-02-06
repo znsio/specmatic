@@ -366,6 +366,39 @@ internal class SpecmaticConfigAllTest {
     }
 
     @Test
+    fun `should deserialize SpecmaticConfig successfully when VirtualService key is present`(@TempDir tempDir: File) {
+        val configFile = tempDir.resolve("specmatic.yaml")
+        val configYaml = """
+            virtualService:
+                nonPatchableKeys:
+                    - description
+                    - url
+        """.trimIndent()
+        configFile.writeText(configYaml)
+
+        val specmaticConfig = configFile.toSpecmaticConfig()
+
+        val nonPatchableKeys = specmaticConfig.getVirtualServiceNonPatchableKeys()
+        assertThat(nonPatchableKeys.size).isEqualTo(2)
+        assertThat(nonPatchableKeys).containsExactly("description", "url")
+    }
+
+    @Test
+    fun `should serialize SpecmaticConfig successfully when VirtualService key is present`() {
+        val configYaml = """
+            virtualService:
+                nonPatchableKeys:
+                    - description
+                    - url
+        """.trimIndent()
+
+        val config = objectMapper.readValue(configYaml, SpecmaticConfigV1::class.java).transform()
+        val configV2 = SpecmaticConfigV2.loadFrom(config) as SpecmaticConfigV2
+
+        assertThat(configV2.virtualService.getNonPatchableKeys()).containsExactly("description", "url")
+    }
+
+    @Test
     fun `should deserialize SpecmaticConfig successfully when AllPatternsMandatory is present`(@TempDir tempDir: File) {
         val configFile = tempDir.resolve("specmatic.yaml")
         val configYaml = """

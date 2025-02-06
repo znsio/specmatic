@@ -74,7 +74,7 @@ data class SpecmaticConfigV3(
                 security = getSecurityConfiguration(config),
                 test = config.test,
                 stub = config.stub,
-                virtualService = config.virtualService,
+                virtualService = SpecmaticConfig.getVirtualServiceConfiguration(config),
                 examples = config.getExamples(),
                 workflow = config.workflow,
                 ignoreInlineExamples = config.ignoreInlineExamples,

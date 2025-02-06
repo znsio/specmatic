@@ -87,8 +87,12 @@ data class StubConfiguration(
 )
 
 data class VirtualServiceConfiguration(
-    val nonPatchableKeys: Set<String> = emptySet()
-)
+    private val nonPatchableKeys: Set<String> = emptySet()
+) {
+    fun getNonPatchableKeys(): Set<String> {
+        return nonPatchableKeys
+    }
+}
 
 data class WorkflowIDOperation(
     val extract: String? = null,
@@ -123,7 +127,7 @@ data class SpecmaticConfig(
     private val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
-    val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
+    private val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     private val examples: List<String>? = null,
     val workflow: WorkflowConfiguration? = null,
     val ignoreInlineExamples: Boolean? = null,
@@ -150,6 +154,11 @@ data class SpecmaticConfig(
         }
 
         @JsonIgnore
+        fun getVirtualServiceConfiguration(specmaticConfig: SpecmaticConfig): VirtualServiceConfiguration {
+            return specmaticConfig.virtualService
+        }
+
+        @JsonIgnore
         fun getAllPatternsMandatory(specmaticConfig: SpecmaticConfig): Boolean? {
             return specmaticConfig.allPatternsMandatory
         }
@@ -159,7 +168,7 @@ data class SpecmaticConfig(
     fun specToStubPortMap(defaultPort: Int, relativeTo: File = File(".")): Map<String, Int> {
         return sources.flatMap { it.specToStubPortMap(defaultPort, relativeTo).entries }.associate { it.key to it.value }
     }
-    
+
     @JsonIgnore
     fun stubPorts(defaultPort: Int): List<Int> {
         return sources.flatMap {
@@ -299,6 +308,11 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun getOpenAPISecurityConfigurationScheme(scheme: String): SecuritySchemeConfiguration? {
         return security?.getOpenAPISecurityScheme(scheme)
+    }
+
+    @JsonIgnore
+    fun getVirtualServiceNonPatchableKeys(): Set<String> {
+        return virtualService.getNonPatchableKeys()
     }
 
     @JsonIgnore

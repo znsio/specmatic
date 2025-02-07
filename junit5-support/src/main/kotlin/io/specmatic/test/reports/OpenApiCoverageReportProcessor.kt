@@ -1,9 +1,9 @@
 package io.specmatic.test.reports
 
-import io.specmatic.core.ReportConfiguration
+import io.specmatic.core.ReportFormatter
 import io.specmatic.core.ReportFormatterType
 import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.SpecmaticConfig.Companion.getReport
+import io.specmatic.core.SuccessCriteria
 import io.specmatic.core.log.logger
 import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
@@ -23,28 +23,28 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
     }
 
     override fun process(specmaticConfig: SpecmaticConfig) {
-        val reportConfiguration = getReport(specmaticConfig)!!
-
         openApiCoverageReportInput.addExcludedAPIs(
-            reportConfiguration.getTypes().getApiCoverage().getOpenAPICoverageConfiguration()
-                .getExcludedEndpoints() + excludedEndpointsFromEnv()
+            specmaticConfig.getOpenAPICoverageConfigurationExcludedEndpoints()!! + excludedEndpointsFromEnv()
         )
         val openAPICoverageReport = openApiCoverageReportInput.generate()
 
         if (openAPICoverageReport.coverageRows.isEmpty()) {
             logger.log("The Open API coverage report generated is blank.\nThis can happen if you have included all the endpoints in the 'excludedEndpoints' array in the report section in specmatic.json, or if your open api specification does not have any paths documented.")
         } else {
-            val renderers = configureReportRenderers(reportConfiguration)
+            val renderers = configureReportRenderers(specmaticConfig.getReportFormatters()!!)
             renderers.forEach { renderer ->
                 logger.log(renderer.render(openAPICoverageReport, specmaticConfig))
             }
             saveAsJson(openApiCoverageReportInput.generateJsonReport())
         }
-        assertSuccessCriteria(reportConfiguration,openAPICoverageReport)
+        assertSuccessCriteria(
+            specmaticConfig.getOpenAPICoverageConfigurationSuccessCriteria()!!,
+            openAPICoverageReport
+        )
     }
 
-    override fun configureReportRenderers(reportConfiguration: ReportConfiguration): List<ReportRenderer<OpenAPICoverageConsoleReport>> {
-        return reportConfiguration.getFormatters()!!.map {
+    override fun configureReportRenderers(reportFormatters: List<ReportFormatter>): List<ReportRenderer<OpenAPICoverageConsoleReport>> {
+        return reportFormatters.map {
             when (it.type) {
                 ReportFormatterType.TEXT -> CoverageReportTextRenderer()
                 ReportFormatterType.HTML -> CoverageReportHtmlRenderer()
@@ -70,11 +70,9 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
     }
 
     override fun assertSuccessCriteria(
-        reportConfiguration: ReportConfiguration,
+        successCriteria: SuccessCriteria,
         report: OpenAPICoverageConsoleReport
     ) {
-        val successCriteria =
-            reportConfiguration.getTypes().getApiCoverage().getOpenAPICoverageConfiguration().getSuccessCriteria()
         if (successCriteria.getEnforce()) {
             val coverageThresholdNotMetMessage =
                 "Total API coverage: ${report.totalCoveragePercentage}% is less than the specified minimum threshold of ${successCriteria.getMinThresholdPercentage()}%."

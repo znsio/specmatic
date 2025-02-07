@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
-import io.specmatic.core.SpecmaticConfig.Companion.getReport
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
@@ -115,7 +114,7 @@ open class SpecmaticJUnitSupport {
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
-            return when (val reportConfiguration = getReport(specmaticConfig)) {
+            return when (val reportFormatters = specmaticConfig?.getReportFormatters()) {
                 null -> {
                     logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
                     ReportConfiguration(
@@ -127,16 +126,17 @@ open class SpecmaticJUnitSupport {
                 }
 
                 else -> {
-                    val htmlReportFormatter = reportConfiguration.getFormatters()?.firstOrNull {
+                    val htmlReportFormatter = reportFormatters.firstOrNull {
                         it.type == ReportFormatterType.HTML
                     } ?: ReportFormatter(ReportFormatterType.HTML)
-                    val textReportFormatter = reportConfiguration.getFormatters()?.firstOrNull {
+                    val textReportFormatter = reportFormatters.firstOrNull {
                         it.type == ReportFormatterType.TEXT
                     } ?: ReportFormatter(ReportFormatterType.TEXT)
-                    ReportConfiguration(
-                        formatters = listOf(htmlReportFormatter, textReportFormatter),
-                        types = reportConfiguration.getTypes()
-                    )
+                    specmaticConfig?.updateReportFormatters(listOf(htmlReportFormatter, textReportFormatter))
+                        ?: ReportConfiguration(
+                            formatters = listOf(htmlReportFormatter, textReportFormatter),
+                            types = ReportTypes()
+                        )
                 }
             }
         }

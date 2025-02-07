@@ -463,6 +463,11 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
+    fun updateReportFormatters(reportFormatters: List<ReportFormatter>?): ReportConfiguration {
+        return ReportConfiguration(formatters = reportFormatters, report?.getTypes())
+    }
+
+    @JsonIgnore
     fun getOpenAPICoverageConfigurationSuccessCriteria(): SuccessCriteria? {
         return report?.getTypes()?.getApiCoverage()?.getOpenAPICoverageConfiguration()?.getSuccessCriteria()
     }
@@ -626,14 +631,14 @@ data class RepositoryInfo(
 
 data class ReportConfiguration(
     private val formatters: List<ReportFormatter>? = null,
-    private val types: ReportTypes = ReportTypes()
+    private val types: ReportTypes? = null
 ) {
     fun getFormatters(): List<ReportFormatter>? {
         return formatters
     }
 
     fun getTypes(): ReportTypes {
-        return types
+        return types ?: ReportTypes()
     }
 }
 

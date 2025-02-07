@@ -12,6 +12,7 @@ data class ContractConfig(
     val provides: List<String>? = null,
     val consumes: List<String>? = null
 ) {
+    @Suppress("unused")
     constructor(
         @JsonProperty("git") git: GitContractSource? = null,
         @JsonProperty("filesystem") filesystem: FileSystemContractSource? = null,
@@ -35,11 +36,13 @@ data class ContractConfig(
     )
 
     @JsonProperty("git")
+    @Suppress("unused")
     fun getGitSource(): GitContractSource? {
         return contractSource as? GitContractSource
     }
 
     @JsonProperty("filesystem")
+    @Suppress("unused")
     fun getFilesystemSource(): FileSystemContractSource? {
         return contractSource as? FileSystemContractSource
     }

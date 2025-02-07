@@ -211,7 +211,12 @@ data class Feature(
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): Pair<ResponseBuilder?, Results> {
         try {
-            val resultList = matchingScenarioToResultList(httpRequest, serverState, mismatchMessages)
+            val resultList = matchingScenarioToResultList(
+                httpRequest = httpRequest,
+                serverState = serverState,
+                mismatchMessages = mismatchMessages,
+                unexpectedKeyCheck = flagsBased.unexpectedKeyCheck ?: ValidateUnexpectedKeys
+            )
 
             return matchingScenario(resultList)?.let {
                 Pair(ResponseBuilder(it, serverState), Results())

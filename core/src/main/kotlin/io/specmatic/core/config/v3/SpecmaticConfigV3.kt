@@ -35,7 +35,7 @@ data class SpecmaticConfigV3(
     val allPatternsMandatory: Boolean? = null,
     @field:JsonAlias("default_pattern_values")
     val defaultPatternValues: Map<String, Any> = emptyMap()
-): SpecmaticVersionedConfig {
+) : SpecmaticVersionedConfig {
     override fun transform(): SpecmaticConfig {
         return SpecmaticConfig(
             version = SpecmaticConfigVersion.VERSION_3,
@@ -60,7 +60,7 @@ data class SpecmaticConfigV3(
         )
     }
 
-    companion object: SpecmaticVersionedConfigLoader {
+    companion object : SpecmaticVersionedConfigLoader {
         override fun loadFrom(config: SpecmaticConfig): SpecmaticVersionedConfig {
             return SpecmaticConfigV3(
                 version = SpecmaticConfigVersion.VERSION_3,
@@ -70,7 +70,7 @@ data class SpecmaticConfigV3(
                 environments = config.environments,
                 hooks = config.getHooks(),
                 repository = getRepository(config),
-                report = config.report,
+                report = SpecmaticConfig.getReport(config),
                 security = getSecurityConfiguration(config),
                 test = SpecmaticConfig.getTestConfiguration(config),
                 stub = SpecmaticConfig.getStubConfiguration(config),

@@ -5,7 +5,6 @@ import io.specmatic.core.*
 import io.specmatic.core.SpecmaticConfig.Companion.getAllPatternsMandatory
 import io.specmatic.core.SpecmaticConfig.Companion.getAttributeSelectionPattern
 import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
-import io.specmatic.core.SpecmaticConfig.Companion.getReport
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
 import io.specmatic.core.SpecmaticConfig.Companion.getStubConfiguration
@@ -77,7 +76,7 @@ data class SpecmaticConfigV2(
                 environments = config.environments,
                 hooks = config.getHooks(),
                 repository = getRepository(config),
-                report = getReport(config),
+                report = SpecmaticConfig.getReport(config),
                 security = getSecurityConfiguration(config),
                 test = getTestConfiguration(config),
                 stub = getStubConfiguration(config),

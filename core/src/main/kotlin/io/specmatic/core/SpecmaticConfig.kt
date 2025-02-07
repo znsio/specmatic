@@ -242,6 +242,11 @@ data class SpecmaticConfig(
         fun getStubConfiguration(specmaticConfig: SpecmaticConfig): StubConfiguration {
             return specmaticConfig.stub
         }
+
+        @JsonIgnore
+        fun getReport(specmaticConfig: SpecmaticConfig?): ReportConfiguration? {
+            return specmaticConfig?.report
+        }
     }
 
     @JsonIgnore
@@ -256,24 +261,20 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun specToStubPortMap(defaultPort: Int, relativeTo: File = File(".")): Map<String, Int> {
-        return sources.flatMap { it.specToStubPortMap(defaultPort, relativeTo).entries }.associate { it.key to it.value }
+        return sources.flatMap { it.specToStubPortMap(defaultPort, relativeTo).entries }
+            .associate { it.key to it.value }
     }
 
     @JsonIgnore
     fun stubPorts(defaultPort: Int): List<Int> {
         return sources.flatMap {
             it.stub.orEmpty().map { consumes ->
-                when(consumes) {
+                when (consumes) {
                     is Consumes.StringValue -> defaultPort
                     is Consumes.ObjectValue -> consumes.port
                 }
             }
         }.plus(defaultPort).distinct()
-
-        @JsonIgnore
-        fun getReport(specmaticConfig: SpecmaticConfig?): ReportConfiguration? {
-            return specmaticConfig?.report
-        }
     }
 
     @JsonIgnore

@@ -15,8 +15,8 @@ data class ContractConfig(
     constructor(
         @JsonProperty("git") git: GitContractSource? = null,
         @JsonProperty("filesystem") filesystem: FileSystemContractSource? = null,
-        @JsonProperty("provides") provides: List<String>? = null,
-        @JsonProperty("consumes") consumes: List<String>? = null
+        provides: List<String>? = null,
+        consumes: List<String>? = null
     ) : this(
         contractSource = git ?: filesystem,
         provides = provides,

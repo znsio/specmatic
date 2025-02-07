@@ -137,7 +137,7 @@ internal class SpecmaticConfigAllTest {
         "./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2.json"
     )
     @ParameterizedTest
-    fun `should serialize ContractConfig successfully`(configFile: String) {
+    fun `should deserialize ContractConfig successfully`(configFile: String) {
         val specmaticConfigV2 = objectMapper.readValue(File(configFile).readText(), SpecmaticConfigV2::class.java)
 
         val contracts = specmaticConfigV2.contracts
@@ -158,7 +158,7 @@ internal class SpecmaticConfigAllTest {
     }
 
     @Test
-    fun `should deserialize ContractConfig successfully`() {
+    fun `should serialize ContractConfig successfully`() {
         val expectedContractsJson = """[
             {
                 "git": {
@@ -202,7 +202,7 @@ internal class SpecmaticConfigAllTest {
         "./src/test/resources/specmaticConfigFiles/v3/specmatic_config_v3.json"
     )
     @ParameterizedTest
-    fun `should serialize ContractConfigV2 successfully`(configFile: String) {
+    fun `should deserialize ContractConfigV2 successfully`(configFile: String) {
         val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
         val specmaticConfigV3 = objectMapper.readValue(File(configFile).readText(), SpecmaticConfigV3::class.java)
 
@@ -230,7 +230,7 @@ internal class SpecmaticConfigAllTest {
     }
 
     @Test
-    fun `should deserialize ContractConfigV2 successfully`() {
+    fun `should serialize ContractConfigV2 successfully`() {
         val expectedContractsJson = """[
             {
                 "git": {
@@ -276,7 +276,8 @@ internal class SpecmaticConfigAllTest {
             )
         )
 
-        val objectMapper = ObjectMapper().registerKotlinModule()
+        val objectMapper =
+            ObjectMapper().registerKotlinModule().setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
         val contractsJson = objectMapper.writeValueAsString(contracts)
 
         assertThat(parsedJSON(contractsJson)).isEqualTo(parsedJSON(expectedContractsJson))
@@ -622,6 +623,5 @@ internal class SpecmaticConfigAllTest {
 
         assertThat(contractSource).isNotNull()
         assertThat(contractSource).isInstanceOf(GitContractSource::class.java)
-
     }
 }

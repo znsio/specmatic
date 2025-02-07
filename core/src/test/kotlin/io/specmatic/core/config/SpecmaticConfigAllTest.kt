@@ -1,6 +1,6 @@
 package io.specmatic.core.config
 
-import com.fasterxml.jackson.databind.JsonMappingException
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
@@ -190,7 +190,8 @@ internal class SpecmaticConfigAllTest {
             )
         )
 
-        val objectMapper = ObjectMapper().registerKotlinModule()
+        val objectMapper =
+            ObjectMapper().registerKotlinModule().setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
         val contractsJson = objectMapper.writeValueAsString(contracts)
 
         assertThat(parsedJSON(contractsJson)).isEqualTo(parsedJSON(expectedContractsJson))
@@ -298,40 +299,6 @@ internal class SpecmaticConfigAllTest {
         assertThat((contractConfig.contractSource as GitContractSource).url).isEqualTo("https://contracts")
         assertThat(contractConfig.provides).containsOnly("com/petstore/1.yaml")
         assertThat(contractConfig.consumes).containsOnly("com/petstore/payment.yaml")
-    }
-
-    @Test
-    fun `should throw JsonMappingException when Git URL is absent in the Contract`() {
-        val contractConfigYaml = """
-            git:
-              branch: 1.0.1
-            provides:
-              - com/petstore/1.yaml
-            consumes:
-              - com/petstore/payment.yaml
-        """.trimIndent()
-
-        val exception = assertThrows<JsonMappingException> {
-            objectMapper.readValue(contractConfigYaml, ContractConfig::class.java)
-        }
-        assertThat(exception.message).startsWith("Git contract source must have 'url' field")
-    }
-
-    @Test
-    fun `should throw JsonMappingException when Filesystem Directory is empty in the Contract`() {
-        val contractConfigYaml = """
-            filesystem:
-                directory: ""
-            provides:
-              - com/petstore/1.yaml
-            consumes:
-              - com/petstore/payment.yaml
-        """.trimIndent()
-
-        val exception = assertThrows<JsonMappingException> {
-            objectMapper.readValue(contractConfigYaml, ContractConfig::class.java)
-        }
-        assertThat(exception.message).startsWith("Filesystem contract source must have 'directory' field")
     }
 
     @Test

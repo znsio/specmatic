@@ -3,6 +3,7 @@ package io.specmatic.core
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.specmatic.core.config.v3.Consumes
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
@@ -30,9 +31,8 @@ internal class SpecmaticConfigKtTest {
     fun `parse specmatic config file with all values`(configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
 
-        assertThat(config.sources).isNotEmpty
-
-        val sources = config.sources
+        val sources = SpecmaticConfig.getSources(config)
+        assertThat(sources).isNotEmpty
 
         assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
         assertThat(sources.first().repository).isEqualTo("https://contracts")
@@ -95,7 +95,8 @@ internal class SpecmaticConfigKtTest {
 
     @Test
     fun `parse specmatic config file with only required values`() {
-        val config = ObjectMapper(YAMLFactory()).readValue("""
+        val config = ObjectMapper(YAMLFactory()).registerKotlinModule().readValue(
+            """
             {
                 "sources": [
                     {
@@ -108,9 +109,8 @@ internal class SpecmaticConfigKtTest {
             }
         """.trimIndent(), SpecmaticConfig::class.java)
 
-        assertThat(config.sources).isNotEmpty
-
-        val sources = config.sources
+        val sources = SpecmaticConfig.getSources(config)
+        assertThat(sources).isNotEmpty
 
         assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
         assertThat(sources.first().test).isEqualTo(listOf("path/to/contract.spec"))
@@ -125,9 +125,8 @@ internal class SpecmaticConfigKtTest {
     fun `parse specmatic config file with aliases`(configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
 
-        assertThat(config.sources).isNotEmpty
-
-        val sources = config.sources
+        val sources = SpecmaticConfig.getSources(config)
+        assertThat(sources).isNotEmpty
 
         assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
         assertThat(sources.first().repository).isEqualTo("https://contracts")

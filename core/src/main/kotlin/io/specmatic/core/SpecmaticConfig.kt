@@ -9,6 +9,10 @@ import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.specmatic.core.Configuration.Companion.configFilePath
+import io.specmatic.core.SourceProvider.filesystem
+import io.specmatic.core.SourceProvider.git
+import io.specmatic.core.SourceProvider.web
+import io.specmatic.core.azure.AzureAPI
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.VERSION_1
 import io.specmatic.core.config.toSpecmaticConfig
@@ -17,6 +21,7 @@ import io.specmatic.core.config.v3.ConsumesDeserializer
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.utilities.ContractSource
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
@@ -28,6 +33,10 @@ import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
+import io.specmatic.core.utilities.GitMonoRepo
+import io.specmatic.core.utilities.GitRepo
+import io.specmatic.core.utilities.LocalFileSystemSource
+import io.specmatic.core.utilities.WebSource
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.Value
@@ -172,7 +181,7 @@ data class AttributeSelectionPattern(
 }
 
 data class SpecmaticConfig(
-    val sources: List<Source> = emptyList(),
+    private val sources: List<Source> = emptyList(),
     private val auth: Auth? = null,
     private val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
@@ -193,6 +202,11 @@ data class SpecmaticConfig(
     private val version: SpecmaticConfigVersion? = null
 ) {
     companion object {
+        @JsonIgnore
+        fun getSources(specmaticConfig: SpecmaticConfig): List<Source> {
+            return specmaticConfig.sources
+        }
+
         @JsonIgnore
         fun getRepository(specmaticConfig: SpecmaticConfig): RepositoryInfo? {
             return specmaticConfig.repository
@@ -269,6 +283,62 @@ data class SpecmaticConfig(
                 }
             }
         }.plus(defaultPort).distinct()
+    }
+
+    fun logDependencyProjects(azure: AzureAPI) {
+        logger.log("Dependency projects")
+        logger.log("-------------------")
+
+        sources.forEach { source ->
+            logger.log("In central repo ${source.repository}")
+
+            source.test?.forEach { relativeContractPath ->
+                logger.log("  Consumers of $relativeContractPath")
+                val consumers = azure.referencesToContract(relativeContractPath)
+
+                if (consumers.isEmpty()) {
+                    logger.log("    ** no consumers found **")
+                } else {
+                    consumers.forEach {
+                        logger.log("  - ${it.description}")
+                    }
+                }
+
+                logger.newLine()
+            }
+        }
+    }
+
+
+    @JsonIgnore
+    fun loadSources(): List<ContractSource> {
+        return sources.map { source ->
+            when (source.provider) {
+                git -> {
+                    val stubPaths = source.specsUsedAsStub()
+                    val testPaths = source.test ?: emptyList()
+
+                    when (source.repository) {
+                        null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
+                        else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
+                    }
+                }
+
+                filesystem -> {
+                    val stubPaths = source.specsUsedAsStub()
+                    val testPaths = source.test ?: emptyList()
+
+                    LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
+                }
+
+                web -> {
+                    val stubPaths = source.specsUsedAsStub()
+                    val testPaths = source.test ?: emptyList()
+
+                    WebSource(testPaths, stubPaths)
+                }
+            }
+        }
     }
 
     @JsonIgnore
@@ -440,7 +510,7 @@ data class SpecmaticConfig(
                     is Consumes.ObjectValue -> stub.specs
                 }
             }.map { spec ->
-                if (source.provider == SourceProvider.web) spec
+                if (source.provider == web) spec
                 else spec.canonicalPath(relativeTo)
             }
         }
@@ -554,7 +624,7 @@ enum class SourceProvider { git, filesystem, web }
 
 data class Source(
     @field:JsonAlias("type")
-    val provider: SourceProvider = SourceProvider.filesystem,
+    val provider: SourceProvider = filesystem,
     val repository: String? = null,
     val branch: String? = null,
     @field:JsonAlias("provides")
@@ -564,6 +634,11 @@ data class Source(
     val stub: List<Consumes>? = null,
     val directory: String? = null,
 ) {
+    constructor(test: List<String>? = null, stub: List<String>? = null) : this(
+        test = test,
+        stub = stub?.map { Consumes.StringValue(it) }
+    )
+
     fun specsUsedAsStub(): List<String> {
         return stub.orEmpty().flatMap {
             when (it) {
@@ -585,7 +660,7 @@ data class Source(
     }
 
     private fun String.canonicalPath(relativeTo: File): String {
-        if (provider == SourceProvider.web) return this
+        if (provider == web) return this
         return relativeTo.parentFile?.resolve(this)?.canonicalPath ?: File(this).canonicalPath
     }
 }

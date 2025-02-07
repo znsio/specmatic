@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import io.specmatic.core.Source
 import io.specmatic.core.SourceProvider
+import io.specmatic.core.config.v3.Consumes
 
 @JsonSerialize(using = ContractConfigSerializer::class)
 @JsonDeserialize(using = ContractConfigDeserializer::class)
@@ -28,7 +29,7 @@ data class ContractConfig(
                 else -> null
             },
         provides = source.test,
-        consumes = source.stub
+        consumes = source.specsUsedAsStub()
     )
 
     fun transform(): Source {
@@ -60,7 +61,7 @@ data class ContractConfig(
                 repository = this.url,
                 branch = this.branch,
                 test = provides,
-                stub = consumes
+                stub = consumes.orEmpty().map { Consumes.StringValue(it) }
             )
         }
 
@@ -85,7 +86,7 @@ data class ContractConfig(
                 provider = SourceProvider.filesystem,
                 directory = this.directory,
                 test = provides,
-                stub = consumes
+                stub = consumes.orEmpty().map { Consumes.StringValue(it) }
             )
         }
 

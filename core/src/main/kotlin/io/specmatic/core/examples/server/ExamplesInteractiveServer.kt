@@ -12,21 +12,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.specmatic.conversions.ExampleFromFile
-import io.specmatic.core.AttributeSelectionPattern
-import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
-import io.specmatic.core.DiscriminatorBasedRequestResponse
-import io.specmatic.core.EXAMPLES_DIR_SUFFIX
-import io.specmatic.core.Feature
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.METHOD_BREAD_CRUMB
-import io.specmatic.core.NoBodyValue
-import io.specmatic.core.PATH_BREAD_CRUMB
-import io.specmatic.core.Result
-import io.specmatic.core.Results
-import io.specmatic.core.SPECMATIC_RESULT_HEADER
-import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
-import io.specmatic.core.Scenario
+import io.specmatic.core.*
 import io.specmatic.core.discriminator.DiscriminatorExampleInjector
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.examples.server.ExamplesView.Companion.isScenarioMultiGen
@@ -38,7 +24,6 @@ import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
-import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.HasFailure
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
@@ -635,9 +620,9 @@ class ExamplesInteractiveServer(
             }
         }
 
-        private fun HttpRequest.removeAttrSelection(attributeSelectionPattern: AttributeSelectionPattern): HttpRequest {
+        private fun HttpRequest.removeAttrSelection(attributeSelectionPattern: AttributeSelectionPatternDetails): HttpRequest {
             return this.copy(
-                queryParams = this.queryParams.remove(attributeSelectionPattern.queryParamKey)
+                queryParams = this.queryParams.remove(attributeSelectionPattern.getQueryParamKey())
             )
         }
 

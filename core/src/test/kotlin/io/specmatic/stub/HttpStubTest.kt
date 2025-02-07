@@ -14,6 +14,7 @@ import io.specmatic.test.HttpClient
 import io.specmatic.test.TestExecutor
 import io.mockk.every
 import io.mockk.mockk
+import io.specmatic.core.utilities.ContractPathData
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.RepeatedTest
@@ -2105,6 +2106,55 @@ components:
             val response = stub.client.execute(request)
 
             assertThat(response.status).isEqualTo(expectedStatus)
+        }
+    }
+
+    @Test
+    fun `should serve requests from multiple ports as configured in specmatic config`() {
+        val specmaticConfigFile = File("src/test/resources/multi_port_stub/specmatic.yaml")
+        val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+
+        val scenarioStubs = specmaticConfig.stubContracts(specmaticConfigFile).map { specPath ->
+            OpenApiSpecification.fromFile(specPath).toFeature() to loadContractStubsFromImplicitPaths(
+                contractPathDataList = listOf(ContractPathData("", specPath)),
+                specmaticConfig = specmaticConfig
+            ).flatMap { it.second }
+        }
+
+        HttpStub(
+            features = specmaticConfig.stubContracts(specmaticConfigFile).map {
+                OpenApiSpecification.fromFile(it).toFeature()
+            },
+            rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+            specmaticConfigPath = specmaticConfigFile.canonicalPath
+        ).use { stub ->
+            val request = HttpRequest(
+                method = "POST",
+                path = "/products",
+                body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
+            )
+            val importedProductResponse = HttpClient(
+                endPointFromHostAndPort("localhost", 9000, null)
+            ).execute(request)
+            assertThat(
+                (importedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+            ).isEqualTo("100")
+
+
+            val exportedProductResponse = HttpClient(
+                endPointFromHostAndPort("localhost", 9001, null)
+            ).execute(request)
+            assertThat(
+                (exportedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+            ).isEqualTo("200")
+
+
+            val anotherExportedProductResponse = HttpClient(
+                endPointFromHostAndPort("localhost", 9002, null)
+            ).execute(request)
+            assertThat(
+                (anotherExportedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+            ).isEqualTo("300")
         }
     }
 }

@@ -158,6 +158,34 @@ fun loadConfigJSON(configFile: File): JSONObjectValue {
     return configJson
 }
 
+fun loadSources(specmaticConfig: SpecmaticConfig): List<ContractSource> {
+    return specmaticConfig.sources.map { source ->
+        when(source.provider) {
+            SourceProvider.git -> {
+                val stubPaths = source.specsUsedAsStub()
+                val testPaths = source.test ?: emptyList()
+
+                when (source.repository) {
+                    null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
+                    else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
+                }
+            }
+            SourceProvider.filesystem -> {
+                val stubPaths = source.specsUsedAsStub()
+                val testPaths = source.test ?: emptyList()
+
+                LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
+            }
+            SourceProvider.web -> {
+                val stubPaths = source.specsUsedAsStub()
+                val testPaths = source.test ?: emptyList()
+
+                WebSource(testPaths, stubPaths)
+            }
+        }
+    }
+}
+
 fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
     val sources = configJson.jsonObject.getOrDefault("sources", null)
 

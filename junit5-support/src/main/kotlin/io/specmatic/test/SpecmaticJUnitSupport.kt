@@ -144,7 +144,9 @@ open class SpecmaticJUnitSupport {
             }
 
             val featureFromJson = OpenApiSpecification.fromYAML(response.body.toStringLiteral(), "").toFeature()
-            val apis = featureFromJson.scenarios.map { scenario -> API(scenario.method, scenario.path) }
+            val apis = featureFromJson.scenarios.map { scenario ->
+                API(method = scenario.method, path = convertPathParameterStyle(scenario.path))
+            }
 
             openApiCoverageReportInput.addAPIs(apis.distinct())
             openApiCoverageReportInput.setEndpointsAPIFlag(true)

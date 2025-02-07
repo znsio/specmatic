@@ -828,16 +828,14 @@ internal class SpecmaticConfigAllTest {
         "VERSION_1, ./src/test/resources/specmaticConfigFiles/v1/specmatic_config_v1.json",
         "VERSION_2, ./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2.yaml",
         "VERSION_2, ./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2.json",
-        "VERSION_3, ./src/test/resources/specmaticConfigFiles/v3/specmatic_config_v3.yaml",
-        "VERSION_3, ./src/test/resources/specmaticConfigFiles/v3/specmatic_config_v3.json"
     )
     @ParameterizedTest
-    fun `given SpecmaticConfig it should load sources`(version: SpecmaticConfigVersion, configFile: String) {
+    fun `given specmatic config less than v3 it should load sources`(version: SpecmaticConfigVersion, configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
         assertThat(config.getVersion()).isEqualTo(version)
         val contractSources = config.loadSources()
 
-        val expectedContractSources = if (version != SpecmaticConfigVersion.VERSION_3) listOf(
+        val expectedContractSources = listOf(
             GitRepo(
                 gitRepositoryURL = "https://contracts",
                 branchName = "1.0.1",
@@ -850,7 +848,23 @@ internal class SpecmaticConfigAllTest {
                 testContracts = listOf("com/petstore/1.yaml"),
                 stubContracts = listOf("com/petstore/payment.yaml", "com/petstore/order.yaml")
             )
-        ) else listOf(
+        )
+
+        assertThat(contractSources[0]).isEqualTo(expectedContractSources[0])
+        assertThat(contractSources[1]).isEqualTo(expectedContractSources[1])
+    }
+
+    @CsvSource(
+        "VERSION_3, ./src/test/resources/specmaticConfigFiles/v3/specmatic_config_v3.yaml",
+        "VERSION_3, ./src/test/resources/specmaticConfigFiles/v3/specmatic_config_v3.json"
+    )
+    @ParameterizedTest
+    fun `given specmatic config v3 it should load sources`(version: SpecmaticConfigVersion, configFile: String) {
+        val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
+        assertThat(config.getVersion()).isEqualTo(version)
+        val contractSources = config.loadSources()
+
+        val expectedContractSources = listOf(
             GitRepo(
                 gitRepositoryURL = "https://contracts",
                 branchName = "1.0.1",

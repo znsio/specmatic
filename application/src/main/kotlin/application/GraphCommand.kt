@@ -1,6 +1,5 @@
 package application
 
-import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.azure.AzureAPI
 import io.specmatic.core.azure.PersonalAccessToken
 import io.specmatic.core.git.getPersonalAccessToken

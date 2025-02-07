@@ -64,7 +64,7 @@ data class SpecmaticConfigV3(
         override fun loadFrom(config: SpecmaticConfig): SpecmaticVersionedConfig {
             return SpecmaticConfigV3(
                 version = SpecmaticConfigVersion.VERSION_3,
-                contracts = config.sources.map { ContractConfigV2(it) },
+                contracts = SpecmaticConfig.getSources(config).map { ContractConfigV2(it) },
                 auth = config.getAuth(),
                 pipeline = getPipeline(config),
                 environments = config.environments,

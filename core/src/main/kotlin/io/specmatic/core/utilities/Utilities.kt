@@ -2,14 +2,22 @@
 
 package io.specmatic.core.utilities
 
-import io.specmatic.core.*
+import io.specmatic.core.CONTENT_TYPE
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.configFilePath
+import io.specmatic.core.DEFAULT_WORKING_DIRECTORY
+import io.specmatic.core.EXAMPLES_DIR_SUFFIX
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.KeyData
+import io.specmatic.core.Resolver
+import io.specmatic.core.Result
 import io.specmatic.core.azure.AzureAuthCredentials
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
+import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
+import io.specmatic.core.nativeString
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.NullPattern
 import io.specmatic.core.pattern.NumberPattern
@@ -156,34 +164,6 @@ fun loadConfigJSON(configFile: File): JSONObjectValue {
         throw ContractException("The contents of $configFilePath must be a json object")
 
     return configJson
-}
-
-fun loadSources(specmaticConfig: SpecmaticConfig): List<ContractSource> {
-    return specmaticConfig.sources.map { source ->
-        when(source.provider) {
-            SourceProvider.git -> {
-                val stubPaths = source.specsUsedAsStub()
-                val testPaths = source.test ?: emptyList()
-
-                when (source.repository) {
-                    null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
-                    else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
-                }
-            }
-            SourceProvider.filesystem -> {
-                val stubPaths = source.specsUsedAsStub()
-                val testPaths = source.test ?: emptyList()
-
-                LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
-            }
-            SourceProvider.web -> {
-                val stubPaths = source.specsUsedAsStub()
-                val testPaths = source.test ?: emptyList()
-
-                WebSource(testPaths, stubPaths)
-            }
-        }
-    }
 }
 
 fun loadSources(configJson: JSONObjectValue): List<ContractSource> {

@@ -28,7 +28,7 @@ data class ContractConfigV2(
     )
 
     fun transform(): Source {
-        return this.contractSource?.transform(provides, consumes) ?: Source()
+        return this.contractSource?.transform(provides, consumes) ?: Source(test = provides, stub = consumes)
     }
 
     interface ContractSourceV2 {

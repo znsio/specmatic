@@ -10,6 +10,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.SourceProvider.filesystem
+import io.specmatic.core.SourceProvider.git
+import io.specmatic.core.SourceProvider.web
 import io.specmatic.core.azure.AzureAPI
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.VERSION_1
@@ -19,7 +21,8 @@ import io.specmatic.core.config.v3.ConsumesDeserializer
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
-import io.specmatic.core.utilities.*
+import io.specmatic.core.utilities.ContractSource
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
@@ -30,6 +33,12 @@ import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
+import io.specmatic.core.utilities.GitMonoRepo
+import io.specmatic.core.utilities.GitRepo
+import io.specmatic.core.utilities.LocalFileSystemSource
+import io.specmatic.core.utilities.WebSource
+import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.Value
 import java.io.File
 
@@ -305,25 +314,25 @@ data class SpecmaticConfig(
     fun loadSources(): List<ContractSource> {
         return sources.map { source ->
             when (source.provider) {
-                SourceProvider.git -> {
-                    val stubPaths = source.stub ?: emptyList()
+                git -> {
+                    val stubPaths = source.specsUsedAsStub()
                     val testPaths = source.test ?: emptyList()
 
                     when (source.repository) {
-                        null -> GitMonoRepo(testPaths, stubPaths, source.provider.name)
+                        null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
                         else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
                     }
                 }
 
-                SourceProvider.filesystem -> {
-                    val stubPaths = source.stub ?: emptyList()
+                filesystem -> {
+                    val stubPaths = source.specsUsedAsStub()
                     val testPaths = source.test ?: emptyList()
 
                     LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
                 }
 
-                SourceProvider.web -> {
-                    val stubPaths = source.stub ?: emptyList()
+                web -> {
+                    val stubPaths = source.specsUsedAsStub()
                     val testPaths = source.test ?: emptyList()
 
                     WebSource(testPaths, stubPaths)
@@ -501,7 +510,7 @@ data class SpecmaticConfig(
                     is Consumes.ObjectValue -> stub.specs
                 }
             }.map { spec ->
-                if (source.provider == SourceProvider.web) spec
+                if (source.provider == web) spec
                 else spec.canonicalPath(relativeTo)
             }
         }
@@ -625,6 +634,11 @@ data class Source(
     val stub: List<Consumes>? = null,
     val directory: String? = null,
 ) {
+    constructor(test: List<String>? = null, stub: List<String>? = null) : this(
+        test = test,
+        stub = stub?.map { Consumes.StringValue(it) }
+    )
+
     fun specsUsedAsStub(): List<String> {
         return stub.orEmpty().flatMap {
             when (it) {
@@ -646,7 +660,7 @@ data class Source(
     }
 
     private fun String.canonicalPath(relativeTo: File): String {
-        if (provider == SourceProvider.web) return this
+        if (provider == web) return this
         return relativeTo.parentFile?.resolve(this)?.canonicalPath ?: File(this).canonicalPath
     }
 }

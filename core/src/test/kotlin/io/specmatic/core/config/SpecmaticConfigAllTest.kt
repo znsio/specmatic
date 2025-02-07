@@ -4,20 +4,26 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import io.specmatic.core.ResiliencyTestSuite
 import io.specmatic.core.Source
 import io.specmatic.core.SourceProvider.filesystem
 import io.specmatic.core.SourceProvider.git
 import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.config.v1.SpecmaticConfigV1
 import io.specmatic.core.config.v2.ContractConfig
 import io.specmatic.core.config.v2.ContractConfig.FileSystemContractSource
 import io.specmatic.core.config.v2.ContractConfig.GitContractSource
 import io.specmatic.core.config.v2.SpecmaticConfigV2
+import io.specmatic.core.config.v3.Consumes
+import io.specmatic.core.config.v3.ContractConfigV2
+import io.specmatic.core.config.v3.SpecmaticConfigV3
 import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSON
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
@@ -72,17 +78,18 @@ internal class SpecmaticConfigAllTest {
     fun `should create SpecmaticConfig from the versioned specmatic configuration`(version: SpecmaticConfigVersion, configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
         assertThat(config.getVersion()).isEqualTo(version)
-        assertThat(config.sources.size).isEqualTo(2)
+        val sources = SpecmaticConfig.getSources(config)
+        assertThat(sources.size).isEqualTo(2)
         val expectedSources = if(version != SpecmaticConfigVersion.VERSION_3) listOf(
             Source(
-                provider = SourceProvider.git,
+                provider = git,
                 repository = "https://contracts",
                 branch = "1.0.1",
                 test = listOf("com/petstore/1.yaml"),
                 stub = listOf(Consumes.StringValue("com/petstore/payment.yaml"))
             ),
             Source(
-                provider = SourceProvider.filesystem,
+                provider = filesystem,
                 test = listOf("com/petstore/1.yaml"),
                 stub = listOf(
                     Consumes.StringValue("com/petstore/payment.yaml"),
@@ -92,14 +99,14 @@ internal class SpecmaticConfigAllTest {
             )
         ) else listOf(
             Source(
-                provider = SourceProvider.git,
+                provider = git,
                 repository = "https://contracts",
                 branch = "1.0.1",
                 test = listOf("com/petstore/1.yaml"),
                 stub = listOf(Consumes.StringValue("com/petstore/payment.yaml"))
             ),
             Source(
-                provider = SourceProvider.filesystem,
+                provider = filesystem,
                 test = listOf("com/petstore/1.yaml"),
                 stub = listOf(
                     Consumes.StringValue("com/petstore/payment.yaml"),

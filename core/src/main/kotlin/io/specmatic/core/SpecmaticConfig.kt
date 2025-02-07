@@ -261,15 +261,14 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun specToStubPortMap(defaultPort: Int, relativeTo: File = File(".")): Map<String, Int> {
-        return sources.flatMap { it.specToStubPortMap(defaultPort, relativeTo).entries }
-            .associate { it.key to it.value }
+        return sources.flatMap { it.specToStubPortMap(defaultPort, relativeTo).entries }.associate { it.key to it.value }
     }
 
     @JsonIgnore
     fun stubPorts(defaultPort: Int): List<Int> {
         return sources.flatMap {
             it.stub.orEmpty().map { consumes ->
-                when (consumes) {
+                when(consumes) {
                     is Consumes.StringValue -> defaultPort
                     is Consumes.ObjectValue -> consumes.port
                 }

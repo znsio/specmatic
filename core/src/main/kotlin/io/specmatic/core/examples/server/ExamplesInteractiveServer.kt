@@ -33,8 +33,8 @@ import io.specmatic.core.examples.server.ExamplesView.Companion.isScenarioMultiG
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.examples.server.SchemaExample.Companion.toSchemaExampleFileName
 import io.specmatic.core.examples.server.SchemaExamplesView.Companion.schemaExamplesToTableRows
-import io.specmatic.core.filters.Filter
-import io.specmatic.core.filters.Filter.Companion.filterUsing
+import io.specmatic.core.filters.ScenarioMetadataFilter
+import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
@@ -361,7 +361,7 @@ class ExamplesInteractiveServer(
                 } else true
             }
 
-            val scenarioFilter = Filter.from(filter)
+            val scenarioFilter = ScenarioMetadataFilter.from(filter)
 
             val filteredScenarios = filterUsing(scenariosFilteredByOlderSyntax.asSequence(), scenarioFilter) {
                 it.toScenarioMetadata()

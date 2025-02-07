@@ -7,10 +7,10 @@ import io.specmatic.test.TestResultRecord
 data class ScenarioMetadataFilter(
     val expression: Expression? = null
 ) {
-    fun isSatisfiedBy(filterable: FilterableExpression): Boolean {
+    fun isSatisfiedBy(filterableExpression: FilterableExpression): Boolean {
         val expression = expression ?: return true
 
-        val expressionWithVariables = filterable.populateExpressionData(expression)
+        val expressionWithVariables = filterableExpression.populateExpressionData(expression)
 
         return try {
             expressionWithVariables.evaluate().booleanValue ?: false

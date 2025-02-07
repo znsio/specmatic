@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import io.specmatic.core.ReportFormatter
 import io.specmatic.core.ResiliencyTestSuite
 import io.specmatic.core.Source
 import io.specmatic.core.SourceProvider
@@ -613,6 +614,208 @@ internal class SpecmaticConfigAllTest {
         configV2.workflow!!.apply {
             assertThat(getUseForAPI("*")).isEqualTo("PATH.id")
             assertThat(getExtractForAPI("POST / -> 201")).isEqualTo("BODY.id")
+        }
+    }
+
+    @Test
+    fun `should deserialize report configuration in SpecmaticConfig successfully`(@TempDir tempDir: File) {
+        val configFile = tempDir.resolve("specmatic.yaml")
+        val reportFormattersYaml = listOf(
+            """
+                type: text
+                layout: table
+                lite: true
+                title: Test Formatter1
+                logo: logo1.svg
+                logoAltText: Test Formatter Logo1
+                heading: Test Results1
+                outputDirectory: testOutput1
+            """.trimIndent(),
+            """
+                type: html
+                layout: table
+                lite: false
+                title: Test Formatter2
+                logo: logo2.svg
+                logoAltText: Test Formatter Logo2
+                heading: Test Results2
+                outputDirectory: testOutput2
+            """.trimIndent()
+        )
+        val formatters = reportFormattersYaml.joinToString("") { entry ->
+            entry.lineSequence()
+                .mapIndexed { index, line ->
+                    if (index == 0) "  \n                - $line"
+                    else "                  $line"
+                }
+                .joinToString("\n")
+        }
+        val configYaml = """
+            report:
+              formatters: $formatters
+              types:
+                APICoverage:
+                  OpenAPI:
+                    successCriteria:
+                      minThresholdPercentage: 10
+                      maxMissedEndpointsInSpec: 3
+                      enforce: true
+                    excludedEndpoints:
+                      - order
+                      - payment
+        """.trimIndent()
+        configFile.writeText(configYaml)
+        val reportFormatters = reportFormattersYaml.map { objectMapper.readValue(it, ReportFormatter::class.java) }
+
+        val specmaticConfig = configFile.toSpecmaticConfig()
+
+        specmaticConfig.apply {
+            assertThat(getReportFormatters()).isEqualTo(reportFormatters)
+            assertThat(getOpenAPICoverageConfigurationSuccessCriteria()?.getMinThresholdPercentage()).isEqualTo(10)
+            assertThat(getOpenAPICoverageConfigurationSuccessCriteria()?.getMaxMissedEndpointsInSpec()).isEqualTo(3)
+            assertThat(getOpenAPICoverageConfigurationSuccessCriteria()?.getEnforce()).isTrue()
+            assertThat(getOpenAPICoverageConfigurationExcludedEndpoints()).containsExactly("order", "payment")
+        }
+    }
+
+    @Test
+    fun `should convert config from v1 to v2 when report configuration is present`() {
+        val reportFormattersYaml = listOf(
+            """
+                type: text
+                layout: table
+                lite: true
+                title: Test Formatter1
+                logo: logo1.svg
+                logoAltText: Test Formatter Logo1
+                heading: Test Results1
+                outputDirectory: testOutput1
+            """.trimIndent(),
+            """
+                type: html
+                layout: table
+                lite: false
+                title: Test Formatter2
+                logo: logo2.svg
+                logoAltText: Test Formatter Logo2
+                heading: Test Results2
+                outputDirectory: testOutput2
+            """.trimIndent()
+        )
+        val formatters = reportFormattersYaml.joinToString("") { entry ->
+            entry.lineSequence()
+                .mapIndexed { index, line ->
+                    if (index == 0) "  \n                - $line"
+                    else "                  $line"
+                }
+                .joinToString("\n")
+        }
+        val configYaml = """
+            report:
+              formatters: $formatters
+              types:
+                APICoverage:
+                  OpenAPI:
+                    successCriteria:
+                      minThresholdPercentage: 10
+                      maxMissedEndpointsInSpec: 3
+                      enforce: true
+                    excludedEndpoints:
+                      - order
+                      - payment
+        """.trimIndent()
+        val reportFormatters = reportFormattersYaml.map { objectMapper.readValue(it, ReportFormatter::class.java) }
+
+        val configFromV1 = objectMapper.readValue(configYaml, SpecmaticConfigV1::class.java).transform()
+        val configV2 = SpecmaticConfigV2.loadFrom(configFromV1) as SpecmaticConfigV2
+
+        configV2.report!!.apply {
+            assertThat(getFormatters()).isEqualTo(reportFormatters)
+            assertThat(
+                getTypes().getApiCoverage().getOpenAPICoverageConfiguration().getSuccessCriteria()
+                    .getMinThresholdPercentage()
+            ).isEqualTo(10)
+            assertThat(
+                getTypes().getApiCoverage().getOpenAPICoverageConfiguration().getSuccessCriteria()
+                    .getMaxMissedEndpointsInSpec()
+            ).isEqualTo(3)
+            assertThat(
+                getTypes().getApiCoverage().getOpenAPICoverageConfiguration().getSuccessCriteria().getEnforce()
+            ).isTrue()
+            assertThat(
+                getTypes().getApiCoverage().getOpenAPICoverageConfiguration().getExcludedEndpoints()
+            ).containsExactly("order", "payment")
+        }
+    }
+
+    @Test
+    fun `should convert config from v2 to v3 when report configuration is present`() {
+        val reportFormattersYaml = listOf(
+            """
+                type: text
+                layout: table
+                lite: true
+                title: Test Formatter1
+                logo: logo1.svg
+                logoAltText: Test Formatter Logo1
+                heading: Test Results1
+                outputDirectory: testOutput1
+            """.trimIndent(),
+            """
+                type: html
+                layout: table
+                lite: false
+                title: Test Formatter2
+                logo: logo2.svg
+                logoAltText: Test Formatter Logo2
+                heading: Test Results2
+                outputDirectory: testOutput2
+            """.trimIndent()
+        )
+        val formatters = reportFormattersYaml.joinToString("") { entry ->
+            entry.lineSequence()
+                .mapIndexed { index, line ->
+                    if (index == 0) "  \n                - $line"
+                    else "                  $line"
+                }
+                .joinToString("\n")
+        }
+        val configYaml = """
+            version: 2
+            report:
+              formatters: $formatters
+              types:
+                APICoverage:
+                  OpenAPI:
+                    successCriteria:
+                      minThresholdPercentage: 10
+                      maxMissedEndpointsInSpec: 3
+                      enforce: true
+                    excludedEndpoints:
+                      - order
+                      - payment
+        """.trimIndent()
+        val reportFormatters = reportFormattersYaml.map { objectMapper.readValue(it, ReportFormatter::class.java) }
+
+        val configFromV2 = objectMapper.readValue(configYaml, SpecmaticConfigV2::class.java).transform()
+        val configV3 = SpecmaticConfigV3.loadFrom(configFromV2) as SpecmaticConfigV3
+
+        configV3.report!!.apply {
+            assertThat(getFormatters()).isEqualTo(reportFormatters)
+            assertThat(
+                getTypes().getApiCoverage().getOpenAPICoverageConfiguration().getSuccessCriteria()
+                    .getMinThresholdPercentage()
+            ).isEqualTo(10)
+            assertThat(
+                getTypes().getApiCoverage().getOpenAPICoverageConfiguration().getSuccessCriteria()
+                    .getMaxMissedEndpointsInSpec()
+            ).isEqualTo(3)
+            assertThat(
+                getTypes().getApiCoverage().getOpenAPICoverageConfiguration().getSuccessCriteria().getEnforce()
+            ).isTrue()
+            assertThat(
+                getTypes().getApiCoverage().getOpenAPICoverageConfiguration().getExcludedEndpoints()
+            ).containsExactly("order", "payment")
         }
     }
 }

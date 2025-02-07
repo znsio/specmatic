@@ -21,6 +21,8 @@ import io.specmatic.core.config.v3.SpecmaticConfigV3
 import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSON
+import io.specmatic.core.utilities.GitRepo
+import io.specmatic.core.utilities.LocalFileSystemSource
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -817,5 +819,57 @@ internal class SpecmaticConfigAllTest {
 
         assertThat(contractSource).isNotNull()
         assertThat(contractSource).isInstanceOf(GitContractSource::class.java)
+    }
+
+    @CsvSource(
+        "VERSION_1, ./src/test/resources/specmaticConfigFiles/specmatic_without_version.yaml",
+        "VERSION_1, ./src/test/resources/specmaticConfigFiles/specmatic_without_version.json",
+        "VERSION_1, ./src/test/resources/specmaticConfigFiles/v1/specmatic_config_v1.yaml",
+        "VERSION_1, ./src/test/resources/specmaticConfigFiles/v1/specmatic_config_v1.json",
+        "VERSION_2, ./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2.yaml",
+        "VERSION_2, ./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2.json",
+        "VERSION_3, ./src/test/resources/specmaticConfigFiles/v3/specmatic_config_v3.yaml",
+        "VERSION_3, ./src/test/resources/specmaticConfigFiles/v3/specmatic_config_v3.json"
+    )
+    @ParameterizedTest
+    fun `given SpecmaticConfig it should load sources`(version: SpecmaticConfigVersion, configFile: String) {
+        val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
+        assertThat(config.getVersion()).isEqualTo(version)
+        val contractSources = config.loadSources()
+
+        val expectedContractSources = if (version != SpecmaticConfigVersion.VERSION_3) listOf(
+            GitRepo(
+                gitRepositoryURL = "https://contracts",
+                branchName = "1.0.1",
+                testContracts = listOf("com/petstore/1.yaml"),
+                stubContracts = listOf("com/petstore/payment.yaml"),
+                type = git.name
+            ),
+            LocalFileSystemSource(
+                directory = "contracts",
+                testContracts = listOf("com/petstore/1.yaml"),
+                stubContracts = listOf("com/petstore/payment.yaml", "com/petstore/order.yaml")
+            )
+        ) else listOf(
+            GitRepo(
+                gitRepositoryURL = "https://contracts",
+                branchName = "1.0.1",
+                testContracts = listOf("com/petstore/1.yaml"),
+                stubContracts = listOf("com/petstore/payment.yaml"),
+                type = git.name
+            ),
+            LocalFileSystemSource(
+                directory = "contracts",
+                testContracts = listOf("com/petstore/1.yaml"),
+                stubContracts = listOf(
+                    "com/petstore/payment.yaml",
+                    "com/petstore/order1.yaml",
+                    "com/petstore/order2.yaml"
+                )
+            )
+        )
+
+        assertThat(contractSources[0]).isEqualTo(expectedContractSources[0])
+        assertThat(contractSources[1]).isEqualTo(expectedContractSources[1])
     }
 }

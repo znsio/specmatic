@@ -4,7 +4,7 @@ import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.logger
 import java.io.File
 
-class LocalFileSystemSource(
+data class LocalFileSystemSource(
     val directory: String = ".",
     override val testContracts: List<String>,
     override val stubContracts: List<String>

@@ -9,7 +9,8 @@ data class HttpStubResponse(
     val contractPath: String = "",
     val examplePath: String? = null,
     val feature: Feature? = null,
-    val scenario: Scenario? = null
+    val scenario: Scenario? = null,
+    val mock: HttpStubData? = null
 ) {
     val responseBody = response.body
 

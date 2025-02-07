@@ -256,7 +256,7 @@ open class SpecmaticJUnitSupport {
 
         specmaticConfig = getSpecmaticConfig()
 
-        val timeoutInMilliseconds = specmaticConfig?.test?.timeoutInMilliseconds ?: try {
+        val timeoutInMilliseconds = specmaticConfig?.getTestTimeoutInMilliseconds() ?: try {
             getLongValue(SPECMATIC_TEST_TIMEOUT)
         } catch (e: NumberFormatException) {
             throw ContractException("$SPECMATIC_TEST_TIMEOUT should be a value of type long")

@@ -2,6 +2,7 @@ package io.specmatic.stub.stateful
 
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
+import io.specmatic.core.SpecmaticConfig.Companion.getAttributeSelectionPattern
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.value.*
@@ -335,7 +336,7 @@ class StatefulHttpStubWithAttributeSelectionTest {
             ).toFeature()
             val specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml")
             val scenarios = feature.scenarios.map {
-                it.copy(attributeSelectionPattern = specmaticConfig.attributeSelectionPattern)
+                it.copy(attributeSelectionPattern = getAttributeSelectionPattern(specmaticConfig))
             }
             httpStub = StatefulHttpStub(
                 specmaticConfigPath = "$SPEC_DIR_PATH/specmatic.yaml",

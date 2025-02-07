@@ -1,4 +1,4 @@
-package io.specmatic.core.config.v2
+package io.specmatic.core.config.v3
 
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
@@ -12,35 +12,34 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import io.specmatic.core.Source
 import io.specmatic.core.SourceProvider
-import io.specmatic.core.config.v3.Consumes
 
-@JsonSerialize(using = ContractConfigSerializer::class)
-@JsonDeserialize(using = ContractConfigDeserializer::class)
-data class ContractConfig(
-    val contractSource: ContractSource? = null,
+@JsonSerialize(using = ContractConfigSerializerV2::class)
+@JsonDeserialize(using = ContractConfigDeserializerV2::class)
+data class ContractConfigV2(
+    val contractSource: ContractSourceV2? = null,
     val provides: List<String>? = null,
-    val consumes: List<String>? = null
+    val consumes: List<Consumes>? = null
 ) {
     constructor(source: Source) : this(
-        contractSource = GitContractSource(source).takeIf { source.provider == SourceProvider.git }
-            ?: FileSystemContractSource(source),
+        contractSource = GitContractSourceV2(source).takeIf { source.provider == SourceProvider.git }
+            ?: FileSystemContractSourceV2(source),
         provides = source.test,
-        consumes = source.specsUsedAsStub()
+        consumes = source.stub
     )
 
     fun transform(): Source {
         return this.contractSource?.transform(provides, consumes) ?: Source()
     }
 
-    interface ContractSource {
+    interface ContractSourceV2 {
         fun write(gen: JsonGenerator)
-        fun transform(provides: List<String>?, consumes: List<String>?): Source
+        fun transform(provides: List<String>?, consumes: List<Consumes>?): Source
     }
 
-    data class GitContractSource(
+    data class GitContractSourceV2(
         val url: String? = null,
         val branch: String? = null
-    ) : ContractSource {
+    ) : ContractSourceV2 {
         constructor(source: Source) : this(source.repository, source.branch)
 
         override fun write(gen: JsonGenerator) {
@@ -50,20 +49,20 @@ data class ContractConfig(
             gen.writeEndObject()
         }
 
-        override fun transform(provides: List<String>?, consumes: List<String>?): Source {
+        override fun transform(provides: List<String>?, consumes: List<Consumes>?): Source {
             return Source(
                 provider = SourceProvider.git,
                 repository = this.url,
                 branch = this.branch,
                 test = provides,
-                stub = consumes.orEmpty().map { Consumes.StringValue(it) }
+                stub = consumes.orEmpty()
             )
         }
     }
 
-    data class FileSystemContractSource(
+    data class FileSystemContractSourceV2(
         val directory: String = "."
-    ) : ContractSource {
+    ) : ContractSourceV2 {
         constructor(source: Source) : this(source.directory ?: ".")
 
         override fun write(gen: JsonGenerator) {
@@ -72,19 +71,19 @@ data class ContractConfig(
             gen.writeEndObject()
         }
 
-        override fun transform(provides: List<String>?, consumes: List<String>?): Source {
+        override fun transform(provides: List<String>?, consumes: List<Consumes>?): Source {
             return Source(
                 provider = SourceProvider.filesystem,
                 directory = this.directory,
                 test = provides,
-                stub = consumes.orEmpty().map { Consumes.StringValue(it) }
+                stub = consumes.orEmpty()
             )
         }
     }
 }
 
-class ContractConfigSerializer : StdSerializer<ContractConfig>(ContractConfig::class.java) {
-    override fun serialize(contract: ContractConfig, gen: JsonGenerator, provider: SerializerProvider) {
+class ContractConfigSerializerV2 : StdSerializer<ContractConfigV2>(ContractConfigV2::class.java) {
+    override fun serialize(contract: ContractConfigV2, gen: JsonGenerator, provider: SerializerProvider) {
         gen.writeStartObject()
         contract.contractSource?.write(gen)
         gen.writeObjectField("provides", contract.provides)
@@ -93,34 +92,23 @@ class ContractConfigSerializer : StdSerializer<ContractConfig>(ContractConfig::c
     }
 }
 
-class ContractConfigDeserializer : StdDeserializer<ContractConfig>(ContractConfig::class.java) {
-    override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): ContractConfig {
+class ContractConfigDeserializerV2 : StdDeserializer<ContractConfigV2>(ContractConfigV2::class.java) {
+    override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): ContractConfigV2 {
         val node: JsonNode = parser.codec.readTree(parser)
 
         val contractSource = when {
             node.has("git") -> {
-                val gitNode = node["git"]
-                val url = gitNode["url"]
-                    .takeIf { it != null && it.asText().isNotBlank() } ?: throw JsonMappingException.from(
-                    parser,
-                    "Git contract source must have 'url' field"
-                )
-                val branch = gitNode["branch"]
-                ContractConfig.GitContractSource(
-                    url = url.asText(),
-                    branch = branch?.asText()
+                val gitNode = node.get("git")
+                ContractConfigV2.GitContractSourceV2(
+                    url = gitNode.get("url").asText(),
+                    branch = gitNode.get("branch").asText()
                 )
             }
 
             node.has("filesystem") -> {
-                val filesystemNode = node["filesystem"]
-                val directory = filesystemNode["directory"]
-                    .takeIf { it != null && it.asText().isNotBlank() } ?: throw JsonMappingException.from(
-                    parser,
-                    "Filesystem contract source must have 'directory' field"
-                )
-                ContractConfig.FileSystemContractSource(
-                    directory = directory.asText()
+                val filesystemNode = node.get("filesystem")
+                ContractConfigV2.FileSystemContractSourceV2(
+                    directory = filesystemNode.get("directory").asText()
                 )
             }
 
@@ -130,9 +118,22 @@ class ContractConfigDeserializer : StdDeserializer<ContractConfig>(ContractConfi
             )
         }
 
-        val provides = node["provides"]?.map { it.asText() }
-        val consumes = node["consumes"]?.map { it.asText() }
+        val provides = if(node.has("provides"))
+            node.get("provides").map { it.asText() }
+        else emptyList()
+        val consumes = if(node.has("consumes")) {
+            node.get("consumes").map {
+                if(it.isObject) {
+                    Consumes.ObjectValue(
+                        specs = it.get("specs").map { specPath -> specPath.asText() },
+                        port = it.get("port").asInt()
+                    )
+                } else {
+                    Consumes.StringValue(it.asText())
+                }
+            }
+        } else emptyList()
 
-        return ContractConfig(contractSource, provides, consumes)
+        return ContractConfigV2(contractSource, provides, consumes)
     }
 }

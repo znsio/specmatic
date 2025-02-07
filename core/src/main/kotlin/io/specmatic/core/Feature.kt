@@ -16,6 +16,7 @@ import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
 import io.ktor.http.*
+import io.specmatic.core.SpecmaticConfig.Companion.getWorkflowConfiguration
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.*
@@ -128,19 +129,11 @@ data class Feature(
     val strictMode: Boolean = false
 ): IFeature {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
-        val updatedSpecmaticConfig = specmaticConfig.copy(
-            test = specmaticConfig.test?.copy(
-                resiliencyTests = specmaticConfig.test.resiliencyTests?.copy(
-                    enable = if(onlyPositive) ResiliencyTestSuite.positiveOnly else ResiliencyTestSuite.all
-                )
-            )
-        )
-
         return this.copy(flagsBased = this.flagsBased.copy(
             generation = GenerativeTestsEnabled(onlyPositive),
             positivePrefix = POSITIVE_TEST_DESCRIPTION_PREFIX,
             negativePrefix = NEGATIVE_TEST_DESCRIPTION_PREFIX),
-            specmaticConfig = updatedSpecmaticConfig
+            specmaticConfig = specmaticConfig.copyResiliencyTestsConfig(onlyPositive)
         )
     }
 
@@ -572,7 +565,7 @@ data class Feature(
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
     fun generateContractTests(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<ContractTest> {
-        val workflow = Workflow(specmaticConfig.workflow ?: WorkflowConfiguration())
+        val workflow = Workflow(specmaticConfig.getWorkflowDetails() ?: WorkflowDetails.default)
 
         return generateContractTestScenarios(suggestions, fn).map { (originalScenario, returnValue) ->
             returnValue.realise(

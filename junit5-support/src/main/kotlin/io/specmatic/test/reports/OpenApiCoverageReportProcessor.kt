@@ -1,6 +1,6 @@
 package io.specmatic.test.reports
 
-import io.specmatic.core.ReportConfiguration
+import io.specmatic.core.ReportConfigurationDetails
 import io.specmatic.core.ReportFormatterType
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.logger
@@ -39,7 +39,7 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
         assertSuccessCriteria(reportConfiguration, openAPICoverageReport)
     }
 
-    override fun configureReportRenderers(reportConfiguration: ReportConfiguration): List<ReportRenderer<OpenAPICoverageConsoleReport>> {
+    override fun configureReportRenderers(reportConfiguration: ReportConfigurationDetails): List<ReportRenderer<OpenAPICoverageConsoleReport>> {
         return reportConfiguration.mapRenderers { formatterType: ReportFormatterType ->
             when (formatterType) {
                 ReportFormatterType.TEXT -> CoverageReportTextRenderer()
@@ -66,7 +66,7 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
     }
 
     override fun assertSuccessCriteria(
-        reportConfiguration: ReportConfiguration,
+        reportConfiguration: ReportConfigurationDetails,
         report: OpenAPICoverageConsoleReport
     ) {
         val successCriteria = reportConfiguration.getSuccessCriteria()

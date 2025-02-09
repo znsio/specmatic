@@ -187,7 +187,7 @@ data class SpecmaticConfig(
     val environments: Map<String, Environment>? = null,
     private val hooks: Map<String, String> = emptyMap(),
     private val repository: RepositoryInfo? = null,
-    val report: ReportConfiguration? = null,
+    val report: ReportConfigurationDetails? = null,
     private val security: SecurityConfiguration? = null,
     private val test: TestConfiguration? = TestConfiguration(),
     private val stub: StubConfiguration = StubConfiguration(),
@@ -256,6 +256,11 @@ data class SpecmaticConfig(
         fun getStubConfiguration(specmaticConfig: SpecmaticConfig): StubConfiguration {
             return specmaticConfig.stub
         }
+    }
+
+    @JsonIgnore
+    fun getReport(): ReportConfiguration? {
+        return report
     }
 
     @JsonIgnore
@@ -679,27 +684,36 @@ data class RepositoryInfo(
 }
 
 
-data class ReportConfiguration(
-    private val formatters: List<ReportFormatterDetails>? = null,
-    private val types: ReportTypes = ReportTypes()
-) {
+interface ReportConfiguration {
+    fun withDefaultFormattersIfMissing(): ReportConfiguration
+    fun getHTMLFormatter(): ReportFormatterDetails?
+    fun getSuccessCriteria(): SuccessCriteria
+    fun <T> mapRenderers(fn: (ReportFormatterType) -> T): List<T>
+    fun excludedOpenAPIEndpoints(): List<String>
+}
+
+data class ReportConfigurationDetails(
+    val formatters: List<ReportFormatterDetails>? = null,
+    val types: ReportTypes = ReportTypes()
+) : ReportConfiguration {
     companion object {
-        val default = ReportConfiguration(
+        val default = ReportConfigurationDetails(
             formatters = listOf(
                 ReportFormatterDetails(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE),
                 ReportFormatterDetails(ReportFormatterType.HTML)
             ), types = ReportTypes()
         )
 
-        fun getFormatters(report: ReportConfiguration?): List<ReportFormatterDetails>? {
+        fun getFormatters(report: ReportConfigurationDetails?): List<ReportFormatterDetails>? {
             return report?.formatters
         }
 
-        fun getTypes(report: ReportConfiguration?): ReportTypes? {
+        fun getTypes(report: ReportConfigurationDetails?): ReportTypes? {
             return report?.types
         }
     }
-    fun withDefaultFormattersIfMissing(): ReportConfiguration {
+
+    override fun withDefaultFormattersIfMissing(): ReportConfigurationDetails {
         val htmlReportFormatter = formatters?.firstOrNull {
             it.type == ReportFormatterType.HTML
         } ?: ReportFormatterDetails(ReportFormatterType.HTML)
@@ -710,21 +724,21 @@ data class ReportConfiguration(
         return this.copy(formatters = listOf(htmlReportFormatter, textReportFormatter))
     }
 
-    fun getHTMLFormatter(): ReportFormatterDetails {
-        return formatters!!.first { it.type == ReportFormatterType.HTML }
+    override fun getHTMLFormatter(): ReportFormatterDetails? {
+        return formatters?.firstOrNull { it.type == ReportFormatterType.HTML }
     }
 
-    fun getSuccessCriteria(): SuccessCriteria {
+    override fun getSuccessCriteria(): SuccessCriteria {
         return types.apiCoverage.openAPI.successCriteria ?: SuccessCriteria()
     }
 
-    fun <T> mapRenderers(fn: (ReportFormatterType) -> T): List<T> {
+    override fun <T> mapRenderers(fn: (ReportFormatterType) -> T): List<T> {
         return formatters!!.map {
             fn(it.type)
         }
     }
 
-    fun excludedOpenAPIEndpoints(): List<String> {
+    override fun excludedOpenAPIEndpoints(): List<String> {
         return types.apiCoverage.openAPI.excludedEndpoints
     }
 }

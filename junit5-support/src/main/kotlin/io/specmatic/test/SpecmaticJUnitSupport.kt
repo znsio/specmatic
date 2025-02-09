@@ -100,12 +100,12 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        private fun getReportConfiguration(): ReportConfiguration {
+        private fun getReportConfiguration(): ReportConfigurationDetails {
             val reportConfiguration = specmaticConfig?.report
 
             if (reportConfiguration == null) {
                 logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
-                return ReportConfiguration.default
+                return ReportConfigurationDetails.default
             }
 
             return reportConfiguration.withDefaultFormattersIfMissing()

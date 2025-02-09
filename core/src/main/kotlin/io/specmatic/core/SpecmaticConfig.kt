@@ -422,6 +422,7 @@ data class APICoverage (
 )
 
 data class APICoverageConfiguration(
+    val excludedEndpoints: List<String> = emptyList(),
     val successCriteria: SuccessCriteria = SuccessCriteria()
 )
 

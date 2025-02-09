@@ -24,6 +24,7 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
     override fun process(specmaticConfig: SpecmaticConfig) {
         val reportConfiguration = specmaticConfig.report!!
 
+        openApiCoverageReportInput.addExcludedAPIs(reportConfiguration.types.apiCoverage.openAPI.excludedEndpoints + excludedEndpointsFromEnv())
         val openAPICoverageReport = openApiCoverageReportInput.generate()
 
         if (openAPICoverageReport.coverageRows.isEmpty()) {
@@ -47,6 +48,10 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
             }
         }
     }
+
+    private fun excludedEndpointsFromEnv() = System.getenv("SPECMATIC_EXCLUDED_ENDPOINTS")?.let { excludedEndpoints ->
+        excludedEndpoints.split(",").map { it.trim() }
+    } ?: emptyList()
 
     private fun saveAsJson(openApiCoverageJsonReport: OpenApiCoverageJsonReport) {
         println("Saving Open API Coverage Report json to $JSON_REPORT_PATH ...")

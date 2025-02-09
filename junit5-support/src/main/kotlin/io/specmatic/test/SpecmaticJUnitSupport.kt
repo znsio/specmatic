@@ -239,7 +239,7 @@ open class SpecmaticJUnitSupport {
         val overlayFilePath: String? = System.getProperty(OVERLAY_FILE_PATH) ?: System.getenv(OVERLAY_FILE_PATH)
         val overlayContent = if(overlayFilePath.isNullOrBlank()) "" else readFrom(overlayFilePath, "overlay")
 
-        val filterExpression = System.getProperty(FILTER, FILTER)
+        val filterExpression = System.getProperty(FILTER, "")
         openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath(), filterExpression = filterExpression)
 
         specmaticConfig = getSpecmaticConfig()

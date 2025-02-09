@@ -24,7 +24,7 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
     override fun process(specmaticConfig: SpecmaticConfig) {
         val reportConfiguration = specmaticConfig.report!!
 
-        openApiCoverageReportInput.addExcludedAPIs(reportConfiguration.types.apiCoverage.openAPI.excludedEndpoints + excludedEndpointsFromEnv())
+        openApiCoverageReportInput.addExcludedAPIs(reportConfiguration.excludedOpenAPIEndpoints() + excludedEndpointsFromEnv())
         val openAPICoverageReport = openApiCoverageReportInput.generate()
 
         if (openAPICoverageReport.coverageRows.isEmpty()) {
@@ -36,15 +36,15 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
             }
             saveAsJson(openApiCoverageReportInput.generateJsonReport())
         }
-        assertSuccessCriteria(reportConfiguration,openAPICoverageReport)
+        assertSuccessCriteria(reportConfiguration, openAPICoverageReport)
     }
 
     override fun configureReportRenderers(reportConfiguration: ReportConfiguration): List<ReportRenderer<OpenAPICoverageConsoleReport>> {
-        return reportConfiguration.formatters!!.map {
-            when (it.type) {
+        return reportConfiguration.mapRenderers { formatterType: ReportFormatterType ->
+            when (formatterType) {
                 ReportFormatterType.TEXT -> CoverageReportTextRenderer()
                 ReportFormatterType.HTML -> CoverageReportHtmlRenderer()
-                else -> throw Exception("Report formatter type: ${it.type} is not supported")
+                else -> throw Exception("Report formatter type: $formatterType is not supported")
             }
         }
     }
@@ -69,7 +69,7 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
         reportConfiguration: ReportConfiguration,
         report: OpenAPICoverageConsoleReport
     ) {
-        val successCriteria = reportConfiguration.types.apiCoverage.openAPI.successCriteria
+        val successCriteria = reportConfiguration.getSuccessCriteria()
         if (successCriteria.enforce) {
             val coverageThresholdNotMetMessage =
                 "Total API coverage: ${report.totalCoveragePercentage}% is less than the specified minimum threshold of ${successCriteria.minThresholdPercentage}%."

@@ -678,21 +678,78 @@ data class RepositoryInfo(
     }
 }
 
-data class ReportConfiguration(
-    val formatters: List<ReportFormatter>? = null,
-    val types: ReportTypes = ReportTypes()
-)
 
-data class ReportFormatter(
-    var type: ReportFormatterType = ReportFormatterType.TEXT,
-    val layout: ReportFormatterLayout = ReportFormatterLayout.TABLE,
-    val lite: Boolean = false,
-    val title: String = "Specmatic Report",
-    val logo: String = "assets/specmatic-logo.svg",
-    val logoAltText: String = "Specmatic",
-    val heading: String = "Contract Test Results",
-    val outputDirectory: String = "./build/reports/specmatic/html"
-)
+data class ReportConfiguration(
+    private val formatters: List<ReportFormatterDetails>? = null,
+    private val types: ReportTypes = ReportTypes()
+) {
+    companion object {
+        val default = ReportConfiguration(
+            formatters = listOf(
+                ReportFormatterDetails(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE),
+                ReportFormatterDetails(ReportFormatterType.HTML)
+            ), types = ReportTypes()
+        )
+
+        fun getFormatters(report: ReportConfiguration?): List<ReportFormatterDetails>? {
+            return report?.formatters
+        }
+
+        fun getTypes(report: ReportConfiguration?): ReportTypes? {
+            return report?.types
+        }
+    }
+    fun withDefaultFormattersIfMissing(): ReportConfiguration {
+        val htmlReportFormatter = formatters?.firstOrNull {
+            it.type == ReportFormatterType.HTML
+        } ?: ReportFormatterDetails(ReportFormatterType.HTML)
+        val textReportFormatter = formatters?.firstOrNull {
+            it.type == ReportFormatterType.TEXT
+        } ?: ReportFormatterDetails(ReportFormatterType.TEXT)
+
+        return this.copy(formatters = listOf(htmlReportFormatter, textReportFormatter))
+    }
+
+    fun getHTMLFormatter(): ReportFormatterDetails {
+        return formatters!!.first { it.type == ReportFormatterType.HTML }
+    }
+
+    fun getSuccessCriteria(): SuccessCriteria {
+        return types.apiCoverage.openAPI.successCriteria ?: SuccessCriteria()
+    }
+
+    fun <T> mapRenderers(fn: (ReportFormatterType) -> T): List<T> {
+        return formatters!!.map {
+            fn(it.type)
+        }
+    }
+
+    fun excludedOpenAPIEndpoints(): List<String> {
+        return types.apiCoverage.openAPI.excludedEndpoints
+    }
+}
+
+interface ReportFormatter {
+    var type: ReportFormatterType
+    val layout: ReportFormatterLayout
+    val lite: Boolean
+    val title: String
+    val logo: String
+    val logoAltText: String
+    val heading: String
+    val outputDirectory: String
+}
+
+data class ReportFormatterDetails (
+    override var type: ReportFormatterType = ReportFormatterType.TEXT,
+    override val layout: ReportFormatterLayout = ReportFormatterLayout.TABLE,
+    override val lite: Boolean = false,
+    override val title: String = "Specmatic Report",
+    override val logo: String = "assets/specmatic-logo.svg",
+    override val logoAltText: String = "Specmatic",
+    override val heading: String = "Contract Test Results",
+    override val outputDirectory: String = "./build/reports/specmatic/html"
+) : ReportFormatter
 
 enum class ReportFormatterType {
     @JsonProperty("text")
@@ -718,7 +775,7 @@ data class APICoverage (
 )
 
 data class APICoverageConfiguration(
-    val successCriteria: SuccessCriteria = SuccessCriteria(),
+    val successCriteria: SuccessCriteria? = null,
     val excludedEndpoints: List<String> = emptyList()
 )
 

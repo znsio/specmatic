@@ -101,30 +101,14 @@ open class SpecmaticJUnitSupport {
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
-            return when (val reportConfiguration = specmaticConfig?.report) {
-                null -> {
-                    logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
-                    ReportConfiguration(
-                        formatters = listOf(
-                            ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE),
-                            ReportFormatter(ReportFormatterType.HTML)
-                        ), types = ReportTypes()
-                    )
-                }
+            val reportConfiguration = specmaticConfig?.report
 
-                else -> {
-                    val htmlReportFormatter = reportConfiguration.formatters?.firstOrNull {
-                        it.type == ReportFormatterType.HTML
-                    } ?: ReportFormatter(ReportFormatterType.HTML)
-                    val textReportFormatter = reportConfiguration.formatters?.firstOrNull {
-                        it.type == ReportFormatterType.TEXT
-                    } ?: ReportFormatter(ReportFormatterType.TEXT)
-                    ReportConfiguration(
-                        formatters = listOf(htmlReportFormatter, textReportFormatter),
-                        types = reportConfiguration.types
-                    )
-                }
+            if (reportConfiguration == null) {
+                logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
+                return ReportConfiguration.default
             }
+
+            return reportConfiguration.withDefaultFormattersIfMissing()
         }
 
         enum class ActuatorSetupResult(val failed: Boolean) {

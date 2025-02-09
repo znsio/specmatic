@@ -1,7 +1,6 @@
 package io.specmatic.test.reports.renderers
 
-import io.specmatic.core.ReportFormatter
-import io.specmatic.core.ReportFormatterType
+import io.specmatic.core.ReportFormatterDetails
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.logger
@@ -35,8 +34,8 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
     override fun render(report: OpenAPICoverageConsoleReport, specmaticConfig: SpecmaticConfig): String {
         logger.log("Generating HTML report...")
         val reportConfiguration = specmaticConfig.report!!
-        val htmlReportConfiguration = reportConfiguration.formatters!!.first { it.type == ReportFormatterType.HTML }
-        val openApiSuccessCriteria = reportConfiguration.types.apiCoverage.openAPI.successCriteria
+        val htmlReportConfiguration = reportConfiguration.getHTMLFormatter()
+        val openApiSuccessCriteria = reportConfiguration.getSuccessCriteria()
 
         val reportData = HtmlReportData(
             totalCoveragePercentage = report.totalCoveragePercentage, actuatorEnabled = actuatorEnabled,
@@ -62,7 +61,7 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
         return props.getProperty("version")
     }
 
-    private fun makeTableRows(report: OpenAPICoverageConsoleReport, htmlReportConfiguration: ReportFormatter): List<TableRow> {
+    private fun makeTableRows(report: OpenAPICoverageConsoleReport, htmlReportConfiguration: ReportFormatterDetails): List<TableRow> {
         val updatedCoverageRows = when(htmlReportConfiguration.lite) {
             true -> reCreateCoverageRowsForLite(report, report.coverageRows)
             else -> report.coverageRows

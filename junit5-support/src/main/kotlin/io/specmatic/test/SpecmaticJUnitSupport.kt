@@ -210,13 +210,7 @@ open class SpecmaticJUnitSupport {
 
         val config = loadSpecmaticConfig(configFileName)
 
-        val envConfigFromFile = config.environments?.get(envName) ?: return JSONObjectValue()
-
-        try {
-            return parsedJSONObject(content = ObjectMapper().writeValueAsString(envConfigFromFile))
-        } catch(e: Throwable) {
-            throw ContractException("Error loading Specmatic configuration: ${e.message}")
-        }
+        return config.getEnvironment(envName)
     }
 
     private fun loadExceptionAsTestError(e: Throwable): Stream<DynamicTest> {

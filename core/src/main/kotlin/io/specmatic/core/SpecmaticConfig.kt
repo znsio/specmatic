@@ -187,7 +187,7 @@ data class SpecmaticConfig(
     val environments: Map<String, Environment>? = null,
     private val hooks: Map<String, String> = emptyMap(),
     private val repository: RepositoryInfo? = null,
-    val report: ReportConfigurationDetails? = null,
+    private val report: ReportConfigurationDetails? = null,
     private val security: SecurityConfiguration? = null,
     private val test: TestConfiguration? = TestConfiguration(),
     private val stub: StubConfiguration = StubConfiguration(),
@@ -202,6 +202,10 @@ data class SpecmaticConfig(
     private val version: SpecmaticConfigVersion? = null
 ) {
     companion object {
+        fun getReport(specmaticConfig: SpecmaticConfig): ReportConfigurationDetails? {
+            return specmaticConfig.report
+        }
+
         @JsonIgnore
         fun getSources(specmaticConfig: SpecmaticConfig): List<Source> {
             return specmaticConfig.sources
@@ -524,6 +528,11 @@ data class SpecmaticConfig(
     @JsonIgnore
     private fun String.canonicalPath(relativeTo: File): String {
         return relativeTo.parentFile?.resolve(this)?.canonicalPath ?: File(this).canonicalPath
+    }
+
+    fun updateReportConfiguration(reportConfiguration: ReportConfiguration): SpecmaticConfig {
+        val reportConfigurationDetails = reportConfiguration as? ReportConfigurationDetails ?: return this
+        return this.copy(report = reportConfigurationDetails)
     }
 }
 

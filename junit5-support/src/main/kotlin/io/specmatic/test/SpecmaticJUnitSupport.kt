@@ -88,7 +88,7 @@ open class SpecmaticJUnitSupport {
         fun report() {
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
             val reportConfiguration = getReportConfiguration()
-            val config = specmaticConfig?.copy(report = reportConfiguration) ?: SpecmaticConfig(report = reportConfiguration)
+            val config = specmaticConfig?.updateReportConfiguration(reportConfiguration) ?: SpecmaticConfig().updateReportConfiguration(reportConfiguration)
 
             reportProcessors.forEach { it.process(config) }
 
@@ -100,8 +100,8 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        private fun getReportConfiguration(): ReportConfigurationDetails {
-            val reportConfiguration = specmaticConfig?.report
+        private fun getReportConfiguration(): ReportConfiguration {
+            val reportConfiguration = specmaticConfig?.getReport()
 
             if (reportConfiguration == null) {
                 logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")

@@ -70,7 +70,7 @@ data class SpecmaticConfigV3(
                 environments = config.environments,
                 hooks = config.getHooks(),
                 repository = getRepository(config),
-                report = config.report,
+                report = SpecmaticConfig.getReport(config),
                 security = getSecurityConfiguration(config),
                 test = SpecmaticConfig.getTestConfiguration(config),
                 stub = SpecmaticConfig.getStubConfiguration(config),

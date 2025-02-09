@@ -68,7 +68,6 @@ open class SpecmaticJUnitSupport {
         const val FILTER_NAME_PROPERTY = "filterName"
         const val FILTER_NOT_NAME_PROPERTY = "filterNotName"
         const val FILTER = "filter"
-        const val FILTER_NOT = "filterNot"
         const val FILTER_NAME_ENVIRONMENT_VARIABLE = "FILTER_NAME"
         const val FILTER_NOT_NAME_ENVIRONMENT_VARIABLE = "FILTER_NOT_NAME"
         const val OVERLAY_FILE_PATH = "overlayFilePath"
@@ -78,7 +77,7 @@ open class SpecmaticJUnitSupport {
 
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfig: SpecmaticConfig? = null
-        val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
+        var openApiCoverageReportInput: OpenApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
         private val testFilter = ScenarioMetadataFilter.from(readEnvVarOrProperty(FILTER, FILTER).orEmpty())
 
         private val threads: Vector<String> = Vector<String>()
@@ -239,6 +238,9 @@ open class SpecmaticJUnitSupport {
         val filterNotName: String? = System.getProperty(FILTER_NOT_NAME_PROPERTY) ?: System.getenv(FILTER_NOT_NAME_ENVIRONMENT_VARIABLE)
         val overlayFilePath: String? = System.getProperty(OVERLAY_FILE_PATH) ?: System.getenv(OVERLAY_FILE_PATH)
         val overlayContent = if(overlayFilePath.isNullOrBlank()) "" else readFrom(overlayFilePath, "overlay")
+
+        val filterExpression = System.getProperty(FILTER, FILTER)
+        openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath(), filterExpression = filterExpression)
 
         specmaticConfig = getSpecmaticConfig()
 

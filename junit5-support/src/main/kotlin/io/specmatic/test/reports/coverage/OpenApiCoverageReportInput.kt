@@ -23,7 +23,8 @@ class OpenApiCoverageReportInput(
     private val allEndpoints: MutableList<Endpoint> = mutableListOf(),
     internal var endpointsAPISet: Boolean = false,
     private var groupedTestResultRecords: MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>> = mutableMapOf(),
-    private var apiCoverageRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf()
+    private var apiCoverageRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf(),
+    private val filterExpression: String = ""
 ) {
     fun addTestReportRecords(testResultRecord: TestResultRecord) {
         testResultRecords.add(testResultRecord)
@@ -161,8 +162,7 @@ class OpenApiCoverageReportInput(
 
     private fun addTestResultsForMissingEndpoints(testResults: List<TestResultRecord>): List<TestResultRecord> {
         var testReportRecordsIncludingMissingAPIs = testResults.toMutableList()
-        val filterExpression = System.getProperty(FILTER, FILTER)
-        val filter = ScenarioMetadataFilter.from(filterExpression);
+        val filter = ScenarioMetadataFilter.from(filterExpression)
         if(endpointsAPISet) {
             applicationAPIs.forEach { api ->
                 if (allEndpoints.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it == api.path }) {

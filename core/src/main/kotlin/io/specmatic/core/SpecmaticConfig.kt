@@ -182,7 +182,7 @@ data class AttributeSelectionPattern(
 }
 
 data class SpecmaticConfig(
-    private val sources: List<Source> = emptyList(),
+    private val sources: List<Source>? = null,
     private val auth: Auth? = null,
     private val pipeline: Pipeline? = null,
     private val environments: Map<String, Environment>? = null,
@@ -208,7 +208,7 @@ data class SpecmaticConfig(
         }
 
         @JsonIgnore
-        fun getSources(specmaticConfig: SpecmaticConfig): List<Source> {
+        fun getSources(specmaticConfig: SpecmaticConfig): List<Source>? {
             return specmaticConfig.sources
         }
 
@@ -284,26 +284,28 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun specToStubPortMap(defaultPort: Int, relativeTo: File = File(".")): Map<String, Int> {
-        return sources.flatMap { it.specToStubPortMap(defaultPort, relativeTo).entries }.associate { it.key to it.value }
+        return sources?.flatMap { it.specToStubPortMap(defaultPort, relativeTo).entries }
+            ?.associate { it.key to it.value }
+            ?: emptyMap()
     }
 
     @JsonIgnore
     fun stubPorts(defaultPort: Int): List<Int> {
-        return sources.flatMap {
+        return sources?.flatMap {
             it.stub.orEmpty().map { consumes ->
                 when(consumes) {
                     is Consumes.StringValue -> defaultPort
                     is Consumes.ObjectValue -> consumes.port
                 }
             }
-        }.plus(defaultPort).distinct()
+        }?.plus(defaultPort)?.distinct() ?: emptyList()
     }
 
     fun logDependencyProjects(azure: AzureAPI) {
         logger.log("Dependency projects")
         logger.log("-------------------")
 
-        sources.forEach { source ->
+        sources?.forEach { source ->
             logger.log("In central repo ${source.repository}")
 
             source.test?.forEach { relativeContractPath ->
@@ -326,7 +328,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun loadSources(): List<ContractSource> {
-        return sources.map { source ->
+        return sources?.map { source ->
             when (source.provider) {
                 git -> {
                     val stubPaths = source.specsUsedAsStub()
@@ -352,7 +354,7 @@ data class SpecmaticConfig(
                     WebSource(testPaths, stubPaths)
                 }
             }
-        }
+        } ?: emptyList()
     }
 
     @JsonIgnore
@@ -517,7 +519,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun stubContracts(relativeTo: File = File(".")): List<String> {
-        return sources.flatMap { source ->
+        return sources?.flatMap { source ->
             source.stub.orEmpty().flatMap { stub ->
                 when (stub) {
                     is Consumes.StringValue -> listOf(stub.value)
@@ -527,7 +529,7 @@ data class SpecmaticConfig(
                 if (source.provider == web) spec
                 else spec.canonicalPath(relativeTo)
             }
-        }
+        } ?: emptyList()
     }
 
     @JsonIgnore

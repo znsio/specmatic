@@ -82,7 +82,7 @@ internal class SpecmaticConfigAllTest {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
         assertThat(config.getVersion()).isEqualTo(version)
         val sources = SpecmaticConfig.getSources(config)
-        assertThat(sources.size).isEqualTo(2)
+        assertThat(sources?.size).isEqualTo(2)
         val expectedSources = if(version != SpecmaticConfigVersion.VERSION_3) listOf(
             Source(
                 provider = git,
@@ -145,9 +145,9 @@ internal class SpecmaticConfigAllTest {
 
         val contracts = specmaticConfigV2.contracts
 
-        assertThat(contracts.size).isEqualTo(2)
-        assertThat(contracts[0].contractSource).isInstanceOf(GitContractSource::class.java)
-        val gitContractSource = contracts[0].contractSource as GitContractSource
+        assertThat(contracts?.size).isEqualTo(2)
+        assertThat(contracts?.get(0)?.contractSource).isInstanceOf(GitContractSource::class.java)
+        val gitContractSource = contracts?.get(0)?.contractSource as GitContractSource
         assertThat(gitContractSource.url).isEqualTo("https://contracts")
         assertThat(gitContractSource.branch).isEqualTo("1.0.1")
         assertThat(contracts[0].provides).containsOnly("com/petstore/1.yaml")
@@ -211,9 +211,9 @@ internal class SpecmaticConfigAllTest {
 
         val contracts = specmaticConfigV3.contracts
 
-        assertThat(contracts.size).isEqualTo(2)
-        assertThat(contracts[0].contractSource).isInstanceOf(GitContractSourceV2::class.java)
-        val gitContractSource = contracts[0].contractSource as GitContractSourceV2
+        assertThat(contracts?.size).isEqualTo(2)
+        assertThat(contracts?.get(0)?.contractSource).isInstanceOf(GitContractSourceV2::class.java)
+        val gitContractSource = contracts?.get(0)?.contractSource as GitContractSourceV2
         assertThat(gitContractSource.url).isEqualTo("https://contracts")
         assertThat(gitContractSource.branch).isEqualTo("1.0.1")
         assertThat(contracts[0].provides).containsOnly("com/petstore/1.yaml")
@@ -796,7 +796,7 @@ internal class SpecmaticConfigAllTest {
 
         val configV2 = SpecmaticConfigV2.loadFrom(dslConfig) as SpecmaticConfigV2
 
-        assertThat(configV2.contracts.first().contractSource).isNull()
+        assertThat(configV2.contracts?.first()?.contractSource).isNull()
     }
 
     @Test
@@ -815,7 +815,7 @@ internal class SpecmaticConfigAllTest {
 
         val configV2 = SpecmaticConfigV2.loadFrom(dslConfig) as SpecmaticConfigV2
 
-        val contractSource = configV2.contracts.first().contractSource
+        val contractSource = configV2.contracts?.first()?.contractSource
 
         assertThat(contractSource).isNotNull()
         assertThat(contractSource).isInstanceOf(GitContractSource::class.java)

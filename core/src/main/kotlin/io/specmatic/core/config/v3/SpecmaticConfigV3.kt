@@ -14,7 +14,7 @@ import io.specmatic.core.utilities.Flags.Companion.getStringValue
 
 data class SpecmaticConfigV3(
     val version: SpecmaticConfigVersion,
-    val contracts: List<ContractConfigV2> = emptyList(),
+    val contracts: List<ContractConfigV2>? = null,
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
@@ -39,7 +39,7 @@ data class SpecmaticConfigV3(
     override fun transform(): SpecmaticConfig {
         return SpecmaticConfig(
             version = SpecmaticConfigVersion.VERSION_3,
-            sources = this.contracts.map { contract -> contract.transform() },
+            sources = this.contracts?.map { contract -> contract.transform() },
             auth = this.auth,
             pipeline = this.pipeline,
             environments = this.environments,
@@ -64,7 +64,7 @@ data class SpecmaticConfigV3(
         override fun loadFrom(config: SpecmaticConfig): SpecmaticVersionedConfig {
             return SpecmaticConfigV3(
                 version = SpecmaticConfigVersion.VERSION_3,
-                contracts = SpecmaticConfig.getSources(config).map { ContractConfigV2(it) },
+                contracts = SpecmaticConfig.getSources(config)?.map { ContractConfigV2(it) },
                 auth = config.getAuth(),
                 pipeline = getPipeline(config),
                 environments = SpecmaticConfig.getEnvironments(config),

@@ -550,8 +550,8 @@ data class SpecmaticConfig(
         }
     }
 
-    fun printWarningForOlderVersions() {
-        getVersion().printWarningForOlderVersions()
+    fun printWarningForOlderVersions(configFilename: String) {
+        getVersion().printWarningForOlderVersions(configFilename)
     }
 }
 
@@ -898,7 +898,8 @@ fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
     }
     try {
         return configFile.toSpecmaticConfig().also { config ->
-            config.printWarningForOlderVersions()
+            val configFilename = configFile.name
+            config.printWarningForOlderVersions(configFilename)
         }
     } catch(e: LinkageError) {
         logger.log(e, "A dependency version conflict has been detected. If you are using Spring in a maven project, a common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.")

@@ -25,7 +25,9 @@ internal class SpecmaticConfigTest {
     @Test
     fun `should print a warning for older versions of the config`() {
         val (output, _) = captureStandardOutput {
-            io.specmatic.core.SpecmaticConfig(version = SpecmaticConfigVersion.VERSION_1).printWarningForOlderVersions()
+            io.specmatic.core.SpecmaticConfig(version = SpecmaticConfigVersion.VERSION_1).printWarningForOlderVersions(
+                configFilename
+            )
         }
 
         assertThat(output).contains("older version")

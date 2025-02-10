@@ -11,12 +11,12 @@ enum class SpecmaticConfigVersion(@JsonValue val value: Int, val configLoader: S
     VERSION_1(1, SpecmaticConfigV1.Companion),
     VERSION_2(2, SpecmaticConfigV2.Companion);
 
-    fun printWarningForOlderVersions() {
+    fun printWarningForOlderVersions(configFilename: String) {
         if (this == getLatestVersion())
            return
 
         onceOnly("config_warning") {
-            println("WARNING: The Specmatic configuration file is of an older version. Please update it to the latest version using the \"config update\" sub-command of Specmatic.")
+            println("WARNING: Your $configFilename Specmatic configuration file is of an older version. Please visit https://specmatic.io/documentation/configuration.html for instructions on how to upgrade it.")
         }
     }
 

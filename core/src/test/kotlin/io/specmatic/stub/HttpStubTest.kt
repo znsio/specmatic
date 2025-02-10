@@ -2250,6 +2250,64 @@ components:
         }
     }
 
+    @Test
+    fun `should serve multiple specs on the same port`() {
+        val specmaticConfigFile = File("src/test/resources/multi_spec_stub_on_same_port/specmatic.yaml")
+        val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+
+        val scenarioStubs = specmaticConfig.stubContracts(specmaticConfigFile).map { specPath ->
+            OpenApiSpecification.fromFile(specPath).toFeature() to loadContractStubsFromImplicitPaths(
+                contractPathDataList = listOf(ContractPathData("", specPath)),
+                specmaticConfig = specmaticConfig
+            ).flatMap { it.second }
+        }
+
+        HttpStub(
+            features = specmaticConfig.stubContracts(specmaticConfigFile).map {
+                OpenApiSpecification.fromFile(it).toFeature()
+            },
+            rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+            specmaticConfigPath = specmaticConfigFile.canonicalPath
+        ).use {
+            val postProductResponse = HttpClient(
+                endPointFromHostAndPort("localhost", 9000, null)
+            ).execute(
+                HttpRequest(
+                    method = "POST",
+                    path = "/products",
+                    body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
+                )
+            )
+
+            assertThat(postProductResponse.status).isEqualTo(201)
+            assertThat(
+                (postProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+            ).isEqualTo("100")
+
+
+            val postOrderResponse = HttpClient(
+                endPointFromHostAndPort("localhost", 9000, null)
+            ).execute(
+                HttpRequest(
+                    method = "POST",
+                    path = "/orders",
+                    body = parsedJSONObject("""
+                         {
+                            "productId": "10",
+                            "quantity": 500,
+                            "totalPrice": 800.0
+                         }
+                    """.trimIndent())
+                )
+            )
+
+            assertThat(postOrderResponse.status).isEqualTo(201)
+            assertThat(
+                (postOrderResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+            ).isEqualTo("222")
+        }
+    }
+
     @Nested
     inner class MultiPortStubTests {
 

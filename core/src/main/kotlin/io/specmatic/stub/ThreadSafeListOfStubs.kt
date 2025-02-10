@@ -108,11 +108,14 @@ class ThreadSafeListOfStubs(
 
     private fun portToListOfStubsMap(defaultPort: Int): Map<Int, ThreadSafeListOfStubs> {
         synchronized(this) {
-            return httpStubs.groupBy { File(it.contractPath).canonicalPath }.mapKeys {
-                specToPortMap[it.key] ?: defaultPort
-            }.mapValues {
-                ThreadSafeListOfStubs(it.value as MutableList<HttpStubData>, specToPortMap)
-            }
+            return httpStubs.groupBy { File(it.contractPath).canonicalPath }
+                .mapKeys {
+                    Pair(it.key, specToPortMap[it.key] ?: defaultPort)
+                }.entries.groupBy(
+                    { it.key.second }, { it.value }
+                ).mapValues { (_, stubs) ->
+                    ThreadSafeListOfStubs(stubs.flatten() as MutableList<HttpStubData>, specToPortMap)
+                }
         }
     }
 

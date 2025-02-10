@@ -737,6 +737,14 @@ data class ReportConfigurationDetails(
         }
     }
 
+    fun removeExcludedEndpointsV2(): ReportConfigurationDetails {
+        if (types.apiCoverage.openAPI.excludedEndpoints.isNotEmpty()) {
+            throw UnsupportedOperationException("Excluded Endpoints are not supported in SpecmaticConfigV2!")
+        }
+        return this
+    }
+
+
     override fun withDefaultFormattersIfMissing(): ReportConfigurationDetails {
         val htmlReportFormatter = formatters?.firstOrNull {
             it.type == ReportFormatterType.HTML

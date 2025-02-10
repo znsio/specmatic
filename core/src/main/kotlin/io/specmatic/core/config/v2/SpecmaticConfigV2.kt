@@ -51,7 +51,7 @@ data class SpecmaticConfigV2(
             environments = this.environments,
             hooks = this.hooks,
             repository = this.repository,
-            report = this.report,
+            report = this.report?.removeExcludedEndpointsV2(),
             security = this.security,
             test = this.test,
             stub = this.stub,

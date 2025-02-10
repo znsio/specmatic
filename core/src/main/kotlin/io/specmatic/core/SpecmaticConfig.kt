@@ -298,7 +298,7 @@ data class SpecmaticConfig(
                     is Consumes.ObjectValue -> consumes.port
                 }
             }
-        }?.plus(defaultPort)?.distinct() ?: emptyList()
+        }?.plus(defaultPort)?.distinct() ?: listOf(defaultPort)
     }
 
     fun logDependencyProjects(azure: AzureAPI) {
@@ -322,7 +322,7 @@ data class SpecmaticConfig(
 
                 logger.newLine()
             }
-        }
+        } ?: logger.log("No sources exists in the given Specmatic Config")
     }
 
 

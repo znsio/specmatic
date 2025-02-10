@@ -2,6 +2,7 @@ package application
 
 import io.mockk.every
 import io.mockk.mockkStatic
+import io.specmatic.core.config.SpecmaticConfigVersion
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import io.specmatic.core.utilities.ContractPathData
@@ -19,5 +20,14 @@ internal class SpecmaticConfigTest {
 
         val paths = SpecmaticConfig().contractStubPathData()
         assertThat(paths == listOf(contractPathData)).isTrue
+    }
+
+    @Test
+    fun `should print a warning for older versions of the config`() {
+        val (output, _) = captureStandardOutput {
+            io.specmatic.core.SpecmaticConfig(version = SpecmaticConfigVersion.VERSION_1).printWarningForOlderVersions()
+        }
+
+        assertThat(output).contains("older version")
     }
 }

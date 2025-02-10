@@ -39,6 +39,7 @@ import io.specmatic.core.utilities.LocalFileSystemSource
 import io.specmatic.core.utilities.WebSource
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.readEnvVarOrProperty
+import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import java.io.File
 
@@ -184,7 +185,7 @@ data class SpecmaticConfig(
     private val sources: List<Source> = emptyList(),
     private val auth: Auth? = null,
     private val pipeline: Pipeline? = null,
-    val environments: Map<String, Environment>? = null,
+    private val environments: Map<String, Environment>? = null,
     private val hooks: Map<String, String> = emptyMap(),
     private val repository: RepositoryInfo? = null,
     private val report: ReportConfigurationDetails? = null,
@@ -259,6 +260,10 @@ data class SpecmaticConfig(
         @JsonIgnore
         fun getStubConfiguration(specmaticConfig: SpecmaticConfig): StubConfiguration {
             return specmaticConfig.stub
+        }
+
+        fun getEnvironments(specmaticConfig: SpecmaticConfig): Map<String, Environment>? {
+            return specmaticConfig.environments
         }
     }
 
@@ -533,6 +538,16 @@ data class SpecmaticConfig(
     fun updateReportConfiguration(reportConfiguration: ReportConfiguration): SpecmaticConfig {
         val reportConfigurationDetails = reportConfiguration as? ReportConfigurationDetails ?: return this
         return this.copy(report = reportConfigurationDetails)
+    }
+
+    fun getEnvironment(envName: String): JSONObjectValue {
+        val envConfigFromFile = environments?.get(envName) ?: return JSONObjectValue()
+
+        try {
+            return parsedJSONObject(content = ObjectMapper().writeValueAsString(envConfigFromFile))
+        } catch(e: Throwable) {
+            throw ContractException("Error loading Specmatic configuration: ${e.message}")
+        }
     }
 }
 

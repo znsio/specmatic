@@ -67,7 +67,7 @@ data class SpecmaticConfigV3(
                 contracts = SpecmaticConfig.getSources(config).map { ContractConfigV2(it) },
                 auth = config.getAuth(),
                 pipeline = getPipeline(config),
-                environments = config.environments,
+                environments = SpecmaticConfig.getEnvironments(config),
                 hooks = config.getHooks(),
                 repository = getRepository(config),
                 report = SpecmaticConfig.getReport(config),

@@ -47,9 +47,9 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.getPipelineProject()).isEqualTo("XNSIO")
         assertThat(config.getPipelineDefinitionId()).isEqualTo(1)
 
-        assertThat(config.environments?.get("staging")?.baseurls?.get("auth.spec")).isEqualTo("http://localhost:8080")
-        assertThat(config.environments?.get("staging")?.variables?.get("username")).isEqualTo("jackie")
-        assertThat(config.environments?.get("staging")?.variables?.get("password")).isEqualTo("PaSsWoRd")
+        assertThat(SpecmaticConfig.getEnvironments(config)?.get("staging")?.baseurls?.get("auth.spec")).isEqualTo("http://localhost:8080")
+        assertThat(SpecmaticConfig.getEnvironments(config)?.get("staging")?.variables?.get("username")).isEqualTo("jackie")
+        assertThat(SpecmaticConfig.getEnvironments(config)?.get("staging")?.variables?.get("password")).isEqualTo("PaSsWoRd")
 
         assertThat(ReportConfigurationDetails.getFormatters(SpecmaticConfig.getReport(config))?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
         assertThat(ReportConfigurationDetails.getFormatters(SpecmaticConfig.getReport(config))?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
@@ -141,9 +141,9 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.getPipelineProject()).isEqualTo("XNSIO")
         assertThat(config.getPipelineDefinitionId()).isEqualTo(1)
 
-        assertThat(config.environments?.get("staging")?.baseurls?.get("auth.spec")).isEqualTo("http://localhost:8080")
-        assertThat(config.environments?.get("staging")?.variables?.get("username")).isEqualTo("jackie")
-        assertThat(config.environments?.get("staging")?.variables?.get("password")).isEqualTo("PaSsWoRd")
+        assertThat(SpecmaticConfig.getEnvironments(config)?.get("staging")?.baseurls?.get("auth.spec")).isEqualTo("http://localhost:8080")
+        assertThat(SpecmaticConfig.getEnvironments(config)?.get("staging")?.variables?.get("username")).isEqualTo("jackie")
+        assertThat(SpecmaticConfig.getEnvironments(config)?.get("staging")?.variables?.get("password")).isEqualTo("PaSsWoRd")
 
         assertThat(ReportConfigurationDetails.getFormatters(SpecmaticConfig.getReport(config))?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
         assertThat(ReportConfigurationDetails.getFormatters(SpecmaticConfig.getReport(config))?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)

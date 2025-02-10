@@ -1,8 +1,13 @@
 package io.specmatic.stub
 
+import io.mockk.every
+import io.mockk.mockk
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.pattern.*
+import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
@@ -12,8 +17,6 @@ import io.specmatic.osAgnosticPath
 import io.specmatic.shouldMatch
 import io.specmatic.test.HttpClient
 import io.specmatic.test.TestExecutor
-import io.mockk.every
-import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.RepeatedTest
@@ -2105,6 +2108,192 @@ components:
             val response = stub.client.execute(request)
 
             assertThat(response.status).isEqualTo(expectedStatus)
+        }
+    }
+
+    @Test
+    fun `should serve requests from multiple ports as configured in specmatic config`() {
+        val specmaticConfigFile = File("src/test/resources/multi_port_stub/specmatic.yaml")
+        val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+
+        val scenarioStubs = specmaticConfig.stubContracts(specmaticConfigFile).map { specPath ->
+            OpenApiSpecification.fromFile(specPath).toFeature() to loadContractStubsFromImplicitPaths(
+                contractPathDataList = listOf(ContractPathData("", specPath)),
+                specmaticConfig = specmaticConfig
+            ).flatMap { it.second }
+        }
+
+        HttpStub(
+            features = specmaticConfig.stubContracts(specmaticConfigFile).map {
+                OpenApiSpecification.fromFile(it).toFeature()
+            },
+            rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+            specmaticConfigPath = specmaticConfigFile.canonicalPath
+        ).use { stub ->
+            val request = HttpRequest(
+                method = "POST",
+                path = "/products",
+                body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
+            )
+            val importedProductResponse = HttpClient(
+                endPointFromHostAndPort("localhost", 9000, null)
+            ).execute(request)
+            assertThat(
+                (importedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+            ).isEqualTo("100")
+
+
+            val exportedProductResponse = HttpClient(
+                endPointFromHostAndPort("localhost", 9001, null)
+            ).execute(request)
+            assertThat(
+                (exportedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+            ).isEqualTo("200")
+
+
+            val anotherExportedProductResponse = HttpClient(
+                endPointFromHostAndPort("localhost", 9002, null)
+            ).execute(request)
+            assertThat(
+                (anotherExportedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+            ).isEqualTo("300")
+        }
+    }
+
+    @Test
+    fun `should accept extra fields in the request when extensible schema is set with no examples`() {
+        Flags.using(EXTENSIBLE_SCHEMA to "true") {
+            val feature: Feature = OpenApiSpecification.fromYAML(
+                """
+            openapi: 3.0.3
+            info:
+              title: Simple API
+              version: 1.0.0
+            paths:
+              /:
+                post:
+                  summary: Simple POST endpoint
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - name
+                          properties:
+                            name:
+                              type: string
+                  responses:
+                    '204':
+                      description: OK
+            """.trimIndent(), ""
+            ).toFeature()
+
+            HttpStub(listOf(feature)).use { stub ->
+                val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"name": "John Doe", "age": 30}"""))
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).withFailMessage(response.body.toStringLiteral()).isEqualTo(204)
+            }
+        }
+    }
+
+    @Test
+    fun `should not accept extra fields in the request when extensible schema is not set`() {
+        val feature: Feature = OpenApiSpecification.fromYAML(
+            """
+            openapi: 3.0.3
+            info:
+              title: Simple API
+              version: 1.0.0
+            paths:
+              /:
+                post:
+                  summary: Simple POST endpoint
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - name
+                          properties:
+                            name:
+                              type: string
+                  responses:
+                    '204':
+                      description: OK
+            """.trimIndent(), ""
+        ).toFeature()
+
+        HttpStub(listOf(feature)).use { stub ->
+            val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"name": "John Doe", "age": 30}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(400)
+            assertThat(response.body.toStringLiteral()).isEqualToNormalizingWhitespace("""
+            In scenario "Simple POST endpoint. Response: OK"
+            API: POST / -> 204
+            >> REQUEST.BODY.age
+            Key named age in the request was not in the contract
+            """.trimIndent())
+        }
+    }
+
+    @Test
+    fun `should use examples with extra fields when extensible schema is enabled`() {
+        Flags.using(EXTENSIBLE_SCHEMA to "true") {
+            val feature: Feature = OpenApiSpecification.fromYAML(
+            """
+            openapi: 3.0.3
+            info:
+              title: Simple API
+              version: 1.0.0
+            paths:
+              /:
+                post:
+                  summary: Simple POST endpoint
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - name
+                          properties:
+                            name:
+                              type: string
+                  responses:
+                    '201':
+                      description: OK
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                            required:
+                              - id
+            """.trimIndent(), ""
+            ).toFeature()
+
+            val example = ScenarioStub(
+                request = HttpRequest(
+                    method = "POST", path = "/",
+                    body = parsedJSONObject("""{"name": "John Doe", "age": 30}""")
+                ),
+                response = HttpResponse(status = 201, body = parsedJSONObject("""{"id": "123"}"""))
+            )
+
+            HttpStub(feature, listOf(example)).use { stub ->
+                val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"name": "John Doe", "age": 30}"""))
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).withFailMessage(response.body.toStringLiteral()).isEqualTo(201)
+                val responseBody = response.body as JSONObjectValue
+                assertThat(responseBody.findFirstChildByPath("id")?.toStringLiteral()).isEqualTo("123")
+            }
         }
     }
 }

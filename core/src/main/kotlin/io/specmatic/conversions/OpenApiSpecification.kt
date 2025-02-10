@@ -71,7 +71,7 @@ class OpenApiSpecification(
     private val specificationPath: String? = null,
     private val securityConfiguration: SecurityConfiguration? = null,
     private val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-    private val dictionary: Map<String, Value> = loadDictionary(openApiFilePath, specmaticConfig.stub.dictionary),
+    private val dictionary: Map<String, Value> = loadDictionary(openApiFilePath, specmaticConfig.getStubDictionary()),
     private val strictMode: Boolean = false
 ) : IncludedSpecification, ApiSpecification {
     init {
@@ -238,7 +238,7 @@ class OpenApiSpecification(
         val updatedScenarios = scenarioInfos.map {
             Scenario(it).copy(
                 dictionary = dictionary.plus(specmaticConfig.parsedDefaultPatternValues()),
-                attributeSelectionPattern = specmaticConfig.attributeSelectionPattern,
+                attributeSelectionPattern = specmaticConfig.getAttributeSelectionPattern(),
                 patterns = it.patterns + unreferencedSchemaPatterns
             )
         }

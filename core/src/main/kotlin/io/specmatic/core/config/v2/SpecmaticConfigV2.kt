@@ -2,9 +2,15 @@ package io.specmatic.core.config.v2
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import io.specmatic.core.*
+import io.specmatic.core.SpecmaticConfig.Companion.getAttributeSelectionPattern
+import io.specmatic.core.SpecmaticConfig.Companion.getAllPatternsMandatory
 import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
+import io.specmatic.core.SpecmaticConfig.Companion.getWorkflowConfiguration
+import io.specmatic.core.SpecmaticConfig.Companion.getVirtualServiceConfiguration
+import io.specmatic.core.SpecmaticConfig.Companion.getTestConfiguration
+import io.specmatic.core.SpecmaticConfig.Companion.getStubConfiguration
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticVersionedConfig
 import io.specmatic.core.config.SpecmaticVersionedConfigLoader
@@ -20,7 +26,7 @@ data class SpecmaticConfigV2(
     val environments: Map<String, Environment>? = null,
     val hooks: Map<String, String> = emptyMap(),
     val repository: RepositoryInfo? = null,
-    val report: ReportConfiguration? = null,
+    val report: ReportConfigurationDetails? = null,
     val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
@@ -64,23 +70,23 @@ data class SpecmaticConfigV2(
         override fun loadFrom(config: SpecmaticConfig): SpecmaticVersionedConfig {
             return SpecmaticConfigV2(
                 version = SpecmaticConfigVersion.VERSION_2,
-                contracts = config.sources.map { ContractConfig(it) },
+                contracts = SpecmaticConfig.getSources(config).map { ContractConfig(it) },
                 auth = config.getAuth(),
                 pipeline = getPipeline(config),
-                environments = config.environments,
+                environments = SpecmaticConfig.getEnvironments(config),
                 hooks = config.getHooks(),
                 repository = getRepository(config),
-                report = config.report,
+                report = SpecmaticConfig.getReport(config),
                 security = getSecurityConfiguration(config),
-                test = config.test,
-                stub = config.stub,
-                virtualService = config.virtualService,
+                test = getTestConfiguration(config),
+                stub = getStubConfiguration(config),
+                virtualService = getVirtualServiceConfiguration(config),
                 examples = config.getExamples(),
-                workflow = config.workflow,
-                ignoreInlineExamples = config.ignoreInlineExamples,
+                workflow = getWorkflowConfiguration(config),
+                ignoreInlineExamples = SpecmaticConfig.getIgnoreInlineExamples(config),
                 additionalExampleParamsFilePath = config.getAdditionalExampleParamsFilePath(),
-                attributeSelectionPattern = config.attributeSelectionPattern,
-                allPatternsMandatory = config.allPatternsMandatory,
+                attributeSelectionPattern = getAttributeSelectionPattern(config),
+                allPatternsMandatory = getAllPatternsMandatory(config),
                 defaultPatternValues = config.getDefaultPatternValues()
             )
         }

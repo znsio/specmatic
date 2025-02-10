@@ -17,7 +17,7 @@ data class SpecmaticConfigV1 (
 	val environments: Map<String, Environment>? = null,
 	val hooks: Map<String, String> = emptyMap(),
 	val repository: RepositoryInfo? = null,
-	val report: ReportConfiguration? = null,
+	val report: ReportConfigurationDetails? = null,
 	val security: SecurityConfiguration? = null,
 	val test: TestConfiguration? = TestConfiguration(),
 	val stub: StubConfiguration = StubConfiguration(),

@@ -126,7 +126,7 @@ class BackwardCompatibilityCheckCommandV2Test {
             val gitCommand = SystemGit(tempDir.absolutePath)
             val result = gitCommand.getFilesChangedInCurrentBranch(
                 gitCommand.currentRemoteBranch()
-            )
+            ).map { it.substringAfterLast(File.separator) }
 
             assert(result.contains("file1.txt"))
         }
@@ -163,7 +163,7 @@ class BackwardCompatibilityCheckCommandV2Test {
             val gitCommand = SystemGit(tempDir.absolutePath)
             val result = gitCommand.getFilesChangedInCurrentBranch(
                 gitCommand.currentRemoteBranch()
-            )
+            ).map { it.substringAfterLast(File.separator) }
 
             assert(result.contains("file1.txt"))
         }

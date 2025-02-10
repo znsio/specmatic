@@ -87,7 +87,7 @@ open class SpecmaticJUnitSupport {
         fun report() {
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
             val reportConfiguration = getReportConfiguration()
-            val config = specmaticConfig?.copy(report = reportConfiguration) ?: SpecmaticConfig(report = reportConfiguration)
+            val config = specmaticConfig?.updateReportConfiguration(reportConfiguration) ?: SpecmaticConfig().updateReportConfiguration(reportConfiguration)
 
             reportProcessors.forEach { it.process(config) }
 
@@ -100,30 +100,14 @@ open class SpecmaticJUnitSupport {
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
-            return when (val reportConfiguration = specmaticConfig?.report) {
-                null -> {
-                    logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
-                    ReportConfiguration(
-                        formatters = listOf(
-                            ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE),
-                            ReportFormatter(ReportFormatterType.HTML)
-                        ), types = ReportTypes()
-                    )
-                }
+            val reportConfiguration = specmaticConfig?.getReport()
 
-                else -> {
-                    val htmlReportFormatter = reportConfiguration.formatters?.firstOrNull {
-                        it.type == ReportFormatterType.HTML
-                    } ?: ReportFormatter(ReportFormatterType.HTML)
-                    val textReportFormatter = reportConfiguration.formatters?.firstOrNull {
-                        it.type == ReportFormatterType.TEXT
-                    } ?: ReportFormatter(ReportFormatterType.TEXT)
-                    ReportConfiguration(
-                        formatters = listOf(htmlReportFormatter, textReportFormatter),
-                        types = reportConfiguration.types
-                    )
-                }
+            if (reportConfiguration == null) {
+                logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
+                return ReportConfigurationDetails.default
             }
+
+            return reportConfiguration.withDefaultFormattersIfMissing()
         }
 
         enum class ActuatorSetupResult(val failed: Boolean) {
@@ -143,7 +127,9 @@ open class SpecmaticJUnitSupport {
             }
 
             val featureFromJson = OpenApiSpecification.fromYAML(response.body.toStringLiteral(), "").toFeature()
-            val apis = featureFromJson.scenarios.map { scenario -> API(scenario.method, scenario.path) }
+            val apis = featureFromJson.scenarios.map { scenario ->
+                API(method = scenario.method, path = convertPathParameterStyle(scenario.path))
+            }
 
             openApiCoverageReportInput.addAPIs(apis.distinct())
             openApiCoverageReportInput.setEndpointsAPIFlag(true)
@@ -207,13 +193,7 @@ open class SpecmaticJUnitSupport {
 
         val config = loadSpecmaticConfig(configFileName)
 
-        val envConfigFromFile = config.environments?.get(envName) ?: return JSONObjectValue()
-
-        try {
-            return parsedJSONObject(content = ObjectMapper().writeValueAsString(envConfigFromFile))
-        } catch(e: Throwable) {
-            throw ContractException("Error loading Specmatic configuration: ${e.message}")
-        }
+        return config.getEnvironment(envName)
     }
 
     private fun loadExceptionAsTestError(e: Throwable): Stream<DynamicTest> {
@@ -244,7 +224,7 @@ open class SpecmaticJUnitSupport {
 
         specmaticConfig = getSpecmaticConfig()
 
-        val timeoutInMilliseconds = specmaticConfig?.test?.timeoutInMilliseconds ?: try {
+        val timeoutInMilliseconds = specmaticConfig?.getTestTimeoutInMilliseconds() ?: try {
             getLongValue(SPECMATIC_TEST_TIMEOUT)
         } catch (e: NumberFormatException) {
             throw ContractException("$SPECMATIC_TEST_TIMEOUT should be a value of type long")

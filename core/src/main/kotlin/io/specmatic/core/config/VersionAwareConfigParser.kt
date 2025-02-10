@@ -31,7 +31,7 @@ fun File.toSpecmaticConfig(): SpecmaticConfig {
 }
 
 fun String.getVersion(): SpecmaticConfigVersion? {
-    val version = objectMapper.readTree(this).get(SPECMATIC_CONFIG_VERSION)?.asInt()
+    val version = objectMapper.readTree(this)[SPECMATIC_CONFIG_VERSION]?.asInt()
     if (version == null || version == 0) return SpecmaticConfigVersion.VERSION_1
     return SpecmaticConfigVersion.getByValue(version)
 }

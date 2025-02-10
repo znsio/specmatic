@@ -176,11 +176,25 @@ class SpecmaticJunitSupportTest {
                           responses:
                             '200':
                               description: OK
-                      /findAvailableProducts:
+                      /findAvailableProducts/{date_time}:
                         get:
+                          parameters:
+                            - ${"$"}ref: '#/components/parameters/DateTimeParameter'
                           responses:
                             '200':
                               description: OK
+                    components:
+                        schemas:
+                            DateTime:
+                                type: string
+                                format: date-time
+                        parameters:
+                            DateTimeParameter:
+                                name: date_time
+                                in: path
+                                required: true
+                                schema:
+                                    ${"$"}ref: '#/components/schemas/DateTime'
                     """.trimIndent()
                 )
             }
@@ -190,7 +204,7 @@ class SpecmaticJunitSupportTest {
         assertThat(SpecmaticJUnitSupport.openApiCoverageReportInput.getApplicationAPIs()).isEqualTo(listOf(
             API("POST", "/orders"),
             API("POST", "/products"),
-            API("GET", "/findAvailableProducts")
+            API("GET", "/findAvailableProducts/{date_time}")
         ))
     }
 

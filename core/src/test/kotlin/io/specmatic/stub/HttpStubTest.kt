@@ -2112,7 +2112,7 @@ components:
     }
 
     @Test
-    fun `should serve requests from multiple ports as configured in specmatic config`() {
+    fun `should serve requests from multiple ports as configured in specmatic config where stubs are loaded from examples`() {
         val specmaticConfigFile = File("src/test/resources/multi_port_stub/specmatic.yaml")
         val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
 
@@ -2157,6 +2157,99 @@ components:
             assertThat(
                 (anotherExportedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
             ).isEqualTo("300")
+        }
+    }
+
+    @Test
+    fun `should return an error if a request for a specific specification is sent to the wrong port`() {
+        val specmaticConfigFile = File("src/test/resources/multi_port_stub_without_examples/specmatic.yaml")
+        val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+
+        val scenarioStubs = specmaticConfig.stubContracts(specmaticConfigFile).map { specPath ->
+            OpenApiSpecification.fromFile(specPath).toFeature() to loadContractStubsFromImplicitPaths(
+                contractPathDataList = listOf(ContractPathData("", specPath)),
+                specmaticConfig = specmaticConfig
+            ).flatMap { it.second }
+        }
+
+        HttpStub(
+            features = specmaticConfig.stubContracts(specmaticConfigFile).map {
+                OpenApiSpecification.fromFile(it).toFeature().copy(specification = it)
+            },
+            rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+            specmaticConfigPath = specmaticConfigFile.canonicalPath
+        ).use {
+
+            val productWithoutCategoryResponse = HttpClient(
+                endPointFromHostAndPort("localhost", 9001, null)
+            ).execute(
+                HttpRequest(
+                    method = "POST",
+                    path = "/products",
+                    body = parsedJSONObject("""{"name": "Nokia", "price": 100.0}""")
+                )
+            )
+
+            assertThat(productWithoutCategoryResponse.status).isEqualTo(400)
+
+
+            val productWithCategoryResponse = HttpClient(
+                endPointFromHostAndPort("localhost", 9000, null)
+            ).execute(
+                HttpRequest(
+                    method = "POST",
+                    path = "/products",
+                    body = parsedJSONObject("""{"name": "Nokia", "price": 100.0, "category": "Electronics"}""")
+                )
+            )
+
+            assertThat(productWithCategoryResponse.status).isEqualTo(400)
+        }
+    }
+
+    @Test
+    fun `should serve requests from multiple ports as configured in specmatic config where no examples are loaded as stubs`() {
+        val specmaticConfigFile = File("src/test/resources/multi_port_stub_without_examples/specmatic.yaml")
+        val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+
+        val scenarioStubs = specmaticConfig.stubContracts(specmaticConfigFile).map { specPath ->
+            OpenApiSpecification.fromFile(specPath).toFeature() to loadContractStubsFromImplicitPaths(
+                contractPathDataList = listOf(ContractPathData("", specPath)),
+                specmaticConfig = specmaticConfig
+            ).flatMap { it.second }
+        }
+
+        HttpStub(
+            features = specmaticConfig.stubContracts(specmaticConfigFile).map {
+                OpenApiSpecification.fromFile(it).toFeature().copy(specification = it)
+            },
+            rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+            specmaticConfigPath = specmaticConfigFile.canonicalPath
+        ).use {
+            val productWithoutCategoryResponse = HttpClient(
+                endPointFromHostAndPort("localhost", 9000, null)
+            ).execute(
+                HttpRequest(
+                    method = "POST",
+                    path = "/products",
+                    body = parsedJSONObject("""{"name": "Nokia", "price": 100.0}""")
+                )
+            ).body as JSONObjectValue
+
+            assertThat(productWithoutCategoryResponse.jsonObject).doesNotContainKey("category")
+
+
+            val productWithCategoryResponse = HttpClient(
+                endPointFromHostAndPort("localhost", 9001, null)
+            ).execute(
+                HttpRequest(
+                    method = "POST",
+                    path = "/products",
+                    body = parsedJSONObject("""{"name": "Nokia", "price": 100.0, "category": "Electronics"}""")
+                )
+            ).body as JSONObjectValue
+
+            assertThat(productWithCategoryResponse.jsonObject).containsKey("category")
         }
     }
 
@@ -2231,12 +2324,14 @@ components:
             val response = stub.client.execute(request)
 
             assertThat(response.status).isEqualTo(400)
-            assertThat(response.body.toStringLiteral()).isEqualToNormalizingWhitespace("""
+            assertThat(response.body.toStringLiteral()).isEqualToNormalizingWhitespace(
+                """
             In scenario "Simple POST endpoint. Response: OK"
             API: POST / -> 204
             >> REQUEST.BODY.age
             Key named age in the request was not in the contract
-            """.trimIndent())
+            """.trimIndent()
+            )
         }
     }
 
@@ -2244,7 +2339,7 @@ components:
     fun `should use examples with extra fields when extensible schema is enabled`() {
         Flags.using(EXTENSIBLE_SCHEMA to "true") {
             val feature: Feature = OpenApiSpecification.fromYAML(
-            """
+                """
             openapi: 3.0.3
             info:
               title: Simple API
@@ -2296,4 +2391,5 @@ components:
             }
         }
     }
+
 }

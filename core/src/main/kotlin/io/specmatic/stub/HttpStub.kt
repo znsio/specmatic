@@ -8,7 +8,6 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.cors.*
 import io.ktor.server.plugins.cors.CORS
-import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -401,7 +400,7 @@ class HttpStub(
     ): HttpStubResponse {
         return getHttpResponse(
             httpRequest = httpRequest,
-            features = features,
+            features = featuresAssociatedTo(port).ifEmpty { features },
             threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(defaultPort, port) ?: threadSafeHttpStubs,
             threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(defaultPort, port)
                 ?: threadSafeHttpStubQueue,
@@ -415,6 +414,19 @@ class HttpStub(
             }
             it.log(_logs, httpRequest)
         }.response
+    }
+
+    private fun featuresAssociatedTo(port: Int): List<Feature> {
+        val specsForGivenPort = portToSpecsMap()[port].orEmpty().map { File(it).canonicalPath }.toSet()
+
+        return features.filter { feature ->
+            val spec = feature.specification ?: return@filter false
+            File(spec).canonicalPath in specsForGivenPort
+        }
+    }
+
+    private fun portToSpecsMap(): Map<Int, List<String>> {
+        return specToStubPortMap.entries.groupBy({ it.value }, { it.key })
     }
 
     private fun handleFlushTransientStubsRequest(httpRequest: HttpRequest): HttpStubResponse {

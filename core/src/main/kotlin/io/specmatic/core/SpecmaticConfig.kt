@@ -607,8 +607,8 @@ data class ResiliencyTestsConfig(
 }
 
 data class Auth(
-    @JsonProperty("bearer-file") private val bearerFile: String = "bearer.txt",
-    @JsonProperty("bearer-environment-variable") private val bearerEnvironmentVariable: String? = null
+    @param:JsonProperty("bearer-file") private val bearerFile: String = "bearer.txt",
+    @param:JsonProperty("bearer-environment-variable") private val bearerEnvironmentVariable: String? = null
 ) {
     fun getBearerFile(): String {
         return bearerFile
@@ -803,12 +803,12 @@ enum class ReportFormatterLayout {
 }
 
 data class ReportTypes (
-    @JsonProperty("APICoverage")
+    @param:JsonProperty("APICoverage")
     val apiCoverage: APICoverage = APICoverage()
 )
 
 data class APICoverage (
-    @JsonProperty("OpenAPI")
+    @param:JsonProperty("OpenAPI")
     val openAPI: APICoverageConfiguration = APICoverageConfiguration()
 )
 
@@ -824,7 +824,7 @@ data class SuccessCriteria(
 )
 
 data class SecurityConfiguration(
-    @JsonProperty("OpenAPI")
+    @param:JsonProperty("OpenAPI")
     private val OpenAPI: OpenAPISecurityConfiguration?
 ) {
     fun getOpenAPISecurityScheme(scheme: String): SecuritySchemeConfiguration? {

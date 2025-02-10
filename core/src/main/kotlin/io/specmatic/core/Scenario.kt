@@ -85,7 +85,7 @@ data class Scenario(
     val dictionary: Map<String, Value> = emptyMap(),
     val attributeSelectionPattern: AttributeSelectionPatternDetails = AttributeSelectionPatternDetails.default,
     val exampleRow: Row? = null,
-    val operationId: String = ""
+    val operationId: String? = null
 ): ScenarioDetailsForResult, HasScenarioMetadata {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -103,7 +103,7 @@ data class Scenario(
         sourceRepositoryBranch = scenarioInfo.sourceRepositoryBranch,
         specification = scenarioInfo.specification,
         serviceType = scenarioInfo.serviceType,
-        operationId = scenarioInfo.operationId.orEmpty()
+        operationId = scenarioInfo.operationId
     )
 
     val apiIdentifier: String

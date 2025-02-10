@@ -2,7 +2,7 @@ package io.specmatic.test.reports.coverage.html
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
-import io.specmatic.core.ReportFormatter
+import io.specmatic.core.ReportFormatterDetails
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.SuccessCriteria
 import io.specmatic.core.TestResult
@@ -188,7 +188,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
 }
 
 data class HtmlReportInformation(
-    val reportFormat: ReportFormatter,
+    val reportFormat: ReportFormatterDetails,
     val specmaticConfig: SpecmaticConfig,
     val successCriteria: SuccessCriteria,
     val specmaticImplementation: String,

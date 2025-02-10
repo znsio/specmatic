@@ -549,6 +549,10 @@ data class SpecmaticConfig(
             throw ContractException("Error loading Specmatic configuration: ${e.message}")
         }
     }
+
+    fun printWarningForOlderVersions(configFilename: String) {
+        getVersion().printWarningForOlderVersions(configFilename)
+    }
 }
 
 data class TestConfiguration(
@@ -893,7 +897,10 @@ fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
         throw ContractException("Could not find the Specmatic configuration at path ${configFile.canonicalPath}")
     }
     try {
-        return configFile.toSpecmaticConfig()
+        return configFile.toSpecmaticConfig().also { config ->
+            val configFilename = configFile.name
+            config.printWarningForOlderVersions(configFilename)
+        }
     } catch(e: LinkageError) {
         logger.log(e, "A dependency version conflict has been detected. If you are using Spring in a maven project, a common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.")
         throw e

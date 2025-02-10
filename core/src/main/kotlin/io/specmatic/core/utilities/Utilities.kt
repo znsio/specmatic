@@ -39,6 +39,7 @@ import org.xml.sax.InputSource
 import java.io.File
 import java.io.StringReader
 import java.io.StringWriter
+import java.util.*
 import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
@@ -364,4 +365,14 @@ fun consolePrintableURL(host: String, port: Int, keyStoreData: KeyData? = null):
     val protocol = keyStoreData?.let { "https" } ?: "http"
     val displayableHost = if (host == DEFAULT_HTTP_STUB_HOST) "localhost" else host
     return "$protocol://$displayableHost:$port"
+}
+
+private val onceOnlyCache: MutableMap<String, Boolean> = Collections.synchronizedMap(mutableMapOf())
+
+fun onceOnly(key: String, fn: () -> Unit) {
+    if(onceOnlyCache.getOrDefault(key, false).not()) {
+        onceOnlyCache[key] = true
+        fn()
+    }
+
 }

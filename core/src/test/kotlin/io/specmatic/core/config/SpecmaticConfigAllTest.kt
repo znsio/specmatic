@@ -15,22 +15,19 @@ import io.specmatic.core.config.v2.ContractConfig.FileSystemContractSource
 import io.specmatic.core.config.v2.ContractConfig.GitContractSource
 import io.specmatic.core.config.v2.SpecmaticConfigV2
 import io.specmatic.core.config.v3.Consumes
-import io.specmatic.core.config.v3.ContractConfigV2
-import io.specmatic.core.config.v3.ContractConfigV2.GitContractSourceV2
-import io.specmatic.core.config.v3.SpecmaticConfigV3
 import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.utilities.GitRepo
 import io.specmatic.core.utilities.LocalFileSystemSource
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
-
 
 internal class SpecmaticConfigAllTest {
     private val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
@@ -73,9 +70,7 @@ internal class SpecmaticConfigAllTest {
         "VERSION_1, ./src/test/resources/specmaticConfigFiles/v1/specmatic_config_v1.yaml",
         "VERSION_1, ./src/test/resources/specmaticConfigFiles/v1/specmatic_config_v1.json",
         "VERSION_2, ./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2.yaml",
-        "VERSION_2, ./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2.json",
-        "VERSION_3, ./src/test/resources/specmaticConfigFiles/v3/specmatic_config_v3.yaml",
-        "VERSION_3, ./src/test/resources/specmaticConfigFiles/v3/specmatic_config_v3.json"
+        "VERSION_2, ./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2.json"
     )
     @ParameterizedTest
     fun `should create SpecmaticConfig from the versioned specmatic configuration`(version: SpecmaticConfigVersion, configFile: String) {
@@ -83,7 +78,7 @@ internal class SpecmaticConfigAllTest {
         assertThat(config.getVersion()).isEqualTo(version)
         val sources = SpecmaticConfig.getSources(config)
         assertThat(sources.size).isEqualTo(2)
-        val expectedSources = if(version != SpecmaticConfigVersion.VERSION_3) listOf(
+        val expectedSources = listOf(
             Source(
                 provider = git,
                 repository = "https://contracts",
@@ -100,7 +95,21 @@ internal class SpecmaticConfigAllTest {
                 ),
                 directory = "contracts"
             )
-        ) else listOf(
+        )
+        assertThat(sources).containsAll(expectedSources)
+    }
+
+    @CsvSource(
+        "VERSION_2, ./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2_stub_port.yaml",
+        "VERSION_2, ./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2_stub_port.json"
+    )
+    @ParameterizedTest
+    fun `should create SpecmaticConfig from the v2 config with stub ports`(version: SpecmaticConfigVersion, configFile: String) {
+        val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
+        assertThat(config.getVersion()).isEqualTo(version)
+        val sources = SpecmaticConfig.getSources(config)
+        assertThat(sources.size).isEqualTo(2)
+        val expectedSources = listOf(
             Source(
                 provider = git,
                 repository = "https://contracts",
@@ -151,13 +160,16 @@ internal class SpecmaticConfigAllTest {
         assertThat(gitContractSource.url).isEqualTo("https://contracts")
         assertThat(gitContractSource.branch).isEqualTo("1.0.1")
         assertThat(contracts[0].provides).containsOnly("com/petstore/1.yaml")
-        assertThat(contracts[0].consumes).containsOnly("com/petstore/payment.yaml")
+        assertThat(contracts[0].consumes).containsOnly(Consumes.StringValue("com/petstore/payment.yaml"))
 
         assertThat(contracts[1].contractSource).isInstanceOf(FileSystemContractSource::class.java)
         val fileSystemContractSource = contracts[1].contractSource as FileSystemContractSource
         assertThat(fileSystemContractSource.directory).isEqualTo("contracts")
         assertThat(contracts[1].provides).containsOnly("com/petstore/1.yaml")
-        assertThat(contracts[1].consumes).containsOnly("com/petstore/payment.yaml", "com/petstore/order.yaml")
+        assertThat(contracts[1].consumes).containsOnly(
+            Consumes.StringValue("com/petstore/payment.yaml"),
+            Consumes.StringValue("com/petstore/order.yaml")
+        )
     }
 
     @Test
@@ -184,12 +196,15 @@ internal class SpecmaticConfigAllTest {
             ContractConfig(
                 contractSource = GitContractSource(url = "https://contracts", branch = "1.0.1"),
                 provides = listOf("com/petstore/1.yaml"),
-                consumes = listOf("com/petstore/payment.yaml")
+                consumes = listOf(Consumes.StringValue("com/petstore/payment.yaml"))
             ),
             ContractConfig(
                 contractSource = FileSystemContractSource(directory = "contracts"),
                 provides = listOf("com/petstore/1.yaml"),
-                consumes = listOf("com/petstore/payment.yaml", "com/petstore/order.yaml")
+                consumes = listOf(
+                    Consumes.StringValue("com/petstore/payment.yaml"),
+                    Consumes.StringValue("com/petstore/order.yaml")
+                )
             )
         )
 
@@ -201,26 +216,26 @@ internal class SpecmaticConfigAllTest {
     }
 
     @CsvSource(
-        "./src/test/resources/specmaticConfigFiles/v3/specmatic_config_v3.yaml",
-        "./src/test/resources/specmaticConfigFiles/v3/specmatic_config_v3.json"
+        "./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2_stub_port.yaml",
+        "./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2_stub_port.json"
     )
     @ParameterizedTest
-    fun `should deserialize ContractConfigV2 successfully`(configFile: String) {
+    fun `should deserialize ContractConfig with stub port config successfully`(configFile: String) {
         val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
-        val specmaticConfigV3 = objectMapper.readValue(File(configFile).readText(), SpecmaticConfigV3::class.java)
+        val SpecmaticConfigV2 = objectMapper.readValue(File(configFile).readText(), SpecmaticConfigV2::class.java)
 
-        val contracts = specmaticConfigV3.contracts
+        val contracts = SpecmaticConfigV2.contracts
 
         assertThat(contracts.size).isEqualTo(2)
-        assertThat(contracts[0].contractSource).isInstanceOf(GitContractSourceV2::class.java)
-        val gitContractSource = contracts[0].contractSource as GitContractSourceV2
+        assertThat(contracts[0].contractSource).isInstanceOf(GitContractSource::class.java)
+        val gitContractSource = contracts[0].contractSource as GitContractSource
         assertThat(gitContractSource.url).isEqualTo("https://contracts")
         assertThat(gitContractSource.branch).isEqualTo("1.0.1")
         assertThat(contracts[0].provides).containsOnly("com/petstore/1.yaml")
         assertThat(contracts[0].consumes).containsOnly(Consumes.StringValue("com/petstore/payment.yaml"))
 
-        assertThat(contracts[1].contractSource).isInstanceOf(ContractConfigV2.FileSystemContractSourceV2::class.java)
-        val fileSystemContractSource = contracts[1].contractSource as ContractConfigV2.FileSystemContractSourceV2
+        assertThat(contracts[1].contractSource).isInstanceOf(ContractConfig.FileSystemContractSource::class.java)
+        val fileSystemContractSource = contracts[1].contractSource as ContractConfig.FileSystemContractSource
         assertThat(fileSystemContractSource.directory).isEqualTo("contracts")
         assertThat(contracts[1].provides).containsOnly("com/petstore/1.yaml")
         assertThat(contracts[1].consumes).containsOnly(
@@ -233,7 +248,7 @@ internal class SpecmaticConfigAllTest {
     }
 
     @Test
-    fun `should serialize ContractConfigV2 successfully`() {
+    fun `should serialize ContractConfig with stub port config successfully`() {
         val expectedContractsJson = """[
             {
                 "git": {
@@ -259,15 +274,15 @@ internal class SpecmaticConfigAllTest {
         ]"""
 
         val contracts = listOf(
-            ContractConfigV2(
-                contractSource = GitContractSourceV2(url = "https://contracts", branch = "1.0.1"),
+            ContractConfig(
+                contractSource = GitContractSource(url = "https://contracts", branch = "1.0.1"),
                 provides = listOf("com/petstore/1.yaml"),
                 consumes = listOf(
                     Consumes.StringValue("com/petstore/payment.yaml")
                 )
             ),
-            ContractConfigV2(
-                contractSource = ContractConfigV2.FileSystemContractSourceV2(directory = "contracts"),
+            ContractConfig(
+                contractSource = ContractConfig.FileSystemContractSource(directory = "contracts"),
                 provides = listOf("com/petstore/1.yaml"),
                 consumes = listOf(
                     Consumes.StringValue("com/petstore/payment.yaml"),
@@ -302,7 +317,7 @@ internal class SpecmaticConfigAllTest {
         assertThat(contractConfig.contractSource).isInstanceOf(GitContractSource::class.java)
         assertThat((contractConfig.contractSource as GitContractSource).url).isEqualTo("https://contracts")
         assertThat(contractConfig.provides).containsOnly("com/petstore/1.yaml")
-        assertThat(contractConfig.consumes).containsOnly("com/petstore/payment.yaml")
+        assertThat(contractConfig.consumes).containsOnly(Consumes.StringValue("com/petstore/payment.yaml"))
     }
 
     @Test
@@ -319,10 +334,10 @@ internal class SpecmaticConfigAllTest {
                 - com/petstore/order.yaml
         """.trimIndent()
 
-        val contractConfig = objectMapper.readValue(contractConfigYaml, ContractConfigV2::class.java)
+        val contractConfig = objectMapper.readValue(contractConfigYaml, ContractConfig::class.java)
 
-        assertThat(contractConfig.contractSource).isInstanceOf(GitContractSourceV2::class.java)
-        assertThat((contractConfig.contractSource as GitContractSourceV2).url).isEqualTo("https://contracts")
+        assertThat(contractConfig.contractSource).isInstanceOf(GitContractSource::class.java)
+        assertThat((contractConfig.contractSource as GitContractSource).url).isEqualTo("https://contracts")
         assertThat(contractConfig.provides).containsOnly("com/petstore/1.yaml")
         assertThat((contractConfig.consumes?.get(0) as Consumes.StringValue).value)
             .isEqualTo("com/petstore/payment.yaml")
@@ -345,7 +360,7 @@ internal class SpecmaticConfigAllTest {
         assertThat(contractConfig.contractSource).isInstanceOf(GitContractSource::class.java)
         assertThat((contractConfig.contractSource as GitContractSource).url).isEqualTo("https://contracts")
         assertThat(contractConfig.provides).isNull()
-        assertThat(contractConfig.consumes).containsOnly("com/petstore/payment.yaml")
+        assertThat(contractConfig.consumes).containsOnly(Consumes.StringValue("com/petstore/payment.yaml"))
     }
 
     @Test
@@ -360,10 +375,10 @@ internal class SpecmaticConfigAllTest {
                 - com/petstore/order.yaml
         """.trimIndent()
 
-        val contractConfig = objectMapper.readValue(contractConfigYaml, ContractConfigV2::class.java)
+        val contractConfig = objectMapper.readValue(contractConfigYaml, ContractConfig::class.java)
 
-        assertThat(contractConfig.contractSource).isInstanceOf(GitContractSourceV2::class.java)
-        assertThat((contractConfig.contractSource as GitContractSourceV2).url).isEqualTo("https://contracts")
+        assertThat(contractConfig.contractSource).isInstanceOf(GitContractSource::class.java)
+        assertThat((contractConfig.contractSource as GitContractSource).url).isEqualTo("https://contracts")
         assertThat(contractConfig.provides).isNull()
         assertThat((contractConfig.consumes?.get(0) as Consumes.StringValue).value)
             .isEqualTo("com/petstore/payment.yaml")
@@ -398,10 +413,10 @@ internal class SpecmaticConfigAllTest {
               - com/petstore/1.yaml
         """.trimIndent()
 
-        val contractConfig = objectMapper.readValue(contractConfigYaml, ContractConfigV2::class.java)
+        val contractConfig = objectMapper.readValue(contractConfigYaml, ContractConfig::class.java)
 
-        assertThat(contractConfig.contractSource).isInstanceOf(GitContractSourceV2::class.java)
-        assertThat((contractConfig.contractSource as GitContractSourceV2).url).isEqualTo("https://contracts")
+        assertThat(contractConfig.contractSource).isInstanceOf(GitContractSource::class.java)
+        assertThat((contractConfig.contractSource as GitContractSource).url).isEqualTo("https://contracts")
         assertThat(contractConfig.provides).containsOnly("com/petstore/1.yaml")
         assertThat(contractConfig.consumes).isNull()
     }
@@ -450,7 +465,7 @@ internal class SpecmaticConfigAllTest {
         """.trimIndent()
 
         val config = objectMapper.readValue(configYaml, SpecmaticConfigV2::class.java).transform()
-        val configV3 = SpecmaticConfigV3.loadFrom(config) as SpecmaticConfigV3
+        val configV3 = SpecmaticConfigV2.loadFrom(config) as SpecmaticConfigV2
 
         assertThat(configV3.virtualService.getNonPatchableKeys()).containsExactly("description", "url")
     }
@@ -505,7 +520,7 @@ internal class SpecmaticConfigAllTest {
         """.trimIndent()
 
         val config = objectMapper.readValue(configYaml, SpecmaticConfigV2::class.java).transform()
-        val configV3 = SpecmaticConfigV3.loadFrom(config) as SpecmaticConfigV3
+        val configV3 = SpecmaticConfigV2.loadFrom(config) as SpecmaticConfigV2
 
         assertThat(configV3.attributeSelectionPattern.getDefaultFields()).containsExactly("description", "url")
         assertThat(configV3.attributeSelectionPattern.getQueryParamKey()).isEqualTo("web")
@@ -544,7 +559,7 @@ internal class SpecmaticConfigAllTest {
         """.trimIndent()
 
         val config = objectMapper.readValue(configYaml, SpecmaticConfigV2::class.java).transform()
-        val configV3 = SpecmaticConfigV3.loadFrom(config) as SpecmaticConfigV3
+        val configV3 = SpecmaticConfigV2.loadFrom(config) as SpecmaticConfigV2
 
         assertThat(configV3.allPatternsMandatory).isTrue()
     }
@@ -582,7 +597,7 @@ internal class SpecmaticConfigAllTest {
         """.trimIndent()
 
         val config = objectMapper.readValue(configYaml, SpecmaticConfigV2::class.java).transform()
-        val configV3 = SpecmaticConfigV3.loadFrom(config) as SpecmaticConfigV3
+        val configV3 = SpecmaticConfigV2.loadFrom(config) as SpecmaticConfigV2
 
         assertThat(configV3.ignoreInlineExamples).isTrue()
     }
@@ -645,7 +660,7 @@ internal class SpecmaticConfigAllTest {
         """.trimIndent()
 
         val configFromV2 = objectMapper.readValue(configYaml, SpecmaticConfigV2::class.java).transform()
-        val configV3 = SpecmaticConfigV3.loadFrom(configFromV2) as SpecmaticConfigV3
+        val configV3 = SpecmaticConfigV2.loadFrom(configFromV2) as SpecmaticConfigV2
 
         configV3.test!!.apply {
             assertThat(getResiliencyTests().getEnableTestSuite()).isEqualTo(ResiliencyTestSuite.all)
@@ -710,7 +725,7 @@ internal class SpecmaticConfigAllTest {
         """.trimIndent()
 
         val configFromV2 = objectMapper.readValue(configYaml, SpecmaticConfigV2::class.java).transform()
-        val configV3 = SpecmaticConfigV3.loadFrom(configFromV2) as SpecmaticConfigV3
+        val configV3 = SpecmaticConfigV2.loadFrom(configFromV2) as SpecmaticConfigV2
 
         configV3.stub.apply {
             assertThat(getGenerative()).isTrue()
@@ -774,7 +789,7 @@ internal class SpecmaticConfigAllTest {
         """.trimIndent()
 
         val configFromV2 = objectMapper.readValue(configYaml, SpecmaticConfigV2::class.java).transform()
-        val configV3 = SpecmaticConfigV3.loadFrom(configFromV2) as SpecmaticConfigV3
+        val configV3 = SpecmaticConfigV2.loadFrom(configFromV2) as SpecmaticConfigV2
 
         configV3.workflow!!.apply {
             assertThat(getUseForAPI("*")).isEqualTo("PATH.id")
@@ -855,11 +870,11 @@ internal class SpecmaticConfigAllTest {
     }
 
     @CsvSource(
-        "VERSION_3, ./src/test/resources/specmaticConfigFiles/v3/specmatic_config_v3.yaml",
-        "VERSION_3, ./src/test/resources/specmaticConfigFiles/v3/specmatic_config_v3.json"
+        "VERSION_2, ./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2_stub_port.yaml",
+        "VERSION_2, ./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2_stub_port.json"
     )
     @ParameterizedTest
-    fun `given specmatic config v3 it should load sources`(version: SpecmaticConfigVersion, configFile: String) {
+    fun `given specmatic config v2 with stub port config, it should load sources`(version: SpecmaticConfigVersion, configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
         assertThat(config.getVersion()).isEqualTo(version)
         val contractSources = config.loadSources()

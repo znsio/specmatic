@@ -21,7 +21,6 @@ import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.utilities.GitRepo
 import io.specmatic.core.utilities.LocalFileSystemSource
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
@@ -104,11 +103,14 @@ internal class SpecmaticConfigAllTest {
         "VERSION_2, ./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2_stub_port.json"
     )
     @ParameterizedTest
-    fun `should create SpecmaticConfig from the v2 config with stub ports`(version: SpecmaticConfigVersion, configFile: String) {
+    fun `should create SpecmaticConfig from the v2 config with stub ports`(
+        version: SpecmaticConfigVersion,
+        configFile: String
+    ) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
         assertThat(config.getVersion()).isEqualTo(version)
         val sources = SpecmaticConfig.getSources(config)
-        assertThat(sources.size).isEqualTo(2)
+        assertThat(sources?.size).isEqualTo(2)
         val expectedSources = listOf(
             Source(
                 provider = git,
@@ -234,8 +236,8 @@ internal class SpecmaticConfigAllTest {
         assertThat(contracts[0].provides).containsOnly("com/petstore/1.yaml")
         assertThat(contracts[0].consumes).containsOnly(Consumes.StringValue("com/petstore/payment.yaml"))
 
-        assertThat(contracts[1].contractSource).isInstanceOf(ContractConfig.FileSystemContractSource::class.java)
-        val fileSystemContractSource = contracts[1].contractSource as ContractConfig.FileSystemContractSource
+        assertThat(contracts[1].contractSource).isInstanceOf(FileSystemContractSource::class.java)
+        val fileSystemContractSource = contracts[1].contractSource as FileSystemContractSource
         assertThat(fileSystemContractSource.directory).isEqualTo("contracts")
         assertThat(contracts[1].provides).containsOnly("com/petstore/1.yaml")
         assertThat(contracts[1].consumes).containsOnly(
@@ -282,7 +284,7 @@ internal class SpecmaticConfigAllTest {
                 )
             ),
             ContractConfig(
-                contractSource = ContractConfig.FileSystemContractSource(directory = "contracts"),
+                contractSource = FileSystemContractSource(directory = "contracts"),
                 provides = listOf("com/petstore/1.yaml"),
                 consumes = listOf(
                     Consumes.StringValue("com/petstore/payment.yaml"),
@@ -874,7 +876,10 @@ internal class SpecmaticConfigAllTest {
         "VERSION_2, ./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2_stub_port.json"
     )
     @ParameterizedTest
-    fun `given specmatic config v2 with stub port config, it should load sources`(version: SpecmaticConfigVersion, configFile: String) {
+    fun `given specmatic config v2 with stub port config, it should load sources`(
+        version: SpecmaticConfigVersion,
+        configFile: String
+    ) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
         assertThat(config.getVersion()).isEqualTo(version)
         val contractSources = config.loadSources()

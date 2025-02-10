@@ -135,6 +135,12 @@ class ThreadSafeListOfStubs(
                 else Pair(stubData.matches(httpRequest), stubData)
             }
     }
+
+    companion object {
+        fun emptyStub(): ThreadSafeListOfStubs {
+            return ThreadSafeListOfStubs(mutableListOf(), emptyMap())
+        }
+    }
 }
 
 

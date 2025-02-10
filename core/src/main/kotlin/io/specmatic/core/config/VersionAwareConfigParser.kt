@@ -6,7 +6,6 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.config.v1.SpecmaticConfigV1
 import io.specmatic.core.config.v2.SpecmaticConfigV2
-import io.specmatic.core.config.v3.SpecmaticConfigV3
 import io.specmatic.core.pattern.ContractException
 import java.io.File
 
@@ -23,10 +22,6 @@ fun File.toSpecmaticConfig(): SpecmaticConfig {
 
         SpecmaticConfigVersion.VERSION_2 -> {
             objectMapper.readValue(configYaml, SpecmaticConfigV2::class.java).transform()
-        }
-
-        SpecmaticConfigVersion.VERSION_3 -> {
-            objectMapper.readValue(configYaml, SpecmaticConfigV3::class.java).transform()
         }
 
         else -> {

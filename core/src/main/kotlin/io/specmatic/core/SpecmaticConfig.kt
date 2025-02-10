@@ -12,6 +12,7 @@ import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.SourceProvider.filesystem
 import io.specmatic.core.SourceProvider.git
 import io.specmatic.core.SourceProvider.web
+import io.specmatic.core.TestConfiguration.Companion.getDefaultResiliencyTestsConfig
 import io.specmatic.core.azure.AzureAPI
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.VERSION_1
@@ -190,7 +191,7 @@ data class SpecmaticConfig(
     private val repository: RepositoryInfo? = null,
     private val report: ReportConfigurationDetails? = null,
     private val security: SecurityConfiguration? = null,
-    private val test: TestConfiguration? = TestConfiguration(),
+    private val test: TestConfiguration? = null,
     private val stub: StubConfiguration = StubConfiguration(),
     private val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     private val examples: List<String>? = null,
@@ -389,12 +390,13 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun getResiliencyTestsEnabled(): ResiliencyTestSuite {
-        return test?.getResiliencyTests()?.getEnableTestSuite() ?: ResiliencyTestSuite.none
+        return test?.getResiliencyTests()?.getEnableTestSuite()
+            ?: getDefaultResiliencyTestsConfig().getEnableTestSuite() ?: ResiliencyTestSuite.none
     }
 
     @JsonIgnore
     fun getTestTimeoutInMilliseconds(): Long? {
-        return test?.getTimeoutInMilliseconds()
+        return test?.getTimeoutInMilliseconds() ?: getLongValue(SPECMATIC_TEST_TIMEOUT)
     }
 
     @JsonIgnore
@@ -559,11 +561,16 @@ data class TestConfiguration(
     private val allowExtensibleSchema: Boolean? = null,
     private val timeoutInMilliseconds: Long? = null
 ) {
+    companion object {
+        fun getDefaultResiliencyTestsConfig(): ResiliencyTestsConfig {
+            return ResiliencyTestsConfig(
+                isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
+                isOnlyPositiveFlagEnabled = getBooleanValue(ONLY_POSITIVE)
+            )
+        }
+    }
     fun getResiliencyTests(): ResiliencyTestsConfig {
-        return resiliencyTests ?: ResiliencyTestsConfig(
-            isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
-            isOnlyPositiveFlagEnabled = getBooleanValue(ONLY_POSITIVE)
-        )
+        return resiliencyTests ?: getDefaultResiliencyTestsConfig()
     }
 
     fun getValidateResponseValues(): Boolean? {
@@ -575,7 +582,7 @@ data class TestConfiguration(
     }
 
     fun getTimeoutInMilliseconds(): Long? {
-        return timeoutInMilliseconds ?: getLongValue(SPECMATIC_TEST_TIMEOUT)
+        return timeoutInMilliseconds
     }
 }
 

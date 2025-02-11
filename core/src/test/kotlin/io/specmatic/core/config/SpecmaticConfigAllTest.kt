@@ -4,24 +4,20 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import io.specmatic.core.ResiliencyTestSuite
-import io.specmatic.core.Source
+import io.specmatic.core.*
 import io.specmatic.core.SourceProvider.filesystem
 import io.specmatic.core.SourceProvider.git
-import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.config.v1.SpecmaticConfigV1
 import io.specmatic.core.config.v2.ContractConfig
 import io.specmatic.core.config.v2.ContractConfig.FileSystemContractSource
 import io.specmatic.core.config.v2.ContractConfig.GitContractSource
 import io.specmatic.core.config.v2.SpecmaticConfigV2
 import io.specmatic.core.config.v3.Consumes
-import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.utilities.GitRepo
 import io.specmatic.core.utilities.LocalFileSystemSource
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
@@ -640,10 +636,10 @@ internal class SpecmaticConfigAllTest {
         val configV2 = SpecmaticConfigV2.loadFrom(configFromV1) as SpecmaticConfigV2
 
         configV2.test!!.apply {
-            assertThat(getResiliencyTests().getEnableTestSuite()).isEqualTo(ResiliencyTestSuite.all)
-            assertThat(getValidateResponseValues()).isTrue()
-            assertThat(getAllowExtensibleSchema()).isTrue()
-            assertThat(getTimeoutInMilliseconds()).isEqualTo(10)
+            assertThat(resiliencyTests?.enable).isEqualTo(ResiliencyTestSuite.all)
+            assertThat(validateResponseValues).isTrue()
+            assertThat(allowExtensibleSchema).isTrue()
+            assertThat(timeoutInMilliseconds).isEqualTo(10)
         }
     }
 
@@ -663,10 +659,10 @@ internal class SpecmaticConfigAllTest {
         val configV3 = SpecmaticConfigV2.loadFrom(configFromV2) as SpecmaticConfigV2
 
         configV3.test!!.apply {
-            assertThat(getResiliencyTests().getEnableTestSuite()).isEqualTo(ResiliencyTestSuite.all)
-            assertThat(getValidateResponseValues()).isTrue()
-            assertThat(getAllowExtensibleSchema()).isTrue()
-            assertThat(getTimeoutInMilliseconds()).isEqualTo(10)
+            assertThat(resiliencyTests?.enable).isEqualTo(ResiliencyTestSuite.all)
+            assertThat(validateResponseValues).isTrue()
+            assertThat(allowExtensibleSchema).isTrue()
+            assertThat(timeoutInMilliseconds).isEqualTo(10)
         }
     }
 
@@ -834,6 +830,150 @@ internal class SpecmaticConfigAllTest {
 
         assertThat(contractSource).isNotNull()
         assertThat(contractSource).isInstanceOf(GitContractSource::class.java)
+    }
+
+    @Test
+    fun `v2 with report gets deserialized` () {
+        val contractConfigYaml = """
+            version: 2
+            contracts:
+              - git:
+                  url: http://source.in
+                provides:
+                - com/petstore/1.yaml
+            report:
+              formatters:
+                - type: text
+                  layout: table
+              types:
+                APICoverage:
+                  OpenAPI:
+                    successCriteria:
+                      minThresholdPercentage: 70
+                      maxMissedEndpointsInSpec: 0
+                      enforce: true
+                    excludedEndpoints:
+                      - /health
+        """.trimIndent()
+
+        val configV2 = objectMapper.readValue(contractConfigYaml, SpecmaticConfigV2::class.java)
+
+        val objectMapper =
+            ObjectMapper(YAMLFactory()).registerKotlinModule().setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
+        val configText = objectMapper.writeValueAsString(configV2)
+        println(configText)
+
+        assertThat(configText)
+            .contains("OpenAPI")
+            .contains("APICoverage")
+
+        assertThat(configV2.report?.formatters?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
+        assertThat(configV2.report?.formatters?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
+
+        assertThat(configV2.report?.types?.apiCoverage?.openAPI?.successCriteria?.minThresholdPercentage).isEqualTo(70)
+        assertThat(configV2.report?.types?.apiCoverage?.openAPI?.successCriteria?.maxMissedEndpointsInSpec).isEqualTo(0)
+        assertThat(configV2.report?.types?.apiCoverage?.openAPI?.successCriteria?.enforce).isEqualTo(true)
+    }
+
+    @Test
+    fun `v1 config with report gets converted to v2` () {
+        val contractConfigYaml = """
+            sources:
+              - provider: git
+                repository: http://source.in
+                provides:
+                - com/petstore/1.yaml
+            report:
+              formatters:
+                - type: text
+                  layout: table
+              types:
+                APICoverage:
+                  OpenAPI:
+                    successCriteria:
+                      minThresholdPercentage: 70
+                      maxMissedEndpointsInSpec: 0
+                      enforce: true
+                    excludedEndpoints:
+                      - /health
+        """.trimIndent()
+
+        val configV1 = objectMapper.readValue(contractConfigYaml, SpecmaticConfigV1::class.java)
+
+        val dslConfig = configV1.transform()
+
+        val configV2 = SpecmaticConfigV2.loadFrom(dslConfig) as SpecmaticConfigV2
+
+        val objectMapper =
+            ObjectMapper(YAMLFactory()).registerKotlinModule().setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
+        val configText = objectMapper.writeValueAsString(configV2)
+        println(configText)
+
+        assertThat(configText)
+            .contains("OpenAPI")
+            .contains("APICoverage")
+
+        assertThat(configV2.report?.formatters?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
+        assertThat(configV2.report?.formatters?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
+
+        assertThat(configV2.report?.types?.apiCoverage?.openAPI?.successCriteria?.minThresholdPercentage).isEqualTo(70)
+        assertThat(configV2.report?.types?.apiCoverage?.openAPI?.successCriteria?.maxMissedEndpointsInSpec).isEqualTo(0)
+        assertThat(configV2.report?.types?.apiCoverage?.openAPI?.successCriteria?.enforce).isEqualTo(true)
+    }
+
+    @Test
+    fun `v2 config with auth gets deserialized` () {
+        val contractConfigYaml = """
+            version: 2
+            contracts:
+              - git:
+                  url: http://source.in
+                provides:
+                  - com/petstore/1.yaml
+            auth:
+              bearer-file: bearer.txt
+        """.trimIndent()
+
+        val configV2 = objectMapper.readValue(contractConfigYaml, SpecmaticConfigV2::class.java)
+
+        val objectMapper =
+            ObjectMapper(YAMLFactory()).registerKotlinModule().setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
+        val configText = objectMapper.writeValueAsString(configV2)
+        println(configText)
+
+        assertThat(configText)
+            .contains("bearer-file")
+
+        assertThat(configV2.auth?.bearerFile).isEqualTo("bearer.txt")
+    }
+
+    @Test
+    fun `v1 config with auth gets converted to v2` () {
+        val contractConfigYaml = """
+            sources:
+              - provider: git
+                repository: http://source.in
+                provides:
+                - com/petstore/1.yaml
+            auth:
+              bearer-file: bearer.txt
+        """.trimIndent()
+
+        val configV1 = objectMapper.readValue(contractConfigYaml, SpecmaticConfigV1::class.java)
+
+        val dslConfig = configV1.transform()
+
+        val configV2 = SpecmaticConfigV2.loadFrom(dslConfig) as SpecmaticConfigV2
+
+        val objectMapper =
+            ObjectMapper(YAMLFactory()).registerKotlinModule().setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
+        val configText = objectMapper.writeValueAsString(configV2)
+        println(configText)
+
+        assertThat(configText)
+            .contains("bearer-file")
+
+        assertThat(configV2.auth?.bearerFile).isEqualTo("bearer.txt")
     }
 
     @CsvSource(

@@ -737,9 +737,12 @@ data class ReportConfigurationDetails(
         }
     }
 
-    fun removeExcludedEndpointsV2(): ReportConfigurationDetails {
+    fun validatePresenceOfExcludedEndpoints(currentVersion: SpecmaticConfigVersion): ReportConfigurationDetails {
+        if(currentVersion.isLessThanOrEqualTo(VERSION_1))
+            return this
+
         if (types.apiCoverage.openAPI.excludedEndpoints.isNotEmpty()) {
-            throw UnsupportedOperationException("Excluded Endpoints are not supported in SpecmaticConfigV2!")
+            throw UnsupportedOperationException("excludedEndpoints is not supported in Specmatic config v2.")
         }
         return this
     }

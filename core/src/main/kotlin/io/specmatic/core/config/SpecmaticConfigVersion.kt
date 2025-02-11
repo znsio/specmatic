@@ -10,6 +10,10 @@ enum class SpecmaticConfigVersion(@JsonValue val value: Int, val configLoader: S
     VERSION_1(1, SpecmaticConfigV1.Companion),
     VERSION_2(2, SpecmaticConfigV2.Companion);
 
+    fun isLessThanOrEqualTo(otherVersion: SpecmaticConfigVersion): Boolean {
+        return this.ordinal <= otherVersion.ordinal
+    }
+
     companion object {
         @JsonCreator
         fun getByValue(value: Int): SpecmaticConfigVersion? {

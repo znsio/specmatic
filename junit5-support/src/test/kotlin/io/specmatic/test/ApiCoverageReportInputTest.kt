@@ -2,6 +2,7 @@ package io.specmatic.test
 
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.TestResult
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER
 import io.specmatic.test.reports.coverage.Endpoint
 import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
@@ -131,7 +132,7 @@ class ApiCoverageReportInputTest {
             "/heartbeat"
         )
 
-
+        System.setProperty(FILTER, "PATH!='/healthCheck, /heartbeat'")
         val apiCoverageReport = OpenApiCoverageReportInput(CONFIG_FILE_PATH, testReportRecords, applicationAPIs, excludedAPIs, endpointsInSpec,true).generate()
         println(CoverageReportTextRenderer().render(apiCoverageReport, specmaticConfig))
         assertThat(apiCoverageReport).isEqualTo(
@@ -181,7 +182,7 @@ class ApiCoverageReportInputTest {
             "/healthCheck",
             "/heartbeat"
         )
-
+        System.setProperty(FILTER, "PATH!='/healthCheck, /heartbeat, /route1, /route2'")
         val apiCoverageReport = OpenApiCoverageReportInput(CONFIG_FILE_PATH, testReportRecords, applicationAPIs, excludedAPIs, endpointsInSpec,true).generate()
         assertThat(apiCoverageReport.coverageRows).isEmpty()
         assertThat(apiCoverageReport.totalCoveragePercentage).isEqualTo(0)

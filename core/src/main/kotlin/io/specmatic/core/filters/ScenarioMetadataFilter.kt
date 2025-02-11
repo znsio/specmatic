@@ -2,19 +2,16 @@ package io.specmatic.core.filters
 
 import com.ezylang.evalex.Expression
 import com.ezylang.evalex.config.ExpressionConfiguration
+import io.specmatic.test.TestResultRecord
 
 data class ScenarioMetadataFilter(
     val expression: Expression? = null
 ) {
-    fun isSatisfiedBy(metadata: ScenarioMetadata): Boolean {
+    fun isSatisfiedBy(filterableExpression: FilterableExpression): Boolean {
         val expression = expression ?: return true
-        val expressionWithVariables = expression
-            .with(ScenarioFilterTags.METHOD.key, metadata.method)
-            .with(ScenarioFilterTags.PATH.key, metadata.path)
-            .with(ScenarioFilterTags.STATUS_CODE.key, metadata.statusCode.toString())
-            .with(ScenarioFilterTags.HEADER.key, metadata.header.joinToString(","))
-            .with(ScenarioFilterTags.QUERY.name, metadata.query.joinToString(","))
-            .with(ScenarioFilterTags.EXAMPLE_NAME.name, metadata.exampleName)
+
+        val expressionWithVariables = filterableExpression.populateExpressionData(expression)
+
         return try {
             expressionWithVariables.evaluate().booleanValue ?: false
         } catch (e: Exception) {
@@ -23,6 +20,7 @@ data class ScenarioMetadataFilter(
             throw IllegalArgumentException(errorMsg)
         }
     }
+
 
     companion object {
         const val ENHANCED_FUNC_NAME = "eFunc"
@@ -50,12 +48,12 @@ data class ScenarioMetadataFilter(
         fun <T> filterUsing(
             items: Sequence<T>,
             scenarioMetadataFilter: ScenarioMetadataFilter,
-            toScenarioMetadata: (T) -> ScenarioMetadata
+            toFilterableMetadata: (T) -> FilterableExpression
         ): Sequence<T> {
-            val returnItems = items.filter {
-                scenarioMetadataFilter.isSatisfiedBy(toScenarioMetadata(it))
+            val filteredItems = items.filter {
+                scenarioMetadataFilter.isSatisfiedBy(toFilterableMetadata(it))
             }
-            return returnItems
+            return filteredItems
         }
     }
 }

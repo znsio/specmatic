@@ -10,6 +10,10 @@ enum class SpecmaticConfigVersion(@JsonValue val value: Int, val configLoader: S
     VERSION_1(1, SpecmaticConfigV1.Companion),
     VERSION_2(2, SpecmaticConfigV2.Companion);
 
+    fun isLessThanOrEqualTo(otherVersion: SpecmaticConfigVersion): Boolean {
+        return this.ordinal <= otherVersion.ordinal
+    }
+
     companion object {
         @JsonCreator
         fun getByValue(value: Int): SpecmaticConfigVersion? {
@@ -25,7 +29,12 @@ enum class SpecmaticConfigVersion(@JsonValue val value: Int, val configLoader: S
         }
 
         fun convertToLatestVersionedConfig(config: SpecmaticConfig): SpecmaticVersionedConfig {
-            return getLatestVersion().configLoader.loadFrom(config)
+            val latestVersion = getLatestVersion()
+            return latestVersion
+                .configLoader
+                .loadFrom(
+                    config.dropExcludedEndpointsAfterVersion1(latestVersion)
+                )
         }
     }
 }

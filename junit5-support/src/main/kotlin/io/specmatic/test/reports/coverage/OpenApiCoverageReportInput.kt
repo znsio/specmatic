@@ -3,7 +3,10 @@ package io.specmatic.test.reports.coverage
 import io.specmatic.conversions.SERVICE_TYPE_HTTP
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.TestResult
+import io.specmatic.core.filters.ScenarioMetadataFilter
+import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.test.API
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER
 import io.specmatic.test.TestResultRecord
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
@@ -20,7 +23,8 @@ class OpenApiCoverageReportInput(
     private val allEndpoints: MutableList<Endpoint> = mutableListOf(),
     internal var endpointsAPISet: Boolean = false,
     private var groupedTestResultRecords: MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>> = mutableMapOf(),
-    private var apiCoverageRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf()
+    private var apiCoverageRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf(),
+    private val filterExpression: String = ""
 ) {
     fun addTestReportRecords(testResultRecord: TestResultRecord) {
         testResultRecords.add(testResultRecord)
@@ -157,7 +161,8 @@ class OpenApiCoverageReportInput(
     }
 
     private fun addTestResultsForMissingEndpoints(testResults: List<TestResultRecord>): List<TestResultRecord> {
-        val testReportRecordsIncludingMissingAPIs = testResults.toMutableList()
+        var testReportRecordsIncludingMissingAPIs = testResults.toMutableList()
+        val filter = ScenarioMetadataFilter.from(filterExpression)
         if(endpointsAPISet) {
             applicationAPIs.forEach { api ->
                 if (allEndpoints.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it == api.path }) {
@@ -172,6 +177,8 @@ class OpenApiCoverageReportInput(
                     )
                 }
             }
+            val filteredItems = filterUsing(testReportRecordsIncludingMissingAPIs.asSequence(), filter) { it }
+            testReportRecordsIncludingMissingAPIs = filteredItems.toMutableList()
         }
         return testReportRecordsIncludingMissingAPIs
     }

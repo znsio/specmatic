@@ -44,6 +44,9 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import java.io.File
 
+private const val excludedEndpointsWarning =
+    "WARNING: excludedEndpoints is not supported in Specmatic config v2. . Refer to https://specmatic.io/documentation/configuration.html#report-configuration to see how to exclude endpoints."
+
 const val APPLICATION_NAME = "Specmatic"
 const val APPLICATION_NAME_LOWER_CASE = "specmatic"
 const val CONFIG_FILE_NAME_WITHOUT_EXT = "specmatic"
@@ -273,7 +276,7 @@ data class SpecmaticConfig(
         if (latestVersion == VERSION_1)
             return this
 
-        logger.log("\nWARNING: excludedEndpoints is not supported in Specmatic config v2. Refer to https://specmatic.io/documentation/configuration.html#report-configuration to see how to exclude endpoints.\n")
+        logger.log("\n$excludedEndpointsWarning\n")
 
         return this.copy(
             report = report?.clearPresenceOfExcludedEndpoints()
@@ -705,7 +708,7 @@ data class ReportConfigurationDetails(
             return this
 
         if (types?.apiCoverage?.openAPI?.excludedEndpoints.orEmpty().isNotEmpty()) {
-            throw UnsupportedOperationException("excludedEndpoints is not supported in Specmatic config v2.")
+            throw UnsupportedOperationException(excludedEndpointsWarning)
         }
         return this
     }

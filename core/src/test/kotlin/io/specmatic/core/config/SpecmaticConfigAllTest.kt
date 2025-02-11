@@ -4,21 +4,27 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import io.specmatic.core.*
+import io.specmatic.core.ReportFormatterLayout
+import io.specmatic.core.ReportFormatterType
+import io.specmatic.core.ResiliencyTestSuite
+import io.specmatic.core.Source
 import io.specmatic.core.SourceProvider.filesystem
 import io.specmatic.core.SourceProvider.git
 import io.specmatic.core.config.SpecmaticConfigVersion.Companion.convertToLatestVersionedConfig
+import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.config.v1.SpecmaticConfigV1
 import io.specmatic.core.config.v2.ContractConfig
 import io.specmatic.core.config.v2.ContractConfig.FileSystemContractSource
 import io.specmatic.core.config.v2.ContractConfig.GitContractSource
 import io.specmatic.core.config.v2.SpecmaticConfigV2
 import io.specmatic.core.config.v3.Consumes
+import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.utilities.ContractSourceEntry
 import io.specmatic.core.utilities.GitRepo
 import io.specmatic.core.utilities.LocalFileSystemSource
+import io.specmatic.stub.captureStandardOutput
 import io.specmatic.toContractSourceEntries
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -233,8 +239,8 @@ internal class SpecmaticConfigAllTest {
         assertThat(contracts[0].provides).containsOnly("com/petstore/1.yaml")
         assertThat(contracts[0].consumes).containsOnly(Consumes.StringValue("com/petstore/payment.yaml"))
 
-        assertThat(contracts[1].contractSource).isInstanceOf(ContractConfig.FileSystemContractSource::class.java)
-        val fileSystemContractSource = contracts[1].contractSource as ContractConfig.FileSystemContractSource
+        assertThat(contracts[1].contractSource).isInstanceOf(FileSystemContractSource::class.java)
+        val fileSystemContractSource = contracts[1].contractSource as FileSystemContractSource
         assertThat(fileSystemContractSource.directory).isEqualTo("contracts")
         assertThat(contracts[1].provides).containsOnly("com/petstore/1.yaml")
         assertThat(contracts[1].consumes).containsOnly(
@@ -281,7 +287,7 @@ internal class SpecmaticConfigAllTest {
                 )
             ),
             ContractConfig(
-                contractSource = ContractConfig.FileSystemContractSource(directory = "contracts"),
+                contractSource = FileSystemContractSource(directory = "contracts"),
                 provides = listOf("com/petstore/1.yaml"),
                 consumes = listOf(
                     Consumes.StringValue("com/petstore/payment.yaml"),
@@ -900,21 +906,45 @@ internal class SpecmaticConfigAllTest {
                     excludedEndpoints:
                       - /health
         """.trimIndent()
+        val expectedReportConfigurationJson = parsedJSON(
+            """
+            {
+              "formatters": [
+                {
+                  "type": "text",
+                  "layout": "table"
+                }
+              ],
+              "types": {
+                "APICoverage": {
+                  "OpenAPI": {
+                    "successCriteria": {
+                      "minThresholdPercentage": 70,
+                      "maxMissedEndpointsInSpec": 0,
+                      "enforce": true
+                    }
+                  }
+                }
+              }
+            }
+        """.trimIndent()
+        )
 
         val configV1 = objectMapper.readValue(contractConfigYaml, SpecmaticConfigV1::class.java)
 
         val dslConfig = configV1.transform()
 
-        val configV2 = convertToLatestVersionedConfig(dslConfig) as SpecmaticConfigV2
+        val (output, configV2) = captureStandardOutput {
+            convertToLatestVersionedConfig(dslConfig) as SpecmaticConfigV2
+        }
 
-        val objectMapper =
-            ObjectMapper(YAMLFactory()).registerKotlinModule().setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
-        val configText = objectMapper.writeValueAsString(configV2)
-        println(configText)
+        assertThat(output).contains("WARNING")
 
-        assertThat(configText)
-            .contains("OpenAPI")
-            .contains("APICoverage")
+        val jsonObjectMapper =
+            ObjectMapper().registerKotlinModule().setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
+        val actualReportConfigurationJson = parsedJSON(jsonObjectMapper.writeValueAsString(configV2.report))
+
+        assertThat(actualReportConfigurationJson).isEqualTo(expectedReportConfigurationJson)
 
         assertThat(configV2.report?.formatters?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
         assertThat(configV2.report?.formatters?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)

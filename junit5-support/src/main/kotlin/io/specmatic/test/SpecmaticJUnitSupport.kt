@@ -1,6 +1,5 @@
 package io.specmatic.test
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
@@ -104,7 +103,7 @@ open class SpecmaticJUnitSupport {
 
             if (reportConfiguration == null) {
                 logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
-                return ReportConfigurationDetails.default
+                return ReportConfiguration.default
             }
 
             return reportConfiguration.withDefaultFormattersIfMissing()

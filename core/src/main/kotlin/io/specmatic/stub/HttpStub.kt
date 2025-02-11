@@ -424,7 +424,7 @@ class HttpStub(
     ): List<Feature> {
         val specsForGivenPort = specToStubPortMap.entries.groupBy(
             { it.value }, { it.key }
-        )[port].orEmpty().map { File(it).canonicalPath }.toSet()
+        )[port].orEmpty().mapNotNull { runCatching { File(it).canonicalPath }.getOrNull() }.toSet()
 
         return features.filter { feature ->
             val spec = feature.specification ?: return@filter false

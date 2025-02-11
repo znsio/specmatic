@@ -21,6 +21,7 @@ import io.ktor.server.netty.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.mockk.*
+import io.specmatic.toContractSourceEntries
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
@@ -47,7 +48,7 @@ internal class UtilitiesTest {
 
     @Test
     fun `contractFilePathsFrom sources when contracts repo dir does not exist`() {
-        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
+        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION").toContractSourceEntries(), SourceProvider.git.toString()))
         File(".spec").deleteRecursively()
 
         mockkStatic("io.specmatic.core.utilities.Utilities")
@@ -71,7 +72,7 @@ internal class UtilitiesTest {
     fun `contractFilePathsFrom sources with branch when contracts repo dir does not exist`() {
         val branchName = "featureBranch"
         val sources = listOf(GitRepo("https://repo1",
-            branchName, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
+            branchName, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION").toContractSourceEntries(), SourceProvider.git.toString()))
         File(".spec").deleteRecursively()
 
         mockkStatic("io.specmatic.core.utilities.Utilities")
@@ -101,7 +102,7 @@ internal class UtilitiesTest {
 
     @Test
     fun `contractFilePathsFrom sources when contracts repo dir exists and is clean`() {
-        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
+        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION").toContractSourceEntries(), SourceProvider.git.toString()))
         File(".spec").deleteRecursively()
         File(".spec/repos/repo1").mkdirs()
 
@@ -147,7 +148,7 @@ internal class UtilitiesTest {
 
     @Test
     fun `contractFilePathsFrom sources when contracts repo dir exists and is not clean`() {
-        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
+        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION").toContractSourceEntries(), SourceProvider.git.toString()))
         File(".spec").deleteRecursively()
         File(".spec/repos/repo1").mkdirs()
 
@@ -174,7 +175,7 @@ internal class UtilitiesTest {
 
     @Test
     fun `contractFilePathsFrom sources when contracts repo dir exists and is behind remote`() {
-        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
+        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION").toContractSourceEntries(), SourceProvider.git.toString()))
         File(".spec").deleteRecursively()
         File(".spec/repos/repo1").mkdirs()
 
@@ -203,10 +204,10 @@ internal class UtilitiesTest {
     fun `contractFilePathsFrom sources with mono repo`() {
         val configFilePath = "monorepo/configLoc/specmatic.json"
 
-        val monorepoContents = listOf(configFilePath, "monorepo/a/1.$CONTRACT_EXTENSION", "monorepo/b/1.$CONTRACT_EXTENSION", "monorepo/c/1.$CONTRACT_EXTENSION")
+        val monorepoContents = listOf(configFilePath, "monorepo/a/1.$CONTRACT_EXTENSION", "monorepo/b/1.$CONTRACT_EXTENSION", "monorepo/c/1.$CONTRACT_EXTENSION").toContractSourceEntries()
         monorepoContents.forEach {
-            File(it).parentFile.mkdirs()
-            File(it).createNewFile()
+            File(it.path).parentFile.mkdirs()
+            File(it.path).createNewFile()
         }
 
         File(configFilePath).printWriter().use { it.println(
@@ -244,7 +245,7 @@ internal class UtilitiesTest {
         val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"repository\": \"https://repo1\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
         val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
-        val expectedSources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
+        val expectedSources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION").toContractSourceEntries(), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
     }
 
@@ -255,8 +256,8 @@ internal class UtilitiesTest {
         val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(
-                GitRepo("https://repo1",null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()),
-                GitRepo("https://repo2",null, listOf(), listOf("c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString())
+                GitRepo("https://repo1",null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION").toContractSourceEntries(), SourceProvider.git.toString()),
+                GitRepo("https://repo2",null, listOf(), listOf("c/1.$CONTRACT_EXTENSION").toContractSourceEntries(), SourceProvider.git.toString())
         )
         assertThat(sources == expectedSources).isTrue
     }
@@ -266,7 +267,7 @@ internal class UtilitiesTest {
         val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
         val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
-        val expectedSources = listOf(GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
+        val expectedSources = listOf(GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION").toContractSourceEntries(), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
     }
 
@@ -275,7 +276,7 @@ internal class UtilitiesTest {
         val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"test\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
         val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
-        val expectedSources = listOf(GitMonoRepo(listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), listOf(), SourceProvider.git.toString()))
+        val expectedSources = listOf(GitMonoRepo(listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION").toContractSourceEntries(), listOf(), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
     }
 
@@ -284,7 +285,7 @@ internal class UtilitiesTest {
         val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"test\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"],\"stub\": [\"c/1.$CONTRACT_EXTENSION\"]}]}"
         val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
-        val expectedSources = listOf(GitMonoRepo(listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), listOf("c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
+        val expectedSources = listOf(GitMonoRepo(listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION").toContractSourceEntries(), listOf("c/1.$CONTRACT_EXTENSION").toContractSourceEntries(), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
     }
 
@@ -295,8 +296,8 @@ internal class UtilitiesTest {
         val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(
-            GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()),
-                GitMonoRepo(listOf(), listOf("c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString())
+            GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION").toContractSourceEntries(), SourceProvider.git.toString()),
+                GitMonoRepo(listOf(), listOf("c/1.$CONTRACT_EXTENSION").toContractSourceEntries(), SourceProvider.git.toString())
         )
         assertThat(sources == expectedSources).isTrue
     }
@@ -308,8 +309,8 @@ internal class UtilitiesTest {
         val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(
-                GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()),
-                GitMonoRepo(listOf(), listOf("c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString())
+                GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION").toContractSourceEntries(), SourceProvider.git.toString()),
+                GitMonoRepo(listOf(), listOf("c/1.$CONTRACT_EXTENSION").toContractSourceEntries(), SourceProvider.git.toString())
         )
         assertThat(sources == expectedSources).isTrue
     }
@@ -524,7 +525,7 @@ internal class UtilitiesTest {
                 loadSources(specmaticJSON.path).flatMap { source ->
                     source.testContracts
                 }.map { specPath ->
-                    OpenApiSpecification.fromFile(specPath).toFeature().executeTests(stub.client)
+                    OpenApiSpecification.fromFile(specPath.path).toFeature().executeTests(stub.client)
                 }
             }
 

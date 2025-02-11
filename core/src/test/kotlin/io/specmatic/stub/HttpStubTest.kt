@@ -2495,6 +2495,129 @@ components:
             }
         }
 
+        @Test
+        fun `should serve requests where the specs are configured using string based syntax`() {
+            val specmaticConfigFile = File("src/test/resources/multi_port_stub_string_syntax/specmatic.yaml")
+            val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+
+            val scenarioStubs = specmaticConfig.stubContracts(specmaticConfigFile).map { specPath ->
+                OpenApiSpecification.fromFile(specPath).toFeature() to loadContractStubsFromImplicitPaths(
+                    contractPathDataList = listOf(ContractPathData("", specPath)),
+                    specmaticConfig = specmaticConfig
+                ).flatMap { it.second }
+            }
+
+            HttpStub(
+                features = specmaticConfig.stubContracts(specmaticConfigFile).map {
+                    OpenApiSpecification.fromFile(it).toFeature()
+                },
+                rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+                specmaticConfigPath = specmaticConfigFile.canonicalPath
+            ).use {
+                val productsResponse = HttpClient(
+                    endPointFromHostAndPort("localhost", 9000, null)
+                ).execute(
+                    HttpRequest(
+                        method = "POST",
+                        path = "/products",
+                        body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
+                    )
+                )
+
+                assertThat(productsResponse.status).isEqualTo(201)
+                assertThat(
+                    (productsResponse.body as JSONObjectValue).findFirstChildByPath("name")?.toStringLiteral()
+                ).isNotEqualTo("Xiaomi").isNotEmpty()
+
+                val ordersResponse = HttpClient(
+                    endPointFromHostAndPort("localhost", 9000, null)
+                ).execute(
+                    HttpRequest(
+                        method = "POST",
+                        path = "/orders",
+                        body = parsedJSONObject("""
+                         {
+                            "productId": "10",
+                            "quantity": 500,
+                            "totalPrice": 800.0
+                         }
+                    """.trimIndent())
+                    )
+                )
+
+                assertThat(ordersResponse.status).isEqualTo(201)
+            }
+        }
+
+        @Test
+        fun `should serve requests from multiple ports when the specs are configured using a mixture of string based and object based syntax`() {
+            val specmaticConfigFile = File("src/test/resources/multi_port_stub_string_and_object_syntax/specmatic.yaml")
+            val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+
+            val scenarioStubs = specmaticConfig.stubContracts(specmaticConfigFile).map { specPath ->
+                OpenApiSpecification.fromFile(specPath).toFeature() to loadContractStubsFromImplicitPaths(
+                    contractPathDataList = listOf(ContractPathData("", specPath)),
+                    specmaticConfig = specmaticConfig
+                ).flatMap { it.second }
+            }
+
+            HttpStub(
+                features = specmaticConfig.stubContracts(specmaticConfigFile).map {
+                    OpenApiSpecification.fromFile(it).toFeature()
+                },
+                rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+                specmaticConfigPath = specmaticConfigFile.canonicalPath
+            ).use {
+                val productsResponse = HttpClient(
+                    endPointFromHostAndPort("localhost", 9000, null)
+                ).execute(
+                    HttpRequest(
+                        method = "POST",
+                        path = "/products",
+                        body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
+                    )
+                )
+
+                assertThat(productsResponse.status).isEqualTo(201)
+                assertThat(
+                    (productsResponse.body as JSONObjectValue).findFirstChildByPath("name")?.toStringLiteral()
+                ).isNotEqualTo("Xiaomi").isNotEmpty()
+
+
+                val exportedProductsResponse = HttpClient(
+                    endPointFromHostAndPort("localhost", 9001, null)
+                ).execute(
+                    HttpRequest(
+                        method = "POST",
+                        path = "/products",
+                        body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
+                    )
+                )
+
+                assertThat(exportedProductsResponse.status).isEqualTo(201)
+                assertThat(
+                    (exportedProductsResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+                ).isEqualTo("200")
+
+                val ordersResponse = HttpClient(
+                    endPointFromHostAndPort("localhost", 9001, null)
+                ).execute(
+                    HttpRequest(
+                        method = "POST",
+                        path = "/orders",
+                        body = parsedJSONObject("""
+                         {
+                            "productId": "10",
+                            "quantity": 500,
+                            "totalPrice": 800.0
+                         }
+                    """.trimIndent())
+                    )
+                )
+
+                assertThat(ordersResponse.status).isEqualTo(201)
+            }
+        }
 
         @Nested
         inner class FeaturesAssociatedToTests {

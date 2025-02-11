@@ -265,60 +265,6 @@ internal class SpecmaticConfigKtTest {
     @Nested
     inner class StubPortConfigTests {
         @Test
-        fun `should return the spec to stub port map from sources`() {
-            val source1 = Source(
-                stub = listOf(
-                    Consumes.StringValue("9000_first.yaml"),
-                    Consumes.StringValue("9000_second.yaml"),
-                    Consumes.ObjectValue(
-                        specs = listOf("9001_first.yaml", "9001_second.yaml"),
-                        port = 9001
-                    ),
-                    Consumes.ObjectValue(
-                        specs = listOf("9002_first.yaml"),
-                        port = 9002
-                    ),
-                )
-            )
-
-            val source2 = Source(
-                stub = listOf(
-                    Consumes.StringValue("9000_third.yaml"),
-                    Consumes.ObjectValue(
-                        specs = listOf("9001_third.yaml", "9001_fourth.yaml"),
-                        port = 9001
-                    ),
-                    Consumes.ObjectValue(
-                        specs = listOf("9002_second.yaml"),
-                        port = 9002
-                    ),
-                )
-            )
-
-            val specmaticConfig = SpecmaticConfig(
-                sources = listOf(source1, source2)
-            )
-
-            val expectedMap = mapOf(
-                "9000_first.yaml" to 9000,
-                "9000_second.yaml" to 9000,
-                "9000_third.yaml" to 9000,
-                "9001_first.yaml" to 9001,
-                "9001_second.yaml" to 9001,
-                "9001_third.yaml" to 9001,
-                "9001_fourth.yaml" to 9001,
-                "9002_first.yaml" to 9002,
-                "9002_second.yaml" to 9002,
-            )
-
-            assertThat(
-                specmaticConfig.specToStubPortMap(
-                    9000
-                ).mapKeys { it.key.substringAfterLast(File.separator) }
-            ).isEqualTo(expectedMap)
-        }
-
-        @Test
         fun `should return all stub ports from sources`() {
             val source1 = Source(
                 stub = listOf(

@@ -1,0 +1,62 @@
+openapi: 3.0.3
+info:
+  title:  Product API
+  version: 1.0.0
+paths:
+  /products:
+    get:
+      summary: Get products
+      description: Retrieve a list of products along with their country of origin.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    originCountry:
+                      type: string
+    post:
+      summary: Add a new product
+      description: Create a new product entry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                category:
+                  type: string
+            examples:
+              POST_XIAOMI:
+                name: Xiaomi
+                type: Mobile
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  category:
+                    type: string
+              examples:
+                POST_XIAOMI:
+                  id: 100
+                  name: Xiaomi
+                  type: Mobile

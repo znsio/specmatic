@@ -187,8 +187,8 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
                 val testPaths = jsonArray(source, "test")
 
                 when (repositoryURL) {
-                    null -> GitMonoRepo(testPaths, stubPaths, type)
-                    else -> GitRepo(repositoryURL, branch, testPaths, stubPaths, type)
+                    null -> GitMonoRepo(testPaths.toContractSourceEntries(), stubPaths.toContractSourceEntries(), type)
+                    else -> GitRepo(repositoryURL, branch, testPaths.toContractSourceEntries(), stubPaths.toContractSourceEntries(), type)
                 }
             }
             "filesystem" -> {
@@ -196,16 +196,20 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
                 val stubPaths = jsonArray(source, "stub")
                 val testPaths = jsonArray(source, "test")
 
-                LocalFileSystemSource(directory, testPaths, stubPaths)
+                LocalFileSystemSource(directory, testPaths.toContractSourceEntries(), stubPaths.toContractSourceEntries())
             }
             "web" -> {
                 val stubPaths = jsonArray(source, "stub")
                 val testPaths = jsonArray(source, "test")
-                WebSource(testPaths, stubPaths)
+                WebSource(testPaths.toContractSourceEntries(), stubPaths.toContractSourceEntries())
             }
             else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $configFilePath")
         }
     }
+}
+
+private fun List<String>.toContractSourceEntries(): List<ContractSourceEntry> {
+    return this.map { ContractSourceEntry(it) }
 }
 
 internal fun jsonArray(source: JSONObjectValue, key: String): List<String> {
@@ -250,7 +254,7 @@ fun contractStubPaths(configFileName: String): List<ContractPathData> {
 }
 
 fun interface ContractsSelectorPredicate {
-    fun select(source: ContractSource): List<String>
+    fun select(source: ContractSource): List<ContractSourceEntry>
 }
 
 fun contractTestPathsFrom(configFilePath: String, workingDirectory: String): List<ContractPathData> {
@@ -268,8 +272,15 @@ data class ContractPathData(
     val provider: String? = null,
     val repository: String? = null,
     val branch: String? = null,
-    val specificationPath: String? = null
-)
+    val specificationPath: String? = null,
+    val port: Int? = null
+) {
+    companion object {
+        fun List<ContractPathData>.specToPortMap(): Map<String, Int?> {
+            return this.associate { File(it.path).path to it.port }
+        }
+    }
+}
 
 fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<ContractPathData> {
     logger.log("Loading config file $configFilePath")

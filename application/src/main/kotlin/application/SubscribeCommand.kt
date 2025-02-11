@@ -37,7 +37,7 @@ class SubscribeCommand: Callable<Unit> {
                     sourceGit.pull()
 
                     for(contract in source.testContracts + source.stubContracts) {
-                        val contractPath = sourceDir.resolve(File(contract))
+                        val contractPath = sourceDir.resolve(File(contract.path))
                         subscribeToContract(manifestData, sourceDir.resolve(contractPath).path, sourceGit)
                     }
 

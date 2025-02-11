@@ -22,6 +22,7 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.ContractSource
+import io.specmatic.core.utilities.ContractSourceEntry
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
@@ -283,11 +284,6 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun specToStubPortMap(defaultPort: Int, relativeTo: File = File(".")): Map<String, Int> {
-        return sources.flatMap { it.specToStubPortMap(defaultPort, relativeTo).entries }.associate { it.key to it.value }
-    }
-
-    @JsonIgnore
     fun stubPorts(defaultPort: Int): List<Int> {
         return sources.flatMap {
             it.stub.orEmpty().map { consumes ->
@@ -327,30 +323,18 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun loadSources(): List<ContractSource> {
         return sources.map { source ->
+            val stubPaths = source.specToStubPortMap().entries.map { ContractSourceEntry(it.key, it.value) }
+            val testPaths = source.test.orEmpty().map { ContractSourceEntry(it) }
+
             when (source.provider) {
-                git -> {
-                    val stubPaths = source.specsUsedAsStub()
-                    val testPaths = source.test ?: emptyList()
-
-                    when (source.repository) {
-                        null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
-                        else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
-                    }
+                git -> when (source.repository) {
+                    null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
+                    else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
                 }
 
-                filesystem -> {
-                    val stubPaths = source.specsUsedAsStub()
-                    val testPaths = source.test ?: emptyList()
+                filesystem -> LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
 
-                    LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
-                }
-
-                web -> {
-                    val stubPaths = source.specsUsedAsStub()
-                    val testPaths = source.test ?: emptyList()
-
-                    WebSource(testPaths, stubPaths)
-                }
+                web -> WebSource(testPaths, stubPaths)
             }
         }
     }
@@ -651,12 +635,12 @@ data class Source(
         }
     }
 
-    fun specToStubPortMap(defaultPort: Int, relativeTo: File = File(".")): Map<String, Int> {
+    fun specToStubPortMap(): Map<String, Int?> {
         return stub.orEmpty().flatMap {
             when (it) {
-                is Consumes.StringValue -> listOf(it.value.canonicalPath(relativeTo) to defaultPort)
+                is Consumes.StringValue -> listOf(it.value to null)
                 is Consumes.ObjectValue -> it.specs.map { specPath ->
-                    specPath.canonicalPath(relativeTo) to it.port
+                    specPath to it.port
                 }
             }
         }.toMap()

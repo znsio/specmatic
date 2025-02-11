@@ -3,12 +3,9 @@ contracts:
   - filesystem:
       directory: "."
     consumes:
-      - port: 9001
+      - port: 9000
         specs:
           - imported_product/imported_product.yaml
-      - port: 9002
+      - port: 9001
         specs:
           - exported_product/exported_product.yaml
-      - port: 9003
-        specs:
-          - another_exported_product/exported_product.yaml

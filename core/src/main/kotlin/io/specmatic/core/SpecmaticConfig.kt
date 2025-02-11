@@ -269,6 +269,18 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
+    fun dropExcludedEndpointsAfterVersion1(latestVersion: SpecmaticConfigVersion): SpecmaticConfig {
+        if (latestVersion == VERSION_1)
+            return this
+
+        logger.log("\nWARNING: excludedEndpoints is not supported in Specmatic config v2. Refer to https://specmatic.io/documentation/configuration.html#report-configuration to see how to exclude endpoints.\n")
+
+        return this.copy(
+            report = report?.clearPresenceOfExcludedEndpoints()
+        )
+    }
+
+    @JsonIgnore
     fun getReport(): ReportConfiguration? {
         return report
     }
@@ -687,6 +699,29 @@ data class ReportConfigurationDetails(
     val formatters: List<ReportFormatterDetails>? = null,
     val types: ReportTypes? = null
 ) : ReportConfiguration {
+
+    fun validatePresenceOfExcludedEndpoints(currentVersion: SpecmaticConfigVersion): ReportConfigurationDetails {
+        if(currentVersion.isLessThanOrEqualTo(VERSION_1))
+            return this
+
+        if (types.apiCoverage.openAPI.excludedEndpoints.isNotEmpty()) {
+            throw UnsupportedOperationException("excludedEndpoints is not supported in Specmatic config v2.")
+        }
+        return this
+    }
+
+    fun clearPresenceOfExcludedEndpoints(): ReportConfigurationDetails {
+        return this.copy(
+            types = types.copy(
+                apiCoverage = types.apiCoverage.copy(
+                    openAPI = types.apiCoverage.openAPI.copy(
+                        excludedEndpoints = emptyList()
+                    )
+                )
+            )
+        )
+    }
+
 
     @JsonIgnore
     override fun withDefaultFormattersIfMissing(): ReportConfigurationDetails {

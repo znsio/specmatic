@@ -10,6 +10,7 @@ import io.specmatic.core.ResiliencyTestSuite
 import io.specmatic.core.Source
 import io.specmatic.core.SourceProvider.filesystem
 import io.specmatic.core.SourceProvider.git
+import io.specmatic.core.config.SpecmaticConfigVersion.Companion.convertToLatestVersionedConfig
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.config.v1.SpecmaticConfigV1
 import io.specmatic.core.config.v2.ContractConfig
@@ -935,7 +936,7 @@ internal class SpecmaticConfigAllTest {
 
         val dslConfig = configV1.transform()
 
-        val configV2 = SpecmaticConfigV2.loadFrom(dslConfig) as SpecmaticConfigV2
+        val configV2 = convertToLatestVersionedConfig(dslConfig) as SpecmaticConfigV2
 
         val jsonObjectMapper =
             ObjectMapper().registerKotlinModule().setSerializationInclusion(JsonInclude.Include.NON_EMPTY)

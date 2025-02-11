@@ -19,7 +19,6 @@ import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME_PROPERTY
-import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME_PROPERTY
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS

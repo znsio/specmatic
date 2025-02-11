@@ -703,15 +703,6 @@ data class ReportConfigurationDetails(
     val formatters: List<ReportFormatterDetails>? = null,
     val types: ReportTypes? = null
 ) : ReportConfiguration {
-    companion object {
-        fun getFormatters(report: ReportConfigurationDetails?): List<ReportFormatterDetails>? {
-            return report?.formatters
-        }
-
-        fun getTypes(report: ReportConfigurationDetails?): ReportTypes? {
-            return report?.types
-        }
-    }
 
     @JsonIgnore
     override fun withDefaultFormattersIfMissing(): ReportConfigurationDetails {

@@ -204,14 +204,7 @@ data class SpecmaticConfig(
 ) {
     companion object {
         fun getReport(specmaticConfig: SpecmaticConfig): ReportConfigurationDetails? {
-            val report = specmaticConfig.report ?: return null
-            runCatching { report.handleExcludedEndpointsDuringUpgrade() }
-                .onFailure {
-                    logger.log("WARNING: ${it.message.orEmpty()}\n")
-                    report.clearPresenceOfExcludedEndpoints()
-                }
-
-            return report
+            return specmaticConfig.report
         }
 
         @JsonIgnore
@@ -272,6 +265,18 @@ data class SpecmaticConfig(
         fun getEnvironments(specmaticConfig: SpecmaticConfig): Map<String, Environment>? {
             return specmaticConfig.environments
         }
+    }
+
+    @JsonIgnore
+    fun dropExcludedEndpointsAfterVersion1(latestVersion: SpecmaticConfigVersion): SpecmaticConfig {
+        if (latestVersion == VERSION_1)
+            return this
+
+        logger.log("\nWARNING: excludedEndpoints is not supported in Specmatic config v2.\n")
+
+        return this.copy(
+            report = report?.clearPresenceOfExcludedEndpoints()
+        )
     }
 
     @JsonIgnore
@@ -728,15 +733,16 @@ data class ReportConfigurationDetails(
         return this
     }
 
-    fun handleExcludedEndpointsDuringUpgrade(): ReportConfigurationDetails {
-        if (types.apiCoverage.openAPI.excludedEndpoints.isNotEmpty()) {
-            throw UnsupportedOperationException("excludedEndpoints is not supported in Specmatic config v2.")
-        }
-        return this
-    }
-
-    fun clearPresenceOfExcludedEndpoints() {
-        types.apiCoverage.openAPI.excludedEndpoints.clear();
+    fun clearPresenceOfExcludedEndpoints(): ReportConfigurationDetails {
+        return this.copy(
+            types = types.copy(
+                apiCoverage = types.apiCoverage.copy(
+                    openAPI = types.apiCoverage.openAPI.copy(
+                        excludedEndpoints = emptyList()
+                    )
+                )
+            )
+        )
     }
 
 
@@ -822,7 +828,7 @@ data class APICoverage (
 
 data class APICoverageConfiguration(
     val successCriteria: SuccessCriteria? = null,
-    val excludedEndpoints: MutableList<String> = mutableListOf()
+    val excludedEndpoints: List<String> = listOf()
 )
 
 data class SuccessCriteria(

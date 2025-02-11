@@ -44,7 +44,7 @@ data class SpecmaticConfigV2(
 ) : SpecmaticVersionedConfig {
     override fun transform(): SpecmaticConfig {
         return SpecmaticConfig(
-            version = SpecmaticConfigVersion.VERSION_2,
+            version = currentConfigVersion(),
             sources = this.contracts.map { contract -> contract.transform() },
             auth = this.auth,
             pipeline = this.pipeline,
@@ -67,16 +67,20 @@ data class SpecmaticConfigV2(
     }
 
     companion object : SpecmaticVersionedConfigLoader {
+        private fun currentConfigVersion(): SpecmaticConfigVersion {
+            return SpecmaticConfigVersion.VERSION_2
+        }
+
         override fun loadFrom(config: SpecmaticConfig): SpecmaticVersionedConfig {
             return SpecmaticConfigV2(
-                version = SpecmaticConfigVersion.VERSION_2,
+                version = currentConfigVersion(),
                 contracts = SpecmaticConfig.getSources(config).map { ContractConfig(it) },
                 auth = config.getAuth(),
                 pipeline = getPipeline(config),
                 environments = SpecmaticConfig.getEnvironments(config),
                 hooks = config.getHooks(),
                 repository = getRepository(config),
-                report = SpecmaticConfig.getReport(config),
+                report = SpecmaticConfig.getReport(config)?.validatePresenceOfExcludedEndpoints(currentConfigVersion()),
                 security = getSecurityConfiguration(config),
                 test = getTestConfiguration(config),
                 stub = getStubConfiguration(config),

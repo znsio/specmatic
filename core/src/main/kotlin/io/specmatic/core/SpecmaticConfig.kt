@@ -362,7 +362,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {
-        return test?.getAllowExtensibleSchema() ?: getBooleanValue(EXTENSIBLE_SCHEMA)
+        return test?.allowExtensibleSchema ?: getBooleanValue(EXTENSIBLE_SCHEMA)
     }
 
     @JsonIgnore
@@ -377,7 +377,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun isResponseValueValidationEnabled(): Boolean {
-        return test?.getValidateResponseValues() ?: getBooleanValue(VALIDATE_RESPONSE_VALUE)
+        return test?.validateResponseValues ?: getBooleanValue(VALIDATE_RESPONSE_VALUE)
     }
 
     @JsonIgnore
@@ -387,19 +387,19 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun getResiliencyTestsEnabled(): ResiliencyTestSuite {
-        return test?.getResiliencyTests()?.getEnableTestSuite() ?: ResiliencyTestSuite.none
+        return (test?.resiliencyTests ?: ResiliencyTestsConfig.fromSystemProperties()).enable ?: ResiliencyTestSuite.none
     }
 
     @JsonIgnore
     fun getTestTimeoutInMilliseconds(): Long? {
-        return test?.getTimeoutInMilliseconds()
+        return test?.timeoutInMilliseconds ?: getLongValue(SPECMATIC_TEST_TIMEOUT)
     }
 
     @JsonIgnore
     fun copyResiliencyTestsConfig(onlyPositive: Boolean): SpecmaticConfig {
         return this.copy(
             test = test?.copy(
-                resiliencyTests = test.getResiliencyTests().copy(
+                resiliencyTests = (test.resiliencyTests ?: ResiliencyTestsConfig.fromSystemProperties()).copy(
                     enable = if (onlyPositive) ResiliencyTestSuite.positiveOnly else ResiliencyTestSuite.all
                 )
             )
@@ -462,12 +462,12 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun getAuthBearerFile(): String? {
-        return auth?.getBearerFile()
+        return auth?.bearerFile
     }
 
     @JsonIgnore
     fun getAuthBearerEnvironmentVariable(): String? {
-        return auth?.getBearerEnvironmentVariable()
+        return auth?.bearerEnvironmentVariable
     }
 
     @JsonIgnore
@@ -552,47 +552,29 @@ data class SpecmaticConfig(
 }
 
 data class TestConfiguration(
-    private val resiliencyTests: ResiliencyTestsConfig? = null,
-    private val validateResponseValues: Boolean? = null,
-    private val allowExtensibleSchema: Boolean? = null,
-    private val timeoutInMilliseconds: Long? = null
-) {
-    fun getResiliencyTests(): ResiliencyTestsConfig {
-        return resiliencyTests ?: ResiliencyTestsConfig(
-            isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
-            isOnlyPositiveFlagEnabled = getBooleanValue(ONLY_POSITIVE)
-        )
-    }
-
-    fun getValidateResponseValues(): Boolean? {
-        return validateResponseValues
-    }
-
-    fun getAllowExtensibleSchema(): Boolean? {
-        return allowExtensibleSchema
-    }
-
-    fun getTimeoutInMilliseconds(): Long? {
-        return timeoutInMilliseconds ?: getLongValue(SPECMATIC_TEST_TIMEOUT)
-    }
-}
+    val resiliencyTests: ResiliencyTestsConfig? = null,
+    val validateResponseValues: Boolean? = null,
+    val allowExtensibleSchema: Boolean? = null,
+    val timeoutInMilliseconds: Long? = null
+)
 
 enum class ResiliencyTestSuite {
     all, positiveOnly, none
 }
 
 data class ResiliencyTestsConfig(
-    private val enable: ResiliencyTestSuite? = null
+    val enable: ResiliencyTestSuite? = null
 ) {
     constructor(isResiliencyTestFlagEnabled: Boolean, isOnlyPositiveFlagEnabled: Boolean) : this(
         enable = getEnableFrom(isResiliencyTestFlagEnabled, isOnlyPositiveFlagEnabled)
     )
 
-    fun getEnableTestSuite(): ResiliencyTestSuite? {
-        return enable
-    }
-
     companion object {
+        fun fromSystemProperties() = ResiliencyTestsConfig(
+            isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
+            isOnlyPositiveFlagEnabled = getBooleanValue(ONLY_POSITIVE)
+        )
+
         private fun getEnableFrom(
             isResiliencyTestFlagEnabled: Boolean,
             isOnlyPositiveFlagEnabled: Boolean
@@ -607,17 +589,9 @@ data class ResiliencyTestsConfig(
 }
 
 data class Auth(
-    @param:JsonProperty("bearer-file") private val bearerFile: String = "bearer.txt",
-    @param:JsonProperty("bearer-environment-variable") private val bearerEnvironmentVariable: String? = null
-) {
-    fun getBearerFile(): String {
-        return bearerFile
-    }
-
-    fun getBearerEnvironmentVariable(): String? {
-        return bearerEnvironmentVariable
-    }
-}
+    @param:JsonProperty("bearer-file") val bearerFile: String = "bearer.txt",
+    @param:JsonProperty("bearer-environment-variable") val bearerEnvironmentVariable: String? = null
+)
 
 enum class PipelineProvider { azure }
 
@@ -737,6 +711,7 @@ data class ReportConfigurationDetails(
         }
     }
 
+    @JsonIgnore
     override fun withDefaultFormattersIfMissing(): ReportConfigurationDetails {
         val htmlReportFormatter = formatters?.firstOrNull {
             it.type == ReportFormatterType.HTML
@@ -748,20 +723,24 @@ data class ReportConfigurationDetails(
         return this.copy(formatters = listOf(htmlReportFormatter, textReportFormatter))
     }
 
+    @JsonIgnore
     override fun getHTMLFormatter(): ReportFormatterDetails? {
         return formatters?.firstOrNull { it.type == ReportFormatterType.HTML }
     }
 
+    @JsonIgnore
     override fun getSuccessCriteria(): SuccessCriteria {
         return types.apiCoverage.openAPI.successCriteria ?: SuccessCriteria()
     }
 
+    @JsonIgnore
     override fun <T> mapRenderers(fn: (ReportFormatterType) -> T): List<T> {
         return formatters!!.map {
             fn(it.type)
         }
     }
 
+    @JsonIgnore
     override fun excludedOpenAPIEndpoints(): List<String> {
         return types.apiCoverage.openAPI.excludedEndpoints
     }

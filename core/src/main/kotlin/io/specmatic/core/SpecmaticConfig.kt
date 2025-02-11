@@ -704,7 +704,7 @@ data class ReportConfigurationDetails(
         if(currentVersion.isLessThanOrEqualTo(VERSION_1))
             return this
 
-        if (types.apiCoverage.openAPI.excludedEndpoints.isNotEmpty()) {
+        if (types?.apiCoverage?.openAPI?.excludedEndpoints.orEmpty().isNotEmpty()) {
             throw UnsupportedOperationException("excludedEndpoints is not supported in Specmatic config v2.")
         }
         return this
@@ -712,9 +712,9 @@ data class ReportConfigurationDetails(
 
     fun clearPresenceOfExcludedEndpoints(): ReportConfigurationDetails {
         return this.copy(
-            types = types.copy(
-                apiCoverage = types.apiCoverage.copy(
-                    openAPI = types.apiCoverage.openAPI.copy(
+            types = types?.copy(
+                apiCoverage = types.apiCoverage?.copy(
+                    openAPI = types.apiCoverage.openAPI?.copy(
                         excludedEndpoints = emptyList()
                     )
                 )

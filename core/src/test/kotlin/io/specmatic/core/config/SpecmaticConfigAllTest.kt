@@ -24,6 +24,7 @@ import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.utilities.ContractSourceEntry
 import io.specmatic.core.utilities.GitRepo
 import io.specmatic.core.utilities.LocalFileSystemSource
+import io.specmatic.stub.captureStandardOutput
 import io.specmatic.toContractSourceEntries
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -921,10 +922,7 @@ internal class SpecmaticConfigAllTest {
                       "minThresholdPercentage": 70,
                       "maxMissedEndpointsInSpec": 0,
                       "enforce": true
-                    },
-                    "excludedEndpoints": [
-                      "/health"
-                    ]
+                    }
                   }
                 }
               }
@@ -936,7 +934,11 @@ internal class SpecmaticConfigAllTest {
 
         val dslConfig = configV1.transform()
 
-        val configV2 = convertToLatestVersionedConfig(dslConfig) as SpecmaticConfigV2
+        val (output, configV2) = captureStandardOutput {
+            convertToLatestVersionedConfig(dslConfig) as SpecmaticConfigV2
+        }
+
+        assertThat(output).contains("WARNING")
 
         val jsonObjectMapper =
             ObjectMapper().registerKotlinModule().setSerializationInclusion(JsonInclude.Include.NON_EMPTY)

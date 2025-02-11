@@ -588,6 +588,7 @@ data class ResiliencyTestsConfig(
         enable = getEnableFrom(isResiliencyTestFlagEnabled, isOnlyPositiveFlagEnabled)
     )
 
+    @JsonIgnore
     fun getEnableTestSuite(): ResiliencyTestSuite? {
         return enable
     }
@@ -737,6 +738,7 @@ data class ReportConfigurationDetails(
         }
     }
 
+    @JsonIgnore
     override fun withDefaultFormattersIfMissing(): ReportConfigurationDetails {
         val htmlReportFormatter = formatters?.firstOrNull {
             it.type == ReportFormatterType.HTML
@@ -748,20 +750,24 @@ data class ReportConfigurationDetails(
         return this.copy(formatters = listOf(htmlReportFormatter, textReportFormatter))
     }
 
+    @JsonIgnore
     override fun getHTMLFormatter(): ReportFormatterDetails? {
         return formatters?.firstOrNull { it.type == ReportFormatterType.HTML }
     }
 
+    @JsonIgnore
     override fun getSuccessCriteria(): SuccessCriteria {
         return types.apiCoverage.openAPI.successCriteria ?: SuccessCriteria()
     }
 
+    @JsonIgnore
     override fun <T> mapRenderers(fn: (ReportFormatterType) -> T): List<T> {
         return formatters!!.map {
             fn(it.type)
         }
     }
 
+    @JsonIgnore
     override fun excludedOpenAPIEndpoints(): List<String> {
         return types.apiCoverage.openAPI.excludedEndpoints
     }

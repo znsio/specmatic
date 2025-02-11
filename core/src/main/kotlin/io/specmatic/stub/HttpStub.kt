@@ -8,7 +8,6 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.cors.*
 import io.ktor.server.plugins.cors.CORS
-import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -76,14 +75,23 @@ class HttpStub(
     val workingDirectory: WorkingDirectory? = null,
     val specmaticConfigPath: String? = null,
     private val timeoutMillis: Long = 0,
+    private val specToStubPortMap: Map<String, Int?> = features.associate { it.path to port }
 ) : ContractStub {
     constructor(
         feature: Feature,
         scenarioStubs: List<ScenarioStub> = emptyList(),
         host: String = "localhost",
         port: Int = 9000,
-        log: (event: LogMessage) -> Unit = dontPrintToConsole
-    ) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
+        log: (event: LogMessage) -> Unit = dontPrintToConsole,
+        specToStubPortMap: Map<String, Int> = mapOf(feature.path to port)
+    ) : this(
+        listOf(feature),
+        contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))),
+        host,
+        port,
+        log,
+        specToStubPortMap = specToStubPortMap
+    )
 
     constructor(
         gherkinData: String,
@@ -91,7 +99,14 @@ class HttpStub(
         host: String = "localhost",
         port: Int = 9000,
         log: (event: LogMessage) -> Unit = dontPrintToConsole
-    ) : this(parseGherkinStringToFeature(gherkinData), scenarioStubs, host, port, log)
+    ) : this(
+        parseGherkinStringToFeature(gherkinData),
+        scenarioStubs,
+        host,
+        port,
+        log,
+        specToStubPortMap = mapOf(parseGherkinStringToFeature(gherkinData).path to port)
+    )
 
     companion object {
         const val JSON_REPORT_PATH = "./build/reports/specmatic"
@@ -133,9 +148,11 @@ class HttpStub(
         else
             SpecmaticConfig()
 
+    private val specToPortMap = specToStubPortMap.mapValues { (_, value) -> value ?: port }
+
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(
         httpStubs = staticHttpStubData(rawHttpStubs),
-        specToPortMap = specToStubPortMap
+        specToPortMap = specToPortMap
     )
 
     private val requestHandlers: MutableList<RequestHandler> = mutableListOf()
@@ -143,10 +160,6 @@ class HttpStub(
     //used by graphql / plugins
     fun registerHandler(requestHandler: RequestHandler) {
         requestHandlers.add(requestHandler)
-    }
-
-    private fun specmaticConfigFile(): File {
-        return if (specmaticConfigPath == null) File(".") else File(specmaticConfigPath)
     }
 
     private fun staticHttpStubData(rawHttpStubs: List<HttpStubData>): MutableList<HttpStubData> {
@@ -194,7 +207,7 @@ class HttpStub(
     private val threadSafeHttpStubQueue =
         ThreadSafeListOfStubs(
             httpStubs = rawHttpStubs.filter { it.stubToken != null }.reversed().toMutableList(),
-            specToPortMap = specToStubPortMap
+            specToPortMap = specToPortMap
         )
 
     private val _logs: MutableList<StubEndpoint> = Collections.synchronizedList(ArrayList())
@@ -207,11 +220,6 @@ class HttpStub(
     val stubCount: Int
         get() {
             return threadSafeHttpStubs.size
-        }
-
-    val specToStubPortMap: Map<String, Int>
-        get() {
-            return specmaticConfig.specToStubPortMap(port, relativeTo = specmaticConfigFile())
         }
 
     val transientStubCount: Int
@@ -401,10 +409,9 @@ class HttpStub(
     ): HttpStubResponse {
         return getHttpResponse(
             httpRequest = httpRequest,
-            features = features,
-            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(defaultPort, port) ?: threadSafeHttpStubs,
-            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(defaultPort, port)
-                ?: threadSafeHttpStubQueue,
+            features = featuresAssociatedTo(port, features, specToPortMap),
+            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(port, defaultPort),
+            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(port, defaultPort),
             strictMode = strictMode,
             passThroughTargetBase = passThroughTargetBase,
             httpClientFactory = httpClientFactory,
@@ -415,6 +422,20 @@ class HttpStub(
             }
             it.log(_logs, httpRequest)
         }.response
+    }
+
+    internal fun featuresAssociatedTo(
+        port: Int,
+        features: List<Feature>,
+        specToStubPortMap: Map<String, Int>
+    ): List<Feature> {
+        val specsForGivenPort = specToStubPortMap.entries.groupBy(
+            { it.value }, { it.key }
+        )[port].orEmpty().toSet()
+
+        return features.filter { feature ->
+            feature.path in specsForGivenPort
+        }
     }
 
     private fun handleFlushTransientStubsRequest(httpRequest: HttpRequest): HttpStubResponse {

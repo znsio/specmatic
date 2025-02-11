@@ -16,8 +16,10 @@ import io.specmatic.core.config.v2.SpecmaticConfigV2
 import io.specmatic.core.config.v3.Consumes
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSON
+import io.specmatic.core.utilities.ContractSourceEntry
 import io.specmatic.core.utilities.GitRepo
 import io.specmatic.core.utilities.LocalFileSystemSource
+import io.specmatic.toContractSourceEntries
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -995,14 +997,14 @@ internal class SpecmaticConfigAllTest {
             GitRepo(
                 gitRepositoryURL = "https://contracts",
                 branchName = "1.0.1",
-                testContracts = listOf("com/petstore/1.yaml"),
-                stubContracts = listOf("com/petstore/payment.yaml"),
+                testContracts = listOf("com/petstore/1.yaml").toContractSourceEntries(),
+                stubContracts = listOf("com/petstore/payment.yaml").toContractSourceEntries(),
                 type = git.name
             ),
             LocalFileSystemSource(
                 directory = "contracts",
-                testContracts = listOf("com/petstore/1.yaml"),
-                stubContracts = listOf("com/petstore/payment.yaml", "com/petstore/order.yaml")
+                testContracts = listOf("com/petstore/1.yaml").toContractSourceEntries(),
+                stubContracts = listOf("com/petstore/payment.yaml", "com/petstore/order.yaml").toContractSourceEntries()
             )
         )
 
@@ -1024,17 +1026,17 @@ internal class SpecmaticConfigAllTest {
             GitRepo(
                 gitRepositoryURL = "https://contracts",
                 branchName = "1.0.1",
-                testContracts = listOf("com/petstore/1.yaml"),
-                stubContracts = listOf("com/petstore/payment.yaml"),
+                testContracts = listOf("com/petstore/1.yaml").toContractSourceEntries(),
+                stubContracts = listOf("com/petstore/payment.yaml").toContractSourceEntries(),
                 type = git.name
             ),
             LocalFileSystemSource(
                 directory = "contracts",
-                testContracts = listOf("com/petstore/1.yaml"),
+                testContracts = listOf("com/petstore/1.yaml").toContractSourceEntries(),
                 stubContracts = listOf(
-                    "com/petstore/payment.yaml",
-                    "com/petstore/order1.yaml",
-                    "com/petstore/order2.yaml"
+                    ContractSourceEntry("com/petstore/payment.yaml"),
+                    ContractSourceEntry("com/petstore/order1.yaml", 9001),
+                    ContractSourceEntry("com/petstore/order2.yaml", 9001)
                 )
             )
         )

@@ -272,7 +272,7 @@ data class SpecmaticConfig(
         if (latestVersion == VERSION_1)
             return this
 
-        logger.log("\nWARNING: excludedEndpoints is not supported in Specmatic config v2.\n")
+        logger.log("\nWARNING: excludedEndpoints is not supported in Specmatic config v2. Refer to https://specmatic.io/documentation/configuration.html#report-configuration to see how to exclude endpoints.\n")
 
         return this.copy(
             report = report?.clearPresenceOfExcludedEndpoints()

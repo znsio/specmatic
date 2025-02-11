@@ -18,6 +18,7 @@ import io.specmatic.shouldMatch
 import io.specmatic.test.HttpClient
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
@@ -2492,6 +2493,144 @@ components:
                     (exportedProductResponse.body as JSONObjectValue).findFirstChildByPath("name")?.toStringLiteral()
                 ).isEqualTo("Xiaomi")
             }
+        }
+
+
+        @Nested
+        inner class FeaturesAssociatedToTests {
+
+            private fun String.canonicalPath(): String {
+                return File(this).canonicalPath
+            }
+
+            @Test
+            fun `should return feature associated with given port`() {
+                val specToStubPortMap = mapOf(
+                    "spec1.yaml".canonicalPath() to 8080,
+                    "spec2.yaml".canonicalPath() to 9090
+                )
+                val features = listOf<Feature>(
+                    mockk {
+                        every { specification } returns "spec1.yaml"
+                        every { stubsFromExamples } returns emptyMap()
+                        every { scenarios } returns emptyList()
+                    },
+                    mockk {
+                        every { specification } returns "spec2.yaml"
+                        every { stubsFromExamples } returns emptyMap()
+                        every { scenarios } returns emptyList()
+                    }
+                )
+                HttpStub(features = features).use { stub ->
+                    val result = stub.featuresAssociatedTo(8080, features, specToStubPortMap)
+
+                    assertEquals(features.take(1), result)
+                }
+            }
+
+            @Test
+            fun `should return empty list when no features match the given port`() {
+                val specToStubPortMap = mapOf(
+                    "spec1.yaml".canonicalPath() to 8080,
+                    "spec2.yaml".canonicalPath() to 9090
+                )
+                val features = listOf<Feature>(
+                    mockk {
+                        every { specification } returns "spec3.yaml"
+                        every { stubsFromExamples } returns emptyMap()
+                        every { scenarios } returns emptyList()
+                    },
+                    mockk {
+                        every { specification } returns "spec4.yaml"
+                        every { stubsFromExamples } returns emptyMap()
+                        every { scenarios } returns emptyList()
+                    }
+                )
+                HttpStub(features = features).use { stub ->
+                    val result = stub.featuresAssociatedTo(7070, features, specToStubPortMap)
+
+                    assertEquals(emptyList<Feature>(), result)
+                }
+            }
+
+            @Test
+            fun `should return empty list when specToStubPortMap is empty`() {
+                val specToStubPortMap = emptyMap<String, Int>()
+                val features = listOf<Feature>(
+                    mockk {
+                        every { specification } returns "spec3.yaml"
+                        every { stubsFromExamples } returns emptyMap()
+                        every { scenarios } returns emptyList()
+                    },
+                    mockk {
+                        every { specification } returns "spec4.yaml"
+                        every { stubsFromExamples } returns emptyMap()
+                        every { scenarios } returns emptyList()
+                    }
+                )
+
+                HttpStub(features = features).use { stub ->
+                    val result = stub.featuresAssociatedTo(8080, features, specToStubPortMap)
+
+                    assertEquals(emptyList<Feature>(), result)
+                }
+            }
+
+            @Test
+            fun `should return empty list when features list is empty`() {
+                val specToStubPortMap = mapOf("spec1.yaml" to 8080)
+                val features = emptyList<Feature>()
+
+                HttpStub(features = features).use { stub ->
+                    val result = stub.featuresAssociatedTo(8080, features, specToStubPortMap)
+
+                    assertEquals(emptyList<Feature>(), result)
+                }
+            }
+
+            @Test
+            fun `should return empty list when feature specification is null`() {
+                val specToStubPortMap = mapOf("spec1.yaml" to 8080)
+                val features = listOf<Feature>(
+                    mockk {
+                        every { specification } returns null
+                        every { stubsFromExamples } returns emptyMap()
+                        every { scenarios } returns emptyList()
+                    }
+                )
+
+                HttpStub(features = features).use { stub ->
+                    val result = stub.featuresAssociatedTo(8080, features, specToStubPortMap)
+
+                    assertEquals(emptyList<Feature>(), result)
+                }
+            }
+
+            @Test
+            fun `should return multiple features associated with the same port`() {
+                val specToStubPortMap = mapOf(
+                    "spec1.yaml".canonicalPath() to 8080,
+                    "spec2.yaml".canonicalPath() to 8080
+                )
+                val feature1 = mockk<Feature> {
+                    every { specification } returns "spec1.yaml"
+                    every { stubsFromExamples } returns emptyMap()
+                    every { scenarios } returns emptyList()
+                }
+                val feature2 = mockk<Feature> {
+                    every { specification } returns "spec2.yaml"
+                    every { stubsFromExamples } returns emptyMap()
+                    every { scenarios } returns emptyList()
+                }
+                val features = listOf(feature1,feature2)
+
+                HttpStub(features = features).use { stub ->
+                    val result = stub.featuresAssociatedTo(8080, features, specToStubPortMap)
+
+                    assertThat(result).isEqualTo(listOf(feature1, feature2))
+                }
+            }
+
         }
     }
 

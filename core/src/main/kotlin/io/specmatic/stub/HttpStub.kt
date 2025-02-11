@@ -400,7 +400,7 @@ class HttpStub(
     ): HttpStubResponse {
         return getHttpResponse(
             httpRequest = httpRequest,
-            features = featuresAssociatedTo(port).ifEmpty { features },
+            features = featuresAssociatedTo(port, features, specToStubPortMap).ifEmpty { features },
             threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(defaultPort, port)
                 ?: ThreadSafeListOfStubs.emptyStub(),
             threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(defaultPort, port)
@@ -417,17 +417,19 @@ class HttpStub(
         }.response
     }
 
-    private fun featuresAssociatedTo(port: Int): List<Feature> {
-        val specsForGivenPort = portToSpecsMap()[port].orEmpty().map { File(it).canonicalPath }.toSet()
+    internal fun featuresAssociatedTo(
+        port: Int,
+        features: List<Feature>,
+        specToStubPortMap: Map<String, Int>
+    ): List<Feature> {
+        val specsForGivenPort = specToStubPortMap.entries.groupBy(
+            { it.value }, { it.key }
+        )[port].orEmpty().map { File(it).canonicalPath }.toSet()
 
         return features.filter { feature ->
             val spec = feature.specification ?: return@filter false
             File(spec).canonicalPath in specsForGivenPort
         }
-    }
-
-    private fun portToSpecsMap(): Map<Int, List<String>> {
-        return specToStubPortMap.entries.groupBy({ it.value }, { it.key })
     }
 
     private fun handleFlushTransientStubsRequest(httpRequest: HttpRequest): HttpStubResponse {

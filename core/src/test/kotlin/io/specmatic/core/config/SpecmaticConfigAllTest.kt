@@ -21,7 +21,6 @@ import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.utilities.GitRepo
 import io.specmatic.core.utilities.LocalFileSystemSource
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
@@ -640,10 +639,10 @@ internal class SpecmaticConfigAllTest {
         val configV2 = SpecmaticConfigV2.loadFrom(configFromV1) as SpecmaticConfigV2
 
         configV2.test!!.apply {
-            assertThat(getResiliencyTests().getEnableTestSuite()).isEqualTo(ResiliencyTestSuite.all)
-            assertThat(getValidateResponseValues()).isTrue()
-            assertThat(getAllowExtensibleSchema()).isTrue()
-            assertThat(getTimeoutInMilliseconds()).isEqualTo(10)
+            assertThat(resiliencyTests?.enable).isEqualTo(ResiliencyTestSuite.all)
+            assertThat(validateResponseValues).isTrue()
+            assertThat(allowExtensibleSchema).isTrue()
+            assertThat(timeoutInMilliseconds).isEqualTo(10)
         }
     }
 
@@ -663,10 +662,10 @@ internal class SpecmaticConfigAllTest {
         val configV3 = SpecmaticConfigV2.loadFrom(configFromV2) as SpecmaticConfigV2
 
         configV3.test!!.apply {
-            assertThat(getResiliencyTests().getEnableTestSuite()).isEqualTo(ResiliencyTestSuite.all)
-            assertThat(getValidateResponseValues()).isTrue()
-            assertThat(getAllowExtensibleSchema()).isTrue()
-            assertThat(getTimeoutInMilliseconds()).isEqualTo(10)
+            assertThat(resiliencyTests?.enable).isEqualTo(ResiliencyTestSuite.all)
+            assertThat(validateResponseValues).isTrue()
+            assertThat(allowExtensibleSchema).isTrue()
+            assertThat(timeoutInMilliseconds).isEqualTo(10)
         }
     }
 

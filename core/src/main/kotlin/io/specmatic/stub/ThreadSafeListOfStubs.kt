@@ -6,7 +6,6 @@ import io.specmatic.core.Result
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 import io.specmatic.mock.ScenarioStub
-import java.io.File
 
 class ThreadSafeListOfStubs(
     private val httpStubs: MutableList<HttpStubData>,
@@ -17,8 +16,8 @@ class ThreadSafeListOfStubs(
             return httpStubs.size
         }
 
-    fun stubAssociatedTo(defaultPort: Int, port: Int): ThreadSafeListOfStubs? {
-        return portToListOfStubsMap(defaultPort)[port]
+    fun stubAssociatedTo(defaultPort: Int, port: Int): ThreadSafeListOfStubs {
+        return portToListOfStubsMap(defaultPort)[port] ?: emptyStubs()
     }
 
     fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {
@@ -108,14 +107,11 @@ class ThreadSafeListOfStubs(
 
     private fun portToListOfStubsMap(defaultPort: Int): Map<Int, ThreadSafeListOfStubs> {
         synchronized(this) {
-            return httpStubs.groupBy { it.contractPath }
-                .mapKeys {
-                    Pair(it.key, specToPortMap[it.key] ?: defaultPort)
-                }.entries.groupBy(
-                    { it.key.second }, { it.value }
-                ).mapValues { (_, stubs) ->
-                    ThreadSafeListOfStubs(stubs.flatten() as MutableList<HttpStubData>, specToPortMap)
-                }
+            return httpStubs.groupBy {
+                specToPortMap[it.contractPath] ?: defaultPort
+            }.mapValues { (_, stubs) ->
+                ThreadSafeListOfStubs(stubs as MutableList<HttpStubData>, specToPortMap)
+            }
         }
     }
 
@@ -140,7 +136,7 @@ class ThreadSafeListOfStubs(
     }
 
     companion object {
-        fun emptyStub(): ThreadSafeListOfStubs {
+        fun emptyStubs(): ThreadSafeListOfStubs {
             return ThreadSafeListOfStubs(mutableListOf(), emptyMap())
         }
     }

@@ -54,7 +54,7 @@ class ThreadSafeListOfStubsTest {
 
             val result = threadSafeList.stubAssociatedTo(defaultPort = 9090, port = 8000)
 
-            assertNull(result)
+            assertThat(result.size).isEqualTo(0)
         }
 
         @Test
@@ -110,7 +110,7 @@ class ThreadSafeListOfStubsTest {
         }
 
         @Test
-        fun `should return null if no stubs exist`() {
+        fun `should return an empty list if no stubs exist`() {
             val specToPortMap = mapOf("spec1.yaml" to 8080)
             val httpStubs = mutableListOf<HttpStubData>()
 
@@ -118,7 +118,7 @@ class ThreadSafeListOfStubsTest {
 
             val result = threadSafeList.stubAssociatedTo(defaultPort = 9090, port = 8080)
 
-            assertNull(result)
+            assertThat(result.size).isEqualTo(0)
         }
     }
 }

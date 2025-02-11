@@ -162,10 +162,6 @@ class HttpStub(
         requestHandlers.add(requestHandler)
     }
 
-    private fun specmaticConfigFile(): File {
-        return if (specmaticConfigPath == null) File(".") else File(specmaticConfigPath)
-    }
-
     private fun staticHttpStubData(rawHttpStubs: List<HttpStubData>): MutableList<HttpStubData> {
         val staticStubs = rawHttpStubs.filter { it.stubToken == null }
 
@@ -414,10 +410,8 @@ class HttpStub(
         return getHttpResponse(
             httpRequest = httpRequest,
             features = featuresAssociatedTo(port, features, specToPortMap).ifEmpty { features },
-            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(defaultPort, port)
-                ?: ThreadSafeListOfStubs.emptyStub(),
-            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(defaultPort, port)
-                ?: ThreadSafeListOfStubs.emptyStub(),
+            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(defaultPort, port),
+            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(defaultPort, port),
             strictMode = strictMode,
             passThroughTargetBase = passThroughTargetBase,
             httpClientFactory = httpClientFactory,

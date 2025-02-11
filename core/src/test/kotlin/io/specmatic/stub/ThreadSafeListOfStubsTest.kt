@@ -28,7 +28,7 @@ class ThreadSafeListOfStubsTest {
 
             val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToPortMap)
 
-            val result = threadSafeList.stubAssociatedTo(defaultPort = 9090, port = 8080)
+            val result = threadSafeList.stubAssociatedTo(port = 8080, defaultPort = 9090)
 
             assertNotNull(result)
             assertThat(result?.size).isEqualTo(1)
@@ -52,7 +52,7 @@ class ThreadSafeListOfStubsTest {
 
             val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToPortMap)
 
-            val result = threadSafeList.stubAssociatedTo(defaultPort = 9090, port = 8000)
+            val result = threadSafeList.stubAssociatedTo(port = 8000, defaultPort = 9090)
 
             assertThat(result.size).isEqualTo(0)
         }
@@ -76,7 +76,7 @@ class ThreadSafeListOfStubsTest {
 
             val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToPortMap)
 
-            val result = threadSafeList.stubAssociatedTo(defaultPort = 9090, port = 9090)
+            val result = threadSafeList.stubAssociatedTo(port = 9090, defaultPort = 9090)
 
             assertNotNull(result)
             assertEquals(2, result!!.size)
@@ -103,7 +103,7 @@ class ThreadSafeListOfStubsTest {
 
             val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToPortMap)
 
-            val result = threadSafeList.stubAssociatedTo(defaultPort = 9090, port = 8080)
+            val result = threadSafeList.stubAssociatedTo(port = 8080, defaultPort = 9090)
 
             assertNotNull(result)
             assertEquals(3, result!!.size)
@@ -116,7 +116,7 @@ class ThreadSafeListOfStubsTest {
 
             val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToPortMap)
 
-            val result = threadSafeList.stubAssociatedTo(defaultPort = 9090, port = 8080)
+            val result = threadSafeList.stubAssociatedTo(port = 8080, defaultPort = 9090)
 
             assertThat(result.size).isEqualTo(0)
         }

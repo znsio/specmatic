@@ -28,8 +28,7 @@ class SamplesCommand : Callable<Unit> {
                     feature,
                     emptyList(),
                     "127.0.0.1",
-                    56789,
-                    specToStubPortMap = mapOf(feature.specification.orEmpty() to 56789)
+                    56789
                 ).use { stub ->
                     feature.executeTests(stub.client)
                     Contract(feature).samples(stub)

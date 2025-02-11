@@ -16,7 +16,7 @@ class ThreadSafeListOfStubs(
             return httpStubs.size
         }
 
-    fun stubAssociatedTo(defaultPort: Int, port: Int): ThreadSafeListOfStubs {
+    fun stubAssociatedTo(port: Int, defaultPort: Int): ThreadSafeListOfStubs {
         return portToListOfStubsMap(defaultPort)[port] ?: emptyStubs()
     }
 

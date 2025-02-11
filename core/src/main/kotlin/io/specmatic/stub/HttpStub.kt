@@ -75,7 +75,7 @@ class HttpStub(
     val workingDirectory: WorkingDirectory? = null,
     val specmaticConfigPath: String? = null,
     private val timeoutMillis: Long = 0,
-    private val specToStubPortMap: Map<String, Int?> = features.associate { it.specification.orEmpty() to port }
+    private val specToStubPortMap: Map<String, Int?> = features.associate { it.path to port }
 ) : ContractStub {
     constructor(
         feature: Feature,
@@ -83,7 +83,7 @@ class HttpStub(
         host: String = "localhost",
         port: Int = 9000,
         log: (event: LogMessage) -> Unit = dontPrintToConsole,
-        specToStubPortMap: Map<String, Int> = mapOf(feature.specification.orEmpty() to port)
+        specToStubPortMap: Map<String, Int> = mapOf(feature.path to port)
     ) : this(
         listOf(feature),
         contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))),
@@ -105,7 +105,7 @@ class HttpStub(
         host,
         port,
         log,
-        specToStubPortMap = emptyMap()
+        specToStubPortMap = mapOf(parseGherkinStringToFeature(gherkinData).path to port)
     )
 
     companion object {
@@ -409,9 +409,9 @@ class HttpStub(
     ): HttpStubResponse {
         return getHttpResponse(
             httpRequest = httpRequest,
-            features = featuresAssociatedTo(port, features, specToPortMap).ifEmpty { features },
-            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(defaultPort, port),
-            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(defaultPort, port),
+            features = featuresAssociatedTo(port, features, specToPortMap),
+            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(port, defaultPort),
+            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(port, defaultPort),
             strictMode = strictMode,
             passThroughTargetBase = passThroughTargetBase,
             httpClientFactory = httpClientFactory,

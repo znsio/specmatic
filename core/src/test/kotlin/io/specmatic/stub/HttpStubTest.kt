@@ -2293,7 +2293,7 @@ components:
                     body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
                 )
                 val importedProductResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9000, null)
+                    endPointFromHostAndPort("localhost", 9001, null)
                 ).execute(request)
                 assertThat(
                     (importedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
@@ -2301,7 +2301,7 @@ components:
 
 
                 val exportedProductResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9001, null)
+                    endPointFromHostAndPort("localhost", 9002, null)
                 ).execute(request)
                 assertThat(
                     (exportedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
@@ -2309,7 +2309,7 @@ components:
 
 
                 val anotherExportedProductResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9002, null)
+                    endPointFromHostAndPort("localhost", 9003, null)
                 ).execute(request)
                 assertThat(
                     (anotherExportedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
@@ -2354,6 +2354,32 @@ components:
                 ).body as JSONObjectValue
 
                 assertThat(productWithCategoryResponse.jsonObject).containsKey("category")
+            }
+        }
+
+        @Test
+        fun `should return an error if a request associated to a spec being served on a non-default port is made to the default port`() {
+            val specmaticConfigFile = File("src/test/resources/multi_port_stub/specmatic.yaml")
+            val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+            val contractPathData = contractStubPaths(specmaticConfigFile.absolutePath)
+            val scenarioStubs = scenarioStubsFrom(specmaticConfigFile, contractPathData, specmaticConfig)
+
+            HttpStub(
+                features = scenarioStubs.features(),
+                rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+                specmaticConfigPath = specmaticConfigFile.canonicalPath,
+                specToStubPortMap = contractPathData.specToPortMap()
+            ).use {
+                val request = HttpRequest(
+                    method = "POST",
+                    path = "/products",
+                    body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
+                )
+                val response = HttpClient(
+                    endPointFromHostAndPort("localhost", 9000, null)
+                ).execute(request)
+
+                assertThat(response.status).isEqualTo(400)
             }
         }
 

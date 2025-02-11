@@ -204,7 +204,16 @@ data class SpecmaticConfig(
 ) {
     companion object {
         fun getReport(specmaticConfig: SpecmaticConfig): ReportConfigurationDetails? {
-            return specmaticConfig.report
+            val report = specmaticConfig.report ?: return null
+            val version = specmaticConfig.version ?: return report
+
+            runCatching { report.handleExcludedEndpointsDuringUpgrade() }
+                .onFailure {
+                    logger.log("WARNING: ${it.message.orEmpty()}\n")
+                    report.clearPresenceOfExcludedEndpoints()
+                }
+
+            return report
         }
 
         @JsonIgnore
@@ -721,6 +730,17 @@ data class ReportConfigurationDetails(
         return this
     }
 
+    fun handleExcludedEndpointsDuringUpgrade(): ReportConfigurationDetails {
+        if (types.apiCoverage.openAPI.excludedEndpoints.isNotEmpty()) {
+            throw UnsupportedOperationException("excludedEndpoints is not supported in Specmatic config v2.")
+        }
+        return this
+    }
+
+    fun clearPresenceOfExcludedEndpoints() {
+        types.apiCoverage.openAPI.excludedEndpoints.clear();
+    }
+
 
     @JsonIgnore
     override fun withDefaultFormattersIfMissing(): ReportConfigurationDetails {
@@ -804,7 +824,7 @@ data class APICoverage (
 
 data class APICoverageConfiguration(
     val successCriteria: SuccessCriteria? = null,
-    val excludedEndpoints: List<String> = emptyList()
+    val excludedEndpoints: MutableList<String> = mutableListOf()
 )
 
 data class SuccessCriteria(

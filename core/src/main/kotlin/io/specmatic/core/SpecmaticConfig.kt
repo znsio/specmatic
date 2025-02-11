@@ -688,12 +688,7 @@ interface ReportConfiguration {
     fun getSuccessCriteria(): SuccessCriteria
     fun <T> mapRenderers(fn: (ReportFormatterType) -> T): List<T>
     fun excludedOpenAPIEndpoints(): List<String>
-}
 
-data class ReportConfigurationDetails(
-    val formatters: List<ReportFormatterDetails>? = null,
-    val types: ReportTypes = ReportTypes()
-) : ReportConfiguration {
     companion object {
         val default = ReportConfigurationDetails(
             formatters = listOf(
@@ -701,7 +696,14 @@ data class ReportConfigurationDetails(
                 ReportFormatterDetails(ReportFormatterType.HTML)
             ), types = ReportTypes()
         )
+    }
+}
 
+data class ReportConfigurationDetails(
+    val formatters: List<ReportFormatterDetails>? = null,
+    val types: ReportTypes? = null
+) : ReportConfiguration {
+    companion object {
         fun getFormatters(report: ReportConfigurationDetails?): List<ReportFormatterDetails>? {
             return report?.formatters
         }
@@ -714,10 +716,10 @@ data class ReportConfigurationDetails(
     @JsonIgnore
     override fun withDefaultFormattersIfMissing(): ReportConfigurationDetails {
         val htmlReportFormatter = formatters?.firstOrNull {
-            it.type == ReportFormatterType.HTML
+            it.getTypeOrDefault() == ReportFormatterType.HTML
         } ?: ReportFormatterDetails(ReportFormatterType.HTML)
         val textReportFormatter = formatters?.firstOrNull {
-            it.type == ReportFormatterType.TEXT
+            it.getTypeOrDefault() == ReportFormatterType.TEXT
         } ?: ReportFormatterDetails(ReportFormatterType.TEXT)
 
         return this.copy(formatters = listOf(htmlReportFormatter, textReportFormatter))
@@ -725,48 +727,88 @@ data class ReportConfigurationDetails(
 
     @JsonIgnore
     override fun getHTMLFormatter(): ReportFormatterDetails? {
-        return formatters?.firstOrNull { it.type == ReportFormatterType.HTML }
+        return formatters?.firstOrNull { it.getTypeOrDefault() == ReportFormatterType.HTML }
     }
 
     @JsonIgnore
     override fun getSuccessCriteria(): SuccessCriteria {
-        return types.apiCoverage.openAPI.successCriteria ?: SuccessCriteria()
+        return types?.apiCoverage?.openAPI?.successCriteria ?: SuccessCriteria.default
     }
 
     @JsonIgnore
     override fun <T> mapRenderers(fn: (ReportFormatterType) -> T): List<T> {
         return formatters!!.map {
-            fn(it.type)
+            fn(it.getTypeOrDefault())
         }
     }
 
     @JsonIgnore
     override fun excludedOpenAPIEndpoints(): List<String> {
-        return types.apiCoverage.openAPI.excludedEndpoints
+        return types?.apiCoverage?.openAPI?.excludedEndpoints ?: emptyList()
     }
 }
 
 interface ReportFormatter {
-    var type: ReportFormatterType
-    val layout: ReportFormatterLayout
-    val lite: Boolean
-    val title: String
-    val logo: String
-    val logoAltText: String
-    val heading: String
-    val outputDirectory: String
+    fun getTypeOrDefault(): ReportFormatterType
+    fun getLayoutOrDefault(): ReportFormatterLayout
+    fun getLiteOrDefault(): Boolean
+    fun getTitleOrDefault(): String
+    fun getLogoOrDefault(): String
+    fun getLogoAltTextOrDefault(): String
+    fun getHeadingOrDefault(): String
+    fun getOutputDirectoryOrDefault(): String
 }
 
-data class ReportFormatterDetails (
-    override var type: ReportFormatterType = ReportFormatterType.TEXT,
-    override val layout: ReportFormatterLayout = ReportFormatterLayout.TABLE,
-    override val lite: Boolean = false,
-    override val title: String = "Specmatic Report",
-    override val logo: String = "assets/specmatic-logo.svg",
-    override val logoAltText: String = "Specmatic",
-    override val heading: String = "Contract Test Results",
-    override val outputDirectory: String = "./build/reports/specmatic/html"
-) : ReportFormatter
+data class ReportFormatterDetails(
+    val type: ReportFormatterType? = null,
+    val layout: ReportFormatterLayout? = null,
+    val lite: Boolean? = null,
+    val title: String? = null,
+    val logo: String? = null,
+    val logoAltText: String? = null,
+    val heading: String? = null,
+    val outputDirectory: String? = null
+) : ReportFormatter {
+    @JsonIgnore
+    override fun getTypeOrDefault(): ReportFormatterType {
+        return type ?: ReportFormatterType.TEXT
+    }
+
+    @JsonIgnore
+    override fun getLayoutOrDefault(): ReportFormatterLayout {
+        return layout ?: ReportFormatterLayout.TABLE
+    }
+
+    @JsonIgnore
+    override fun getLiteOrDefault(): Boolean {
+        return lite ?: false
+    }
+
+    @JsonIgnore
+    override fun getTitleOrDefault(): String {
+        return title ?: "Specmatic Report"
+    }
+
+    @JsonIgnore
+    override fun getLogoOrDefault(): String {
+        return logo ?: "assets/specmatic-logo.svg"
+    }
+
+    @JsonIgnore
+    override fun getLogoAltTextOrDefault(): String {
+        return logoAltText ?: "Specmatic"
+    }
+
+    @JsonIgnore
+    override fun getHeadingOrDefault(): String {
+        return heading ?: "Contract Test Results"
+    }
+
+    @JsonIgnore
+    override fun getOutputDirectoryOrDefault(): String {
+        return outputDirectory ?: "./build/reports/specmatic/html"
+    }
+}
 
 enum class ReportFormatterType {
     @JsonProperty("text")
@@ -781,26 +823,45 @@ enum class ReportFormatterLayout {
     TABLE
 }
 
-data class ReportTypes (
+data class ReportTypes(
     @param:JsonProperty("APICoverage")
-    val apiCoverage: APICoverage = APICoverage()
+    val apiCoverage: APICoverage? = null
 )
 
-data class APICoverage (
+data class APICoverage(
     @param:JsonProperty("OpenAPI")
-    val openAPI: APICoverageConfiguration = APICoverageConfiguration()
+    val openAPI: APICoverageConfiguration? = null
 )
 
 data class APICoverageConfiguration(
     val successCriteria: SuccessCriteria? = null,
-    val excludedEndpoints: List<String> = emptyList()
+    val excludedEndpoints: List<String>? = null
 )
 
 data class SuccessCriteria(
-    val minThresholdPercentage: Int = 0,
-    val maxMissedEndpointsInSpec: Int = 0,
-    val enforce: Boolean = false
-)
+    val minThresholdPercentage: Int? = null,
+    val maxMissedEndpointsInSpec: Int? = null,
+    val enforce: Boolean? = null
+) {
+    companion object {
+        val default = SuccessCriteria(0, 0, false)
+    }
+
+    @JsonIgnore
+    fun getMinThresholdPercentageOrDefault(): Int {
+        return minThresholdPercentage ?: 0
+    }
+
+    @JsonIgnore
+    fun getMaxMissedEndpointsInSpecOrDefault(): Int {
+        return maxMissedEndpointsInSpec ?: 0
+    }
+
+    @JsonIgnore
+    fun getEnforceOrDefault(): Boolean {
+        return enforce ?: false
+    }
+}
 
 data class SecurityConfiguration(
     @param:JsonProperty("OpenAPI")

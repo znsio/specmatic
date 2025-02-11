@@ -277,7 +277,7 @@ data class ContractPathData(
 ) {
     companion object {
         fun List<ContractPathData>.specToPortMap(): Map<String, Int?> {
-            return this.associate { it.path to it.port }
+            return this.associate { File(it.path).path to it.port }
         }
     }
 }

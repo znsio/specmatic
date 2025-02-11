@@ -205,8 +205,6 @@ data class SpecmaticConfig(
     companion object {
         fun getReport(specmaticConfig: SpecmaticConfig): ReportConfigurationDetails? {
             val report = specmaticConfig.report ?: return null
-            val version = specmaticConfig.version ?: return report
-
             runCatching { report.handleExcludedEndpointsDuringUpgrade() }
                 .onFailure {
                     logger.log("WARNING: ${it.message.orEmpty()}\n")

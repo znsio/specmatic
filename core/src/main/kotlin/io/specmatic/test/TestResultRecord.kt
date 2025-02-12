@@ -1,7 +1,10 @@
 package io.specmatic.test
 
+import com.ezylang.evalex.Expression
 import io.specmatic.core.Result
 import io.specmatic.core.TestResult
+import io.specmatic.core.filters.FilterableExpression
+import io.specmatic.core.filters.ScenarioFilterTags
 
 data class TestResultRecord(
     val path: String,
@@ -17,8 +20,12 @@ data class TestResultRecord(
     val scenarioResult: Result? = null,
     val isValid: Boolean = true,
     val isWip: Boolean = false
-) {
+) : FilterableExpression
+{
     val isExercised = result !in setOf(TestResult.MissingInSpec, TestResult.NotCovered)
     val isCovered = result !in setOf(TestResult.MissingInSpec, TestResult.NotCovered)
     fun isConnectionRefused() = actualResponseStatus == 0
+    override fun populateExpressionData(expression: Expression): Expression {
+        return expression.with(ScenarioFilterTags.PATH.key, path)
+    }
 }

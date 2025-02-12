@@ -1,0 +1,20 @@
+{
+    "http-request": {
+        "path": "/orders",
+        "method": "POST",
+        "body": {
+            "productId": "10",
+            "quantity": 500,
+            "totalPrice": 800.0
+        }
+    },
+    "http-response": {
+        "status": 201,
+        "body": {
+            "id": "222",
+            "productId": "10",
+            "quantity": 500,
+            "totalPrice": 800.0
+        }
+    }
+}

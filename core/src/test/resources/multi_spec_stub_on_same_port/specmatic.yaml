@@ -1,0 +1,7 @@
+version: 2
+contracts:
+  - filesystem:
+      directory: "."
+    consumes:
+      - ./product/product.yaml
+      - ./order/order.yaml

@@ -2,15 +2,14 @@ package io.specmatic.core.config.v2
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import io.specmatic.core.*
-import io.specmatic.core.SpecmaticConfig.Companion.getAttributeSelectionPattern
 import io.specmatic.core.SpecmaticConfig.Companion.getAllPatternsMandatory
+import io.specmatic.core.SpecmaticConfig.Companion.getAttributeSelectionPattern
 import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
-import io.specmatic.core.SpecmaticConfig.Companion.getWorkflowConfiguration
-import io.specmatic.core.SpecmaticConfig.Companion.getVirtualServiceConfiguration
 import io.specmatic.core.SpecmaticConfig.Companion.getTestConfiguration
-import io.specmatic.core.SpecmaticConfig.Companion.getStubConfiguration
+import io.specmatic.core.SpecmaticConfig.Companion.getVirtualServiceConfiguration
+import io.specmatic.core.SpecmaticConfig.Companion.getWorkflowConfiguration
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticVersionedConfig
 import io.specmatic.core.config.SpecmaticVersionedConfigLoader
@@ -20,16 +19,16 @@ import io.specmatic.core.utilities.Flags.Companion.getStringValue
 
 data class SpecmaticConfigV2(
     val version: SpecmaticConfigVersion,
-    val contracts: List<ContractConfig> = emptyList(),
+    val contracts: List<ContractConfig>? = null,
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
-    val hooks: Map<String, String> = emptyMap(),
+    val hooks: Map<String, String>? = null,
     val repository: RepositoryInfo? = null,
     val report: ReportConfigurationDetails? = null,
     val security: SecurityConfiguration? = null,
-    val test: TestConfiguration? = TestConfiguration(),
-    val stub: StubConfiguration = StubConfiguration(),
+    val test: TestConfiguration? = null,
+    val stub: StubConfiguration? = null,
     @field:JsonAlias("virtual_service") val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
     val workflow: WorkflowConfiguration? = null,
@@ -45,7 +44,7 @@ data class SpecmaticConfigV2(
     override fun transform(): SpecmaticConfig {
         return SpecmaticConfig(
             version = currentConfigVersion(),
-            sources = this.contracts.map { contract -> contract.transform() },
+            sources = this.contracts?.map { contract -> contract.transform() },
             auth = this.auth,
             pipeline = this.pipeline,
             environments = this.environments,
@@ -74,7 +73,7 @@ data class SpecmaticConfigV2(
         override fun loadFrom(config: SpecmaticConfig): SpecmaticVersionedConfig {
             return SpecmaticConfigV2(
                 version = currentConfigVersion(),
-                contracts = SpecmaticConfig.getSources(config).map { ContractConfig(it) },
+                contracts = SpecmaticConfig.getSources(config)?.map { ContractConfig(it) },
                 auth = config.getAuth(),
                 pipeline = getPipeline(config),
                 environments = SpecmaticConfig.getEnvironments(config),
@@ -83,7 +82,7 @@ data class SpecmaticConfigV2(
                 report = SpecmaticConfig.getReport(config)?.validatePresenceOfExcludedEndpoints(currentConfigVersion()),
                 security = getSecurityConfiguration(config),
                 test = getTestConfiguration(config),
-                stub = getStubConfiguration(config),
+                stub = SpecmaticConfig.getStubConfiguration(config),
                 virtualService = getVirtualServiceConfiguration(config),
                 examples = config.getExamples(),
                 workflow = getWorkflowConfiguration(config),

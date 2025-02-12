@@ -1495,7 +1495,8 @@ data class Feature(
         return Pair(descriptor, commonValueType)
     }
 
-    private fun convergePatternMap(map1: Map<String, Pattern>, map2: Map<String, Pattern>): Map<String, Pattern> {
+    @Suppress("MemberVisibilityCanBePrivate")
+    fun convergePatternMap(map1: Map<String, Pattern>, map2: Map<String, Pattern>): Map<String, Pattern> {
         val common: Map<String, Pattern> = map1.filter { entry ->
             val cleanedKey = withoutOptionality(entry.key)
             cleanedKey in map2 || "${cleanedKey}?" in map2

@@ -554,31 +554,7 @@ data class TestConfiguration(
     val validateResponseValues: Boolean? = null,
     val allowExtensibleSchema: Boolean? = null,
     val timeoutInMilliseconds: Long? = null
-) {
-    companion object {
-        fun getDefaultResiliencyTestsConfig(): ResiliencyTestsConfig {
-            return ResiliencyTestsConfig(
-                isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
-                isOnlyPositiveFlagEnabled = getBooleanValue(ONLY_POSITIVE)
-            )
-        }
-    }
-    fun getResiliencyTests(): ResiliencyTestsConfig {
-        return resiliencyTests ?: getDefaultResiliencyTestsConfig()
-    }
-
-    fun getValidateResponseValues(): Boolean? {
-        return validateResponseValues
-    }
-
-    fun getAllowExtensibleSchema(): Boolean? {
-        return allowExtensibleSchema
-    }
-
-    fun getTimeoutInMilliseconds(): Long? {
-        return timeoutInMilliseconds
-    }
-}
+)
 
 enum class ResiliencyTestSuite {
     all, positiveOnly, none

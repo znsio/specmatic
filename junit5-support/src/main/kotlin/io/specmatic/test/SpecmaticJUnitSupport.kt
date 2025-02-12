@@ -507,18 +507,25 @@ open class SpecmaticJUnitSupport {
             feature.scenarios.asSequence(),
             filterName,
             filterNotName
-        ) { it.testDescription() }
+        ) {
+            it.testDescription()
+        }
+
         val filteredScenarios = filterUsing(
             filteredScenariosBasedOnName,
             testFilter
-        )
-        { it.toScenarioMetadata() }
-        val remainingScenarios = feature.scenarios.filterNot { scenario ->
-            filteredScenarios.contains(scenario)
+        ) {
+            it.toScenarioMetadata()
         }
-        val excludedEndpoints = remainingScenarios.map {
-            convertPathParameterStyle(it.toScenarioMetadata().path)
-        }
+
+        val filteredScenarioPaths = filteredScenarios.map { convertPathParameterStyle(it.path) }
+
+        val filteredOutScenarios = feature.scenarios.filter { scenario -> scenario !in filteredScenarios }
+
+        val filteredOutScenarioPaths = filteredOutScenarios.map { convertPathParameterStyle(it.path) }
+
+        val excludedEndpoints = filteredOutScenarioPaths.filter { it !in filteredScenarioPaths }
+
         openApiCoverageReportInput.addExcludedAPIs(excludedEndpoints);
         val tests: Sequence<ContractTest> = feature
             .copy(scenarios = filteredScenarios.toList())

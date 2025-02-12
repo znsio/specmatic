@@ -93,27 +93,11 @@ fun String.loadContract(): Feature {
 }
 
 data class StubConfiguration(
-    private val generative: Boolean? = null,
-    private val delayInMilliseconds: Long? = null,
-    private val dictionary: String? = null,
-    private val includeMandatoryAndRequestedKeysInResponse: Boolean? = null
-) {
-    fun getGenerative(): Boolean? {
-        return generative
-    }
-
-    fun getDelayInMilliseconds(): Long? {
-        return delayInMilliseconds ?: getLongValue(SPECMATIC_STUB_DELAY)
-    }
-
-    fun getDictionary(): String? {
-        return dictionary ?: getStringValue(SPECMATIC_STUB_DICTIONARY)
-    }
-
-    fun getIncludeMandatoryAndRequestedKeysInResponse(): Boolean? {
-        return includeMandatoryAndRequestedKeysInResponse
-    }
-}
+    val generative: Boolean? = null,
+    val delayInMilliseconds: Long? = null,
+    val dictionary: String? = null,
+    val includeMandatoryAndRequestedKeysInResponse: Boolean? = null
+)
 
 data class VirtualServiceConfiguration(
     private val nonPatchableKeys: Set<String> = emptySet()
@@ -194,7 +178,7 @@ data class SpecmaticConfig(
     private val report: ReportConfigurationDetails? = null,
     private val security: SecurityConfiguration? = null,
     private val test: TestConfiguration? = null,
-    private val stub: StubConfiguration = StubConfiguration(),
+    private val stub: StubConfiguration? = null,
     private val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     private val examples: List<String>? = null,
     private val workflow: WorkflowConfiguration? = null,
@@ -261,7 +245,7 @@ data class SpecmaticConfig(
         }
 
         @JsonIgnore
-        fun getStubConfiguration(specmaticConfig: SpecmaticConfig): StubConfiguration {
+        fun getStubConfiguration(specmaticConfig: SpecmaticConfig): StubConfiguration? {
             return specmaticConfig.stub
         }
 
@@ -405,22 +389,22 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun getStubIncludeMandatoryAndRequestedKeysInResponse(): Boolean {
-        return stub.getIncludeMandatoryAndRequestedKeysInResponse() ?: true
+        return stub?.includeMandatoryAndRequestedKeysInResponse ?: true
     }
 
     @JsonIgnore
     fun getStubGenerative(): Boolean {
-        return stub.getGenerative() ?: false
+        return stub?.generative ?: false
     }
 
     @JsonIgnore
     fun getStubDelayInMilliseconds(): Long? {
-        return stub.getDelayInMilliseconds()
+        return stub?.delayInMilliseconds ?: getLongValue(SPECMATIC_STUB_DELAY)
     }
 
     @JsonIgnore
     fun getStubDictionary(): String? {
-        return stub.getDictionary()
+        return stub?.dictionary ?: getStringValue(SPECMATIC_STUB_DICTIONARY)
     }
 
     @JsonIgnore

@@ -7,7 +7,6 @@ import io.specmatic.core.SpecmaticConfig.Companion.getAttributeSelectionPattern
 import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
-import io.specmatic.core.SpecmaticConfig.Companion.getStubConfiguration
 import io.specmatic.core.SpecmaticConfig.Companion.getTestConfiguration
 import io.specmatic.core.SpecmaticConfig.Companion.getVirtualServiceConfiguration
 import io.specmatic.core.SpecmaticConfig.Companion.getWorkflowConfiguration
@@ -29,7 +28,7 @@ data class SpecmaticConfigV2(
     val report: ReportConfigurationDetails? = null,
     val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = null,
-    val stub: StubConfiguration = StubConfiguration(),
+    val stub: StubConfiguration? = null,
     @field:JsonAlias("virtual_service") val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
     val workflow: WorkflowConfiguration? = null,
@@ -83,7 +82,7 @@ data class SpecmaticConfigV2(
                 report = SpecmaticConfig.getReport(config)?.validatePresenceOfExcludedEndpoints(currentConfigVersion()),
                 security = getSecurityConfiguration(config),
                 test = getTestConfiguration(config),
-                stub = getStubConfiguration(config),
+                stub = SpecmaticConfig.getStubConfiguration(config),
                 virtualService = getVirtualServiceConfiguration(config),
                 examples = config.getExamples(),
                 workflow = getWorkflowConfiguration(config),

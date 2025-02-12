@@ -9,9 +9,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.specmatic.core.Configuration.Companion.configFilePath
-import io.specmatic.core.SourceProvider.filesystem
-import io.specmatic.core.SourceProvider.git
-import io.specmatic.core.SourceProvider.web
+import io.specmatic.core.SourceProvider.*
 import io.specmatic.core.azure.AzureAPI
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.VERSION_1
@@ -186,7 +184,7 @@ data class AttributeSelectionPattern(
 }
 
 data class SpecmaticConfig(
-    private val sources: List<Source> = emptyList(),
+    private val sources: List<Source>? = null,
     private val auth: Auth? = null,
     private val pipeline: Pipeline? = null,
     private val environments: Map<String, Environment>? = null,
@@ -212,7 +210,7 @@ data class SpecmaticConfig(
         }
 
         @JsonIgnore
-        fun getSources(specmaticConfig: SpecmaticConfig): List<Source> {
+        fun getSources(specmaticConfig: SpecmaticConfig): List<Source>? {
             return specmaticConfig.sources
         }
 
@@ -300,7 +298,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun stubPorts(defaultPort: Int): List<Int> {
-        return sources.flatMap {
+        return sources.orEmpty().flatMap {
             it.stub.orEmpty().map { consumes ->
                 when(consumes) {
                     is Consumes.StringValue -> defaultPort
@@ -314,7 +312,9 @@ data class SpecmaticConfig(
         logger.log("Dependency projects")
         logger.log("-------------------")
 
-        sources.forEach { source ->
+        val availableSources = sources ?: return logger.log("\nNo sources exists in the given Specmatic Config")
+
+        availableSources.forEach { source ->
             logger.log("In central repo ${source.repository}")
 
             source.test?.forEach { relativeContractPath ->
@@ -337,7 +337,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun loadSources(): List<ContractSource> {
-        return sources.map { source ->
+        return sources.orEmpty().map { source ->
             val stubPaths = source.specToStubPortMap().entries.map { ContractSourceEntry(it.key, it.value) }
             val testPaths = source.test.orEmpty().map { ContractSourceEntry(it) }
 
@@ -346,9 +346,7 @@ data class SpecmaticConfig(
                     null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
                     else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
                 }
-
-                filesystem -> LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
-
+                filesystem, null -> LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
                 web -> WebSource(testPaths, stubPaths)
             }
         }
@@ -386,7 +384,8 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun getResiliencyTestsEnabled(): ResiliencyTestSuite {
-        return (test?.resiliencyTests ?: ResiliencyTestsConfig.fromSystemProperties()).enable ?: ResiliencyTestSuite.none
+        return (test?.resiliencyTests ?: ResiliencyTestsConfig.fromSystemProperties()).enable
+            ?: ResiliencyTestSuite.none
     }
 
     @JsonIgnore
@@ -516,7 +515,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun stubContracts(relativeTo: File = File(".")): List<String> {
-        return sources.flatMap { source ->
+        return sources.orEmpty().flatMap { source ->
             source.stub.orEmpty().flatMap { stub ->
                 when (stub) {
                     is Consumes.StringValue -> listOf(stub.value)
@@ -626,7 +625,7 @@ enum class SourceProvider { git, filesystem, web }
 
 data class Source(
     @field:JsonAlias("type")
-    val provider: SourceProvider = filesystem,
+    val provider: SourceProvider? = null,
     val repository: String? = null,
     val branch: String? = null,
     @field:JsonAlias("provides")
@@ -659,11 +658,6 @@ data class Source(
                 }
             }
         }.toMap()
-    }
-
-    private fun String.canonicalPath(relativeTo: File): String {
-        if (provider == web) return this
-        return relativeTo.parentFile?.resolve(this)?.canonicalPath ?: File(this).canonicalPath
     }
 }
 
@@ -704,7 +698,7 @@ data class ReportConfigurationDetails(
 ) : ReportConfiguration {
 
     fun validatePresenceOfExcludedEndpoints(currentVersion: SpecmaticConfigVersion): ReportConfigurationDetails {
-        if(currentVersion.isLessThanOrEqualTo(VERSION_1))
+        if (currentVersion.isLessThanOrEqualTo(VERSION_1))
             return this
 
         if (types?.apiCoverage?.openAPI?.excludedEndpoints.orEmpty().isNotEmpty()) {

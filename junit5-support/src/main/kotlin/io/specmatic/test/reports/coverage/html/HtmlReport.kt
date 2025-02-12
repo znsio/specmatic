@@ -2,7 +2,7 @@ package io.specmatic.test.reports.coverage.html
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
-import io.specmatic.core.ReportFormatterDetails
+import io.specmatic.core.ReportFormatter
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.SuccessCriteria
 import io.specmatic.core.TestResult
@@ -15,7 +15,7 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 
 class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
-    private val outputDirectory = htmlReportInformation.reportFormat.outputDirectory
+    private val outputDirectory = htmlReportInformation.reportFormat.getOutputDirectoryOrDefault()
     private val apiSuccessCriteria = htmlReportInformation.successCriteria
     private val reportFormat = htmlReportInformation.reportFormat
     private val reportData = htmlReportInformation.reportData
@@ -45,11 +45,11 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         val updatedTableRows = updateTableRows(reportData.tableRows)
 
         val templateVariables = mapOf(
-            "lite" to reportFormat.lite,
-            "pageTitle" to reportFormat.title,
-            "reportHeading" to reportFormat.heading,
-            "logo" to reportFormat.logo,
-            "logoAltText" to reportFormat.logoAltText,
+            "lite" to reportFormat.getLiteOrDefault(),
+            "pageTitle" to reportFormat.getTitleOrDefault(),
+            "reportHeading" to reportFormat.getHeadingOrDefault(),
+            "logo" to reportFormat.getLogoOrDefault(),
+            "logoAltText" to reportFormat.getLogoAltTextOrDefault(),
             "summaryResult" to if (testCriteria && successCriteria) "approved" else "rejected",
             "totalCoverage" to reportData.totalCoveragePercentage,
             "totalSuccess" to totalSuccess,
@@ -59,7 +59,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
             "totalTests" to totalTests,
             "totalDuration" to reportData.totalTestDuration,
             "actuatorEnabled" to reportData.actuatorEnabled,
-            "minimumCoverage" to apiSuccessCriteria.minThresholdPercentage,
+            "minimumCoverage" to apiSuccessCriteria.getMinThresholdPercentageOrDefault(),
             "successCriteriaPassed" to successCriteria,
             "testCriteriaPassed" to testCriteria,
             "tableConfig" to htmlReportInformation.tableConfig,
@@ -110,7 +110,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
     }
 
     private fun successCriteriaPassed(totalCoveragePercentage: Int): Boolean {
-        return totalCoveragePercentage >= apiSuccessCriteria.minThresholdPercentage || !apiSuccessCriteria.enforce
+        return totalCoveragePercentage >= apiSuccessCriteria.getMinThresholdPercentageOrDefault() || !apiSuccessCriteria.getEnforceOrDefault()
     }
 
     private fun calculateTestGroupCounts(scenarioData: Map<String, Map<String, Map<String, List<ScenarioData>>>>) {
@@ -130,7 +130,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
             }
         }
 
-        totalTests = when (reportFormat.lite) {
+        totalTests = when (reportFormat.getLiteOrDefault()) {
             true ->  totalSuccess + totalFailures + totalErrors
             else ->  totalSuccess + totalFailures + totalErrors + totalSkipped
         }
@@ -188,7 +188,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
 }
 
 data class HtmlReportInformation(
-    val reportFormat: ReportFormatterDetails,
+    val reportFormat: ReportFormatter,
     val specmaticConfig: SpecmaticConfig,
     val successCriteria: SuccessCriteria,
     val specmaticImplementation: String,

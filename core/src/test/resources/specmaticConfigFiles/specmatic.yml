@@ -41,7 +41,6 @@ report:
         excludedEndpoints:
           - /heartbeat
           - /health
-
 security:
   OpenAPI:
     securitySchemes:

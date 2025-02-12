@@ -1,3 +1,7 @@
+buildscript {
+    apply from: "https://raw.githubusercontent.com/znsio/specmatic-gradle-task-helpers/refs/heads/main/build.gradle?x_=${(int) (new Date().toInstant().epochSecond / 600)}"
+}
+
 plugins {
     id 'java'
     id 'maven-publish'

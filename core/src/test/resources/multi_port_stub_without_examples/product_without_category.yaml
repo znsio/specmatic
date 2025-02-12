@@ -1,0 +1,83 @@
+openapi: 3.0.3
+info:
+  title: Product API
+  version: 1.0.0
+paths:
+  /products:
+    post:
+      summary: Add a new product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - price
+              properties:
+                name:
+                  type: string
+                price:
+                  type: number
+            examples:
+              ADD_PRODUCT_SUCCESS:
+                value:
+                  name: "Widget"
+                  price: 9.99
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+              examples:
+                ADD_PRODUCT_SUCCESS:
+                  value:
+                    id: 1
+                    name: "Widget"
+                    price: 9.99
+    get:
+      summary: List all products
+      responses:
+        '200':
+          description: A list of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+              examples:
+                LIST_PRODUCTS_SUCCESS:
+                  value:
+                    - id: 1
+                      name: "Widget"
+                      price: 9.99
+                    - id: 2
+                      name: "Gadget"
+                      price: 19.99
+components:
+  schemas:
+    ProductId:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: integer
+    ProductDetails:
+      type: object
+      required:
+        - name
+        - price
+      properties:
+        name:
+          type: string
+        price:
+          type: number
+    Product:
+      allOf:
+        - $ref: '#/components/schemas/ProductId'
+        - $ref: '#/components/schemas/ProductDetails'

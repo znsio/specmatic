@@ -47,17 +47,31 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.getPipelineProject()).isEqualTo("XNSIO")
         assertThat(config.getPipelineDefinitionId()).isEqualTo(1)
 
-        assertThat(SpecmaticConfig.getEnvironments(config)?.get("staging")?.baseurls?.get("auth.spec")).isEqualTo("http://localhost:8080")
-        assertThat(SpecmaticConfig.getEnvironments(config)?.get("staging")?.variables?.get("username")).isEqualTo("jackie")
-        assertThat(SpecmaticConfig.getEnvironments(config)?.get("staging")?.variables?.get("password")).isEqualTo("PaSsWoRd")
+        assertThat(
+            SpecmaticConfig.getEnvironments(config)?.get("staging")?.baseurls?.get("auth.spec")
+        ).isEqualTo("http://localhost:8080")
+        assertThat(
+            SpecmaticConfig.getEnvironments(config)?.get("staging")?.variables?.get("username")
+        ).isEqualTo("jackie")
+        assertThat(
+            SpecmaticConfig.getEnvironments(config)?.get("staging")?.variables?.get("password")
+        ).isEqualTo("PaSsWoRd")
 
-        assertThat(ReportConfigurationDetails.getFormatters(SpecmaticConfig.getReport(config))?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
-        assertThat(ReportConfigurationDetails.getFormatters(SpecmaticConfig.getReport(config))?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
-        assertThat(ReportConfigurationDetails.getTypes(SpecmaticConfig.getReport(config))?.apiCoverage?.openAPI?.successCriteria?.minThresholdPercentage).isEqualTo(70)
-        assertThat(ReportConfigurationDetails.getTypes(SpecmaticConfig.getReport(config))?.apiCoverage?.openAPI?.successCriteria?.maxMissedEndpointsInSpec).isEqualTo(3)
-        assertThat(ReportConfigurationDetails.getTypes(SpecmaticConfig.getReport(config))?.apiCoverage?.openAPI?.successCriteria?.enforce).isTrue()
-        assertThat(ReportConfigurationDetails.getTypes(SpecmaticConfig.getReport(config))?.apiCoverage?.openAPI?.excludedEndpoints?.get(0)).isEqualTo("/heartbeat")
-        assertThat(ReportConfigurationDetails.getTypes(SpecmaticConfig.getReport(config))?.apiCoverage?.openAPI?.excludedEndpoints?.get(1)).isEqualTo("/health")
+        assertThat(SpecmaticConfig.getReport(config)?.formatters?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
+        assertThat(SpecmaticConfig.getReport(config)?.formatters?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
+        assertThat(SpecmaticConfig.getReport(config)?.types?.apiCoverage?.openAPI?.successCriteria?.minThresholdPercentage).isEqualTo(
+            70
+        )
+        assertThat(SpecmaticConfig.getReport(config)?.types?.apiCoverage?.openAPI?.successCriteria?.maxMissedEndpointsInSpec).isEqualTo(
+            3
+        )
+        assertThat(SpecmaticConfig.getReport(config)?.types?.apiCoverage?.openAPI?.successCriteria?.enforce).isTrue()
+        assertThat(SpecmaticConfig.getReport(config)?.types?.apiCoverage?.openAPI?.excludedEndpoints?.get(0)).isEqualTo(
+            "/heartbeat"
+        )
+        assertThat(SpecmaticConfig.getReport(config)?.types?.apiCoverage?.openAPI?.excludedEndpoints?.get(1)).isEqualTo(
+            "/health"
+        )
 
         assertThat(
             (config.getOpenAPISecurityConfigurationScheme("oAuth2AuthCode") as OAuth2SecuritySchemeConfiguration).token
@@ -85,7 +99,7 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.getStubDelayInMilliseconds()).isEqualTo(1000L)
         assertThat(config.getStubGenerative()).isEqualTo(false)
 
-        val htmlConfig = ReportConfigurationDetails.getFormatters(SpecmaticConfig.getReport(config))?.first { it.type == ReportFormatterType.HTML }
+        val htmlConfig = SpecmaticConfig.getReport(config)?.formatters?.first { it.type == ReportFormatterType.HTML }
         assertThat(htmlConfig?.title).isEqualTo("Test Report")
         assertThat(htmlConfig?.heading).isEqualTo("Test Results")
         assertThat(htmlConfig?.outputDirectory).isEqualTo("output")
@@ -145,13 +159,13 @@ internal class SpecmaticConfigKtTest {
         assertThat(SpecmaticConfig.getEnvironments(config)?.get("staging")?.variables?.get("username")).isEqualTo("jackie")
         assertThat(SpecmaticConfig.getEnvironments(config)?.get("staging")?.variables?.get("password")).isEqualTo("PaSsWoRd")
 
-        assertThat(ReportConfigurationDetails.getFormatters(SpecmaticConfig.getReport(config))?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
-        assertThat(ReportConfigurationDetails.getFormatters(SpecmaticConfig.getReport(config))?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
-        assertThat(ReportConfigurationDetails.getTypes(SpecmaticConfig.getReport(config))?.apiCoverage?.openAPI?.successCriteria?.minThresholdPercentage).isEqualTo(70)
-        assertThat(ReportConfigurationDetails.getTypes(SpecmaticConfig.getReport(config))?.apiCoverage?.openAPI?.successCriteria?.maxMissedEndpointsInSpec).isEqualTo(3)
-        assertThat(ReportConfigurationDetails.getTypes(SpecmaticConfig.getReport(config))?.apiCoverage?.openAPI?.successCriteria?.enforce).isTrue()
-        assertThat(ReportConfigurationDetails.getTypes(SpecmaticConfig.getReport(config))?.apiCoverage?.openAPI?.excludedEndpoints?.get(0)).isEqualTo("/heartbeat")
-        assertThat(ReportConfigurationDetails.getTypes(SpecmaticConfig.getReport(config))?.apiCoverage?.openAPI?.excludedEndpoints?.get(1)).isEqualTo("/health")
+        assertThat(SpecmaticConfig.getReport(config)?.formatters?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
+        assertThat(SpecmaticConfig.getReport(config)?.formatters?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
+        assertThat(SpecmaticConfig.getReport(config)?.types?.apiCoverage?.openAPI?.successCriteria?.minThresholdPercentage).isEqualTo(70)
+        assertThat(SpecmaticConfig.getReport(config)?.types?.apiCoverage?.openAPI?.successCriteria?.maxMissedEndpointsInSpec).isEqualTo(3)
+        assertThat(SpecmaticConfig.getReport(config)?.types?.apiCoverage?.openAPI?.successCriteria?.enforce).isTrue()
+        assertThat(SpecmaticConfig.getReport(config)?.types?.apiCoverage?.openAPI?.excludedEndpoints?.get(0)).isEqualTo("/heartbeat")
+        assertThat(SpecmaticConfig.getReport(config)?.types?.apiCoverage?.openAPI?.excludedEndpoints?.get(1)).isEqualTo("/health")
 
         assertThat(
             (config.getOpenAPISecurityConfigurationScheme("oAuth2AuthCode") as OAuth2SecuritySchemeConfiguration).token
@@ -250,60 +264,6 @@ internal class SpecmaticConfigKtTest {
 
     @Nested
     inner class StubPortConfigTests {
-        @Test
-        fun `should return the spec to stub port map from sources`() {
-            val source1 = Source(
-                stub = listOf(
-                    Consumes.StringValue("9000_first.yaml"),
-                    Consumes.StringValue("9000_second.yaml"),
-                    Consumes.ObjectValue(
-                        specs = listOf("9001_first.yaml", "9001_second.yaml"),
-                        port = 9001
-                    ),
-                    Consumes.ObjectValue(
-                        specs = listOf("9002_first.yaml"),
-                        port = 9002
-                    ),
-                )
-            )
-
-            val source2 = Source(
-                stub = listOf(
-                    Consumes.StringValue("9000_third.yaml"),
-                    Consumes.ObjectValue(
-                        specs = listOf("9001_third.yaml", "9001_fourth.yaml"),
-                        port = 9001
-                    ),
-                    Consumes.ObjectValue(
-                        specs = listOf("9002_second.yaml"),
-                        port = 9002
-                    ),
-                )
-            )
-
-            val specmaticConfig = SpecmaticConfig(
-                sources = listOf(source1, source2)
-            )
-
-            val expectedMap = mapOf(
-                "9000_first.yaml" to 9000,
-                "9000_second.yaml" to 9000,
-                "9000_third.yaml" to 9000,
-                "9001_first.yaml" to 9001,
-                "9001_second.yaml" to 9001,
-                "9001_third.yaml" to 9001,
-                "9001_fourth.yaml" to 9001,
-                "9002_first.yaml" to 9002,
-                "9002_second.yaml" to 9002,
-            )
-
-            assertThat(
-                specmaticConfig.specToStubPortMap(
-                    9000
-                ).mapKeys { it.key.substringAfterLast(File.separator) }
-            ).isEqualTo(expectedMap)
-        }
-
         @Test
         fun `should return all stub ports from sources`() {
             val source1 = Source(

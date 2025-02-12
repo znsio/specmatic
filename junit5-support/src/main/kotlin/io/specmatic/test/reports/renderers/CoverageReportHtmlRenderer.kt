@@ -1,6 +1,6 @@
 package io.specmatic.test.reports.renderers
 
-import io.specmatic.core.ReportFormatterDetails
+import io.specmatic.core.ReportFormatter
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.logger
@@ -50,7 +50,7 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
         )
 
         HtmlReport(htmlReportInformation).generate()
-        return "Successfully generated HTML report in ${htmlReportConfiguration.outputDirectory}"
+        return "Successfully generated HTML report in ${htmlReportConfiguration.getOutputDirectoryOrDefault()}"
     }
 
     private fun getSpecmaticVersion(): String {
@@ -61,8 +61,11 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
         return props.getProperty("version")
     }
 
-    private fun makeTableRows(report: OpenAPICoverageConsoleReport, htmlReportConfiguration: ReportFormatterDetails): List<TableRow> {
-        val updatedCoverageRows = when(htmlReportConfiguration.lite) {
+    private fun makeTableRows(
+        report: OpenAPICoverageConsoleReport,
+        htmlReportConfiguration: ReportFormatter
+    ): List<TableRow> {
+        val updatedCoverageRows = when (htmlReportConfiguration.getLiteOrDefault()) {
             true -> reCreateCoverageRowsForLite(report, report.coverageRows)
             else -> report.coverageRows
         }

@@ -6,6 +6,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.specmatic.toContractSourceEntries
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -31,7 +32,7 @@ class WebSourceTest {
 
             val webSource = WebSource(
                 listOf(),
-                listOf(specificationOnTheWeb)
+                listOf(specificationOnTheWeb).toContractSourceEntries()
             )
 
             val contractData = webSource.loadContracts({ source -> source.stubContracts }, DEFAULT_WORKING_DIRECTORY, "")

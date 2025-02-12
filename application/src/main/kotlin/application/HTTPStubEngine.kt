@@ -23,7 +23,8 @@ class HTTPStubEngine {
         specmaticConfigPath: String? = null,
         httpClientFactory: HttpClientFactory,
         workingDirectory: WorkingDirectory,
-        gracefulRestartTimeoutInMs: Long
+        gracefulRestartTimeoutInMs: Long,
+        specToPortMap: Map<String, Int?>
     ): HttpStub {
         return HttpStub(
             features = stubs.map { it.first },
@@ -37,18 +38,19 @@ class HTTPStubEngine {
             httpClientFactory = httpClientFactory,
             workingDirectory = workingDirectory,
             specmaticConfigPath = specmaticConfigPath,
-            timeoutMillis = gracefulRestartTimeoutInMs
+            timeoutMillis = gracefulRestartTimeoutInMs,
+            specToStubPortMap = specToPortMap
         ).also {
             consoleLog(NewLineLogMessage)
-            consoleLog(StringLog(serverStartupMessage(it.specToStubPortMap)))
+            consoleLog(StringLog(serverStartupMessage(specToPortMap)))
             consoleLog(StringLog("Press Ctrl + C to stop."))
         }
     }
 
-    private fun serverStartupMessage(specToStubPortMap: Map<String, Int>): String {
+    private fun serverStartupMessage(specToStubPortMap: Map<String, Int?>): String {
         val newLine = System.lineSeparator()
         val portToSpecs: Map<Int, List<String>> = specToStubPortMap.entries
-            .groupBy({ it.value }, { it.key })
+            .groupBy({ it.value ?: 9000 }, { it.key })
 
         val messageBuilder = StringBuilder("Stub server is running on the following URLs:")
 

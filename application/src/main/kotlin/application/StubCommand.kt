@@ -5,6 +5,7 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.core.utilities.ContractPathData.Companion.specToPortMap
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.exitIfAnyDoNotExist
 import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
@@ -192,7 +193,19 @@ class StubCommand : Callable<Unit> {
             true -> if (portIsInUse(host, port)) findRandomFreePort() else port
             false -> port
         }
-        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, specmaticConfigPath, httpClientFactory, workingDirectory, gracefulRestartTimeoutInMs)
+        httpStub = httpStubEngine.runHTTPStub(
+            stubs = stubData,
+            host = host,
+            port = port,
+            certInfo = certInfo,
+            strictMode = strictMode,
+            passThroughTargetBase = passThroughTargetBase,
+            specmaticConfigPath = specmaticConfigPath,
+            httpClientFactory = httpClientFactory,
+            workingDirectory = workingDirectory,
+            gracefulRestartTimeoutInMs = gracefulRestartTimeoutInMs,
+            specToPortMap = contractSources.specToPortMap()
+        )
 
         LogTail.storeSnapshot()
     }

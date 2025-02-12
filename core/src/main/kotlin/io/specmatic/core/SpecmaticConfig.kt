@@ -312,9 +312,9 @@ data class SpecmaticConfig(
         logger.log("Dependency projects")
         logger.log("-------------------")
 
-        val sources = sources ?: return logger.log("\nNo sources exists in the given Specmatic Config")
+        val availableSources = sources ?: return logger.log("\nNo sources exists in the given Specmatic Config")
 
-        sources.forEach { source ->
+        availableSources.forEach { source ->
             logger.log("In central repo ${source.repository}")
 
             source.test?.forEach { relativeContractPath ->
@@ -346,8 +346,8 @@ data class SpecmaticConfig(
                     null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
                     else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
                 }
-                web -> WebSource(testPaths, stubPaths)
                 filesystem, null -> LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
+                web -> WebSource(testPaths, stubPaths)
             }
         }
     }

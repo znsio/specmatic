@@ -9,8 +9,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.specmatic.core.Configuration.Companion.configFilePath
-import io.specmatic.core.SourceProvider.git
-import io.specmatic.core.SourceProvider.web
+import io.specmatic.core.SourceProvider.*
 import io.specmatic.core.azure.AzureAPI
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.VERSION_1
@@ -299,19 +298,21 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun stubPorts(defaultPort: Int): List<Int> {
-        return sources?.flatMap {
+        return sources.orEmpty().flatMap {
             it.stub.orEmpty().map { consumes ->
                 when(consumes) {
                     is Consumes.StringValue -> defaultPort
                     is Consumes.ObjectValue -> consumes.port
                 }
             }
-        }?.plus(defaultPort)?.distinct() ?: listOf(defaultPort)
+        }.plus(defaultPort).distinct()
     }
 
     fun logDependencyProjects(azure: AzureAPI) {
         logger.log("Dependency projects")
         logger.log("-------------------")
+
+        val sources = sources
 
         sources?.forEach { source ->
             logger.log("In central repo ${source.repository}")
@@ -330,7 +331,7 @@ data class SpecmaticConfig(
 
                 logger.newLine()
             }
-        } ?: logger.log("No sources exists in the given Specmatic Config")
+        } ?: logger.log("\nNo sources exists in the given Specmatic Config")
     }
 
 
@@ -346,7 +347,7 @@ data class SpecmaticConfig(
                     else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
                 }
                 web -> WebSource(testPaths, stubPaths)
-                else -> LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
+                filesystem, null -> LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
             }
         } ?: emptyList()
     }
@@ -514,7 +515,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun stubContracts(relativeTo: File = File(".")): List<String> {
-        return sources?.flatMap { source ->
+        return sources.orEmpty().flatMap { source ->
             source.stub.orEmpty().flatMap { stub ->
                 when (stub) {
                     is Consumes.StringValue -> listOf(stub.value)

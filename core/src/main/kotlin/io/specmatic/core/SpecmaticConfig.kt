@@ -9,7 +9,6 @@ import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.specmatic.core.Configuration.Companion.configFilePath
-import io.specmatic.core.SourceProvider.filesystem
 import io.specmatic.core.SourceProvider.git
 import io.specmatic.core.SourceProvider.web
 import io.specmatic.core.azure.AzureAPI
@@ -346,10 +345,8 @@ data class SpecmaticConfig(
                     null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
                     else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
                 }
-
-                filesystem -> LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
-
                 web -> WebSource(testPaths, stubPaths)
+                else -> LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
             }
         } ?: emptyList()
     }
@@ -627,7 +624,7 @@ enum class SourceProvider { git, filesystem, web }
 
 data class Source(
     @field:JsonAlias("type")
-    val provider: SourceProvider = filesystem,
+    val provider: SourceProvider? = null,
     val repository: String? = null,
     val branch: String? = null,
     @field:JsonAlias("provides")

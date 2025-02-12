@@ -525,7 +525,7 @@ data class SpecmaticConfig(
                 if (source.provider == web) spec
                 else spec.canonicalPath(relativeTo)
             }
-        } ?: emptyList()
+        }
     }
 
     @JsonIgnore

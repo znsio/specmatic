@@ -312,9 +312,9 @@ data class SpecmaticConfig(
         logger.log("Dependency projects")
         logger.log("-------------------")
 
-        val sources = sources
+        val sources = sources ?: return logger.log("\nNo sources exists in the given Specmatic Config")
 
-        sources?.forEach { source ->
+        sources.forEach { source ->
             logger.log("In central repo ${source.repository}")
 
             source.test?.forEach { relativeContractPath ->
@@ -331,13 +331,13 @@ data class SpecmaticConfig(
 
                 logger.newLine()
             }
-        } ?: logger.log("\nNo sources exists in the given Specmatic Config")
+        }
     }
 
 
     @JsonIgnore
     fun loadSources(): List<ContractSource> {
-        return sources?.map { source ->
+        return sources.orEmpty().map { source ->
             val stubPaths = source.specToStubPortMap().entries.map { ContractSourceEntry(it.key, it.value) }
             val testPaths = source.test.orEmpty().map { ContractSourceEntry(it) }
 
@@ -349,7 +349,7 @@ data class SpecmaticConfig(
                 web -> WebSource(testPaths, stubPaths)
                 filesystem, null -> LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
             }
-        } ?: emptyList()
+        }
     }
 
     @JsonIgnore

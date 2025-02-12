@@ -31,13 +31,13 @@ internal class SpecmaticConfigKtTest {
     fun `parse specmatic config file with all values`(configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
 
-        val sources = SpecmaticConfig.getSources(config)
+        val sources = SpecmaticConfig.getSources(config).orEmpty()
         assertThat(sources).isNotEmpty
 
-        assertThat(sources?.first()?.provider).isEqualTo(SourceProvider.git)
-        assertThat(sources?.first()?.repository).isEqualTo("https://contracts")
-        assertThat(sources?.first()?.test).isEqualTo(listOf("com/petstore/1.spec"))
-        assertThat(sources?.first()?.specsUsedAsStub()).isEqualTo(listOf("com/petstore/payment.spec"))
+        assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
+        assertThat(sources.first().repository).isEqualTo("https://contracts")
+        assertThat(sources.first().test).isEqualTo(listOf("com/petstore/1.spec"))
+        assertThat(sources.first().specsUsedAsStub()).isEqualTo(listOf("com/petstore/payment.spec"))
 
         assertThat(config.getAuthBearerFile()).isEqualTo("bearer.txt")
         assertThat(config.getAuthBearerEnvironmentVariable()).isNull()

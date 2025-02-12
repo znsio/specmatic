@@ -232,11 +232,11 @@ internal class SpecmaticConfigAllTest {
         val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
         val SpecmaticConfigV2 = objectMapper.readValue(File(configFile).readText(), SpecmaticConfigV2::class.java)
 
-        val contracts = SpecmaticConfigV2.contracts
+        val contracts = SpecmaticConfigV2.contracts.orEmpty()
 
-        assertThat(contracts?.size).isEqualTo(2)
-        assertThat(contracts?.get(0)?.contractSource).isInstanceOf(GitContractSource::class.java)
-        val gitContractSource = contracts?.get(0)?.contractSource as GitContractSource
+        assertThat(contracts.size).isEqualTo(2)
+        assertThat(contracts.get(0).contractSource).isInstanceOf(GitContractSource::class.java)
+        val gitContractSource = contracts.get(0).contractSource as GitContractSource
         assertThat(gitContractSource.url).isEqualTo("https://contracts")
         assertThat(gitContractSource.branch).isEqualTo("1.0.1")
         assertThat(contracts[0].provides).containsOnly("com/petstore/1.yaml")

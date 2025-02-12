@@ -658,11 +658,6 @@ data class Source(
             }
         }.toMap()
     }
-
-    private fun String.canonicalPath(relativeTo: File): String {
-        if (provider == web) return this
-        return relativeTo.parentFile?.resolve(this)?.canonicalPath ?: File(this).canonicalPath
-    }
 }
 
 data class RepositoryInfo(

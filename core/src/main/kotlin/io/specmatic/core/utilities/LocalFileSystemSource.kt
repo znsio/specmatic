@@ -6,8 +6,8 @@ import java.io.File
 
 data class LocalFileSystemSource(
     val directory: String = ".",
-    override val testContracts: List<String>,
-    override val stubContracts: List<String>
+    override val testContracts: List<ContractSourceEntry>,
+    override val stubContracts: List<ContractSourceEntry>
 ) : ContractSource {
     override val type = "filesystem"
 
@@ -38,13 +38,14 @@ data class LocalFileSystemSource(
         configFilePath: String
     ): List<ContractPathData> {
         return selector.select(this).map {
-            val resolvedPath = File(directory).resolve(it)
+            val resolvedPath = File(directory).resolve(it.path)
 
             ContractPathData(
                 directory,
                 resolvedPath.path,
                 provider = type,
                 specificationPath = resolvedPath.canonicalPath,
+                port = it.port
             )
         }
     }

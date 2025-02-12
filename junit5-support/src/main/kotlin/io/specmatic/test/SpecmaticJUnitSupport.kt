@@ -1,6 +1,5 @@
 package io.specmatic.test
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
@@ -68,7 +67,6 @@ open class SpecmaticJUnitSupport {
         const val FILTER_NAME_PROPERTY = "filterName"
         const val FILTER_NOT_NAME_PROPERTY = "filterNotName"
         const val FILTER = "filter"
-        const val FILTER_NOT = "filterNot"
         const val FILTER_NAME_ENVIRONMENT_VARIABLE = "FILTER_NAME"
         const val FILTER_NOT_NAME_ENVIRONMENT_VARIABLE = "FILTER_NOT_NAME"
         const val OVERLAY_FILE_PATH = "overlayFilePath"
@@ -78,8 +76,8 @@ open class SpecmaticJUnitSupport {
 
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfig: SpecmaticConfig? = null
-        val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
-        private val scenarioMetadataFilter = ScenarioMetadataFilter.from(readEnvVarOrProperty(FILTER, FILTER).orEmpty())
+        var openApiCoverageReportInput: OpenApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
+        private val testFilter = ScenarioMetadataFilter.from(readEnvVarOrProperty(FILTER, FILTER).orEmpty())
 
         private val threads: Vector<String> = Vector<String>()
 
@@ -105,7 +103,7 @@ open class SpecmaticJUnitSupport {
 
             if (reportConfiguration == null) {
                 logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
-                return ReportConfigurationDetails.default
+                return ReportConfiguration.default
             }
 
             return reportConfiguration.withDefaultFormattersIfMissing()
@@ -220,6 +218,9 @@ open class SpecmaticJUnitSupport {
         val overlayFilePath: String? = System.getProperty(OVERLAY_FILE_PATH) ?: System.getenv(OVERLAY_FILE_PATH)
         val overlayContent = if(overlayFilePath.isNullOrBlank()) "" else readFrom(overlayFilePath, "overlay")
 
+        val filterExpression = System.getProperty(FILTER, "")
+        openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath(), filterExpression = filterExpression)
+
         specmaticConfig = getSpecmaticConfig()
 
         val timeoutInMilliseconds = specmaticConfig?.getTestTimeoutInMilliseconds() ?: try {
@@ -306,12 +307,12 @@ open class SpecmaticJUnitSupport {
                 filterNotName
             ) { it.testDescription() }
 
-            filterUsing(filteredTestsBasedOnName, scenarioMetadataFilter) {
+            filterUsing(filteredTestsBasedOnName, testFilter) {
                 it.toScenarioMetadata()
             }
-        } catch(e: ContractException) {
+        } catch (e: ContractException) {
             return loadExceptionAsTestError(e)
-        } catch(e: Throwable) {
+        } catch (e: Throwable) {
             return loadExceptionAsTestError(e)
         }
 
@@ -353,7 +354,7 @@ open class SpecmaticJUnitSupport {
 
                 try {
                     testResult = contractTest.runTest(testBaseURL, timeoutInMilliseconds)
-                    val (result, response) = testResult
+                    val (result) = testResult
 
                     if (result is Result.Success && result.isPartialSuccess()) {
                         partialSuccesses.add(result)
@@ -506,11 +507,26 @@ open class SpecmaticJUnitSupport {
             feature.scenarios.asSequence(),
             filterName,
             filterNotName
-        ) { it.testDescription() }
+        ) {
+            it.testDescription()
+        }
+
         val filteredScenarios = filterUsing(
             filteredScenariosBasedOnName,
-            scenarioMetadataFilter
-        ) { it.toScenarioMetadata() }
+            testFilter
+        ) {
+            it.toScenarioMetadata()
+        }
+
+        val filteredScenarioPaths = filteredScenarios.map { convertPathParameterStyle(it.path) }
+
+        val filteredOutScenarios = feature.scenarios.filter { scenario -> scenario !in filteredScenarios }
+
+        val filteredOutScenarioPaths = filteredOutScenarios.map { convertPathParameterStyle(it.path) }
+
+        val excludedEndpoints = filteredOutScenarioPaths.filter { it !in filteredScenarioPaths }
+
+        openApiCoverageReportInput.addExcludedAPIs(excludedEndpoints);
         val tests: Sequence<ContractTest> = feature
             .copy(scenarios = filteredScenarios.toList())
             .also {

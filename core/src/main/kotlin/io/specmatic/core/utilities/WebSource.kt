@@ -8,7 +8,7 @@ import java.io.File
 import java.net.ServerSocket
 import java.net.URL
 
-class WebSource(override val testContracts: List<String>, override val stubContracts: List<String>) : ContractSource {
+class WebSource(override val testContracts: List<ContractSourceEntry>, override val stubContracts: List<ContractSourceEntry>) : ContractSource {
     override val type: String = "web"
     override fun pathDescriptor(path: String): String {
         return ""
@@ -38,7 +38,7 @@ class WebSource(override val testContracts: List<String>, override val stubContr
         configFilePath: String
     ): List<ContractPathData> {
         val resolvedPath = File(workingDirectory).resolve("web")
-        return selector.select(this).map { url ->
+        return selector.select(this).map { (url, port) ->
             val path = toSpecificationPath(URL(url))
 
             val initialDownloadPath = resolvedPath.resolve(path).canonicalFile
@@ -50,7 +50,8 @@ class WebSource(override val testContracts: List<String>, override val stubContr
                 resolvedPath.path,
                 actualDownloadPath.path,
                 provider = type,
-                specificationPath = initialDownloadPath.canonicalPath
+                specificationPath = initialDownloadPath.canonicalPath,
+                port = port
             )
         }
     }

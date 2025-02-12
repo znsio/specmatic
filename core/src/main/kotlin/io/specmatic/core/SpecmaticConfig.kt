@@ -43,6 +43,9 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import java.io.File
 
+private const val excludedEndpointsWarning =
+    "WARNING: excludedEndpoints is not supported in Specmatic config v2. . Refer to https://specmatic.io/documentation/configuration.html#report-configuration to see how to exclude endpoints."
+
 const val APPLICATION_NAME = "Specmatic"
 const val APPLICATION_NAME_LOWER_CASE = "specmatic"
 const val CONFIG_FILE_NAME_WITHOUT_EXT = "specmatic"
@@ -268,6 +271,18 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
+    fun dropExcludedEndpointsAfterVersion1(latestVersion: SpecmaticConfigVersion): SpecmaticConfig {
+        if (latestVersion == VERSION_1)
+            return this
+
+        logger.log("\n$excludedEndpointsWarning\n")
+
+        return this.copy(
+            report = report?.clearPresenceOfExcludedEndpoints()
+        )
+    }
+
+    @JsonIgnore
     fun getReport(): ReportConfiguration? {
         return report
     }
@@ -280,13 +295,6 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun getAttributeSelectionPattern(): AttributeSelectionPatternDetails {
         return attributeSelectionPattern
-    }
-
-    @JsonIgnore
-    fun specToStubPortMap(defaultPort: Int, relativeTo: File = File(".")): Map<String, Int> {
-        return sources?.flatMap { it.specToStubPortMap(defaultPort, relativeTo).entries }
-            ?.associate { it.key to it.value }
-            ?: emptyMap()
     }
 
     @JsonIgnore
@@ -329,30 +337,18 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun loadSources(): List<ContractSource> {
         return sources?.map { source ->
+            val stubPaths = source.specToStubPortMap().entries.map { ContractSourceEntry(it.key, it.value) }
+            val testPaths = source.test.orEmpty().map { ContractSourceEntry(it) }
+
             when (source.provider) {
-                git -> {
-                    val stubPaths = source.specsUsedAsStub()
-                    val testPaths = source.test ?: emptyList()
-
-                    when (source.repository) {
-                        null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
-                        else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
-                    }
+                git -> when (source.repository) {
+                    null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
+                    else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
                 }
 
-                filesystem -> {
-                    val stubPaths = source.specsUsedAsStub()
-                    val testPaths = source.test ?: emptyList()
+                filesystem -> LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
 
-                    LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
-                }
-
-                web -> {
-                    val stubPaths = source.specsUsedAsStub()
-                    val testPaths = source.test ?: emptyList()
-
-                    WebSource(testPaths, stubPaths)
-                }
+                web -> WebSource(testPaths, stubPaths)
             }
         } ?: emptyList()
     }
@@ -364,7 +360,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {
-        return test?.getAllowExtensibleSchema() ?: getBooleanValue(EXTENSIBLE_SCHEMA)
+        return test?.allowExtensibleSchema ?: getBooleanValue(EXTENSIBLE_SCHEMA)
     }
 
     @JsonIgnore
@@ -379,7 +375,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun isResponseValueValidationEnabled(): Boolean {
-        return test?.getValidateResponseValues() ?: getBooleanValue(VALIDATE_RESPONSE_VALUE)
+        return test?.validateResponseValues ?: getBooleanValue(VALIDATE_RESPONSE_VALUE)
     }
 
     @JsonIgnore
@@ -389,19 +385,20 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun getResiliencyTestsEnabled(): ResiliencyTestSuite {
-        return test?.getResiliencyTests()?.getEnableTestSuite() ?: ResiliencyTestSuite.none
+        return (test?.resiliencyTests ?: ResiliencyTestsConfig.fromSystemProperties()).enable
+            ?: ResiliencyTestSuite.none
     }
 
     @JsonIgnore
     fun getTestTimeoutInMilliseconds(): Long? {
-        return test?.getTimeoutInMilliseconds()
+        return test?.timeoutInMilliseconds ?: getLongValue(SPECMATIC_TEST_TIMEOUT)
     }
 
     @JsonIgnore
     fun copyResiliencyTestsConfig(onlyPositive: Boolean): SpecmaticConfig {
         return this.copy(
             test = test?.copy(
-                resiliencyTests = test.getResiliencyTests().copy(
+                resiliencyTests = (test.resiliencyTests ?: ResiliencyTestsConfig.fromSystemProperties()).copy(
                     enable = if (onlyPositive) ResiliencyTestSuite.positiveOnly else ResiliencyTestSuite.all
                 )
             )
@@ -464,12 +461,12 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun getAuthBearerFile(): String? {
-        return auth?.getBearerFile()
+        return auth?.bearerFile
     }
 
     @JsonIgnore
     fun getAuthBearerEnvironmentVariable(): String? {
-        return auth?.getBearerEnvironmentVariable()
+        return auth?.bearerEnvironmentVariable
     }
 
     @JsonIgnore
@@ -554,47 +551,29 @@ data class SpecmaticConfig(
 }
 
 data class TestConfiguration(
-    private val resiliencyTests: ResiliencyTestsConfig? = null,
-    private val validateResponseValues: Boolean? = null,
-    private val allowExtensibleSchema: Boolean? = null,
-    private val timeoutInMilliseconds: Long? = null
-) {
-    fun getResiliencyTests(): ResiliencyTestsConfig {
-        return resiliencyTests ?: ResiliencyTestsConfig(
-            isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
-            isOnlyPositiveFlagEnabled = getBooleanValue(ONLY_POSITIVE)
-        )
-    }
-
-    fun getValidateResponseValues(): Boolean? {
-        return validateResponseValues
-    }
-
-    fun getAllowExtensibleSchema(): Boolean? {
-        return allowExtensibleSchema
-    }
-
-    fun getTimeoutInMilliseconds(): Long? {
-        return timeoutInMilliseconds ?: getLongValue(SPECMATIC_TEST_TIMEOUT)
-    }
-}
+    val resiliencyTests: ResiliencyTestsConfig? = null,
+    val validateResponseValues: Boolean? = null,
+    val allowExtensibleSchema: Boolean? = null,
+    val timeoutInMilliseconds: Long? = null
+)
 
 enum class ResiliencyTestSuite {
     all, positiveOnly, none
 }
 
 data class ResiliencyTestsConfig(
-    private val enable: ResiliencyTestSuite? = null
+    val enable: ResiliencyTestSuite? = null
 ) {
     constructor(isResiliencyTestFlagEnabled: Boolean, isOnlyPositiveFlagEnabled: Boolean) : this(
         enable = getEnableFrom(isResiliencyTestFlagEnabled, isOnlyPositiveFlagEnabled)
     )
 
-    fun getEnableTestSuite(): ResiliencyTestSuite? {
-        return enable
-    }
-
     companion object {
+        fun fromSystemProperties() = ResiliencyTestsConfig(
+            isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
+            isOnlyPositiveFlagEnabled = getBooleanValue(ONLY_POSITIVE)
+        )
+
         private fun getEnableFrom(
             isResiliencyTestFlagEnabled: Boolean,
             isOnlyPositiveFlagEnabled: Boolean
@@ -609,17 +588,9 @@ data class ResiliencyTestsConfig(
 }
 
 data class Auth(
-    @JsonProperty("bearer-file") private val bearerFile: String = "bearer.txt",
-    @JsonProperty("bearer-environment-variable") private val bearerEnvironmentVariable: String? = null
-) {
-    fun getBearerFile(): String {
-        return bearerFile
-    }
-
-    fun getBearerEnvironmentVariable(): String? {
-        return bearerEnvironmentVariable
-    }
-}
+    @param:JsonProperty("bearer-file") val bearerFile: String = "bearer.txt",
+    @param:JsonProperty("bearer-environment-variable") val bearerEnvironmentVariable: String? = null
+)
 
 enum class PipelineProvider { azure }
 
@@ -679,12 +650,12 @@ data class Source(
         }
     }
 
-    fun specToStubPortMap(defaultPort: Int, relativeTo: File = File(".")): Map<String, Int> {
+    fun specToStubPortMap(): Map<String, Int?> {
         return stub.orEmpty().flatMap {
             when (it) {
-                is Consumes.StringValue -> listOf(it.value.canonicalPath(relativeTo) to defaultPort)
+                is Consumes.StringValue -> listOf(it.value to null)
                 is Consumes.ObjectValue -> it.specs.map { specPath ->
-                    specPath.canonicalPath(relativeTo) to it.port
+                    specPath to it.port
                 }
             }
         }.toMap()
@@ -716,12 +687,7 @@ interface ReportConfiguration {
     fun getSuccessCriteria(): SuccessCriteria
     fun <T> mapRenderers(fn: (ReportFormatterType) -> T): List<T>
     fun excludedOpenAPIEndpoints(): List<String>
-}
 
-data class ReportConfigurationDetails(
-    val formatters: List<ReportFormatterDetails>? = null,
-    val types: ReportTypes = ReportTypes()
-) : ReportConfiguration {
     companion object {
         val default = ReportConfigurationDetails(
             formatters = listOf(
@@ -729,67 +695,133 @@ data class ReportConfigurationDetails(
                 ReportFormatterDetails(ReportFormatterType.HTML)
             ), types = ReportTypes()
         )
+    }
+}
 
-        fun getFormatters(report: ReportConfigurationDetails?): List<ReportFormatterDetails>? {
-            return report?.formatters
-        }
+data class ReportConfigurationDetails(
+    val formatters: List<ReportFormatterDetails>? = null,
+    val types: ReportTypes? = null
+) : ReportConfiguration {
 
-        fun getTypes(report: ReportConfigurationDetails?): ReportTypes? {
-            return report?.types
+    fun validatePresenceOfExcludedEndpoints(currentVersion: SpecmaticConfigVersion): ReportConfigurationDetails {
+        if (currentVersion.isLessThanOrEqualTo(VERSION_1))
+            return this
+
+        if (types?.apiCoverage?.openAPI?.excludedEndpoints.orEmpty().isNotEmpty()) {
+            throw UnsupportedOperationException(excludedEndpointsWarning)
         }
+        return this
     }
 
+    fun clearPresenceOfExcludedEndpoints(): ReportConfigurationDetails {
+        return this.copy(
+            types = types?.copy(
+                apiCoverage = types.apiCoverage?.copy(
+                    openAPI = types.apiCoverage.openAPI?.copy(
+                        excludedEndpoints = emptyList()
+                    )
+                )
+            )
+        )
+    }
+
+
+    @JsonIgnore
     override fun withDefaultFormattersIfMissing(): ReportConfigurationDetails {
         val htmlReportFormatter = formatters?.firstOrNull {
-            it.type == ReportFormatterType.HTML
+            it.getTypeOrDefault() == ReportFormatterType.HTML
         } ?: ReportFormatterDetails(ReportFormatterType.HTML)
         val textReportFormatter = formatters?.firstOrNull {
-            it.type == ReportFormatterType.TEXT
+            it.getTypeOrDefault() == ReportFormatterType.TEXT
         } ?: ReportFormatterDetails(ReportFormatterType.TEXT)
 
         return this.copy(formatters = listOf(htmlReportFormatter, textReportFormatter))
     }
 
+    @JsonIgnore
     override fun getHTMLFormatter(): ReportFormatterDetails? {
-        return formatters?.firstOrNull { it.type == ReportFormatterType.HTML }
+        return formatters?.firstOrNull { it.getTypeOrDefault() == ReportFormatterType.HTML }
     }
 
+    @JsonIgnore
     override fun getSuccessCriteria(): SuccessCriteria {
-        return types.apiCoverage.openAPI.successCriteria ?: SuccessCriteria()
+        return types?.apiCoverage?.openAPI?.successCriteria ?: SuccessCriteria.default
     }
 
+    @JsonIgnore
     override fun <T> mapRenderers(fn: (ReportFormatterType) -> T): List<T> {
         return formatters!!.map {
-            fn(it.type)
+            fn(it.getTypeOrDefault())
         }
     }
 
+    @JsonIgnore
     override fun excludedOpenAPIEndpoints(): List<String> {
-        return types.apiCoverage.openAPI.excludedEndpoints
+        return types?.apiCoverage?.openAPI?.excludedEndpoints ?: emptyList()
     }
 }
 
 interface ReportFormatter {
-    var type: ReportFormatterType
-    val layout: ReportFormatterLayout
-    val lite: Boolean
-    val title: String
-    val logo: String
-    val logoAltText: String
-    val heading: String
-    val outputDirectory: String
+    fun getTypeOrDefault(): ReportFormatterType
+    fun getLayoutOrDefault(): ReportFormatterLayout
+    fun getLiteOrDefault(): Boolean
+    fun getTitleOrDefault(): String
+    fun getLogoOrDefault(): String
+    fun getLogoAltTextOrDefault(): String
+    fun getHeadingOrDefault(): String
+    fun getOutputDirectoryOrDefault(): String
 }
 
-data class ReportFormatterDetails (
-    override var type: ReportFormatterType = ReportFormatterType.TEXT,
-    override val layout: ReportFormatterLayout = ReportFormatterLayout.TABLE,
-    override val lite: Boolean = false,
-    override val title: String = "Specmatic Report",
-    override val logo: String = "assets/specmatic-logo.svg",
-    override val logoAltText: String = "Specmatic",
-    override val heading: String = "Contract Test Results",
-    override val outputDirectory: String = "./build/reports/specmatic/html"
-) : ReportFormatter
+data class ReportFormatterDetails(
+    val type: ReportFormatterType? = null,
+    val layout: ReportFormatterLayout? = null,
+    val lite: Boolean? = null,
+    val title: String? = null,
+    val logo: String? = null,
+    val logoAltText: String? = null,
+    val heading: String? = null,
+    val outputDirectory: String? = null
+) : ReportFormatter {
+    @JsonIgnore
+    override fun getTypeOrDefault(): ReportFormatterType {
+        return type ?: ReportFormatterType.TEXT
+    }
+
+    @JsonIgnore
+    override fun getLayoutOrDefault(): ReportFormatterLayout {
+        return layout ?: ReportFormatterLayout.TABLE
+    }
+
+    @JsonIgnore
+    override fun getLiteOrDefault(): Boolean {
+        return lite ?: false
+    }
+
+    @JsonIgnore
+    override fun getTitleOrDefault(): String {
+        return title ?: "Specmatic Report"
+    }
+
+    @JsonIgnore
+    override fun getLogoOrDefault(): String {
+        return logo ?: "assets/specmatic-logo.svg"
+    }
+
+    @JsonIgnore
+    override fun getLogoAltTextOrDefault(): String {
+        return logoAltText ?: "Specmatic"
+    }
+
+    @JsonIgnore
+    override fun getHeadingOrDefault(): String {
+        return heading ?: "Contract Test Results"
+    }
+
+    @JsonIgnore
+    override fun getOutputDirectoryOrDefault(): String {
+        return outputDirectory ?: "./build/reports/specmatic/html"
+    }
+}
 
 enum class ReportFormatterType {
     @JsonProperty("text")
@@ -804,29 +836,48 @@ enum class ReportFormatterLayout {
     TABLE
 }
 
-data class ReportTypes (
-    @JsonProperty("APICoverage")
-    val apiCoverage: APICoverage = APICoverage()
+data class ReportTypes(
+    @param:JsonProperty("APICoverage")
+    val apiCoverage: APICoverage? = null
 )
 
-data class APICoverage (
-    @JsonProperty("OpenAPI")
-    val openAPI: APICoverageConfiguration = APICoverageConfiguration()
+data class APICoverage(
+    @param:JsonProperty("OpenAPI")
+    val openAPI: APICoverageConfiguration? = null
 )
 
 data class APICoverageConfiguration(
     val successCriteria: SuccessCriteria? = null,
-    val excludedEndpoints: List<String> = emptyList()
+    val excludedEndpoints: List<String>? = null
 )
 
 data class SuccessCriteria(
-    val minThresholdPercentage: Int = 0,
-    val maxMissedEndpointsInSpec: Int = 0,
-    val enforce: Boolean = false
-)
+    val minThresholdPercentage: Int? = null,
+    val maxMissedEndpointsInSpec: Int? = null,
+    val enforce: Boolean? = null
+) {
+    companion object {
+        val default = SuccessCriteria(0, 0, false)
+    }
+
+    @JsonIgnore
+    fun getMinThresholdPercentageOrDefault(): Int {
+        return minThresholdPercentage ?: 0
+    }
+
+    @JsonIgnore
+    fun getMaxMissedEndpointsInSpecOrDefault(): Int {
+        return maxMissedEndpointsInSpec ?: 0
+    }
+
+    @JsonIgnore
+    fun getEnforceOrDefault(): Boolean {
+        return enforce ?: false
+    }
+}
 
 data class SecurityConfiguration(
-    @JsonProperty("OpenAPI")
+    @param:JsonProperty("OpenAPI")
     private val OpenAPI: OpenAPISecurityConfiguration?
 ) {
     fun getOpenAPISecurityScheme(scheme: String): SecuritySchemeConfiguration? {

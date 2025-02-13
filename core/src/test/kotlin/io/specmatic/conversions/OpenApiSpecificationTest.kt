@@ -7749,7 +7749,7 @@ paths:
     }
 
     @Test
-    fun `minimum and maximum keywords in Number and Integer types get wired up`() {
+    fun `minimum maximum and exclusivity keywords in Number and Integer types get wired up`() {
         val minAge = BigDecimal(18.0)
         val maxAge = BigDecimal(120.0)
         val feature = OpenApiSpecification.fromYAML(
@@ -7809,11 +7809,18 @@ paths:
             override fun setServerState(serverState: Map<String, Value>) {
             }
         })
+
+        val exclusiveMin = minAge + BIG_DECIMAL_INC
+        val exclusiveMax = maxAge - BIG_DECIMAL_INC
+
+        val minOutsideBounds = exclusiveMin - BIG_DECIMAL_INC
+        val maxOutsideBounds = exclusiveMax + BIG_DECIMAL_INC
+
         assertThat(actualAges).contains(
-            minAge + BIG_DECIMAL_INC,
-            maxAge - BIG_DECIMAL_INC,
-            minAge - BIG_DECIMAL_INC,
-            maxAge + BIG_DECIMAL_INC
+            exclusiveMin,
+            exclusiveMax,
+            minOutsideBounds,
+            maxOutsideBounds
         )
 
         assertThat(results.results.size).isEqualTo(8)

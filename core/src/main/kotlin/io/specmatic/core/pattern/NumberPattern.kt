@@ -75,10 +75,10 @@ data class NumberPattern(
 
         val sampleNumber = BigDecimal(sampleData.number.toString())
 
-        if (sampleNumber >= effectiveMin)
+        if (sampleNumber < effectiveMin)
             return mismatchResult("number >= $effectiveMin", sampleData, resolver.mismatchMessages)
 
-        if (sampleNumber <= effectiveMax)
+        if (sampleNumber > effectiveMax)
             return mismatchResult("number <= $effectiveMax", sampleData, resolver.mismatchMessages)
 
         return Result.Success()

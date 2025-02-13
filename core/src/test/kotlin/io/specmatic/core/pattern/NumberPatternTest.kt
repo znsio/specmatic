@@ -40,13 +40,13 @@ internal class NumberPatternTest {
 
     @Test
     fun `should allow example values as per minimum keyword`() {
-        val result = NumberPattern(minimum = BigDecimal(3.0)).matches(NumberValue(4), Resolver())
+        val result = NumberPattern(minimum = BigDecimal(3)).matches(NumberValue(4), Resolver())
         assertThat(result.isSuccess()).isTrue()
     }
 
     @Test
     fun `should reject example values when minimum keyword is not met`() {
-        val result = NumberPattern(minimum = BigDecimal(3.0)).matches(NumberValue(2), Resolver())
+        val result = NumberPattern(minimum = BigDecimal(3)).matches(NumberValue(2), Resolver())
         assertThat(result.isSuccess()).isFalse()
         assertThat(result.reportString()).isEqualTo("""Expected number >= 3, actual was 2 (number)""")
     }
@@ -59,9 +59,9 @@ internal class NumberPatternTest {
 
     @Test
     fun `should reject example values when exclusiveMinimum keyword is not met`() {
-        val result = NumberPattern(minimum = BigDecimal(3.0), exclusiveMinimum = true).matches(NumberValue(3.0), Resolver())
+        val result = NumberPattern(minimum = BigDecimal(3), exclusiveMinimum = true).matches(NumberValue(3), Resolver())
         assertThat(result.isSuccess()).isFalse()
-        assertThat(result.reportString()).isEqualTo("""Expected number > 3, actual was 3.0 (number)""")
+        assertThat(result.reportString()).isEqualTo("""Expected number >= 4, actual was 3 (number)""")
     }
 
     @Test
@@ -85,15 +85,15 @@ internal class NumberPatternTest {
 
     @Test
     fun `should reject example values when exclusiveMaximum keyword is not met`() {
-        val result = NumberPattern(maximum = BigDecimal(99.0), exclusiveMaximum = true).matches(NumberValue(99.0), Resolver())
+        val result = NumberPattern(maximum = BigDecimal(99), exclusiveMaximum = true).matches(NumberValue(99), Resolver())
         assertThat(result.isSuccess()).isFalse()
-        assertThat(result.reportString()).isEqualTo("""Expected number < 99, actual was 99.0 (number)""")
+        assertThat(result.reportString()).isEqualTo("""Expected number <= 98, actual was 99 (number)""")
     }
 
     @Test
     fun `should not allow maximum less than minimum`() {
         val exception = assertThrows<IllegalArgumentException> { NumberPattern(minimum = BigDecimal(6.0), maximum = BigDecimal(4.0)) }
-        assertThat(exception.message).isEqualTo("Inappropriate minimum and maximum values set")
+        assertThat(exception.message).isEqualTo("minimum cannot be greater than maximum")
     }
 
     @Test
@@ -105,22 +105,22 @@ internal class NumberPatternTest {
     @Test
     fun `should not allow maximum equal to minimum when both exclusive keywords are set to true`() {
         val exception = assertThrows<IllegalArgumentException> { NumberPattern(minimum = BigDecimal(6.0), exclusiveMinimum = true, maximum = BigDecimal(6.0), exclusiveMaximum = true) }
-        assertThat(exception.message).isEqualTo("Inappropriate minimum and maximum values set")
+        assertThat(exception.message).isEqualTo("minimum cannot be equal to maximum when exclusiveMinimum or exclusiveMaximum is true")
     }
 
     @Test
     fun `should not allow maximum greater than minimum by 1 when both exclusive keywords are set to true`() {
         val exception = assertThrows<IllegalArgumentException> { NumberPattern(minimum = BigDecimal(6.0), exclusiveMinimum = true, maximum = BigDecimal(5.0), exclusiveMaximum = true) }
-        assertThat(exception.message).isEqualTo("Inappropriate minimum and maximum values set")
+        assertThat(exception.message).isEqualTo("minimum cannot be greater than maximum")
     }
 
     @Test
     fun `should not allow maximum equal to minimum when any one exclusive keyword is set to true`() {
         val minException = assertThrows<IllegalArgumentException> { NumberPattern(minimum = BigDecimal(6.0), exclusiveMinimum = true, maximum = BigDecimal(6.0), exclusiveMaximum = false) }
-        assertThat(minException.message).isEqualTo("Inappropriate minimum and maximum values set")
+        assertThat(minException.message).isEqualTo("minimum cannot be equal to maximum when exclusiveMinimum or exclusiveMaximum is true")
 
         val maxException = assertThrows<IllegalArgumentException> { NumberPattern(minimum = BigDecimal(6.0), exclusiveMinimum = false, maximum = BigDecimal(6.0), exclusiveMaximum = true) }
-        assertThat(maxException.message).isEqualTo("Inappropriate minimum and maximum values set")
+        assertThat(maxException.message).isEqualTo("minimum cannot be equal to maximum when exclusiveMinimum or exclusiveMaximum is true")
     }
 
     @Test
@@ -296,9 +296,11 @@ internal class NumberPatternTest {
     @Test
     @Tag(GENERATION)
     fun `negative values generated should include a value greater than minimum and maximum keyword values when isDoubleFormat is true`() {
+        val minimum = BigDecimal(10.0)
+        val maximum = BigDecimal(20.0)
         val pattern = NumberPattern(
-            minimum = BigDecimal(10.0),
-            maximum = BigDecimal(20.0),
+            minimum = minimum,
+            maximum = maximum,
             isDoubleFormat = true
         )
         val result = pattern.negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
@@ -307,17 +309,19 @@ internal class NumberPatternTest {
             NullPattern,
             StringPattern(),
             BooleanPattern(),
-            ExactValuePattern(NumberValue(pattern.minimum - BIG_DECIMAL_INC)),
-            ExactValuePattern(NumberValue(pattern.maximum + BIG_DECIMAL_INC)),
+            ExactValuePattern(NumberValue(minimum - BIG_DECIMAL_INC)),
+            ExactValuePattern(NumberValue(maximum + BIG_DECIMAL_INC)),
         )
     }
 
     @Test
     @Tag(GENERATION)
     fun `negative values generated should include a value greater than minimum and maximum keyword values when isDoubleFormat is false`() {
+        val minimum = BigDecimal(10.0)
+        val maximum = BigDecimal(20.0)
         val pattern = NumberPattern(
-            minimum = BigDecimal(10.0),
-            maximum = BigDecimal(20.0),
+            minimum = minimum,
+            maximum = maximum,
         )
         val result = pattern.negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
 
@@ -325,17 +329,19 @@ internal class NumberPatternTest {
             NullPattern,
             StringPattern(),
             BooleanPattern(),
-            ExactValuePattern(NumberValue(pattern.minimum - BigDecimal(1))),
-            ExactValuePattern(NumberValue(pattern.maximum + BigDecimal(1))),
+            ExactValuePattern(NumberValue(minimum - BigDecimal(1))),
+            ExactValuePattern(NumberValue(maximum + BigDecimal(1))),
         )
     }
 
     @Test
     @Tag(GENERATION)
     fun `should exclude data type based negatives when withDataTypeNegatives config is false`() {
+        val minimum = BigDecimal(10.0)
+        val maximum = BigDecimal(20.0)
         val pattern = NumberPattern(
-            minimum = BigDecimal(10.0),
-            maximum = BigDecimal(20.0),
+            minimum = minimum,
+            maximum = maximum,
         )
         val result = pattern.negativeBasedOn(
             Row(),
@@ -344,8 +350,8 @@ internal class NumberPatternTest {
         ).map { it.value }.toList()
 
         assertThat(result).containsExactlyInAnyOrder(
-            ExactValuePattern(NumberValue(pattern.minimum - BigDecimal(1))),
-            ExactValuePattern(NumberValue(pattern.maximum + BigDecimal(1))),
+            ExactValuePattern(NumberValue(minimum - BigDecimal(1))),
+            ExactValuePattern(NumberValue(maximum + BigDecimal(1))),
         )
     }
 

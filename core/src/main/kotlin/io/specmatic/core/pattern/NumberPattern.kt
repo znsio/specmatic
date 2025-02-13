@@ -54,11 +54,8 @@ data class NumberPattern(
 
     private val effectiveMin = if (minimum != null) {
         if (exclusiveMinimum) minimum + smallestPositiveValue else minimum
-    } else if (effectiveMax < BigDecimal(0)) {
+    } else
         smallestNegativeValue
-    } else {
-        BigDecimal(0)
-    }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if (sampleData?.hasTemplate() == true)

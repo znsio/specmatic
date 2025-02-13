@@ -9,12 +9,14 @@ import io.specmatic.core.value.*
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.loadContractStubsFromImplicitPaths
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.fail
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
+import org.junit.jupiter.api.fail
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 
@@ -660,6 +662,18 @@ class StatefulHttpStubConcurrencyTest {
 
         latch.await()
         executor.shutdown()
+
+        fun waitForProducts(maxRetries: Int = 5) {
+            repeat(maxRetries) {
+                val response = httpStub.client.execute(HttpRequest(method = "GET", path = "/products"))
+                if (response.status == 200 && (response.body as JSONArrayValue).list.size == numberOfThreads) {
+                    return
+                }
+                Thread.sleep(100)
+            }
+            fail<String>("Products were not added successfully within the retry limit")
+        }
+        waitForProducts()
 
         // Verify all products were added
         val response = httpStub.client.execute(

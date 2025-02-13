@@ -11,7 +11,6 @@ import io.specmatic.core.log.CompositePrinter
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.LogStrategy
 import io.specmatic.core.pattern.*
-import io.specmatic.core.pattern.NumberPattern.Companion.BIG_DECIMAL_INC
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.EmptyString
@@ -59,6 +58,8 @@ fun openAPIToString(openAPI: OpenAPI): String {
 }
 
 internal class OpenApiSpecificationTest {
+    private val smallInc = BigDecimal("1")
+
     companion object {
         const val OPENAPI_FILE_WITH_YAML_EXTENSION = "openApiTest.yaml"
         const val OPENAPI_FILE_WITH_YML_EXTENSION = "openApiTest.yml"
@@ -7810,11 +7811,11 @@ paths:
             }
         })
 
-        val exclusiveMin = minAge + BIG_DECIMAL_INC
-        val exclusiveMax = maxAge - BIG_DECIMAL_INC
+        val exclusiveMin = minAge + smallInc
+        val exclusiveMax = maxAge - smallInc
 
-        val minOutsideBounds = exclusiveMin - BIG_DECIMAL_INC
-        val maxOutsideBounds = exclusiveMax + BIG_DECIMAL_INC
+        val minOutsideBounds = exclusiveMin - smallInc
+        val maxOutsideBounds = exclusiveMax + smallInc
 
         assertThat(actualAges).contains(
             exclusiveMin,

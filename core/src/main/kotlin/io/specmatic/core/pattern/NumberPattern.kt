@@ -21,41 +21,32 @@ data class NumberPattern(
     override val example: String? = null,
     val isDoubleFormat: Boolean = false
 ) : Pattern, ScalarType, HasDefaultExample {
-
-    companion object {
-        val BIG_DECIMAL_INC: BigDecimal = BigDecimal(Double.MIN_VALUE)
-        val SMALLEST_NEGATIVE_DECIMAL: BigDecimal = BigDecimal(-Double.MAX_VALUE)
-        val SMALLEST_POSITIVE_DECIMAL: BigDecimal = BigDecimal(Double.MIN_VALUE)
-        val BIGGEST_POSITIVE_DECIMAL: BigDecimal = BigDecimal(Double.MAX_VALUE)
-    }
-
-    init {
-        if (minLength < 1) throw IllegalArgumentException("minLength cannot be less than 1")
-        if (maxLength < minLength) throw IllegalArgumentException("maxLength cannot be less than minLength")
-        if (minimum != null && maximum != null) {
-            if (minimum > maximum) throw IllegalArgumentException("minimum cannot be greater than maximum")
-            if ((exclusiveMinimum || exclusiveMaximum) && minimum == maximum) {
-                throw IllegalArgumentException("minimum cannot be equal to maximum when exclusiveMinimum or exclusiveMaximum is true")
-            }
-        }
-    }
     private fun minValueIsSet() = minimum != null
     private fun maxValueIsSet() = maximum != null
     private fun minAndMaxValuesNotSet() = minimum == null && maximum == null
-    private val smallestNegativeValue = if (isDoubleFormat) SMALLEST_NEGATIVE_DECIMAL else BigDecimal(Int.MIN_VALUE)
-    private val smallestPositiveValue = if (isDoubleFormat) SMALLEST_POSITIVE_DECIMAL else BigDecimal(1)
-    private val largestValue = if (isDoubleFormat) BIGGEST_POSITIVE_DECIMAL else Int.MAX_VALUE.toBigDecimal()
+    private val lowerBound = if (isDoubleFormat) BigDecimal(-Double.MAX_VALUE) else BigDecimal(Int.MIN_VALUE)
+    private val upperBound = if (isDoubleFormat) BigDecimal(Double.MAX_VALUE) else BigDecimal(Int.MAX_VALUE)
+    private val smallInc = BigDecimal("1")
 
     private val effectiveMax = if (maximum != null) {
-        if (exclusiveMaximum) maximum - smallestPositiveValue else maximum
+        if (exclusiveMaximum) maximum - smallInc else maximum
     } else {
-        largestValue
+        upperBound
     }
 
     private val effectiveMin = if (minimum != null) {
-        if (exclusiveMinimum) minimum + smallestPositiveValue else minimum
+        if (exclusiveMinimum) minimum + smallInc else minimum
     } else
-        smallestNegativeValue
+        lowerBound
+
+    init {
+        if (minLength < 1) throw IllegalArgumentException("minLength $minLength cannot be less than 1")
+        if (maxLength < minLength) throw IllegalArgumentException("maxLength $maxLength cannot be less than minLength $minLength")
+        if (minimum != null && maximum != null) {
+            if (minimum > maximum) throw IllegalArgumentException("minimum $minimum cannot be greater than maximum $maximum")
+            if (effectiveMin > effectiveMax) throw IllegalArgumentException("effective minimum $effectiveMin cannot be greater than effective maximum $effectiveMax after applying exclusiveMinimum and exclusiveMaximum")
+        }
+    }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if (sampleData?.hasTemplate() == true)
@@ -138,7 +129,7 @@ data class NumberPattern(
             values.add(HasValue(ExactValuePattern(NumberValue(effectiveMax)), message))
         }
 
-        return values.asSequence()
+        return values.asSequence().distinct()
     }
 
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
@@ -151,9 +142,9 @@ data class NumberPattern(
                 yieldAll(scalarAnnotation(current, sequenceOf(NullPattern, BooleanPattern(), StringPattern())))
             }
             val negativeForMinimumValue: Sequence<ReturnValue<Pattern>> =
-                negativeRangeValues(minValueIsSet(), effectiveMin - smallestPositiveValue, "value lesser than minimum value '$effectiveMin'")
+                negativeRangeValues(minValueIsSet(), effectiveMin - smallInc, "value lesser than minimum value '$effectiveMin'")
             val negativeForMaximumValue: Sequence<ReturnValue<Pattern>> =
-                negativeRangeValues(maxValueIsSet(), effectiveMax + smallestPositiveValue, "value greater than maximum value '$effectiveMax'")
+                negativeRangeValues(maxValueIsSet(), effectiveMax + smallInc, "value greater than maximum value '$effectiveMax'")
 
             yieldAll(negativeForMinimumValue + negativeForMaximumValue)
         }

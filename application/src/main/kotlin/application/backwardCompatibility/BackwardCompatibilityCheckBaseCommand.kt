@@ -105,7 +105,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     }
 
     private fun checkIfTheChangedSpecsAreValidOrExit(parseResultsOfFilesChangedInCurrentBranch: Set<ParseResult>) {
-        if (parseResultsOfFilesChangedInCurrentBranch.none { it.errorMessages.isNotEmpty() })
+        if (parseResultsOfFilesChangedInCurrentBranch.all { it.errorMessages.isEmpty() })
             return
 
         logger.log("The following changed specs are invalid: $newLine")

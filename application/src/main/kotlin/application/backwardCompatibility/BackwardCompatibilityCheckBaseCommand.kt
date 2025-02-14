@@ -105,20 +105,24 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     }
 
     private fun checkIfTheChangedSpecsAreValidOrExit(parseResultsOfFilesChangedInCurrentBranch: Set<ParseResult>) {
-        if (parseResultsOfFilesChangedInCurrentBranch.any { it.errorMessages.isNotEmpty() }) {
-            logger.log("The following changed specs are invalid: $newLine")
-            var index = 1
-            parseResultsOfFilesChangedInCurrentBranch.forEach { parseResult ->
-                if (parseResult.errorMessages.isNotEmpty()) {
-                    logger.log("$index. ${parseResult.specPath}, reason(s):")
-                    parseResult.errorMessages.forEachIndexed { idx, errorMessage ->
-                        logger.log("$ONE_INDENT${idx.inc()}. $errorMessage")
-                    }
-                    index++
+        if (parseResultsOfFilesChangedInCurrentBranch.none { it.errorMessages.isNotEmpty() })
+            return
+
+        logger.log("The following changed specs are invalid: $newLine")
+
+        parseResultsOfFilesChangedInCurrentBranch.forEachIndexed { index, parseResult ->
+            if (parseResult.errorMessages.isNotEmpty()) {
+                val ordinal = index + 1
+
+                logger.log("$ordinal. ${parseResult.specPath}, reason(s):")
+
+                parseResult.errorMessages.forEachIndexed { idx, errorMessage ->
+                    logger.log("$ONE_INDENT${idx.inc()}. $errorMessage")
                 }
             }
-            exitProcess(0)
         }
+
+        exitProcess(0)
     }
 
     private fun getChangedSpecsInCurrentBranch(): Set<String> {

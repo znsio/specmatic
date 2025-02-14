@@ -9,14 +9,17 @@ import io.specmatic.core.value.*
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.loadContractStubsFromImplicitPaths
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.fail
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
+import org.junit.jupiter.api.fail
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class StatefulHttpStubTest {
@@ -659,6 +662,7 @@ class StatefulHttpStubConcurrencyTest {
         }
 
         latch.await()
+        executor.awaitTermination(10L, TimeUnit.SECONDS)
         executor.shutdown()
 
         // Verify all products were added

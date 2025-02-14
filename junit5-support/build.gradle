@@ -16,7 +16,8 @@ def junit_version = "5.11.4"
 
 dependencies {
     // TODO Fix to eliminate vulnerabilities, remove when the enclosing library supports it
-    implementation 'io.netty:netty-codec-http:4.1.118.Final' // used by ktor-server-netty-jvm 2.3.9 in core
+    implementation 'io.netty:netty-codec-http:4.1.118.Final' // used by ktor-server-netty-jvm 2.3.13 in core (last checked on Feb 13 2025)
+    implementation 'net.minidev:json-smart:2.5.2' // used by json-path 2.9.0 (last checked on Feb 13 2025)
 
     api project(':core')
     implementation "org.junit.jupiter:junit-jupiter-engine:${junit_version}"

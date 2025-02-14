@@ -1,5 +1,7 @@
 package io.specmatic.core.pattern
 
+import com.mifmif.common.regex.Generex
+import dk.brics.automaton.RegExp
 import io.specmatic.GENERATION
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
@@ -296,5 +298,82 @@ internal class StringPatternTest {
     @Test
     fun `should throw an exception with the regex parse failure from the regex library` () {
         assertThatThrownBy { StringPattern(regex = "yes|no|") }.hasMessageContaining("unexpected end-of-string")
+    }
+
+    @Test
+    fun `test max infinite length`() {
+        val regex = "[a-zA-Z0-9]*"
+        val generex = Generex(regex)
+
+        println(generex.random(10, 32))
+
+    }
+
+    @Test
+    fun `test min length finite regex`() {
+        val regex = "[a-zA-Z0-9]{32}"
+        val generex = Generex(regex)
+
+        println(generex.random(10))
+    }
+
+    @Test
+    fun `test min length with finite regex where min is more than regex max`() {
+        val regex = "[a-zA-Z0-9]{32}"
+        val min = 33
+
+        val briks = RegExp(regex).toAutomaton()
+
+        val shortestExample = briks.getShortestExample(true)
+
+        assertThat(shortestExample.length).isLessThan(min)
+
+    }
+
+    @Test
+    fun `test max length with finite regex where max is less than regex length`() {
+        val regex = "[a-zA-Z0-9]{5}[a-zA-Z0-9]{5}"
+        val max = 10
+
+        val generex = Generex(regex)
+
+        val briks = RegExp(regex).toAutomaton()
+
+        val matchedStrings = generex.getMatchedStrings(max)
+
+        assertThat(matchedStrings).isNotEmpty()
+    }
+
+    @Test
+    fun `test max length with infinite regex where max is less than regex min`() {
+        val regex = "([a-zA-Z0-9]{5})+"
+        val max = 4
+
+        val generex = Generex(regex)
+
+        val briks = RegExp(regex).toAutomaton()
+
+        val shortestString = briks.getShortestExample(true)
+        assertThat(shortestString.length).isGreaterThan(max)
+
+//        val matchedStrings = generex.getMatchedStrings(max)
+
+//        val matchedStrings = generex.random(0, max)
+
+//        assertThat(matchedStrings).isNotEmpty()
+    }
+
+    @Test
+    fun temp() {
+        val min = 33
+
+        val regex = "[a-zA-Z0-9]{1,32}"
+        val generex = Generex(regex)
+
+        val briks = RegExp(regex).toAutomaton()
+
+        generex.random(33)
+
+        generex.getMatchedStrings(10)
     }
 }

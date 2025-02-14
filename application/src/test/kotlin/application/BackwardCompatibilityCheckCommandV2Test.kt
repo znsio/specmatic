@@ -4,12 +4,14 @@ import application.backwardCompatibility.BackwardCompatibilityCheckCommandV2
 import io.mockk.every
 import io.mockk.spyk
 import io.specmatic.core.git.SystemGit
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.nio.file.Files
 
@@ -56,45 +58,122 @@ class BackwardCompatibilityCheckCommandV2Test {
             .waitFor()
     }
 
-    @Test
-    fun `getSpecsReferringTo returns empty set when input is empty`() {
-        val command = BackwardCompatibilityCheckCommandV2()
-        val result = command.getSpecsReferringTo(emptySet())
-        assertTrue(result.isEmpty())
+    @Nested
+    inner class GetSpecsReferringToTests {
+        @Test
+        fun `getSpecsReferringTo returns empty set when input is empty`() {
+            val command = BackwardCompatibilityCheckCommandV2()
+            val result = command.getSpecsReferringTo(emptySet())
+            assertTrue(result.isEmpty())
+        }
+
+        @Test
+        fun `getSpecsReferringTo returns empty set when no files refer to changed schema files`() {
+            val command = spyk<BackwardCompatibilityCheckCommandV2>()
+            every { command.allSpecFiles() } returns listOf(
+                File("file1.yaml").apply { writeText("content1") },
+                File("file2.yaml").apply { writeText("content2") }
+            )
+            val result = command.getSpecsReferringTo(setOf("file3.yaml"))
+            assertTrue(result.isEmpty())
+        }
+
+        @Test
+        fun `getSpecsReferringTo returns set of files that refer to changed schema files`() {
+            val command = spyk<BackwardCompatibilityCheckCommandV2>()
+            every { command.allSpecFiles() } returns listOf(
+                File("file1.yaml").apply { writeText("file3.yaml") },
+                File("file2.yaml").apply { writeText("file4.yaml") }
+            )
+            val result = command.getSpecsReferringTo(setOf("file3.yaml"))
+            assertEquals(setOf("file1.yaml"), result)
+        }
+
+        @Test
+        fun `getSpecsReferringTo returns set of files which are referring to a changed schema that is one level down`() {
+            val command = spyk<BackwardCompatibilityCheckCommandV2>()
+            every { command.allSpecFiles() } returns listOf(
+                File("file1.yaml").apply { referTo("schema_file1.yaml") },
+                File("schema_file2.yaml").apply { referTo("schema_file1.yaml") }, // schema within a schema
+                File("file2.yaml").apply { referTo("schema_file2.yaml") }
+            )
+            val result = command.getSpecsReferringTo(setOf("schema_file1.yaml"))
+            assertEquals(setOf("file1.yaml", "schema_file2.yaml", "file2.yaml"), result)
+        }
+
+        @Test
+        fun `getSpecsReferringTo should not hang if there is a circular dependency`() {
+            val command = spyk<BackwardCompatibilityCheckCommandV2>()
+            every { command.allSpecFiles() } returns listOf(
+                File("a.yaml").apply { referTo("b.yaml") },
+                File("b.yaml").apply { referTo("c.yaml") },
+                File("c.yaml").apply { referTo("a.yaml") }
+            )
+
+            assertThat(command.getSpecsReferringTo(setOf("a.yaml"))).isEqualTo(setOf("b.yaml", "c.yaml"))
+            assertThat(command.getSpecsReferringTo(setOf("b.yaml"))).isEqualTo(setOf("c.yaml", "a.yaml"))
+            assertThat(command.getSpecsReferringTo(setOf("c.yaml"))).isEqualTo(setOf("a.yaml", "b.yaml"))
+        }
     }
 
-    @Test
-    fun `getSpecsReferringTo returns empty set when no files refer to changed schema files`() {
-        val command = spyk<BackwardCompatibilityCheckCommandV2>()
-        every { command.allSpecFiles() } returns listOf(
-            File("file1.yaml").apply { writeText("content1") },
-            File("file2.yaml").apply { writeText("content2") }
-        )
-        val result = command.getSpecsReferringTo(setOf("file3.yaml"))
-        assertTrue(result.isEmpty())
-    }
+    @Nested
+    inner class ParseResultTests {
+        private val command = spyk<BackwardCompatibilityCheckCommandV2>()
 
-    @Test
-    fun `getSpecsReferringTo returns set of files that refer to changed schema files`() {
-        val command = spyk<BackwardCompatibilityCheckCommandV2>()
-        every { command.allSpecFiles() } returns listOf(
-            File("file1.yaml").apply { writeText("file3.yaml") },
-            File("file2.yaml").apply { writeText("file4.yaml") }
-        )
-        val result = command.getSpecsReferringTo(setOf("file3.yaml"))
-        assertEquals(setOf("file1.yaml"), result)
-    }
+        @Test
+        fun `should return error when file extension is invalid`(@TempDir tempDir: File) {
+            val invalidFile = File(tempDir, "invalid.txt").apply { writeText("content") }
 
-    @Test
-    fun `getSpecsReferringTo returns set of files which are referring to a changed schema that is one level down`() {
-        val command = spyk<BackwardCompatibilityCheckCommandV2>()
-        every { command.allSpecFiles() } returns listOf(
-            File("file1.yaml").apply { referTo("schema_file1.yaml") },
-            File("schema_file2.yaml").apply { referTo("schema_file1.yaml") }, // schema within a schema
-            File("file2.yaml").apply { referTo("schema_file2.yaml") }
-        )
-        val result = command.getSpecsReferringTo(setOf("schema_file1.yaml"))
-        assertEquals(setOf("file1.yaml", "file2.yaml"), result)
+            val result = command.parseResult(invalidFile)
+
+            assertThat(result.specPath).isEqualTo(invalidFile.canonicalPath)
+            assertThat(result.errorMessages).containsExactly("The provided spec has an invalid extension.")
+        }
+
+        @Test
+        fun `should return parse errors when file has valid extension and OpenApiSpecification parsing fails`(@TempDir tempDir: File) {
+            val validFile = File(tempDir, "valid.yaml").apply {
+                writeText("""
+                       openapi: 3.1.0  
+                       info:
+                         title: My API
+                         version: 1.0.0
+                       components:
+                         schemas:
+                           User:
+                             - ${"$"}ref: '#/components/schemas/Product' 
+
+                """.trimIndent())
+            }
+            val expectedErrors = setOf("attribute components.schemas.User is not of type `object`")
+
+            val result = command.parseResult(validFile)
+
+            assertThat(result.specPath).isEqualTo(validFile.canonicalPath)
+            assertThat(result.errorMessages).containsExactlyInAnyOrderElementsOf(expectedErrors)
+        }
+
+        @Test
+        fun `should return empty error messages when file has valid extension and no parse errors`(@TempDir tempDir: File) {
+            val validFile = File(tempDir, "valid.yaml").apply {
+                writeText("""
+                       openapi: 3.1.0  
+                       info:
+                         title: My API
+                         version: 1.0.0
+                       components:
+                         schemas:
+                           User:
+                            type: string
+
+                """.trimIndent())
+            }
+
+            val result = command.parseResult(validFile)
+
+            assertThat(result.specPath).isEqualTo(validFile.canonicalPath)
+            assertThat(result.errorMessages).isEmpty()
+        }
     }
 
     @Nested
@@ -171,7 +250,17 @@ class BackwardCompatibilityCheckCommandV2Test {
 
     @AfterEach
     fun `cleanup files`() {
-        listOf("file1.yaml", "file2.yaml", "file3.yaml", "file4.yaml", "schema_file1.yaml", "schema_file2.yaml").forEach {
+        listOf(
+            "file1.yaml",
+            "file2.yaml",
+            "file3.yaml",
+            "file4.yaml",
+            "schema_file1.yaml",
+            "schema_file2.yaml",
+            "a.yaml",
+            "b.yaml",
+            "c.yaml"
+        ).forEach {
             File(it).delete()
         }
         tempDir.deleteRecursively()

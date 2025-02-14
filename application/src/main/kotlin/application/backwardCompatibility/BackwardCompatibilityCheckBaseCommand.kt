@@ -43,7 +43,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     var repoDir: String = "."
 
     abstract fun checkBackwardCompatibility(oldFeature: IFeature, newFeature: IFeature): Results
-    abstract fun File.isValidSpec(): Boolean
+    abstract fun parseResult(file: File): ParseResult
     abstract fun getFeatureFromSpecPath(path: String): IFeature
 
     abstract fun getSpecsOfChangedExternalisedExamples(
@@ -78,9 +78,14 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         val filesChangedInCurrentBranch = getChangedSpecsInCurrentBranch().filter {
             it.contains(targetPath)
         }.toSet()
+        checkIfTheChangedSpecsAreValidOrExit(filesChangedInCurrentBranch.parseResults())
+
         val filesReferringToChangedSchemaFiles = getSpecsReferringTo(filesChangedInCurrentBranch)
+        checkIfTheChangedSpecsAreValidOrExit(filesReferringToChangedSchemaFiles.parseResults())
+
         val specificationsOfChangedExternalisedExamples =
             getSpecsOfChangedExternalisedExamples(filesChangedInCurrentBranch)
+        checkIfTheChangedSpecsAreValidOrExit(specificationsOfChangedExternalisedExamples.parseResults())
 
         if(logSpecs) {
             logFilesToBeCheckedForBackwardCompatibility(
@@ -95,11 +100,32 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
                 specificationsOfChangedExternalisedExamples
     }
 
+    private fun Set<String>.parseResults(): Set<ParseResult> {
+        return this.map { parseResult(File(it)) }.toSet()
+    }
+
+    private fun checkIfTheChangedSpecsAreValidOrExit(parseResultsOfFilesChangedInCurrentBranch: Set<ParseResult>) {
+        if (parseResultsOfFilesChangedInCurrentBranch.any { it.errorMessages.isNotEmpty() }) {
+            logger.log("The following changed specs are invalid: $newLine")
+            var index = 1
+            parseResultsOfFilesChangedInCurrentBranch.forEach { parseResult ->
+                if (parseResult.errorMessages.isNotEmpty()) {
+                    logger.log("$index. ${parseResult.specPath}, reason(s):")
+                    parseResult.errorMessages.forEachIndexed { idx, errorMessage ->
+                        logger.log("$ONE_INDENT${idx.inc()}. $errorMessage")
+                    }
+                    index++
+                }
+            }
+            exitProcess(0)
+        }
+    }
+
     private fun getChangedSpecsInCurrentBranch(): Set<String> {
         return gitCommand.getFilesChangedInCurrentBranch(
             baseBranch()
         ).filter {
-            File(it).exists() && File(it).isValidSpec()
+            File(it).exists()
         }.toSet().also {
             if (it.isEmpty()) {
                 logger.log("$newLine No specs were changed, skipping the check.$newLine")
@@ -108,7 +134,10 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         }
     }
 
-    open fun getSpecsReferringTo(schemaFiles: Set<String>): Set<String> {
+    open fun getSpecsReferringTo(
+        schemaFiles: Set<String>,
+        visitedSpecs: MutableSet<String> = mutableSetOf()
+    ): Set<String> {
         if (schemaFiles.isEmpty()) return emptySet()
 
         val inputFileNames = schemaFiles.map { File(it).name }
@@ -122,15 +151,19 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
             }
         }.map { it.path }.toSet()
 
-        return result.flatMap {
-            getSpecsReferringTo(setOf(it)).ifEmpty { setOf(it) }
-        }.toSet()
+        result.forEach { spec ->
+            if (spec !in visitedSpecs) {
+                visitedSpecs.add(spec)
+                visitedSpecs += getSpecsReferringTo(setOf(spec), visitedSpecs)
+            }
+        }
+        return (visitedSpecs - schemaFiles)
     }
 
     internal fun allSpecFiles(): List<File> {
         return File(repoDir).walk().toList().filterNot {
             ".git" in it.path
-        }.filter { it.isFile && it.isValidSpec() }
+        }.filter { it.isFile }
     }
 
     private fun logFilesToBeCheckedForBackwardCompatibility(

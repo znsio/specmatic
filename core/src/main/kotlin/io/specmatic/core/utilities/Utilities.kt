@@ -39,6 +39,7 @@ import org.xml.sax.InputSource
 import java.io.File
 import java.io.StringReader
 import java.io.StringWriter
+import java.util.concurrent.*
 import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
@@ -375,4 +376,22 @@ fun consolePrintableURL(host: String, port: Int, keyStoreData: KeyData? = null):
     val protocol = keyStoreData?.let { "https" } ?: "http"
     val displayableHost = if (host == DEFAULT_HTTP_STUB_HOST) "localhost" else host
     return "$protocol://$displayableHost:$port"
+}
+
+fun <T> runWithTimeout(timeout: Long, task: Callable<T>): T {
+    val unit = TimeUnit.MILLISECONDS
+
+    val executor = Executors.newSingleThreadExecutor()
+    val future = executor.submit(task)
+
+    try {
+        return future.get(timeout, unit)
+    } catch (e: TimeoutException) {
+        future.cancel(true)
+        throw e
+    } catch (e: ExecutionException) {
+        throw RuntimeException("Task execution failed", e.cause)
+    } finally {
+        executor.shutdown() // Shut down the executor
+    }
 }

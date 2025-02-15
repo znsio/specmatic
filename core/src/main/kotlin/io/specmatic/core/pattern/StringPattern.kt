@@ -20,9 +20,9 @@ data class StringPattern (
     override val example: String? = null,
     val regex: String? = null
 ) : Pattern, ScalarType, HasDefaultExample {
+    val validRegex = regex?.let { validateRegex(replaceRegexLowerBounds(it)).removePrefix("^").removeSuffix("$") }
     private val effectiveMinLength = minLength ?: 0
-    private val effectiveMaxLength = maxLength ?: (effectiveMinLength + 5)
-    val validRegex = regex?.let { replaceRegexLowerBounds(it) }
+    private val effectiveMaxLength = maxLength ?: (effectiveMinLength + 5) //TODO: we should do this only for infinite regex
 
     init {
         if (effectiveMinLength < 0) {
@@ -33,9 +33,8 @@ data class StringPattern (
         }
 
         validRegex?.let {
-            val regexWithoutCaretAndDollar = validateRegex(it).removePrefix("^").removeSuffix("$")
-            regexMinLengthValidation(regexWithoutCaretAndDollar)
-            regexMaxLengthValidation(regexWithoutCaretAndDollar)
+            regexMinLengthValidation(validRegex)
+            regexMaxLengthValidation(validRegex)
         }
     }
 
@@ -135,8 +134,7 @@ data class StringPattern (
         }
 
         return validRegex?.let {
-            val regexWithoutCaretAndDollar = it.removePrefix("^").removeSuffix("$")
-            StringValue(generateFromRegex(regexWithoutCaretAndDollar, patternBaseLength, effectiveMaxLength))
+            StringValue(generateFromRegex(validRegex, patternBaseLength, effectiveMaxLength))
         } ?: StringValue(randomString(patternBaseLength))
     }
 

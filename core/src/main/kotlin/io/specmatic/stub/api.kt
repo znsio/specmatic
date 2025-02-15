@@ -101,7 +101,7 @@ internal fun createStub(
     timeoutMillis: Long,
     strict: Boolean = false
 ): ContractStub {
-    return runWithTimeout(STUB_START_TIMEOUT) {
+    val stubData = runWithTimeout(STUB_START_TIMEOUT) {
         val configFileName = getConfigFilePath()
         if (File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
         val contractPathData = contractStubPaths(configFileName)
@@ -113,18 +113,26 @@ internal fun createStub(
         val features = contractInfo.map { it.first }
         val httpExpectations = contractInfoToHttpExpectations(contractInfo)
 
-        HttpStub(
-            features,
-            httpExpectations,
-            host,
-            port,
-            ::consoleLog,
-            specmaticConfigPath = File(configFileName).canonicalPath,
-            timeoutMillis = timeoutMillis,
-            strictMode = strict,
-            specToStubPortMap = contractPathData.specToPortMap()
-        )
+        object {
+            val httpExpectations = httpExpectations
+            val features = features
+            val configFileName = configFileName
+            val contractPathData = contractPathData
+        }
+
     }
+
+    return HttpStub(
+        stubData.features,
+        stubData.httpExpectations,
+        host,
+        port,
+        ::consoleLog,
+        specmaticConfigPath = File(stubData.configFileName).canonicalPath,
+        timeoutMillis = timeoutMillis,
+        strictMode = strict,
+        specToStubPortMap = stubData.contractPathData.specToPortMap()
+    )
 }
 
 internal fun createStub(
@@ -135,7 +143,7 @@ internal fun createStub(
     givenConfigFileName: String? = null,
     dataDirPaths: List<String> = emptyList()
 ): ContractStub {
-    return runWithTimeout(STUB_START_TIMEOUT) {
+    val stubValues = runWithTimeout(STUB_START_TIMEOUT) {
         val workingDirectory = WorkingDirectory()
         val configFileName = givenConfigFileName ?: getConfigFilePath()
         if (File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
@@ -151,19 +159,27 @@ internal fun createStub(
         val features = stubs.map { it.first }
         val expectations = contractInfoToHttpExpectations(stubs)
 
-        HttpStub(
-            features,
-            expectations,
-            host,
-            port,
-            log = ::consoleLog,
-            workingDirectory = workingDirectory,
-            specmaticConfigPath = File(configFileName).canonicalPath,
-            timeoutMillis = timeoutMillis,
-            strictMode = strict,
-            specToStubPortMap = contractStubPaths.specToPortMap()
-        )
+        object {
+            val workingDirectory = workingDirectory
+            val features = features
+            val expectations = expectations
+            val configFileName = configFileName
+            val contractStubPaths = contractStubPaths
+        }
     }
+
+    return HttpStub(
+        stubValues.features,
+        stubValues.expectations,
+        host,
+        port,
+        log = ::consoleLog,
+        workingDirectory = stubValues.workingDirectory,
+        specmaticConfigPath = File(stubValues.configFileName).canonicalPath,
+        timeoutMillis = timeoutMillis,
+        strictMode = strict,
+        specToStubPortMap = stubValues.contractStubPaths.specToPortMap()
+    )
 }
 
 internal fun createStubFromContracts(

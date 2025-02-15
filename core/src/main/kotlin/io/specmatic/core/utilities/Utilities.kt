@@ -390,7 +390,7 @@ fun <T> runWithTimeout(timeout: Long, task: Callable<T>): T {
         future.cancel(true)
         throw e
     } catch (e: ExecutionException) {
-        throw RuntimeException("Task execution failed", e.cause)
+        throw e.cause ?: e
     } finally {
         executor.shutdown() // Shut down the executor
     }

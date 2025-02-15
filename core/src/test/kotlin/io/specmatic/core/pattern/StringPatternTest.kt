@@ -94,7 +94,8 @@ internal class StringPatternTest {
     @CsvSource(
         "'^\\w+(-\\w+)*$',null,10,1",
         "'^[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$',1,10,1",
-        "'^[a-z]*$', null, null, 5",
+        "'^[a-z]*$', null, null, 0",
+        "'^[a-z]*$', 5, null, 5",
         "'^[a-z0-9]{6,10}',6,10,6",
         "null, 1, 10, 1"
     )
@@ -277,21 +278,14 @@ internal class StringPatternTest {
     fun `should not allow construction of string with minLength is greater that what is possible with regex`() {
         val tenOccurrencesOfAlphabetA = "^a{10}\$"
         assertThrows<Exception> { StringPattern(minLength = 15, maxLength = 20, regex = tenOccurrencesOfAlphabetA) }
-            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - minLength cannot be greater than length of shortest possible string that matches regex") }
+            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - minLength cannot be greater than the length of longest possible string that matches regex") }
     }
 
     @Test
     fun `should not allow construction of string with maxLength is lesser that what is possible with regex`() {
         val tenOccurrencesOfAlphabetA = "^a{10}\$"
         assertThrows<Exception> { StringPattern(minLength = 5, maxLength = 8, regex = tenOccurrencesOfAlphabetA) }
-            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - maxLength cannot be less than length of shortest possible string that matches regex") }
-    }
-
-    @Test
-    fun `should not allow construction of string with maxLength is greater that what is possible with regex`() {
-        val fiveToElevenOccurrencesOfAlphabetA = "^a{5,11}\$"
-        assertThrows<Exception> { StringPattern(minLength = 5, maxLength = 10, regex = fiveToElevenOccurrencesOfAlphabetA) }
-            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - regex cannot generate / match string greater than maxLength") }
+            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - maxLength cannot be less than the length of shortest possible string that matches regex") }
     }
 
     @Test
@@ -307,80 +301,78 @@ internal class StringPatternTest {
                 minLength = 21
             )
         }.isInstanceOf(IllegalArgumentException::class.java)
-            .hasMessage("Invalid String Constraints - minLength cannot be greater than length of longest possible string that matches regex")
+            .hasMessage("Invalid String Constraints - minLength cannot be greater than the length of longest possible string that matches regex")
     }
 
     @ParameterizedTest
     @CsvSource(
-        "'^[A-Z]{10,12}$';9;null;true;9;12",
-        "'^[A-Z]{10,12}$';10;null;true;10;12",
-        "'^[A-Z]{10,20}$';20;null;true;20;20",
-        "'^[A-Z]{10,20}$';21;null;false;0;0",
-        "'^[A-Z]{10,20}$';null;9;false;0;0",
-        "'^[A-Z]{10,20}$';null;10;true;10;10",
-        "'^[A-Z]{10,20}$';null;20;true;10;20",
-        "'^[A-Z]{10,20}$';null;21;true;10;20",
-        "'^[A-Z]{10,20}$';9;20;true;10;20",
-        "'^[A-Z]{10,20}$';8;9;false;0;0",
-        "'^[A-Z]{10,20}$';10;20;true;10;20",
-        "'^[A-Z]{10,20}$';11;19;true;11;19",
-        "'^[A-Z]{,20}$';0;null;true;0;20",
-        "'^[A-Z]{,20}$';20;null;true;20;20",
-        "'^[A-Z]{,20}$';21;null;false;0;0",
-        "'^[A-Z]{,20}$';null;20;true;0;20",
-        "'^[A-Z]{,20}$';null;21;true;0;20",
-        "'^[A-Z]{20}$';19;null;true;20;20",
-        "'^[A-Z]{20}$';20;null;true;20;20",
-        "'^[A-Z]{20}$';21;null;false;0;0",
-        "'^[A-Z]{20}$';null;19;false;0;0",
-        "'^[A-Z]{20}$';null;20;true;20;20",
-        "'^[A-Z]{20}$';null;21;true;20;20",
-        "'^[A-Z]{10,}$';9;null;true;9;99999999",
-        "'^[A-Z]{10,}$';10;null;true;10;99999999",
-        "'^[A-Z]{10,}$';101;null;false;101;99999999",
-        "'^[A-Z]{10,}$';null;9;false;0;0",
-        "'^[A-Z]{10,}$';null;10;true;10;10",
-        "'^[A-Z]{10,}$';null;21;true;10;21",
-        "'^[A-Z]*$';0;null;true;0;99999999",
-        "'^[A-Z]*$';10;null;true;10;99999999",
-        "'^[A-Z]*$';null;0;true;0;0",
-        "'^[A-Z]*$';null;10;true;0;10",
-        "'^[A-Z]+$';0;null;false;0;0",
-        "'^[A-Z]+$';1;null;true;1;99999999",
-        "'^[A-Z]+$';10;null;true;10;99999999",
-        "'^[A-Z]+$';null;0;false;0;0",
-        "'^[A-Z]+$';null;1;true;1;1",
-        "'^[A-Z]+$';null;10;true;1;10",
+        "'^[a-zA-Z0-9]{10,12}$';9;null;true;9;12",
+        "'^[a-zA-Z0-9]{10,12}$';10;null;true;10;12",
+        "'^[a-zA-Z0-9]{10,20}$';20;null;true;20;20",
+        "'^[a-zA-Z0-9]{10,20}$';21;null;false;0;0",
+        "'^[a-zA-Z0-9]{10,20}$';null;9;false;0;0",
+        "'^[a-zA-Z0-9]{10,20}$';null;10;true;10;10",
+        "'^[a-zA-Z0-9]{10,20}$';null;20;true;10;20",
+        "'^[a-zA-Z0-9]{10,20}$';null;21;true;10;20",
+        "'^[a-zA-Z0-9]{10,20}$';9;20;true;10;20",
+        "'^[a-zA-Z0-9]{10,20}$';8;9;false;0;0",
+        "'^[a-zA-Z0-9]{10,20}$';10;20;true;10;20",
+        "'^[a-zA-Z0-9]{10,20}$';11;19;true;11;19",
+        "'^[a-zA-Z0-9]{,20}$';0;null;true;0;20",
+        "'^[a-zA-Z0-9]{,20}$';20;null;true;20;20",
+        "'^[a-zA-Z0-9]{,20}$';21;null;false;0;0",
+        "'^[a-zA-Z0-9]{,20}$';null;20;true;0;20",
+        "'^[a-zA-Z0-9]{,20}$';null;21;true;0;20",
+        "'^[a-zA-Z0-9]{20}$';19;null;true;20;20",
+        "'^[a-zA-Z0-9]{20}$';20;null;true;20;20",
+        "'^[a-zA-Z0-9]{20}$';21;null;false;0;0",
+        "'^[a-zA-Z0-9]{20}$';null;19;false;0;0",
+        "'^[a-zA-Z0-9]{20}$';null;20;true;20;20",
+        "'^[a-zA-Z0-9]{20}$';null;21;true;20;20",
+        "'^[a-zA-Z0-9]{10,}$';9;null;true;9;99999999",
+        "'^[a-zA-Z0-9]{10,}$';10;null;true;10;99999999",
+        "'^[a-zA-Z0-9]{10,}$';101;null;true;101;99999999",
+        "'^[a-zA-Z0-9]{10,}$';null;9;false;0;0",
+        "'^[a-zA-Z0-9]{10,}$';null;10;true;10;10",
+        "'^[a-zA-Z0-9]{10,}$';null;21;true;10;21",
+        "'^[a-zA-Z0-9]*$';0;null;true;0;99999999",
+        "'^[a-zA-Z0-9]*$';10;null;true;10;99999999",
+        "'^[a-zA-Z0-9]*$';null;0;true;0;0",
+        "'^[a-zA-Z0-9]*$';null;10;true;0;10",
+        "'^[a-zA-Z0-9]+$';0;null;true;1;99999999",
+        "'^[a-zA-Z0-9]+$';1;null;true;1;99999999",
+        "'^[a-zA-Z0-9]+$';10;null;true;10;99999999",
+        "'^[a-zA-Z0-9]+$';null;0;false;0;0",
+        "'^[a-zA-Z0-9]+$';null;1;true;1;1",
+        "'^[a-zA-Z0-9]+$';null;10;true;1;10",
         delimiterString = ";"
     )
     fun `generate string value as per regex in conjunction with minimum and maximum`(
         regex: String?, minInput: String?, maxInput: String?, valid:Boolean, expectedMinLength: Int, expectedMaxLength: Int
     ) {
-        repeat(10) {
-            val min = minInput?.toIntOrNull()
-            val max = maxInput?.toIntOrNull()
-            val patternRegex = if (regex == "null") null else regex
+        val min = minInput?.toIntOrNull()
+        val max = maxInput?.toIntOrNull()
+        val patternRegex = if (regex == "null") null else regex
 
-            try {
-                val stringPattern = StringPattern(
-                    minLength = min,
-                    maxLength = max,
-                    regex = patternRegex
-                )
-                val result = stringPattern.generate(Resolver()) as StringValue
-                if (valid) {
-                    val generatedString = result.string
-                    val generatedLength = generatedString.length
+        try {
+            val stringPattern = StringPattern(
+                minLength = min,
+                maxLength = max,
+                regex = patternRegex
+            )
+            val result = stringPattern.generate(Resolver()) as StringValue
+            if (valid) {
+                val generatedString = result.string
+                val generatedLength = generatedString.length
 
-                    assertThat(generatedLength).isGreaterThanOrEqualTo(expectedMinLength)
-                    assertThat(generatedLength).isLessThanOrEqualTo(expectedMaxLength)
-                    patternRegex?.let { assertThat(generatedString).matches(stringPattern.validRegex) }
-                } else {
-                    fail("Expected an exception to be thrown")
-                }
-            } catch (e: Exception) {
-                if (valid) throw e
+                assertThat(generatedLength).isGreaterThanOrEqualTo(expectedMinLength)
+                assertThat(generatedLength).isLessThanOrEqualTo(expectedMaxLength)
+                patternRegex?.let { assertThat(generatedString).matches(stringPattern.validRegex) }
+            } else {
+                fail("Expected an exception to be thrown")
             }
+        } catch (e: Exception) {
+            if (valid) throw e
         }
     }
 

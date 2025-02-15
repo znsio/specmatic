@@ -414,6 +414,7 @@ internal class StringPatternTest {
         automaton.getShortestExample(true).let {
             assertThat(it.length).isLessThan(min)
         }
+        assertThat(Generex(regex).getMatchedStrings(min).size).isNotZero()
     }
 
     @ParameterizedTest

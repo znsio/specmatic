@@ -26,10 +26,10 @@ data class StringPattern (
 
     init {
         if (effectiveMinLength < 0) {
-            throw IllegalArgumentException("minimumLength cannot be less than 0")
+            throw IllegalArgumentException("minLength cannot be less than 0")
         }
         if (effectiveMinLength > effectiveMaxLength) {
-            throw IllegalArgumentException("maximumLength cannot be less than minimumLength")
+            throw IllegalArgumentException("maxLength cannot be less than minLength")
         }
 
         validRegex?.let {

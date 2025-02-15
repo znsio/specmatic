@@ -299,6 +299,17 @@ internal class StringPatternTest {
         assertThatThrownBy { StringPattern(regex = "yes|no|") }.hasMessageContaining("unexpected end-of-string")
     }
 
+    @Test
+    fun `minLength greater than upper bound in the regex should not be accepted`() {
+        assertThatThrownBy {
+            StringPattern(
+                regex = "[A-Z]{10,20}",
+                minLength = 21
+            )
+        }.isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessage("Invalid String Constraints - minLength cannot be greater than length of longest possible string that matches regex")
+    }
+
     @ParameterizedTest
     @CsvSource(
         "'^[A-Z]{10,12}$';9;null;true;9;12",

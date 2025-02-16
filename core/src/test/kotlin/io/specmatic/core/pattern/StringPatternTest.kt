@@ -1,7 +1,5 @@
 package io.specmatic.core.pattern
 
-import com.mifmif.common.regex.Generex
-import dk.brics.automaton.RegExp
 import io.specmatic.GENERATION
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
@@ -17,6 +15,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+
 
 internal class StringPatternTest {
     @Test
@@ -43,6 +42,44 @@ internal class StringPatternTest {
     @Test
     fun `should generate random string based on minLength`() {
         assertThat(StringPattern(minLength = 8).generate(Resolver()).toStringLiteral().length).isEqualTo(8)
+    }
+
+    @Test
+    fun `should strip out word boundary in regex`() {
+        val possibleValues = "Cat|Dog|Lion|Tiger"
+        val pattern = StringPattern(maxLength = 30, regex = "$WORD_BOUNDARY($possibleValues)$WORD_BOUNDARY")
+        val generatedValue = pattern.generate(Resolver())
+        assertThat(generatedValue.toStringLiteral()).isIn(possibleValues.split("|"))
+        pattern.matches(generatedValue, Resolver()).let {
+            assertThat(it.isSuccess()).isTrue
+        }
+    }
+    @Test
+    fun `should generate random string based on the regex and then it should match the regex`() {
+        val maxLength = 32
+        val pattern = StringPattern(maxLength = maxLength, regex = "[0-9a-f]{$maxLength}")
+        val generatedValue = pattern.generate(Resolver())
+        assertThat(generatedValue.toStringLiteral().length).isEqualTo(maxLength)
+        pattern.matches(generatedValue, Resolver()).let {
+            assertThat(it.isSuccess()).isTrue
+        }
+    }
+
+    @Test
+    fun `newBasedOn should generate random string based on the regex and then it should match the regex`() {
+        val maxLength = 32
+        val regex = "[0-9a-f]{$maxLength}"
+        val pattern = StringPattern(maxLength = maxLength, regex = regex)
+        val newBasedOn = pattern.newBasedOn(Row(), Resolver())
+        assertThat(newBasedOn.toList()).hasSize(2)
+        newBasedOn.forEach {
+            it.value.generate(Resolver()).let { generatedValue ->
+                assertThat(generatedValue.toStringLiteral().length).isEqualTo(maxLength)
+                pattern.matches(generatedValue, Resolver()).let { result ->
+                    assertThat(result.isSuccess()).withFailMessage("$generatedValue does not match the regex $regex").isTrue
+                }
+            }
+        }
     }
 
     @Test
@@ -307,7 +344,7 @@ internal class StringPatternTest {
 
     @Test
     fun `should not allow construction of string with minLength is greater that what is possible with regex`() {
-        val tenOccurrencesOfAlphabetA = "a{10}"
+        val tenOccurrencesOfAlphabetA = "^a{10}\$"
         val minLength = 15
         assertThrows<Exception> { StringPattern(minLength = minLength, maxLength = 20, regex = tenOccurrencesOfAlphabetA) }
             .also { assertThat(it.message).isEqualTo("Invalid String Constraints - minLength $minLength cannot be greater than the length of longest possible string that matches regex $tenOccurrencesOfAlphabetA") }
@@ -315,7 +352,7 @@ internal class StringPatternTest {
 
     @Test
     fun `should not allow construction of string with maxLength is lesser that what is possible with regex`() {
-        val tenOccurrencesOfAlphabetA = "a{10}"
+        val tenOccurrencesOfAlphabetA = "^a{10}\$"
         val maxLength = 8
         assertThrows<Exception> { StringPattern(minLength = 5, maxLength = maxLength, regex = tenOccurrencesOfAlphabetA) }
             .also { assertThat(it.message).isEqualTo("Invalid String Constraints - maxLength $maxLength cannot be less than the length of shortest possible string that matches regex $tenOccurrencesOfAlphabetA") }
@@ -409,109 +446,5 @@ internal class StringPatternTest {
         } catch (e: Exception) {
             if (valid) throw e
         }
-    }
-
-    @ParameterizedTest
-    @CsvSource(
-        "[a-zA-Z0-9]{10,20}; 9",
-        "[a-zA-Z0-9]{0,20}; -1",
-        "[a-zA-Z0-9]{10}; 9",
-        "[a-zA-Z0-9]{5}[a-zA-Z0-9]{5}; 9",
-    delimiterString = "; "
-    )
-    fun `min is less than lower bound of a finite regex should be accept`(regex: String, min: Int) {
-        val automaton = RegExp(regex).toAutomaton()
-        assertThat(automaton.isFinite).isTrue
-        automaton.getShortestExample(true).let {
-            assertThat(it.length).isGreaterThan(min)
-        }
-    }
-
-    @ParameterizedTest
-    @CsvSource(
-        "[a-zA-Z0-9]{10,20}; 21",
-        "[a-zA-Z0-9]{0,20}; 21",
-        "[a-zA-Z0-9]{10}; 11",
-        "[a-zA-Z0-9]{5}[a-zA-Z0-9]{5}; 11",
-        delimiterString = "; "
-    )
-    fun `min is greater than upper bound of a finite regex should be rejected`(regex: String, min: Int) {
-        val automaton = RegExp(regex).toAutomaton()
-        assertThat(automaton.isFinite).isTrue
-        automaton.getShortestExample(true).let {
-            assertThat(it.length).isLessThan(min)
-        }
-        assertThat(Generex(regex).getMatchedStrings(min).size).isNotZero()
-    }
-
-    @ParameterizedTest
-    @CsvSource(
-        "[a-zA-Z0-9]{10,20}; 9",
-        "[a-zA-Z0-9]{0,20}; 0",
-        "[a-zA-Z0-9]{10}; 9",
-        "[a-zA-Z0-9]{5}[a-zA-Z0-9]{5}; 9",
-        delimiterString = "; "
-    )
-    fun `max is less than lower bound of a finite regex should be rejected`(regex: String, max: Int) {
-        val automaton = RegExp(regex).toAutomaton()
-        assertThat(automaton.isFinite).isTrue
-        automaton.getShortestExample(true).let {
-            assertThat(it.length).isGreaterThanOrEqualTo(max)
-        }
-        assertThat(Generex(regex).getMatchedStrings(max).size).isZero()
-    }
-
-    @ParameterizedTest
-    @CsvSource(
-        "[a-zA-Z0-9]{10,20}; 21",
-        "[a-zA-Z0-9]{0,20}; 21",
-        "[a-zA-Z0-9]{10}; 11",
-        "[a-zA-Z0-9]{5}[a-zA-Z0-9]{5}; 11",
-        delimiterString = "; "
-    )
-    fun `max is greater than upper bound of a finite regex should be accepted`(regex: String, max: Int) {
-        val automaton = RegExp(regex).toAutomaton()
-        assertThat(automaton.isFinite).isTrue
-        automaton.getShortestExample(true).let {
-            assertThat(it.length).isLessThan(max)
-        }
-        assertThat(Generex(regex).getMatchedStrings(max).size).isNotZero()
-    }
-
-    @ParameterizedTest
-    @CsvSource(
-        "[a-zA-Z0-9]{10,}; 9",
-        "[a-zA-Z0-9]{0,}; -1",
-        "[a-zA-Z0-9]{5,}[a-zA-Z0-9]{5,}; 9",
-        "[a-zA-Z0-9]+; 0",
-        ".*; -1",
-        ".+; 0",
-        delimiterString = "; "
-    )
-    fun `min is less than lower bound of an infinite regex should be accept`(regex: String, min: Int) {
-        val automaton = RegExp(regex).toAutomaton()
-        assertThat(automaton.isFinite).isFalse
-        automaton.getShortestExample(true).let {
-            assertThat(it.length).isGreaterThan(min)
-        }
-    }
-
-    @ParameterizedTest
-    @CsvSource(
-        "[a-zA-Z0-9]{10,}; 9",
-        "[a-zA-Z0-9]{0,}; 0",
-        "[a-zA-Z0-9]{5,}[a-zA-Z0-9]{5,}; 9",
-        "[a-zA-Z0-9]+; 0",
-        ".*; 0",
-        ".+; 0",
-        delimiterString = "; "
-    )
-    fun `max is less than lower bound of an infinite regex should be rejected`(regex: String, max: Int) {
-        val automaton = RegExp(regex).toAutomaton()
-        assertThat(automaton.isFinite).isFalse
-        automaton.getShortestExample(true).let {
-            assertThat(it.length).isGreaterThanOrEqualTo(max)
-        }
-        assertThat(Generex(regex).getMatchedStrings(max).size).isZero()
     }
 }

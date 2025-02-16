@@ -15,6 +15,8 @@ import java.nio.charset.StandardCharsets
 import java.util.*
 import java.util.concurrent.TimeoutException
 
+const val WORD_BOUNDARY = "\\b"
+
 data class StringPattern (
     override val typeAlias: String? = null,
     val minLength: Int? = null,
@@ -22,7 +24,12 @@ data class StringPattern (
     override val example: String? = null,
     val regex: String? = null
 ) : Pattern, ScalarType, HasDefaultExample {
-    val validRegex get() = regex?.let { validateRegex(replaceRegexLowerBounds(it)).removePrefix("^").removeSuffix("$") }
+    val validRegex
+        get() = regex?.let {
+            validateRegex(replaceRegexLowerBounds(it))
+                .removePrefix("^").removeSuffix("$")
+                .removePrefix(WORD_BOUNDARY).removeSuffix(WORD_BOUNDARY)
+        }
     private val effectiveMinLength get() = minLength ?: 0
 
     init {
@@ -63,10 +70,10 @@ data class StringPattern (
                     Generex(regex).random(it)
                 }
                 if (someValue.length < it) {
-                    throw IllegalArgumentException("Invalid String Constraints - minLength $it cannot be greater than the length of longest possible string that matches regex $regex")
+                    throw IllegalArgumentException("Invalid String Constraints - minLength $it cannot be greater than the length of longest possible string that matches regex ${this.regex}")
                 }
             } catch (e: TimeoutException) {
-                throw IllegalArgumentException("Invalid String Constraints - minLength $it cannot be greater than the length of longest possible string that matches regex $regex")
+                throw IllegalArgumentException("Invalid String Constraints - minLength $it cannot be greater than the length of longest possible string that matches regex ${this.regex}")
             }
         }
     }
@@ -76,7 +83,7 @@ data class StringPattern (
             val automaton = RegExp(regex).toAutomaton()
             val shortestPossibleLengthOfRegex = automaton.getShortestExample(true).length
             if (shortestPossibleLengthOfRegex > it) {
-                throw IllegalArgumentException("Invalid String Constraints - maxLength $it cannot be less than the length of shortest possible string that matches regex $regex")
+                throw IllegalArgumentException("Invalid String Constraints - maxLength $it cannot be less than the length of shortest possible string that matches regex ${this.regex}")
             }
         }
     }
@@ -166,14 +173,17 @@ data class StringPattern (
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        val minLengthExample: ReturnValue<Pattern>? = minLength?.let {
-            HasValue(ExactValuePattern(StringValue(randomString(it))), "minimum length string")
+        val regExSpec = RegExSpec(validRegex)
+        val minLengthExample: ReturnValue<Pattern>? = minLength?.let { minLen ->
+            val exampleString = regExSpec.generateShortestStringOrRandom(minLen)
+            HasValue(ExactValuePattern(StringValue(exampleString)), "minimum length string")
         }
 
         val withinRangeExample: ReturnValue<Pattern> = HasValue(this)
 
-        val maxLengthExample: ReturnValue<Pattern>? = maxLength?.let {
-            HasValue(ExactValuePattern(StringValue(randomString(it))), "maximum length string")
+        val maxLengthExample: ReturnValue<Pattern>? = maxLength?.let { maxLen ->
+            val exampleString = regExSpec.generateLongestStringOrRandom(maxLen)
+            HasValue(ExactValuePattern(StringValue(exampleString)), "maximum length string")
         }
 
         return sequenceOf(minLengthExample, withinRangeExample, maxLengthExample).filterNotNull()

@@ -275,6 +275,13 @@ internal class StringPatternTest {
     }
 
     @Test
+    fun `should not allow construction of string with invalid regex`() {
+        val invalidRegex = "/^a{10}\$/"
+        assertThrows<Exception> { StringPattern(regex = invalidRegex) }
+            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - $invalidRegex is not valid. OpenAPI follows ECMA-262 regular expressions, which do not support / / delimiters like those used in many programming languages") }
+    }
+
+    @Test
     fun `should not allow construction of string with minLength is greater that what is possible with regex`() {
         val tenOccurrencesOfAlphabetA = "a{10}"
         val minLength = 15

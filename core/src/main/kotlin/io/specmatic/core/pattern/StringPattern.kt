@@ -48,6 +48,9 @@ data class StringPattern (
     }
 
     private fun validateRegex(regex: String): String {
+        if (regex.startsWith("/") && regex.endsWith("/")) {
+            throw IllegalArgumentException("Invalid String Constraints - $regex is not valid. OpenAPI follows ECMA-262 regular expressions, which do not support / / delimiters like those used in many programming languages")
+        }
         return runCatching { RegExp(regex); regex }.getOrElse {
                 e -> throw IllegalArgumentException("Failed to parse regex ${regex.quote()}\nReason: ${e.message}")
         }

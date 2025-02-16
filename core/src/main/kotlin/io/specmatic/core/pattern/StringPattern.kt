@@ -7,13 +7,11 @@ import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.mismatchResult
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
-import io.specmatic.core.utilities.runWithTimeout
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import java.nio.charset.StandardCharsets
 import java.util.*
-import java.util.concurrent.TimeoutException
 
 const val WORD_BOUNDARY = "\\b"
 
@@ -65,24 +63,21 @@ data class StringPattern (
 
     private fun regexMinLengthValidation(regex: String) {
         minLength?.let {
-            try {
-                val someValue = runWithTimeout(1000) {
-                    Generex(regex).random(it)
-                }
-                if (someValue.length < it) {
+            val regExSpec = RegExSpec(regex)
+            val shortestString = regExSpec.generateShortestString()
+            if (it > shortestString.length && regExSpec.isFinite) {
+                val longestString = regExSpec.generateLongestStringOrRandom(it)
+                if (longestString.length < it) {
                     throw IllegalArgumentException("Invalid String Constraints - minLength $it cannot be greater than the length of longest possible string that matches regex ${this.regex}")
                 }
-            } catch (e: TimeoutException) {
-                throw IllegalArgumentException("Invalid String Constraints - minLength $it cannot be greater than the length of longest possible string that matches regex ${this.regex}")
             }
         }
     }
 
     private fun regexMaxLengthValidation(regex: String) {
         maxLength?.let {
-            val automaton = RegExp(regex).toAutomaton()
-            val shortestPossibleLengthOfRegex = automaton.getShortestExample(true).length
-            if (shortestPossibleLengthOfRegex > it) {
+            val shortestPossibleString = RegExSpec(regex).generateShortestString()
+            if (shortestPossibleString.length > it) {
                 throw IllegalArgumentException("Invalid String Constraints - maxLength $it cannot be less than the length of shortest possible string that matches regex ${this.regex}")
             }
         }

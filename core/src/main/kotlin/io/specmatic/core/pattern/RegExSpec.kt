@@ -8,10 +8,12 @@ class RegExSpec(val regex: String?) {
 
     fun generateShortestStringOrRandom(minLen: Int): String {
         if (regex == null) return randomString(minLen)
-        val shortestExample = RegExp(regex).toAutomaton().getShortestExample(true)
+        val shortestExample = generateShortestString()
         if (minLen <= shortestExample.length) return shortestExample
         return Generex(regex).random(minLen, minLen)
     }
+
+    fun generateShortestString(): String = RegExp(regex).toAutomaton().getShortestExample(true)
 
     fun generateLongestStringOrRandom(maxLen: Int): String {
         if (regex == null) return randomString(maxLen)
@@ -54,4 +56,10 @@ class RegExSpec(val regex: String?) {
         memo[key] = best
         return best
     }
+
+    val isFinite: Boolean
+        get() {
+            if (regex == null) return false
+            return !Generex(regex).isInfinite
+        }
 }

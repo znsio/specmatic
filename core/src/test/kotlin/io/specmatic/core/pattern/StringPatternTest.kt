@@ -51,6 +51,30 @@ internal class StringPatternTest {
     }
 
     @Test
+    fun `should match valid string`() {
+        assertThat(StringPattern(regex = "[0-9A-Z]{32}").matches(StringValue("VAKTIGOOIXJDKQWGBBAPFXRKIHLEONUP"), Resolver()).isSuccess()).isTrue
+    }
+
+    @Test
+    fun `should not match an invalid string`() {
+        val regex = "[0-9a-z]{32}"
+        val candidate = "VAKTIGOOIXJDKQWGBBAPFXRKIHLEONUP"
+        val result = StringPattern(regex = regex).matches(StringValue(candidate), Resolver())
+        assertThat(result.isSuccess()).isFalse
+        assertThat(result.reportString()).isEqualTo("""Expected string that matches regex $regex, actual was "$candidate"""")
+    }
+
+    @Test
+    fun `should match valid string when min is specified`() {
+        assertThat(StringPattern(regex = "[0-9A-Z]{32}", minLength = 32).matches(StringValue("VAKTIGOOIXJDKQWGBBAPFXRKIHLEONUP"), Resolver()).isSuccess()).isTrue
+    }
+
+    @Test
+    fun `should match valid string when max is specified`() {
+        assertThat(StringPattern(regex = "[0-9A-Z]{32}", maxLength = 32).matches(StringValue("VAKTIGOOIXJDKQWGBBAPFXRKIHLEONUP"), Resolver()).isSuccess()).isTrue
+    }
+
+    @Test
     fun `should match string of any length when min and max are not specified`() {
         val randomString = RandomStringUtils.randomAlphabetic((0..99).random())
         assertThat(StringPattern().matches(StringValue(randomString), Resolver()).isSuccess()).isTrue

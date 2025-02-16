@@ -100,7 +100,7 @@ data class StringPattern (
 
         if (doesNotMatchRegex(sampleData)) {
             return mismatchResult(
-                """string that matches regex /$validRegex/""",
+                """string that matches regex $validRegex""",
                 sampleData,
                 resolver.mismatchMessages
             )

@@ -27,7 +27,7 @@ internal class StringPatternTest {
     @Test
     fun `should not allow maxLength less than minLength`() {
         val exception = assertThrows<IllegalArgumentException> { StringPattern(minLength = 6, maxLength = 4) }
-        assertThat(exception.message).isEqualTo("maxLength cannot be less than minLength")
+        assertThat(exception.message).isEqualTo("maxLength 4 cannot be less than minLength 6")
     }
 
     @Test
@@ -271,21 +271,23 @@ internal class StringPatternTest {
         val exception = assertThrows<IllegalArgumentException> {
             StringPattern(minLength = 6, maxLength = 4)
         }
-        assertThat(exception.message).isEqualTo("maxLength cannot be less than minLength")
+        assertThat(exception.message).isEqualTo("maxLength 4 cannot be less than minLength 6")
     }
 
     @Test
     fun `should not allow construction of string with minLength is greater that what is possible with regex`() {
-        val tenOccurrencesOfAlphabetA = "^a{10}\$"
-        assertThrows<Exception> { StringPattern(minLength = 15, maxLength = 20, regex = tenOccurrencesOfAlphabetA) }
-            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - minLength cannot be greater than the length of longest possible string that matches regex") }
+        val tenOccurrencesOfAlphabetA = "a{10}"
+        val minLength = 15
+        assertThrows<Exception> { StringPattern(minLength = minLength, maxLength = 20, regex = tenOccurrencesOfAlphabetA) }
+            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - minLength $minLength cannot be greater than the length of longest possible string that matches regex $tenOccurrencesOfAlphabetA") }
     }
 
     @Test
     fun `should not allow construction of string with maxLength is lesser that what is possible with regex`() {
-        val tenOccurrencesOfAlphabetA = "^a{10}\$"
-        assertThrows<Exception> { StringPattern(minLength = 5, maxLength = 8, regex = tenOccurrencesOfAlphabetA) }
-            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - maxLength cannot be less than the length of shortest possible string that matches regex") }
+        val tenOccurrencesOfAlphabetA = "a{10}"
+        val maxLength = 8
+        assertThrows<Exception> { StringPattern(minLength = 5, maxLength = maxLength, regex = tenOccurrencesOfAlphabetA) }
+            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - maxLength $maxLength cannot be less than the length of shortest possible string that matches regex $tenOccurrencesOfAlphabetA") }
     }
 
     @Test
@@ -295,13 +297,15 @@ internal class StringPatternTest {
 
     @Test
     fun `minLength greater than upper bound in the regex should not be accepted`() {
+        val regex = "[A-Z]{10,20}"
+        val minLength = 21
         assertThatThrownBy {
             StringPattern(
-                regex = "[A-Z]{10,20}",
-                minLength = 21
+                regex = regex,
+                minLength = minLength
             )
         }.isInstanceOf(IllegalArgumentException::class.java)
-            .hasMessage("Invalid String Constraints - minLength cannot be greater than the length of longest possible string that matches regex")
+            .hasMessage("Invalid String Constraints - minLength $minLength cannot be greater than the length of longest possible string that matches regex $regex")
     }
 
     @ParameterizedTest

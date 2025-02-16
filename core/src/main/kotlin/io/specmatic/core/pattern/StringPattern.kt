@@ -27,11 +27,11 @@ data class StringPattern (
 
     init {
         if (effectiveMinLength < 0) {
-            throw IllegalArgumentException("minLength cannot be less than 0")
+            throw IllegalArgumentException("minLength $effectiveMinLength cannot be less than 0")
         }
         maxLength?.let {
             if (effectiveMinLength > it) {
-                throw IllegalArgumentException("maxLength cannot be less than minLength")
+                throw IllegalArgumentException("maxLength $it cannot be less than minLength $effectiveMinLength")
             }
         }
         validRegex?.let {
@@ -60,10 +60,10 @@ data class StringPattern (
                     Generex(regex).random(it)
                 }
                 if (someValue.length < it) {
-                    throw IllegalArgumentException("Invalid String Constraints - minLength cannot be greater than the length of longest possible string that matches regex")
+                    throw IllegalArgumentException("Invalid String Constraints - minLength $it cannot be greater than the length of longest possible string that matches regex $regex")
                 }
             } catch (e: TimeoutException) {
-                throw IllegalArgumentException("Invalid String Constraints - minLength cannot be greater than the length of longest possible string that matches regex")
+                throw IllegalArgumentException("Invalid String Constraints - minLength $it cannot be greater than the length of longest possible string that matches regex $regex")
             }
         }
     }
@@ -72,8 +72,8 @@ data class StringPattern (
         maxLength?.let {
             val automaton = RegExp(regex).toAutomaton()
             val shortestPossibleLengthOfRegex = automaton.getShortestExample(true).length
-            if (shortestPossibleLengthOfRegex > maxLength) {
-                throw IllegalArgumentException("Invalid String Constraints - maxLength cannot be less than the length of shortest possible string that matches regex")
+            if (shortestPossibleLengthOfRegex > it) {
+                throw IllegalArgumentException("Invalid String Constraints - maxLength $it cannot be less than the length of shortest possible string that matches regex $regex")
             }
         }
     }

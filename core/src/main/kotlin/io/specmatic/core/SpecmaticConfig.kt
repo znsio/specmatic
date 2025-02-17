@@ -193,7 +193,7 @@ data class SpecmaticConfig(
     private val hooks: Map<String, String> = emptyMap(),
     private val repository: RepositoryInfo? = null,
     private val report: ReportConfigurationDetails? = null,
-    private val security: SecurityConfiguration? = null,
+    private val security: SecurityConfigurationDetails? = null,
     private val test: TestConfiguration? = TestConfiguration(),
     private val stub: StubConfiguration = StubConfiguration(),
     private val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
@@ -227,7 +227,7 @@ data class SpecmaticConfig(
         }
 
         @JsonIgnore
-        fun getSecurityConfiguration(specmaticConfig: SpecmaticConfig?): SecurityConfiguration? {
+        fun getSecurityConfiguration(specmaticConfig: SpecmaticConfig?): SecurityConfigurationDetails? {
             return specmaticConfig?.security
         }
 
@@ -876,17 +876,21 @@ data class SuccessCriteria(
     }
 }
 
-data class SecurityConfiguration(
+fun interface SecurityConfiguration {
+    fun getOpenAPISecurityScheme(scheme: String): SecuritySchemeConfiguration?
+}
+
+data class SecurityConfigurationDetails(
     @param:JsonProperty("OpenAPI")
-    private val OpenAPI: OpenAPISecurityConfiguration?
-) {
-    fun getOpenAPISecurityScheme(scheme: String): SecuritySchemeConfiguration? {
+    val OpenAPI: OpenAPISecurityConfiguration? = null
+) : SecurityConfiguration {
+    override fun getOpenAPISecurityScheme(scheme: String): SecuritySchemeConfiguration? {
         return OpenAPI?.securitySchemes?.get(scheme)
     }
 }
 
 data class OpenAPISecurityConfiguration(
-    val securitySchemes: Map<String, SecuritySchemeConfiguration> = emptyMap()
+    val securitySchemes: Map<String, SecuritySchemeConfiguration>? = null
 )
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")

@@ -132,7 +132,7 @@ Examples:
                 }
             }
 
-            private fun newSecurityConfiguration(token: String) = SecurityConfiguration(
+            private fun newSecurityConfiguration(token: String) = SecurityConfigurationDetails(
                 OpenAPI = OpenAPISecurityConfiguration(
                     securitySchemes = mapOf(
                         "oAuth2AuthCode" to OAuth2SecuritySchemeConfiguration(
@@ -582,7 +582,7 @@ Background:
             assertThat(result.reportString()).contains("Authorization header must be prefixed with \"Bearer\"")
         }
 
-        private fun securityConfigurationForBearerScheme(token: String) = SecurityConfiguration(
+        private fun securityConfigurationForBearerScheme(token: String) = SecurityConfigurationDetails(
             OpenAPI = OpenAPISecurityConfiguration(
                 securitySchemes = mapOf(
                     "BearerAuth" to BearerSecuritySchemeConfiguration(
@@ -961,7 +961,7 @@ Feature: Authenticated
             }
         }
 
-        private fun securityConfigurationForApiKeyInHeaderScheme(token: String) = SecurityConfiguration(
+        private fun securityConfigurationForApiKeyInHeaderScheme(token: String) = SecurityConfigurationDetails(
             OpenAPI = OpenAPISecurityConfiguration(
                 securitySchemes = mapOf(
                     "ApiKeyAuthHeader" to APIKeySecuritySchemeConfiguration(
@@ -971,7 +971,7 @@ Feature: Authenticated
             )
         )
 
-        private fun securityConfigurationForApiKeyInQueryScheme(token: String) = SecurityConfiguration(
+        private fun securityConfigurationForApiKeyInQueryScheme(token: String) = SecurityConfigurationDetails(
             OpenAPI = OpenAPISecurityConfiguration(
                 securitySchemes = mapOf(
                     "ApiKeyAuthQuery" to APIKeySecuritySchemeConfiguration(

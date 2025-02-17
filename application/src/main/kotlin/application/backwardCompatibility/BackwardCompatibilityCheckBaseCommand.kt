@@ -78,7 +78,9 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         val filesChangedInCurrentBranch = getChangedSpecsInCurrentBranch().filter {
             it.contains(targetPath)
         }.toSet()
+
         val filesReferringToChangedSchemaFiles = getSpecsReferringTo(filesChangedInCurrentBranch)
+
         val specificationsOfChangedExternalisedExamples =
             getSpecsOfChangedExternalisedExamples(filesChangedInCurrentBranch)
 
@@ -108,7 +110,10 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         }
     }
 
-    open fun getSpecsReferringTo(schemaFiles: Set<String>): Set<String> {
+    open fun getSpecsReferringTo(
+        schemaFiles: Set<String>,
+        visitedSpecs: Set<String> = setOf()
+    ): Set<String> {
         if (schemaFiles.isEmpty()) return emptySet()
 
         val inputFileNames = schemaFiles.map { File(it).name }
@@ -122,9 +127,16 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
             }
         }.map { it.path }.toSet()
 
-        return result.flatMap {
-            getSpecsReferringTo(setOf(it)).ifEmpty { setOf(it) }
-        }.toSet()
+        val updatedVisitedSpecs = result.fold(visitedSpecs) { acc, spec ->
+            if (spec in visitedSpecs)
+                return@fold acc
+
+            val updatedVisitedSpecs = acc + spec
+            updatedVisitedSpecs + getSpecsReferringTo(setOf(spec), updatedVisitedSpecs)
+
+        }
+
+        return (updatedVisitedSpecs - schemaFiles)
     }
 
     internal fun allSpecFiles(): List<File> {

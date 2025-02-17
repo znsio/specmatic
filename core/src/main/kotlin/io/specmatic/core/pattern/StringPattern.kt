@@ -27,6 +27,7 @@ data class StringPattern (
             validateRegex(replaceRegexLowerBounds(it))
                 .removePrefix("^").removeSuffix("$")
                 .removePrefix(WORD_BOUNDARY).removeSuffix(WORD_BOUNDARY)
+                .let { regexWithoutSurroundingDelimiters -> replaceShorthandEscapeSeq(regexWithoutSurroundingDelimiters) }
         }
     private val effectiveMinLength get() = minLength ?: 0
 
@@ -58,6 +59,34 @@ data class StringPattern (
         }
         return runCatching { RegExp(regex); regex }.getOrElse {
                 e -> throw IllegalArgumentException("Failed to parse regex ${regex.quote()}\nReason: ${e.message}")
+        }
+    }
+
+    private fun replaceShorthandEscapeSeq(regex: String): String {
+        // This regex matches a character class: a '[' followed by either an escaped char (e.g. \])
+        // or any char that is not a ']', until the first unescaped ']'
+        val charClassRegex = Regex("""\[(?:\\.|[^\]])*]""")
+
+        return charClassRegex.replace(regex) { matchResult ->
+            val charClass = matchResult.value
+
+            // Check if the class is negated (i.e. starts with "[^")
+            val isNegated = charClass.startsWith("[^")
+            // Extract the inner content (skip the starting '[' or "[^" and the ending ']')
+            val innerContent = if (isNegated)
+                charClass.substring(2, charClass.length - 1)
+            else
+                charClass.substring(1, charClass.length - 1)
+
+            // Replace shorthand escapes inside the character class.
+            // Note: The replacements are applied only to the inner content.
+            val replaced = innerContent
+                .replace(Regex("""\\w"""), "a-zA-Z0-9_")
+                .replace(Regex("""\\s"""), " \\t\\r\\n\\f")
+                .replace(Regex("""\\d"""), "0-9")
+
+            // Rebuild the character class with its original negation if present.
+            if (isNegated) "[^$replaced]" else "[$replaced]"
         }
     }
 

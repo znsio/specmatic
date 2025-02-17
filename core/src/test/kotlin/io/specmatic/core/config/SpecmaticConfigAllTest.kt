@@ -489,11 +489,11 @@ internal class SpecmaticConfigAllTest {
 
         val specmaticConfig = configFile.toSpecmaticConfig()
 
-        assertThat(specmaticConfig.getAttributeSelectionPattern().getDefaultFields()).containsExactly(
+        assertThat(specmaticConfig.getAttributeSelectionPattern().getDefaultFieldsOrDefault()).containsExactly(
             "description",
             "url"
         )
-        assertThat(specmaticConfig.getAttributeSelectionPattern().getQueryParamKey()).isEqualTo("web")
+        assertThat(specmaticConfig.getAttributeSelectionPattern().getQueryParamKeyOrDefault()).isEqualTo("web")
     }
 
     @Test
@@ -509,8 +509,9 @@ internal class SpecmaticConfigAllTest {
         val config = objectMapper.readValue(configYaml, SpecmaticConfigV1::class.java).transform()
         val configV2 = SpecmaticConfigV2.loadFrom(config) as SpecmaticConfigV2
 
-        assertThat(configV2.attributeSelectionPattern?.getDefaultFields()).containsExactly("description", "url")
-        assertThat(configV2.attributeSelectionPattern?.getQueryParamKey()).isEqualTo("web")
+        assertThat(configV2.attributeSelectionPattern?.getDefaultFieldsOrDefault())
+            .containsExactly("description", "url")
+        assertThat(configV2.attributeSelectionPattern?.getQueryParamKeyOrDefault()).isEqualTo("web")
     }
 
     @Test
@@ -527,8 +528,9 @@ internal class SpecmaticConfigAllTest {
         val config = objectMapper.readValue(configYaml, SpecmaticConfigV2::class.java).transform()
         val configV3 = SpecmaticConfigV2.loadFrom(config) as SpecmaticConfigV2
 
-        assertThat(configV3.attributeSelectionPattern?.getDefaultFields()).containsExactly("description", "url")
-        assertThat(configV3.attributeSelectionPattern?.getQueryParamKey()).isEqualTo("web")
+        assertThat(configV3.attributeSelectionPattern?.getDefaultFieldsOrDefault())
+            .containsExactly("description", "url")
+        assertThat(configV3.attributeSelectionPattern?.getQueryParamKeyOrDefault()).isEqualTo("web")
     }
 
     @Test

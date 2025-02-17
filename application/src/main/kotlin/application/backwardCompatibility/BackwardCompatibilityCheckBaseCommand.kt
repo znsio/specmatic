@@ -112,7 +112,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
 
     open fun getSpecsReferringTo(
         schemaFiles: Set<String>,
-        visitedSpecs: MutableSet<String> = mutableSetOf()
+        visitedSpecs: Set<String> = setOf()
     ): Set<String> {
         if (schemaFiles.isEmpty()) return emptySet()
 
@@ -127,13 +127,16 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
             }
         }.map { it.path }.toSet()
 
-        result.forEach { spec ->
-            if (spec !in visitedSpecs) {
-                visitedSpecs.add(spec)
-                visitedSpecs += getSpecsReferringTo(setOf(spec), visitedSpecs)
-            }
+        val updatedVisitedSpecs = result.fold(visitedSpecs) { acc, spec ->
+            if (spec in visitedSpecs)
+                return@fold acc
+
+            val updatedVisitedSpecs = acc + spec
+            updatedVisitedSpecs + getSpecsReferringTo(setOf(spec), updatedVisitedSpecs)
+
         }
-        return (visitedSpecs - schemaFiles)
+
+        return (updatedVisitedSpecs - schemaFiles)
     }
 
     internal fun allSpecFiles(): List<File> {

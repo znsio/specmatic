@@ -9,7 +9,7 @@ import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
 
-data class SpecmaticConfigV1 (
+data class SpecmaticConfigV1(
 	@field:JsonAlias("contract_repositories")
 	val sources: List<Source> = emptyList(),
 	val auth: Auth? = null,
@@ -28,7 +28,7 @@ data class SpecmaticConfigV1 (
 	val ignoreInlineExamples: Boolean? = null,
 	val additionalExampleParamsFilePath: String? = getStringValue(Flags.ADDITIONAL_EXAMPLE_PARAMS_FILE),
 	@field:JsonAlias("attribute_selection_pattern")
-	val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
+	val attributeSelectionPattern: AttributeSelectionPattern? = null,
 	@field:JsonAlias("all_patterns_mandatory")
 	val allPatternsMandatory: Boolean? = null,
 	@field:JsonAlias("default_pattern_values")

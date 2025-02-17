@@ -156,8 +156,8 @@ data class WorkflowConfiguration(
 }
 
 interface AttributeSelectionPatternDetails {
-    fun getDefaultFields(): List<String>
-    fun getQueryParamKey(): String
+    fun getDefaultFieldsOrDefault(): List<String>
+    fun getQueryParamKeyOrDefault(): String
 
     companion object {
         val default: AttributeSelectionPatternDetails = AttributeSelectionPattern()
@@ -166,18 +166,20 @@ interface AttributeSelectionPatternDetails {
 
 data class AttributeSelectionPattern(
     @field:JsonAlias("default_fields")
-    private val defaultFields: List<String>? = null,
+    val defaultFields: List<String>? = null,
     @field:JsonAlias("query_param_key")
-    private val queryParamKey: String? = null
+    val queryParamKey: String? = null
 ) : AttributeSelectionPatternDetails {
-    override fun getDefaultFields(): List<String> {
+    @JsonIgnore
+    override fun getDefaultFieldsOrDefault(): List<String> {
         return defaultFields ?: readEnvVarOrProperty(
             ATTRIBUTE_SELECTION_DEFAULT_FIELDS,
             ATTRIBUTE_SELECTION_DEFAULT_FIELDS
         ).orEmpty().split(",").filter { it.isNotBlank() }
     }
 
-    override fun getQueryParamKey(): String {
+    @JsonIgnore
+    override fun getQueryParamKeyOrDefault(): String {
         return queryParamKey ?: readEnvVarOrProperty(
             ATTRIBUTE_SELECTION_QUERY_PARAM_KEY,
             ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
@@ -201,7 +203,7 @@ data class SpecmaticConfig(
     private val workflow: WorkflowConfiguration? = null,
     private val ignoreInlineExamples: Boolean? = null,
     private val additionalExampleParamsFilePath: String? = null,
-    private val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
+    private val attributeSelectionPattern: AttributeSelectionPattern? = null,
     private val allPatternsMandatory: Boolean? = null,
     private val defaultPatternValues: Map<String, Any> = emptyMap(),
     private val version: SpecmaticConfigVersion? = null
@@ -257,7 +259,7 @@ data class SpecmaticConfig(
         }
 
         @JsonIgnore
-        fun getAttributeSelectionPattern(specmaticConfig: SpecmaticConfig): AttributeSelectionPattern {
+        fun getAttributeSelectionPattern(specmaticConfig: SpecmaticConfig): AttributeSelectionPattern? {
             return specmaticConfig.attributeSelectionPattern
         }
 
@@ -295,7 +297,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun getAttributeSelectionPattern(): AttributeSelectionPatternDetails {
-        return attributeSelectionPattern
+        return attributeSelectionPattern ?: AttributeSelectionPatternDetails.default
     }
 
     @JsonIgnore
@@ -356,7 +358,8 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun attributeSelectionQueryParamKey(): String {
-        return attributeSelectionPattern.getQueryParamKey()
+        return attributeSelectionPattern?.getQueryParamKeyOrDefault()
+            ?: AttributeSelectionPatternDetails.default.getQueryParamKeyOrDefault()
     }
 
     @JsonIgnore

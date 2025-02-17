@@ -10,8 +10,8 @@ import io.specmatic.core.ResiliencyTestSuite
 import io.specmatic.core.Source
 import io.specmatic.core.SourceProvider.filesystem
 import io.specmatic.core.SourceProvider.git
-import io.specmatic.core.config.SpecmaticConfigVersion.Companion.convertToLatestVersionedConfig
 import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.config.SpecmaticConfigVersion.Companion.convertToLatestVersionedConfig
 import io.specmatic.core.config.v1.SpecmaticConfigV1
 import io.specmatic.core.config.v2.ContractConfig
 import io.specmatic.core.config.v2.ContractConfig.FileSystemContractSource
@@ -509,8 +509,8 @@ internal class SpecmaticConfigAllTest {
         val config = objectMapper.readValue(configYaml, SpecmaticConfigV1::class.java).transform()
         val configV2 = SpecmaticConfigV2.loadFrom(config) as SpecmaticConfigV2
 
-        assertThat(configV2.attributeSelectionPattern.getDefaultFields()).containsExactly("description", "url")
-        assertThat(configV2.attributeSelectionPattern.getQueryParamKey()).isEqualTo("web")
+        assertThat(configV2.attributeSelectionPattern?.getDefaultFields()).containsExactly("description", "url")
+        assertThat(configV2.attributeSelectionPattern?.getQueryParamKey()).isEqualTo("web")
     }
 
     @Test
@@ -527,8 +527,8 @@ internal class SpecmaticConfigAllTest {
         val config = objectMapper.readValue(configYaml, SpecmaticConfigV2::class.java).transform()
         val configV3 = SpecmaticConfigV2.loadFrom(config) as SpecmaticConfigV2
 
-        assertThat(configV3.attributeSelectionPattern.getDefaultFields()).containsExactly("description", "url")
-        assertThat(configV3.attributeSelectionPattern.getQueryParamKey()).isEqualTo("web")
+        assertThat(configV3.attributeSelectionPattern?.getDefaultFields()).containsExactly("description", "url")
+        assertThat(configV3.attributeSelectionPattern?.getQueryParamKey()).isEqualTo("web")
     }
 
     @Test

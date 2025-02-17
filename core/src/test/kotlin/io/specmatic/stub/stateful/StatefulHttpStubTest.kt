@@ -1,11 +1,14 @@
 package io.specmatic.stub.stateful
 
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.*
-import io.specmatic.core.SpecmaticConfig.Companion.getAttributeSelectionPattern
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.QueryParameters
+import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.ContractPathData
-import io.specmatic.core.value.*
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.StringValue
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.loadContractStubsFromImplicitPaths
 import org.assertj.core.api.Assertions.assertThat
@@ -336,7 +339,7 @@ class StatefulHttpStubWithAttributeSelectionTest {
             ).toFeature()
             val specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml")
             val scenarios = feature.scenarios.map {
-                it.copy(attributeSelectionPattern = getAttributeSelectionPattern(specmaticConfig))
+                it.copy(attributeSelectionPattern = specmaticConfig.getAttributeSelectionPattern())
             }
             httpStub = StatefulHttpStub(
                 specmaticConfigPath = "$SPEC_DIR_PATH/specmatic.yaml",

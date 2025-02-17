@@ -166,9 +166,9 @@ interface AttributeSelectionPatternDetails {
 
 data class AttributeSelectionPattern(
     @field:JsonAlias("default_fields")
-    private val defaultFields: List<String>? = null,
+    val defaultFields: List<String>? = null,
     @field:JsonAlias("query_param_key")
-    private val queryParamKey: String? = null
+    val queryParamKey: String? = null
 ) : AttributeSelectionPatternDetails {
     override fun getDefaultFields(): List<String> {
         return defaultFields ?: readEnvVarOrProperty(
@@ -201,7 +201,7 @@ data class SpecmaticConfig(
     private val workflow: WorkflowConfiguration? = null,
     private val ignoreInlineExamples: Boolean? = null,
     private val additionalExampleParamsFilePath: String? = null,
-    private val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
+    private val attributeSelectionPattern: AttributeSelectionPattern? = null,
     private val allPatternsMandatory: Boolean? = null,
     private val defaultPatternValues: Map<String, Any> = emptyMap(),
     private val version: SpecmaticConfigVersion? = null
@@ -257,7 +257,7 @@ data class SpecmaticConfig(
         }
 
         @JsonIgnore
-        fun getAttributeSelectionPattern(specmaticConfig: SpecmaticConfig): AttributeSelectionPattern {
+        fun getAttributeSelectionPattern(specmaticConfig: SpecmaticConfig): AttributeSelectionPattern? {
             return specmaticConfig.attributeSelectionPattern
         }
 
@@ -295,7 +295,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun getAttributeSelectionPattern(): AttributeSelectionPatternDetails {
-        return attributeSelectionPattern
+        return attributeSelectionPattern ?: AttributeSelectionPatternDetails.default
     }
 
     @JsonIgnore
@@ -356,7 +356,8 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun attributeSelectionQueryParamKey(): String {
-        return attributeSelectionPattern.getQueryParamKey()
+        return attributeSelectionPattern?.getQueryParamKey()
+            ?: AttributeSelectionPatternDetails.default.getQueryParamKey()
     }
 
     @JsonIgnore

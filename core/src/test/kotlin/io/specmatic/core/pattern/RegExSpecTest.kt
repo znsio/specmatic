@@ -1,13 +1,52 @@
 package io.specmatic.core.pattern
 
-import com.mifmif.common.regex.Generex
-import dk.brics.automaton.RegExp
+import io.specmatic.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
 class RegExSpecTest {
+    @Test
+    fun `should not allow construction with invalid regex`() {
+        val invalidRegex = "/^a{10}\$/"
+        assertThrows<Exception> { RegExSpec(invalidRegex) }
+            .also { assertThat(it.message).isEqualTo("Invalid regex $invalidRegex. OpenAPI follows ECMA-262 regular expressions, which do not support / / delimiters like those used in many programming languages") }
+    }
+
+    @Test
+    fun `should not allow construction with minLength greater that what is possible with regex`() {
+        val tenOccurrencesOfAlphabetA = "^a{10}\$"
+        val minLength = 15
+        assertThrows<Exception> { RegExSpec(tenOccurrencesOfAlphabetA).validateMinLength(minLength) }
+            .also { assertThat(it.message).isEqualTo("minLength $minLength cannot be greater than the length of longest possible string that matches regex $tenOccurrencesOfAlphabetA") }
+    }
+
+    @Test
+    fun `should not allow construction with maxLength lesser that what is possible with regex`() {
+        val tenOccurrencesOfAlphabetA = "^a{10}\$"
+        val maxLength = 8
+        assertThrows<Exception> { RegExSpec(tenOccurrencesOfAlphabetA).validateMaxLength(maxLength) }
+            .also { assertThat(it.message).isEqualTo("maxLength $maxLength cannot be less than the length of shortest possible string that matches regex $tenOccurrencesOfAlphabetA") }
+    }
+
+    @Test
+    fun `should throw an exception with the regex parse failure from the regex library` () {
+        assertThatThrownBy { RegExSpec("yes|no|") }.hasMessageContaining("unexpected end-of-string")
+    }
+
+    @Test
+    fun `minLength greater than upper bound in the regex should not be accepted`() {
+        val regex = "[A-Z]{10,20}"
+        val minLength = 21
+        assertThatThrownBy {
+            RegExSpec(regex).validateMinLength(minLength)
+        }.isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessage("minLength $minLength cannot be greater than the length of longest possible string that matches regex $regex")
+    }
+
     @ParameterizedTest
     @CsvSource(
         "[a-zA-Z0-9]{1,3}; 1; 1",
@@ -59,107 +98,55 @@ class RegExSpecTest {
         assertThat(randomString).hasSize(10)
     }
 
-    @ParameterizedTest
-    @CsvSource(
-        "[a-zA-Z0-9]{10,20}; 9",
-        "[a-zA-Z0-9]{0,20}; -1",
-        "[a-zA-Z0-9]{10}; 9",
-        "[a-zA-Z0-9]{5}[a-zA-Z0-9]{5}; 9",
-        delimiterString = "; "
-    )
-    fun `min is less than lower bound of a finite regex should be accept`(regex: String, min: Int) {
-        val automaton = RegExp(regex).toAutomaton()
-        assertThat(automaton.isFinite).isTrue
-        automaton.getShortestExample(true).let {
-            assertThat(it.length).isGreaterThan(min)
-        }
+    @Test
+    fun `should strip out word boundary in regex`() {
+        val possibleValues = "Cat|Dog|Lion|Tiger"
+        val regExSpec = RegExSpec("$WORD_BOUNDARY($possibleValues)$WORD_BOUNDARY")
+        possibleValues.split("|").forEach { assertThat(regExSpec.match(StringValue(it))).isTrue }
     }
 
     @ParameterizedTest
     @CsvSource(
-        "[a-zA-Z0-9]{10,20}; 21",
-        "[a-zA-Z0-9]{0,20}; 21",
-        "[a-zA-Z0-9]{10}; 11",
-        "[a-zA-Z0-9]{5}[a-zA-Z0-9]{5}; 11",
+        "^[A-Z]{5,10}\$; [A-Z]{5,10}",
+        "[A-Z]{,10}; [A-Z]{0,10}",
+        "$WORD_BOUNDARY[A-Z]{5,10}$WORD_BOUNDARY; [A-Z]{5,10}",
+        "A-Z\\s0-9; A-Z\\s0-9",
+        "A-Z\\d0-9; A-Z\\d0-9",
+        "A-Z\\w0-9; A-Z\\w0-9",
+        "a[A-Z\\s0-9]b; a[A-Z \\t\\r\\n0-9]b",
+        "a[A-Z\\da-z]b; a[A-Z0-9a-z]b",
+        "a[A-Z\\w0-9]b; a[A-Za-zA-Z0-9_0-9]b",
+        "a[^A-Z\\s0-9]b; a[^A-Z \\t\\r\\n0-9]b",
+        "a[^A-Z\\da-z]b; a[^A-Z0-9a-z]b",
+        "a[^A-Z\\w0-9]b; a[^A-Za-zA-Z0-9_0-9]b",
+        "A-Z\\S0-9; A-Z\\S0-9",
+        "A-Z\\D0-9; A-Z\\D0-9",
+        "A-Z\\W0-9; A-Z\\W0-9",
+        "a[A-Z\\S0-9]b; a[A-Z\\S0-9]b",
+        "a[A-Z\\Da-z]b; a[A-Z\\Da-z]b",
+        "a[A-Z\\W0-9]b; a[A-Z\\W0-9]b",
         delimiterString = "; "
     )
-    fun `min is greater than upper bound of a finite regex should be rejected`(regex: String, min: Int) {
-        val automaton = RegExp(regex).toAutomaton()
-        assertThat(automaton.isFinite).isTrue
-        automaton.getShortestExample(true).let {
-            assertThat(it.length).isLessThan(min)
-        }
-        assertThat(Generex(regex).getMatchedStrings(min).size).isNotZero()
+    fun `cleans up the regex at construction`(inputRegex: String, expectedRegex: String) {
+        val regExSpec = RegExSpec(inputRegex)
+        val toString = regExSpec.toString()
+        assertThat(toString).isEqualTo(expectedRegex)
     }
 
     @ParameterizedTest
     @CsvSource(
-        "[a-zA-Z0-9]{10,20}; 9",
-        "[a-zA-Z0-9]{0,20}; 0",
-        "[a-zA-Z0-9]{10}; 9",
-        "[a-zA-Z0-9]{5}[a-zA-Z0-9]{5}; 9",
+        "null; 3; null; 5; 5",
+        "null; 3; 4; 4; 4",
+        "null; 3; 10; 5; 5",
+        "^[A-Z]{5,10}\$; 5; 10; 5; 10",
+        "[A-Z]{,10}; 0; 10; 0; 10",
+        "[A-Z]{3,}; 0; 10; 3; 10",
         delimiterString = "; "
     )
-    fun `max is less than lower bound of a finite regex should be rejected`(regex: String, max: Int) {
-        val automaton = RegExp(regex).toAutomaton()
-        assertThat(automaton.isFinite).isTrue
-        automaton.getShortestExample(true).let {
-            assertThat(it.length).isGreaterThanOrEqualTo(max)
-        }
-        assertThat(Generex(regex).getMatchedStrings(max).size).isZero()
-    }
-
-    @ParameterizedTest
-    @CsvSource(
-        "[a-zA-Z0-9]{10,20}; 21",
-        "[a-zA-Z0-9]{0,20}; 21",
-        "[a-zA-Z0-9]{10}; 11",
-        "[a-zA-Z0-9]{5}[a-zA-Z0-9]{5}; 11",
-        delimiterString = "; "
-    )
-    fun `max is greater than upper bound of a finite regex should be accepted`(regex: String, max: Int) {
-        val automaton = RegExp(regex).toAutomaton()
-        assertThat(automaton.isFinite).isTrue
-        automaton.getShortestExample(true).let {
-            assertThat(it.length).isLessThan(max)
-        }
-        assertThat(Generex(regex).getMatchedStrings(max).size).isNotZero()
-    }
-
-    @ParameterizedTest
-    @CsvSource(
-        "[a-zA-Z0-9]{10,}; 9",
-        "[a-zA-Z0-9]{0,}; -1",
-        "[a-zA-Z0-9]{5,}[a-zA-Z0-9]{5,}; 9",
-        "[a-zA-Z0-9]+; 0",
-        ".*; -1",
-        ".+; 0",
-        delimiterString = "; "
-    )
-    fun `min is less than lower bound of an infinite regex should be accept`(regex: String, min: Int) {
-        val automaton = RegExp(regex).toAutomaton()
-        assertThat(automaton.isFinite).isFalse
-        automaton.getShortestExample(true).let {
-            assertThat(it.length).isGreaterThan(min)
-        }
-    }
-
-    @ParameterizedTest
-    @CsvSource(
-        "[a-zA-Z0-9]{10,}; 9",
-        "[a-zA-Z0-9]{0,}; 0",
-        "[a-zA-Z0-9]{5,}[a-zA-Z0-9]{5,}; 9",
-        "[a-zA-Z0-9]+; 0",
-        ".*; 0",
-        ".+; 0",
-        delimiterString = "; "
-    )
-    fun `max is less than lower bound of an infinite regex should be rejected`(regex: String, max: Int) {
-        val automaton = RegExp(regex).toAutomaton()
-        assertThat(automaton.isFinite).isFalse
-        automaton.getShortestExample(true).let {
-            assertThat(it.length).isGreaterThanOrEqualTo(max)
-        }
-        assertThat(Generex(regex).getMatchedStrings(max).size).isZero()
+    fun `Generate random string when regex is empty`(regex: String, min: Int, max: String, expectedMinLen: Int, expectedMaxLen: Int) {
+        val generatedString = RegExSpec(regex.takeIf { it != "null" }).generateRandomString(min, max.toIntOrNull()).toStringLiteral()
+        assertThat(generatedString.length)
+            .isGreaterThanOrEqualTo(expectedMinLen)
+            .isLessThanOrEqualTo(expectedMaxLen)
     }
 }

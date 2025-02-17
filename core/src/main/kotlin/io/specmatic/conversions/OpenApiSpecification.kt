@@ -105,15 +105,7 @@ class OpenApiSpecification(
         }
 
         fun isParsable(openApiFilePath: String): Boolean {
-            val options = ParseOptions().apply { isResolve = true; isResolveFully = true }
-            val parseResult = OpenAPIV3Parser().readLocation(openApiFilePath, null, options)
-
-            return parseResult.messages.isEmpty()
-        }
-
-        fun parseResult(openApiFilePath: String): SwaggerParseResult {
-            val options = ParseOptions().apply { isResolve = true; isResolveFully = true }
-            return OpenAPIV3Parser().readLocation(openApiFilePath, null, options)
+            return OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences()) != null
         }
 
         fun getImplicitOverlayContent(openApiFilePath: String): String {

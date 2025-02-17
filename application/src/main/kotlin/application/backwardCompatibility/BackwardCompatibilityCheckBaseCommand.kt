@@ -43,7 +43,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     var repoDir: String = "."
 
     abstract fun checkBackwardCompatibility(oldFeature: IFeature, newFeature: IFeature): Results
-    abstract fun parseResult(file: File): ParseResult
+    abstract fun File.isValidSpec(): Boolean
     abstract fun getFeatureFromSpecPath(path: String): IFeature
 
     abstract fun getSpecsOfChangedExternalisedExamples(
@@ -78,14 +78,11 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         val filesChangedInCurrentBranch = getChangedSpecsInCurrentBranch().filter {
             it.contains(targetPath)
         }.toSet()
-        checkIfTheChangedSpecsAreValidOrExit(filesChangedInCurrentBranch.parseResults())
 
         val filesReferringToChangedSchemaFiles = getSpecsReferringTo(filesChangedInCurrentBranch)
-        checkIfTheChangedSpecsAreValidOrExit(filesReferringToChangedSchemaFiles.parseResults())
 
         val specificationsOfChangedExternalisedExamples =
             getSpecsOfChangedExternalisedExamples(filesChangedInCurrentBranch)
-        checkIfTheChangedSpecsAreValidOrExit(specificationsOfChangedExternalisedExamples.parseResults())
 
         if(logSpecs) {
             logFilesToBeCheckedForBackwardCompatibility(
@@ -100,36 +97,11 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
                 specificationsOfChangedExternalisedExamples
     }
 
-    private fun Set<String>.parseResults(): Set<ParseResult> {
-        return this.map { parseResult(File(it)) }.toSet()
-    }
-
-    private fun checkIfTheChangedSpecsAreValidOrExit(parseResultsOfFilesChangedInCurrentBranch: Set<ParseResult>) {
-        if (parseResultsOfFilesChangedInCurrentBranch.all { it.errorMessages.isEmpty() })
-            return
-
-        logger.log("The following changed specs are invalid: $newLine")
-
-        parseResultsOfFilesChangedInCurrentBranch.forEachIndexed { index, parseResult ->
-            if (parseResult.errorMessages.isNotEmpty()) {
-                val ordinal = index + 1
-
-                logger.log("$ordinal. ${parseResult.specPath}, reason(s):")
-
-                parseResult.errorMessages.forEachIndexed { idx, errorMessage ->
-                    logger.log("$ONE_INDENT${idx.inc()}. $errorMessage")
-                }
-            }
-        }
-
-        exitProcess(0)
-    }
-
     private fun getChangedSpecsInCurrentBranch(): Set<String> {
         return gitCommand.getFilesChangedInCurrentBranch(
             baseBranch()
         ).filter {
-            File(it).exists()
+            File(it).exists() && File(it).isValidSpec()
         }.toSet().also {
             if (it.isEmpty()) {
                 logger.log("$newLine No specs were changed, skipping the check.$newLine")
@@ -167,7 +139,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     internal fun allSpecFiles(): List<File> {
         return File(repoDir).walk().toList().filterNot {
             ".git" in it.path
-        }.filter { it.isFile }
+        }.filter { it.isFile && it.isValidSpec() }
     }
 
     private fun logFilesToBeCheckedForBackwardCompatibility(

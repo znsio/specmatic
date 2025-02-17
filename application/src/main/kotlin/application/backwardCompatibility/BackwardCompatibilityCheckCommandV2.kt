@@ -8,7 +8,6 @@ import io.specmatic.core.IFeature
 import io.specmatic.core.Results
 import io.specmatic.core.WSDL
 import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.testBackwardCompatibility
 import io.specmatic.stub.isOpenAPI
 import org.springframework.stereotype.Component
@@ -32,17 +31,9 @@ class BackwardCompatibilityCheckCommandV2: BackwardCompatibilityCheckBaseCommand
         return testBackwardCompatibility(oldFeature as Feature, newFeature as Feature)
     }
 
-    override fun parseResult(file: File): ParseResult {
-        if (file.extension !in CONTRACT_EXTENSIONS) {
-            return ParseResult(
-                specPath = file.canonicalPath,
-                errorMessages = setOf("The provided spec has an invalid extension.")
-            )
-        }
-        return ParseResult(
-            specPath = file.canonicalPath,
-            errorMessages = OpenApiSpecification.parseResult(file.path).messages.orEmpty().toSet()
-        )
+    override fun File.isValidSpec(): Boolean {
+        if (this.extension !in CONTRACT_EXTENSIONS) return false
+        return OpenApiSpecification.isParsable(this.path)
     }
 
     override fun getFeatureFromSpecPath(path: String): Feature {

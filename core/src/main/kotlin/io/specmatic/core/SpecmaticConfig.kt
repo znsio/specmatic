@@ -117,12 +117,8 @@ data class StubConfiguration(
 }
 
 data class VirtualServiceConfiguration(
-    private val nonPatchableKeys: Set<String> = emptySet()
-) {
-    fun getNonPatchableKeys(): Set<String> {
-        return nonPatchableKeys
-    }
-}
+    val nonPatchableKeys: Set<String>? = null
+)
 
 data class WorkflowIDOperation(
     val extract: String? = null,
@@ -196,7 +192,7 @@ data class SpecmaticConfig(
     private val security: SecurityConfiguration? = null,
     private val test: TestConfiguration? = TestConfiguration(),
     private val stub: StubConfiguration = StubConfiguration(),
-    private val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
+    private val virtualService: VirtualServiceConfiguration? = null,
     private val examples: List<String>? = null,
     private val workflow: WorkflowConfiguration? = null,
     private val ignoreInlineExamples: Boolean? = null,
@@ -242,7 +238,7 @@ data class SpecmaticConfig(
         }
 
         @JsonIgnore
-        fun getVirtualServiceConfiguration(specmaticConfig: SpecmaticConfig): VirtualServiceConfiguration {
+        fun getVirtualServiceConfiguration(specmaticConfig: SpecmaticConfig): VirtualServiceConfiguration? {
             return specmaticConfig.virtualService
         }
 
@@ -511,7 +507,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun getVirtualServiceNonPatchableKeys(): Set<String> {
-        return virtualService.getNonPatchableKeys()
+        return virtualService?.nonPatchableKeys ?: emptySet()
     }
 
     @JsonIgnore

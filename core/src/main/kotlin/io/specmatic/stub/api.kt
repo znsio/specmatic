@@ -101,14 +101,15 @@ internal fun createStub(
     timeoutMillis: Long,
     strict: Boolean = false
 ): ContractStub {
+    val configFileName = getConfigFilePath()
+    val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
+
     val stubData = runWithTimeout(STUB_START_TIMEOUT) {
-        val configFileName = getConfigFilePath()
         if (File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
         val contractPathData = contractStubPaths(configFileName)
 
         if (strict) throwExceptionIfDirectoriesAreInvalid(dataDirPaths, "example directories")
 
-        val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
         val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths, specmaticConfig, strict)
         val features = contractInfo.map { it.first }
         val httpExpectations = contractInfoToHttpExpectations(contractInfo)
@@ -116,7 +117,6 @@ internal fun createStub(
         object {
             val httpExpectations = httpExpectations
             val features = features
-            val configFileName = configFileName
             val contractPathData = contractPathData
         }
 
@@ -128,7 +128,7 @@ internal fun createStub(
         host,
         port,
         ::consoleLog,
-        specmaticConfigPath = File(stubData.configFileName).canonicalPath,
+        specmaticConfigPath = File(configFileName).canonicalPath,
         timeoutMillis = timeoutMillis,
         strictMode = strict,
         specToStubPortMap = stubData.contractPathData.specToPortMap()
@@ -143,12 +143,13 @@ internal fun createStub(
     givenConfigFileName: String? = null,
     dataDirPaths: List<String> = emptyList()
 ): ContractStub {
-    val stubValues = runWithTimeout(STUB_START_TIMEOUT) {
+    val configFileName = givenConfigFileName ?: getConfigFilePath()
+    val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
+
+    val stubValues = runWithTimeout(specmaticConfig.getStubStartTimeoutInMilliseconds()) {
         val workingDirectory = WorkingDirectory()
-        val configFileName = givenConfigFileName ?: getConfigFilePath()
         if (File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
 
-        val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
         val contractStubPaths = contractStubPaths(configFileName)
 
         val stubs = if (dataDirPaths.isEmpty()) {
@@ -163,7 +164,6 @@ internal fun createStub(
             val workingDirectory = workingDirectory
             val features = features
             val expectations = expectations
-            val configFileName = configFileName
             val contractStubPaths = contractStubPaths
         }
     }
@@ -175,7 +175,7 @@ internal fun createStub(
         port,
         log = ::consoleLog,
         workingDirectory = stubValues.workingDirectory,
-        specmaticConfigPath = File(stubValues.configFileName).canonicalPath,
+        specmaticConfigPath = File(configFileName).canonicalPath,
         timeoutMillis = timeoutMillis,
         strictMode = strict,
         specToStubPortMap = stubValues.contractStubPaths.specToPortMap()

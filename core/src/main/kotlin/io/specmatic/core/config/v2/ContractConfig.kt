@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.specmatic.core.Source
 import io.specmatic.core.SourceProvider
+import io.specmatic.core.SourceProvider.filesystem
 import io.specmatic.core.config.v3.Consumes
 import io.specmatic.core.config.v3.ConsumesDeserializer
 
@@ -49,7 +50,11 @@ data class ContractConfig(
     }
 
     fun transform(): Source {
-        return this.contractSource?.transform(provides, consumes) ?: Source(test = provides, stub = consumes)
+        return this.contractSource?.transform(provides, consumes) ?: Source(
+            provider = filesystem,
+            test = provides,
+            stub = consumes
+        )
     }
 
     fun interface ContractSource {
@@ -80,7 +85,7 @@ data class ContractConfig(
 
         override fun transform(provides: List<String>?, consumes: List<Consumes>?): Source {
             return Source(
-                provider = SourceProvider.filesystem,
+                provider = filesystem,
                 directory = this.directory,
                 test = provides,
                 stub = consumes.orEmpty()

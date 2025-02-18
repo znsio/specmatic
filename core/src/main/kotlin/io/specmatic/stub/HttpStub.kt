@@ -62,6 +62,8 @@ import java.nio.charset.Charset
 import java.util.*
 import kotlin.text.toCharArray
 
+const val SPECMATIC_RESPONSE_CODE_HEADER = "Specmatic-Response-Code"
+
 class HttpStub(
     private val features: List<Feature>,
     rawHttpStubs: List<HttpStubData> = emptyList(),

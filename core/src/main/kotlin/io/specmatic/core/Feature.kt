@@ -1,14 +1,5 @@
 package io.specmatic.core
 
-import io.specmatic.conversions.*
-import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.*
-import io.specmatic.core.pattern.Examples.Companion.examplesFrom
-import io.specmatic.core.value.*
-import io.specmatic.mock.NoMatchingScenario
-import io.specmatic.mock.ScenarioStub
-import io.specmatic.stub.HttpStubData
-import io.specmatic.test.*
 import io.cucumber.gherkin.GherkinDocumentBuilder
 import io.cucumber.gherkin.Parser
 import io.cucumber.messages.IdGenerator
@@ -16,10 +7,18 @@ import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
 import io.ktor.http.*
-import io.specmatic.core.SpecmaticConfig.Companion.getWorkflowConfiguration
+import io.specmatic.conversions.*
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
+import io.specmatic.core.log.logger
+import io.specmatic.core.pattern.*
+import io.specmatic.core.pattern.Examples.Companion.examplesFrom
 import io.specmatic.core.utilities.*
+import io.specmatic.core.value.*
+import io.specmatic.mock.NoMatchingScenario
+import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.HttpStubData
+import io.specmatic.test.*
 import io.swagger.v3.oas.models.*
 import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.info.Info
@@ -216,7 +215,9 @@ data class Feature(
                 serverState = serverState,
                 mismatchMessages = mismatchMessages,
                 unexpectedKeyCheck = flagsBased.unexpectedKeyCheck ?: ValidateUnexpectedKeys
-            )
+            ).let { resultList ->
+                filterByExpectedResponseStatus(httpRequest.expectedResponseCode(), resultList)
+            }
 
             return matchingScenario(resultList)?.let {
                 Pair(ResponseBuilder(it, serverState), Results())
@@ -231,6 +232,15 @@ data class Feature(
         } finally {
             serverState = emptyMap()
         }
+    }
+
+    private fun filterByExpectedResponseStatus(
+        expectedResponseCode: Int?,
+        resultList: Sequence<Pair<Scenario, Result>>
+    ): Sequence<Pair<Scenario, Result>> {
+        return expectedResponseCode?.let {
+            resultList.filter { result -> result.first.status == it }
+        } ?: resultList
     }
 
     fun stubResponseMap(
@@ -271,9 +281,11 @@ data class Feature(
     ): Sequence<Pair<Scenario, Result>> {
         val scenarioSequence = scenarios.asSequence()
 
-        return scenarioSequence.zip(scenarioSequence.map {
+        val matchingScenarios = scenarioSequence.zip(scenarioSequence.map {
             it.matchesStub(httpRequest, serverState, mismatchMessages, unexpectedKeyCheck)
         })
+
+        return matchingScenarios
     }
 
     fun compatibilityLookup(httpRequest: HttpRequest, mismatchMessages: MismatchMessages = NewAndOldContractRequestMismatches): List<Pair<Scenario, Result>> {

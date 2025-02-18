@@ -384,8 +384,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun getResiliencyTestsEnabled(): ResiliencyTestSuite {
-        return (test?.resiliencyTests ?: ResiliencyTestsConfig.fromSystemProperties()).enable
-            ?: ResiliencyTestSuite.none
+        return (test?.resiliencyTests ?: ResiliencyTestsConfig.fromSystemProperties()).enable ?: ResiliencyTestSuite.none
     }
 
     @JsonIgnore

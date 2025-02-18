@@ -1585,10 +1585,10 @@ data class Feature(
             pattern is NumberPattern -> {
                 val schema = if (pattern.isDoubleFormat) NumberSchema() else IntegerSchema()
                 schema.apply {
-                    minimum = pattern.minimum.takeUnless { it == NumberPattern.LOWEST_DECIMAL };
-                    maximum = pattern.maximum.takeUnless { it == NumberPattern.HIGHEST_DECIMAL };
-                    exclusiveMinimum = pattern.exclusiveMinimum.takeUnless { !it };
-                    exclusiveMaximum = pattern.exclusiveMaximum.takeUnless { !it }
+                    minimum = pattern.minimum;
+                    maximum = pattern.maximum;
+                    exclusiveMinimum = pattern.exclusiveMinimum;
+                    exclusiveMaximum = pattern.exclusiveMaximum
                 }
             }
             pattern is StringPattern -> {

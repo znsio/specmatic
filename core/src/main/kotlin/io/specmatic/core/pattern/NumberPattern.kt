@@ -14,9 +14,9 @@ data class NumberPattern(
     override val typeAlias: String? = null,
     val minLength: Int = 1,
     val maxLength: Int = Int.MAX_VALUE,
-    private val minimum: BigDecimal? = null,
+    val minimum: BigDecimal? = null,
     val exclusiveMinimum: Boolean = false,
-    private val maximum: BigDecimal? = null,
+    val maximum: BigDecimal? = null,
     val exclusiveMaximum: Boolean = false,
     override val example: String? = null,
     val isDoubleFormat: Boolean = false

@@ -3,13 +3,17 @@ package integration_tests
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
+import io.specmatic.core.Result
 import io.specmatic.core.SPECMATIC_TYPE_HEADER
+import io.specmatic.core.Scenario
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.mock.TRANSIENT_MOCK_ID
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.SPECMATIC_RESPONSE_CODE_HEADER
+import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.fail
 import org.junit.jupiter.api.Test
 
 class ResponseCodeHintingTest {
@@ -349,5 +353,62 @@ class ResponseCodeHintingTest {
                 assertThat(response.status).isEqualTo(400)
             }
         }
+    }
+
+    @Test
+    fun `test should send the relevant response code for both positive and negative tests`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 1.0.0
+            paths:
+              /:
+                post:
+                  summary: Simple POST endpoint
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - name
+                          properties:
+                            name:
+                              type: string
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    '400':
+                      description: Bad Request
+                      content:
+                        text/plain:
+                          schema:
+                              type: string
+            """.trimIndent(), "").toFeature().enableGenerativeTesting()
+
+        val results = feature.executeTests(object : TestExecutor {
+            var expectedResponseCode = 0
+            var testDescription = ""
+
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.expectedResponseCode()).withFailMessage("Expected hinted response code ${request.expectedResponseCode()} to be equal to $expectedResponseCode in test scenario $testDescription").isEqualTo(expectedResponseCode)
+                return HttpResponse(expectedResponseCode, "done")
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                testDescription = scenario.testDescription()
+                expectedResponseCode = scenario.status
+            }
+        })
+
+        assertThat(results.testCount).isGreaterThan(0)
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+
     }
 }

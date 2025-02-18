@@ -1582,6 +1582,22 @@ data class Feature(
     @Suppress("MemberVisibilityCanBePrivate")
     fun toOpenApiSchema(pattern: Pattern, resolver: Resolver? = null): Schema<Any> {
         val schema = when {
+            pattern is NumberPattern -> {
+                val schema = if (pattern.isDoubleFormat) NumberSchema() else IntegerSchema()
+                schema.apply {
+                    minimum = pattern.minimum.takeUnless { it == NumberPattern.LOWEST_DECIMAL };
+                    maximum = pattern.maximum.takeUnless { it == NumberPattern.HIGHEST_DECIMAL };
+                    exclusiveMinimum = pattern.exclusiveMinimum.takeUnless { !it };
+                    exclusiveMaximum = pattern.exclusiveMaximum.takeUnless { !it }
+                }
+            }
+            pattern is StringPattern -> {
+                StringSchema().apply {
+                    minLength = pattern.minLength;
+                    maxLength = pattern.maxLength;
+                    format = pattern.regex
+                }
+            }
             pattern is DictionaryPattern -> {
                 ObjectSchema().apply {
                     additionalProperties = Schema<Any>().apply {
@@ -1668,9 +1684,9 @@ data class Feature(
             }
             pattern is NumberPattern || (pattern is DeferredPattern && pattern.pattern == "(number)") -> NumberSchema()
             pattern is BooleanPattern || (pattern is DeferredPattern && pattern.pattern == "(boolean)") -> BooleanSchema()
-            pattern is DateTimePattern || (pattern is DeferredPattern && pattern.pattern == "(datetime)") -> StringSchema()
-            pattern is DatePattern || (pattern is DeferredPattern && pattern.pattern == "(date)") -> StringSchema()
-            pattern is UUIDPattern || (pattern is DeferredPattern && pattern.pattern == "(uuid)") -> StringSchema()
+            pattern is DateTimePattern || (pattern is DeferredPattern && pattern.pattern == "(datetime)") -> DateTimeSchema()
+            pattern is DatePattern || (pattern is DeferredPattern && pattern.pattern == "(date)") -> DateSchema()
+            pattern is UUIDPattern || (pattern is DeferredPattern && pattern.pattern == "(uuid)") -> UUIDSchema()
             pattern is StringPattern || pattern is EmptyStringPattern || (pattern is DeferredPattern && pattern.pattern == "(string)") || (pattern is DeferredPattern && pattern.pattern == "(nothing)") -> StringSchema()
             pattern is NullPattern || (pattern is DeferredPattern && pattern.pattern == "(null)") -> Schema<Any>().apply {
                 this.nullable = true

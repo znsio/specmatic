@@ -461,7 +461,7 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun getAuthBearerFile(): String? {
-        return auth?.let { it.bearerFile ?: "bearer.txt" }
+        return auth?.bearerFile
     }
 
     @JsonIgnore

@@ -24,6 +24,7 @@ class RegExSpec(regex: String?) {
     private val isFinite = this.regex != null && !Generex(this.regex).isInfinite
 
     fun validateMinLength(minLength: Int?) {
+        if (regex == null) return
         minLength?.let {
             val shortestString = generateShortestString()
             if (it > shortestString.length && isFinite) {
@@ -36,6 +37,7 @@ class RegExSpec(regex: String?) {
     }
 
     fun validateMaxLength(maxLength: Int?) {
+        if (regex == null) return
         maxLength?.let {
             val shortestPossibleString = generateShortestString()
             if (shortestPossibleString.length > it) {
@@ -51,7 +53,8 @@ class RegExSpec(regex: String?) {
         return Generex(regex).random(minLen, minLen)
     }
 
-    private fun generateShortestString(): String = RegExp(regex).toAutomaton().getShortestExample(true)
+    private fun generateShortestString(): String =
+        regex?.let { RegExp(it).toAutomaton().getShortestExample(true) } ?: ""
 
     fun generateLongestStringOrRandom(maxLen: Int): String {
         if (regex == null) return randomString(maxLen)

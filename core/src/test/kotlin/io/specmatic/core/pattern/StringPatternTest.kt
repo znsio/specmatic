@@ -383,7 +383,7 @@ internal class StringPatternTest {
                     .isGreaterThanOrEqualTo(expectedMinLen)
                     .isLessThanOrEqualTo(expectedMaxLen)
 
-                assertThat(generatedString).matches(regex)
+                assertThat(generatedString).matches(RegExSpec(regex).toString())
             } else {
                 fail("Expected an exception to be thrown")
             }

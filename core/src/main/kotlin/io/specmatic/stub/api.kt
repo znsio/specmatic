@@ -6,18 +6,15 @@ import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
-import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.core.utilities.*
 import io.specmatic.core.utilities.ContractPathData.Companion.specToPortMap
-import io.specmatic.core.utilities.contractStubPaths
-import io.specmatic.core.utilities.examplesDirFor
-import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
-import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import org.yaml.snakeyaml.Yaml
 import java.io.File
 
 private const val HTTP_STUB_SHUTDOWN_TIMEOUT = 2000L
+private const val STUB_START_TIMEOUT = 20_000L
 
 // Used by stub client code
 fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000): ContractStub {
@@ -105,26 +102,36 @@ internal fun createStub(
     strict: Boolean = false
 ): ContractStub {
     val configFileName = getConfigFilePath()
-    if(File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
-    val contractPathData = contractStubPaths(configFileName)
-
-    if(strict) throwExceptionIfDirectoriesAreInvalid(dataDirPaths, "example directories")
-
     val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
-    val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths, specmaticConfig, strict)
-    val features = contractInfo.map { it.first }
-    val httpExpectations = contractInfoToHttpExpectations(contractInfo)
+
+    val stubData = runWithTimeout(STUB_START_TIMEOUT) {
+        if (File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
+        val contractPathData = contractStubPaths(configFileName)
+
+        if (strict) throwExceptionIfDirectoriesAreInvalid(dataDirPaths, "example directories")
+
+        val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths, specmaticConfig, strict)
+        val features = contractInfo.map { it.first }
+        val httpExpectations = contractInfoToHttpExpectations(contractInfo)
+
+        object {
+            val httpExpectations = httpExpectations
+            val features = features
+            val contractPathData = contractPathData
+        }
+
+    }
 
     return HttpStub(
-        features,
-        httpExpectations,
+        stubData.features,
+        stubData.httpExpectations,
         host,
         port,
         ::consoleLog,
         specmaticConfigPath = File(configFileName).canonicalPath,
         timeoutMillis = timeoutMillis,
         strictMode = strict,
-        specToStubPortMap = contractPathData.specToPortMap()
+        specToStubPortMap = stubData.contractPathData.specToPortMap()
     )
 }
 
@@ -136,32 +143,42 @@ internal fun createStub(
     givenConfigFileName: String? = null,
     dataDirPaths: List<String> = emptyList()
 ): ContractStub {
-    val workingDirectory = WorkingDirectory()
     val configFileName = givenConfigFileName ?: getConfigFilePath()
-    if(File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
-
     val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
-    val contractStubPaths = contractStubPaths(configFileName)
 
-    val stubs = if(dataDirPaths.isEmpty()) {
-        loadContractStubsFromImplicitPaths(contractStubPaths, specmaticConfig)
-    } else {
-        loadContractStubsFromFiles(contractStubPaths, dataDirPaths, specmaticConfig, strict)
+    val stubValues = runWithTimeout(specmaticConfig.getStubStartTimeoutInMilliseconds()) {
+        val workingDirectory = WorkingDirectory()
+        if (File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
+
+        val contractStubPaths = contractStubPaths(configFileName)
+
+        val stubs = if (dataDirPaths.isEmpty()) {
+            loadContractStubsFromImplicitPaths(contractStubPaths, specmaticConfig)
+        } else {
+            loadContractStubsFromFiles(contractStubPaths, dataDirPaths, specmaticConfig, strict)
+        }
+        val features = stubs.map { it.first }
+        val expectations = contractInfoToHttpExpectations(stubs)
+
+        object {
+            val workingDirectory = workingDirectory
+            val features = features
+            val expectations = expectations
+            val contractStubPaths = contractStubPaths
+        }
     }
-    val features = stubs.map { it.first }
-    val expectations = contractInfoToHttpExpectations(stubs)
 
     return HttpStub(
-        features,
-        expectations,
+        stubValues.features,
+        stubValues.expectations,
         host,
         port,
         log = ::consoleLog,
-        workingDirectory = workingDirectory,
+        workingDirectory = stubValues.workingDirectory,
         specmaticConfigPath = File(configFileName).canonicalPath,
         timeoutMillis = timeoutMillis,
         strictMode = strict,
-        specToStubPortMap = contractStubPaths.specToPortMap()
+        specToStubPortMap = stubValues.contractStubPaths.specToPortMap()
     )
 }
 

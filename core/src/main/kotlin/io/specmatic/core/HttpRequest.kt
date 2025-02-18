@@ -11,6 +11,7 @@ import io.ktor.http.*
 import io.ktor.http.content.*
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_PRETTY_PRINT
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
+import io.specmatic.stub.SPECMATIC_RESPONSE_CODE_HEADER
 import org.apache.http.client.utils.URLEncodedUtils
 import org.apache.http.message.BasicNameValuePair
 import java.io.File
@@ -64,6 +65,10 @@ data class HttpRequest(
         multiPartFormData = multiPartFormData,
         metadata = metadata
     )
+
+    fun addHeader(name: String, value: String): HttpRequest {
+        return this.copy(headers = headers.plus(name to value))
+    }
 
     fun updateQueryParams(otherQueryParams: Map<String, String>): HttpRequest =
         copy(queryParams = queryParams.plus(otherQueryParams))
@@ -383,6 +388,10 @@ data class HttpRequest(
             headers = updatedHeaders,
             metadata = updatedMetadata
         )
+    }
+
+    fun expectedResponseCode(): Int? {
+        return headers[SPECMATIC_RESPONSE_CODE_HEADER]?.toIntOrNull()
     }
 }
 

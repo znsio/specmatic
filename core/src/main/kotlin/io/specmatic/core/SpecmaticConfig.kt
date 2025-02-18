@@ -97,7 +97,8 @@ data class StubConfiguration(
     private val generative: Boolean? = null,
     private val delayInMilliseconds: Long? = null,
     private val dictionary: String? = null,
-    private val includeMandatoryAndRequestedKeysInResponse: Boolean? = null
+    private val includeMandatoryAndRequestedKeysInResponse: Boolean? = null,
+    private val startTimeoutInMilliseconds: Long? = null
 ) {
     fun getGenerative(): Boolean? {
         return generative
@@ -113,6 +114,10 @@ data class StubConfiguration(
 
     fun getIncludeMandatoryAndRequestedKeysInResponse(): Boolean? {
         return includeMandatoryAndRequestedKeysInResponse
+    }
+
+    fun getStartTimeoutInMilliseconds(): Long? {
+        return startTimeoutInMilliseconds
     }
 }
 
@@ -308,6 +313,11 @@ data class SpecmaticConfig(
                 }
             }
         }.plus(defaultPort).distinct()
+    }
+
+    @JsonIgnore
+    fun getStubStartTimeoutInMilliseconds(): Long {
+        return stub.getStartTimeoutInMilliseconds() ?: 20_000L
     }
 
     fun logDependencyProjects(azure: AzureAPI) {

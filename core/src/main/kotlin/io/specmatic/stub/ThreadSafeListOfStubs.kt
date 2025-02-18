@@ -52,8 +52,14 @@ class ThreadSafeListOfStubs(
     }
 
     fun matchingTransientStub(httpRequest: HttpRequest): Pair<HttpStubData, List<Pair<Result, HttpStubData>>>? {
+        val expectedResponseCode = httpRequest.expectedResponseCode()
+
         val queueMatchResults: List<Pair<Result, HttpStubData>> = matchResults { stubs ->
-            stubs.map { Pair(it.matches(httpRequest), it) }
+            stubs.filter {
+                hasExpectedResponseCode(it, expectedResponseCode)
+            }.map {
+                Pair(it.matches(httpRequest), it)
+            }
         }
 
         val (_, queueMock) = queueMatchResults.findLast { (result, _) ->
@@ -63,9 +69,18 @@ class ThreadSafeListOfStubs(
         return Pair(queueMock, queueMatchResults)
     }
 
+    private fun hasExpectedResponseCode(httpStubData: HttpStubData, expectedResponseCode: Int?): Boolean {
+        expectedResponseCode ?: return true
+        return httpStubData.responsePattern.status == expectedResponseCode
+    }
+
     fun matchingNonTransientStub(httpRequest: HttpRequest): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
+        val expectedResponseCode = httpRequest.expectedResponseCode()
+
         val listMatchResults: List<Pair<Result, HttpStubData>> = matchResults { httpStubData ->
-             httpStubData.filter { it.partial == null }.map {
+             httpStubData.filter {
+                 hasExpectedResponseCode(it, expectedResponseCode)
+             }.filter { it.partial == null }.map {
                  Pair(it.matches(httpRequest), it)
              }.plus(partialMatchResults(httpStubData, httpRequest))
         }
@@ -119,8 +134,12 @@ class ThreadSafeListOfStubs(
         httpStubData: List<HttpStubData>,
         httpRequest: HttpRequest
     ): List<Pair<Result, HttpStubData>> {
+        val expectedResponseCode = httpRequest.expectedResponseCode()
+
         return httpStubData.mapNotNull { it.partial?.let { partial -> it to partial } }
-            .map { (stubData, partial) ->
+            .filter {
+                hasExpectedResponseCode(it.first, expectedResponseCode)
+            }.map { (stubData, partial) ->
                 val (requestPattern, _, resolver) = stubData
 
                 val partialResolver = resolver.copy(

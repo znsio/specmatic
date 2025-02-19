@@ -11,12 +11,13 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "2.3.12"
+def ktor_version = "2.3.13"
 def junit_version = "5.11.4"
 
 dependencies {
     // TODO Fix to eliminate vulnerabilities, remove when the enclosing library supports it
-    implementation 'io.netty:netty-codec-http:4.1.115.Final' // used by ktor-server-netty-jvm 2.3.9 in core
+    implementation 'io.netty:netty-codec-http:4.1.118.Final' // used by ktor-server-netty-jvm 2.3.13 in core (last checked on Feb 13 2025)
+    implementation 'net.minidev:json-smart:2.5.2' // used by json-path 2.9.0 (last checked on Feb 13 2025)
 
     api project(':core')
     implementation "org.junit.jupiter:junit-jupiter-engine:${junit_version}"
@@ -25,13 +26,13 @@ dependencies {
     implementation 'org.assertj:assertj-core:3.26.3'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.11.4'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
-    implementation 'org.thymeleaf:thymeleaf:3.1.2.RELEASE'
+    implementation 'org.thymeleaf:thymeleaf:3.1.3.RELEASE'
 
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
     implementation "io.ktor:ktor-client-cio:${ktor_version}"
 
     testImplementation "org.junit.jupiter:junit-jupiter-params:${junit_version}"
-    implementation 'org.junit.platform:junit-platform-launcher:1.11.3'
+    implementation 'org.junit.platform:junit-platform-launcher:1.11.4'
     implementation 'org.junit.platform:junit-platform-reporting:1.11.4'
     implementation 'org.fusesource.jansi:jansi:2.4.1'
 }

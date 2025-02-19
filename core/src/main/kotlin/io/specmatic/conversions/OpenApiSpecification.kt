@@ -402,6 +402,8 @@ class OpenApiSpecification(
         val data: List<Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>>> =
             openApiPaths().map { (openApiPath, pathItem) ->
                 val scenariosAndExamples = openApiOperations(pathItem).map { (httpMethod, openApiOperation) ->
+                    logger.debug("\n\nProcessing $httpMethod $openApiPath")
+
                     try {
                         openApiOperation.validateParameters()
                     } catch (e: ContractException) {
@@ -825,6 +827,8 @@ class OpenApiSpecification(
 
     private fun toHttpResponsePatterns(responses: ApiResponses?): List<ResponsePatternData> {
         return responses.orEmpty().map { (status, response) ->
+            logger.debug("Processing response payload with status $status")
+
             val headersMap = openAPIHeadersToSpecmatic(response)
             if(!isNumber(status) && status != "default")
                 throw ContractException("Response status codes are expected to be numbers, but \"$status\" was found")
@@ -835,6 +839,8 @@ class OpenApiSpecification(
 
     private fun openAPIHeadersToSpecmatic(response: ApiResponse) =
         response.headers.orEmpty().map { (headerName, header) ->
+            logger.debug("Processing response header $headerName")
+
             toSpecmaticParamName(header.required != true, headerName) to toSpecmaticPattern(
                 resolveResponseHeader(header)?.schema ?: throw ContractException(
                     headerComponentMissingError(
@@ -893,6 +899,8 @@ class OpenApiSpecification(
                 }
 
         return response.content.map { (contentType, mediaType) ->
+            logger.debug("Processing response with content type $contentType")
+
             val responsePattern = HttpResponsePattern(
                 headersPattern = HttpHeadersPattern(headersMap, contentType = contentType),
                 status = if (status == "default") 1000 else status.toInt(),
@@ -932,6 +940,7 @@ class OpenApiSpecification(
         httpMethod: String,
         operation: Operation
     ): List<RequestPatternsData> {
+        logger.debug("Processing requests for $httpMethod")
 
         val securitySchemes: Map<String, OpenAPISecurityScheme> =
             parsedOpenApi.components?.securitySchemes?.mapValues { (schemeName, scheme) ->
@@ -952,6 +961,8 @@ class OpenApiSpecification(
         val parameters = operation.parameters
 
         val headersMap = parameters.orEmpty().filterIsInstance<HeaderParameter>().associate {
+            logger.debug("Processing request header ${it.name}")
+
             toSpecmaticParamName(it.required != true, it.name) to toSpecmaticPattern(it.schema, emptyList())
         }
 
@@ -986,6 +997,8 @@ class OpenApiSpecification(
             )
 
         return requestBody.content.map { (contentType, mediaType) ->
+            logger.debug("Processing request payload with media type $contentType")
+
             when (contentType.lowercase()) {
                 "multipart/form-data" -> {
                     val partSchemas = if (mediaType.schema.`$ref` == null) {
@@ -1116,6 +1129,8 @@ class OpenApiSpecification(
         operation: Operation,
         contractSecuritySchemes: Map<String, OpenAPISecurityScheme>
     ): List<OpenAPISecurityScheme> {
+        logger.debug("Associating security schemes")
+
         val globalSecurityRequirements: List<String> =
             parsedOpenApi.security?.map { it.keys.toList() }?.flatten() ?: emptyList()
         val operationSecurityRequirements: List<String> =
@@ -1275,6 +1290,8 @@ class OpenApiSpecification(
     private fun toSpecmaticPattern(
         schema: Schema<*>, typeStack: List<String>, patternName: String = "", jsonInFormData: Boolean = false
     ): Pattern {
+        if(patternName.isNotBlank()) logger.debug("Processing schema $patternName")
+
         val preExistingResult = patterns["($patternName)"]
         val pattern = if (preExistingResult != null && patternName.isNotBlank())
             preExistingResult
@@ -1491,8 +1508,8 @@ class OpenApiSpecification(
     }
 
     private fun numberPattern(schema: Schema<*>, isDoubleFormat: Boolean) = NumberPattern(
-        minimum = schema.minimum ?: NumberPattern.LOWEST_DECIMAL,
-        maximum = schema.maximum ?: NumberPattern.HIGHEST_DECIMAL,
+        minimum = schema.minimum,
+        maximum = schema.maximum,
         exclusiveMinimum = schema.exclusiveMinimum ?: false,
         exclusiveMaximum = schema.exclusiveMaximum ?: false,
         isDoubleFormat = isDoubleFormat,
@@ -1849,6 +1866,8 @@ class OpenApiSpecification(
         val parameters = operation.parameters ?: return HttpQueryParamPattern(emptyMap())
 
         val queryPattern: Map<String, Pattern> = parameters.filterIsInstance<QueryParameter>().associate {
+            logger.debug("Processing query parameter ${it.name}")
+
             val specmaticPattern: Pattern? = if (it.schema.type == "array") {
                 QueryParameterArrayPattern(listOf(toSpecmaticPattern(schema = it.schema.items, typeStack = emptyList())), it.name)
             } else if (it.schema.type != "object") {
@@ -1898,6 +1917,8 @@ class OpenApiSpecification(
             }
 
         val pathPattern: List<URLPathSegmentPattern> = pathSegments.map { pathSegment ->
+            logger.debug("Processing path segment $pathSegment")
+
             if (isParameter(pathSegment)) {
                 val paramName = pathSegment.removeSurrounding("{", "}")
 

@@ -1,8 +1,5 @@
 package io.specmatic.core.pattern
 
-import com.mifmif.common.regex.Generex
-import dk.brics.automaton.RegExp
-import io.ktor.http.*
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.mismatchResult
@@ -20,50 +17,20 @@ data class StringPattern (
     override val example: String? = null,
     val regex: String? = null
 ) : Pattern, ScalarType, HasDefaultExample {
+    private val regExSpec get() = RegExSpec(regex)
+    private val effectiveMinLength get() = minLength ?: 0
+
     init {
-        if (minLength != null && maxLength != null && minLength > maxLength) {
-            throw IllegalArgumentException("maxLength cannot be less than minLength")
+        if (effectiveMinLength < 0) {
+            throw IllegalArgumentException("minLength $effectiveMinLength cannot be less than 0")
         }
-
-        regex?.let {
-            val regexWithoutCaretAndDollar = validateRegex(it).removePrefix("^").removeSuffix("$")
-            regexMinLengthValidation(regexWithoutCaretAndDollar)
-            regexMaxLengthValidation(regexWithoutCaretAndDollar)
-        }
-
-    }
-
-    private fun validateRegex(regex: String): String {
-        return runCatching { RegExp(regex); regex }.getOrElse {
-            e -> throw IllegalArgumentException("Failed to parse regex ${regex.quote()}\nReason: ${e.message}")
-        }
-    }
-
-    private fun regexMinLengthValidation(regex: String) {
-        minLength?.let {
-            val automaton = RegExp(regex).toAutomaton()
-            val shortestPossibleLengthOfRegex = automaton.getShortestExample(true).length
-            if (shortestPossibleLengthOfRegex < it) {
-                throw IllegalArgumentException("Invalid String Constraints - minLength cannot be greater than length of shortest possible string that matches regex")
-            }
-            if (maxLength != null && shortestPossibleLengthOfRegex > maxLength) {
-                throw IllegalArgumentException("Invalid String Constraints - maxLength cannot be less than length of shortest possible string that matches regex")
-            }
-        }
-    }
-
-    private fun regexMaxLengthValidation(regex: String) {
         maxLength?.let {
-            val automaton = RegExp(regex).toAutomaton()
-            val generatedString = if (automaton.isFinite) {
-                generateFromRegex(regex, it + 1)
-            } else {
-                generateFromRegex(regex, minLength ?: 0, it)
-            }
-            if (generatedString.length > it) {
-                throw IllegalArgumentException("Invalid String Constraints - regex cannot generate / match string greater than maxLength")
+            if (effectiveMinLength > it) {
+                throw IllegalArgumentException("maxLength $it cannot be less than minLength $effectiveMinLength")
             }
         }
+        regExSpec.validateMinLength(minLength)
+        regExSpec.validateMaxLength(maxLength)
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
@@ -74,7 +41,7 @@ data class StringPattern (
             return mismatchResult("string", sampleData, resolver.mismatchMessages)
 
         if (lengthBelowLowerBound(sampleData)) return mismatchResult(
-            "string with minLength $minLength",
+            "string with minLength $effectiveMinLength",
             sampleData, resolver.mismatchMessages
         )
 
@@ -83,9 +50,9 @@ data class StringPattern (
             sampleData, resolver.mismatchMessages
         )
 
-        if (doesNotMatchRegex(sampleData)) {
+        if (!regExSpec.match(sampleData)) {
             return mismatchResult(
-                """string that matches regex /$regex/""",
+                """string that matches regex $regex""",
                 sampleData,
                 resolver.mismatchMessages
             )
@@ -94,14 +61,11 @@ data class StringPattern (
         return Result.Success()
     }
 
-    private fun doesNotMatchRegex(sampleData: StringValue) =
-        regex != null && !Regex(regex).matches(sampleData.toStringLiteral())
-
     private fun lengthAboveUpperBound(sampleData: StringValue) =
-        maxLength != null && sampleData.toStringLiteral().length > maxLength
+        maxLength?.let { sampleData.toStringLiteral().length > it } ?: false
 
     private fun lengthBelowLowerBound(sampleData: StringValue) =
-        minLength != null && sampleData.toStringLiteral().length < minLength
+        sampleData.toStringLiteral().length < effectiveMinLength
 
     override fun encompasses(
         otherPattern: Pattern,
@@ -116,14 +80,6 @@ data class StringPattern (
         return JSONArrayValue(valueList)
     }
 
-    private val patternBaseLength: Int =
-        when {
-            minLength != null && 5 < minLength -> minLength
-            maxLength != null && 5 > maxLength -> maxLength
-            else -> 5
-        }
-
-
     override fun generate(resolver: Resolver): Value {
         val defaultExample = resolver.resolveExample(example, this)
 
@@ -133,35 +89,20 @@ data class StringPattern (
             return it
         }
 
-        return regex?.let {
-            val regexWithoutCaretAndDollar = regex.removePrefix("^").removeSuffix("$")
-            StringValue(generateFromRegex(regexWithoutCaretAndDollar, patternBaseLength, maxLength))
-        } ?: StringValue(randomString(patternBaseLength))
+        return regExSpec.generateRandomString(effectiveMinLength, maxLength)
     }
 
-
-    private fun generateFromRegex(regexWithoutCaretAndDollar: String, minLength: Int, maxLength: Int? = null): String =
-        try {
-            if(maxLength != null) {
-                Generex(regexWithoutCaretAndDollar).random(minLength, maxLength)
-            } else {
-                Generex(regexWithoutCaretAndDollar).random(minLength)
-            }
-        } catch (e: StackOverflowError) {
-            //TODO: This is a temporary fix for the stack overflow error, need to find a better solution
-            generateFromRegex(regexWithoutCaretAndDollar, minLength, maxLength)
-        }
-
-
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        val minLengthExample: ReturnValue<Pattern>? = minLength?.let {
-            HasValue(ExactValuePattern(StringValue(randomString(it))), "minimum length string")
+        val minLengthExample: ReturnValue<Pattern>? = minLength?.let { minLen ->
+            val exampleString = regExSpec.generateShortestStringOrRandom(minLen)
+            HasValue(ExactValuePattern(StringValue(exampleString)), "minimum length string")
         }
 
         val withinRangeExample: ReturnValue<Pattern> = HasValue(this)
 
-        val maxLengthExample: ReturnValue<Pattern>? = maxLength?.let {
-            HasValue(ExactValuePattern(StringValue(randomString(it))), "maximum length string")
+        val maxLengthExample: ReturnValue<Pattern>? = maxLength?.let { maxLen ->
+            val exampleString = regExSpec.generateLongestStringOrRandom(maxLen)
+            HasValue(ExactValuePattern(StringValue(exampleString)), "maximum length string")
         }
 
         return sequenceOf(minLengthExample, withinRangeExample, maxLengthExample).filterNotNull()
@@ -187,15 +128,15 @@ data class StringPattern (
                     HasValue(pattern, "length greater than maxLength '$maxLength'")
                 )
             }
-            if (minLength != null) {
+            if (minLength != null && minLength != 0) {
                 val pattern = copy(
-                    minLength = minLength.dec(),
-                    maxLength = minLength.dec(),
+                    minLength = effectiveMinLength.dec(),
+                    maxLength = effectiveMinLength.dec(),
                     regex = null
                 )
                 yield(
                     HasValue(
-                        pattern, "length lesser than minLength '$minLength'"
+                        pattern, "length lesser than minLength '$effectiveMinLength'"
                     )
                 )
             }

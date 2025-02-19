@@ -7,6 +7,7 @@ import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.Value
+import io.specmatic.stub.SPECMATIC_RESPONSE_CODE_HEADER
 
 data class ScenarioAsTest(
     val scenario: Scenario,
@@ -85,7 +86,7 @@ data class ScenarioAsTest(
     ): Pair<Result, HttpResponse?> {
         val request = testScenario.generateHttpRequest(flagsBased).let {
             workflow.updateRequest(it, originalScenario)
-        }
+        }.addHeader(SPECMATIC_RESPONSE_CODE_HEADER, testScenario.status.toString())
 
         try {
             testExecutor.setServerState(testScenario.serverState)

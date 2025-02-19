@@ -97,6 +97,11 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
         jsonObject[name]
 
     fun keys() = jsonObject.keys
+    fun addEntry(key: String, value: String): JSONObjectValue {
+        return this.copy(
+            jsonObject = jsonObject.plus(key to StringValue(value))
+        )
+    }
 
 }
 

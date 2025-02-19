@@ -548,6 +548,7 @@ data class SpecmaticConfig(
         }
     }
 
+    @JsonIgnore
     fun getSecurityConfiguration(): SecurityConfiguration? {
         return security
     }

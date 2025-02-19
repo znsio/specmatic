@@ -211,7 +211,6 @@ data class SpecmaticConfig(
             return specmaticConfig.report
         }
 
-        @JsonIgnore
         fun getSources(specmaticConfig: SpecmaticConfig): List<Source>? {
             return specmaticConfig.sources
         }

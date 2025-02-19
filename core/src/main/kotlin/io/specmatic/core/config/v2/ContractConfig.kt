@@ -50,11 +50,7 @@ data class ContractConfig(
     }
 
     fun transform(): Source {
-        return this.contractSource?.transform(provides, consumes) ?: Source(
-            provider = filesystem,
-            test = provides,
-            stub = consumes
-        )
+        return this.contractSource?.transform(provides, consumes) ?: Source(test = provides, stub = consumes)
     }
 
     fun interface ContractSource {
@@ -79,14 +75,14 @@ data class ContractConfig(
     }
 
     data class FileSystemContractSource(
-        val directory: String = "."
+        val directory: String? = null
     ) : ContractSource {
-        constructor(source: Source) : this(source.directory ?: ".")
+        constructor(source: Source) : this(source.directory)
 
         override fun transform(provides: List<String>?, consumes: List<Consumes>?): Source {
             return Source(
-                provider = filesystem,
-                directory = this.directory,
+                provider = directory.let { filesystem },
+                directory = directory,
                 test = provides,
                 stub = consumes.orEmpty()
             )

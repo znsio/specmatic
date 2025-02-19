@@ -9,7 +9,9 @@ import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.specmatic.core.Configuration.Companion.configFilePath
-import io.specmatic.core.SourceProvider.*
+import io.specmatic.core.SourceProvider.filesystem
+import io.specmatic.core.SourceProvider.git
+import io.specmatic.core.SourceProvider.web
 import io.specmatic.core.azure.AzureAPI
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.VERSION_1
@@ -510,26 +512,6 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun getVirtualServiceNonPatchableKeys(): Set<String> {
         return virtualService.getNonPatchableKeys()
-    }
-
-    @JsonIgnore
-    fun stubContracts(relativeTo: File = File(".")): List<String> {
-        return sources.orEmpty().flatMap { source ->
-            source.stub.orEmpty().flatMap { stub ->
-                when (stub) {
-                    is Consumes.StringValue -> listOf(stub.value)
-                    is Consumes.ObjectValue -> stub.specs
-                }
-            }.map { spec ->
-                if (source.provider == web) spec
-                else spec.canonicalPath(relativeTo)
-            }
-        }
-    }
-
-    @JsonIgnore
-    private fun String.canonicalPath(relativeTo: File): String {
-        return relativeTo.parentFile?.resolve(this)?.canonicalPath ?: File(this).canonicalPath
     }
 
     fun updateReportConfiguration(reportConfiguration: ReportConfiguration): SpecmaticConfig {

@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import java.io.File
 
 internal class SpecmaticConfigKtTest {
 
@@ -338,7 +337,7 @@ internal class SpecmaticConfigKtTest {
             )
 
             assertThat(
-                specmaticConfig.stubContracts().map { it.substringAfterLast(File.separator) }
+                specmaticConfig.loadSources().flatMap { sources -> sources.stubContracts.map { stub -> stub.path } }
             ).isEqualTo(
                 listOf(
                     "9000_first.yaml",

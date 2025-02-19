@@ -6118,7 +6118,8 @@ paths:
                     in: path
                     required: true
                     schema:
-                      type: number
+                      type: integer
+                      format: int32
                   requestBody:
                     content:
                       application/json:
@@ -6186,7 +6187,8 @@ paths:
                     in: path
                     required: true
                     schema:
-                      type: number
+                      type: integer
+                      format: int32
                   requestBody:
                     content:
                       application/json:

@@ -1587,15 +1587,15 @@ data class Feature(
                 schema.apply {
                     minimum = pattern.minimum;
                     maximum = pattern.maximum;
-                    exclusiveMinimum = pattern.exclusiveMinimum;
-                    exclusiveMaximum = pattern.exclusiveMaximum
+                    exclusiveMinimum = pattern.exclusiveMinimum.takeIf { it };
+                    exclusiveMaximum = pattern.exclusiveMaximum.takeIf { it }
                 }
             }
             pattern is StringPattern -> {
                 StringSchema().apply {
                     minLength = pattern.minLength;
                     maxLength = pattern.maxLength;
-                    format = pattern.regex
+                    this.pattern = pattern.regex
                 }
             }
             pattern is DictionaryPattern -> {
@@ -1687,8 +1687,6 @@ data class Feature(
             pattern is DateTimePattern || (pattern is DeferredPattern && pattern.pattern == "(datetime)") -> DateTimeSchema()
             pattern is DatePattern || (pattern is DeferredPattern && pattern.pattern == "(date)") -> DateSchema()
             pattern is UUIDPattern || (pattern is DeferredPattern && pattern.pattern == "(uuid)") -> UUIDSchema()
-            pattern is DatePattern || (pattern is DeferredPattern && pattern.pattern == "(date)") -> StringSchema()
-            pattern is UUIDPattern || (pattern is DeferredPattern && pattern.pattern == "(uuid)") -> StringSchema()
             pattern is StringPattern || pattern is EmptyStringPattern || (pattern is DeferredPattern && pattern.pattern == "(string)") || (pattern is DeferredPattern && pattern.pattern == "(nothing)") -> StringSchema()
             pattern is NullPattern || (pattern is DeferredPattern && pattern.pattern == "(null)") -> Schema<Any>().apply {
                 this.nullable = true

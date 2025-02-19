@@ -101,38 +101,7 @@ internal fun createStub(
     timeoutMillis: Long,
     strict: Boolean = false
 ): ContractStub {
-    val configFileName = getConfigFilePath()
-    val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
-
-    val stubData = runWithTimeout(STUB_START_TIMEOUT) {
-        if (File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
-        val contractPathData = contractStubPaths(configFileName)
-
-        if (strict) throwExceptionIfDirectoriesAreInvalid(dataDirPaths, "example directories")
-
-        val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths, specmaticConfig, strict)
-        val features = contractInfo.map { it.first }
-        val httpExpectations = contractInfoToHttpExpectations(contractInfo)
-
-        object {
-            val httpExpectations = httpExpectations
-            val features = features
-            val contractPathData = contractPathData
-        }
-
-    }
-
-    return HttpStub(
-        stubData.features,
-        stubData.httpExpectations,
-        host,
-        port,
-        ::consoleLog,
-        specmaticConfigPath = File(configFileName).canonicalPath,
-        timeoutMillis = timeoutMillis,
-        strictMode = strict,
-        specToStubPortMap = stubData.contractPathData.specToPortMap()
-    )
+    return createStub(host, port, timeoutMillis, strict, null, dataDirPaths)
 }
 
 internal fun createStub(

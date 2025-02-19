@@ -226,9 +226,8 @@ data class SpecmaticConfig(
             return specmaticConfig.pipeline
         }
 
-        @JsonIgnore
-        fun getSecurityConfiguration(specmaticConfig: SpecmaticConfig?): SecurityConfigurationDetails? {
-            return specmaticConfig?.security
+        fun getSecurityConfiguration(specmaticConfig: SpecmaticConfig): SecurityConfigurationDetails? {
+            return specmaticConfig.security
         }
 
         @JsonIgnore
@@ -547,6 +546,10 @@ data class SpecmaticConfig(
         } catch(e: Throwable) {
             throw ContractException("Error loading Specmatic configuration: ${e.message}")
         }
+    }
+
+    fun getSecurityConfiguration(): SecurityConfiguration? {
+        return security
     }
 }
 
@@ -884,6 +887,7 @@ data class SecurityConfigurationDetails(
     @param:JsonProperty("OpenAPI")
     val OpenAPI: OpenAPISecurityConfiguration? = null
 ) : SecurityConfiguration {
+    @JsonIgnore
     override fun getOpenAPISecurityScheme(scheme: String): SecuritySchemeConfiguration? {
         return OpenAPI?.securitySchemes?.get(scheme)
     }

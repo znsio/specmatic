@@ -6,7 +6,6 @@ import io.specmatic.core.SpecmaticConfig.Companion.getAllPatternsMandatory
 import io.specmatic.core.SpecmaticConfig.Companion.getAttributeSelectionPattern
 import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
-import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
 import io.specmatic.core.SpecmaticConfig.Companion.getStubConfiguration
 import io.specmatic.core.SpecmaticConfig.Companion.getTestConfiguration
 import io.specmatic.core.SpecmaticConfig.Companion.getVirtualServiceConfiguration
@@ -81,7 +80,7 @@ data class SpecmaticConfigV2(
                 hooks = config.getHooks(),
                 repository = getRepository(config),
                 report = SpecmaticConfig.getReport(config)?.validatePresenceOfExcludedEndpoints(currentConfigVersion()),
-                security = getSecurityConfiguration(config),
+                security = SpecmaticConfig.getSecurityConfiguration(config),
                 test = getTestConfiguration(config),
                 stub = getStubConfiguration(config),
                 virtualService = getVirtualServiceConfiguration(config),

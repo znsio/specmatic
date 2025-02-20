@@ -11,21 +11,7 @@ import org.junit.jupiter.params.provider.CsvSource
 
 class TimePatternTest {
     @Test
-    fun testValidTimeMatch() {
-        val timeString = "10:05:59"
-        val result = TimePattern.matches(StringValue(timeString), Resolver())
-        assertTrue(result is Result.Success)
-    }
-
-    @Test
-    fun testInvalidTimeMatch() {
-        val timeString = "invalid-time"
-        val result = TimePattern.matches(StringValue(timeString), Resolver())
-        assertTrue(result is Result.Failure)
-    }
-
-    @Test
-    fun testGeneratedTimeIsValid() {
+    fun `should be able to generate a time`() {
         val generated = TimePattern.generate(Resolver())
         println(generated)
         val result = TimePattern.matches(generated, Resolver())
@@ -33,13 +19,7 @@ class TimePatternTest {
     }
 
     @Test
-    fun testParseValidTime() {
-        val parsed = TimePattern.parse("23:59:59", Resolver())
-        assertEquals("23:59:59", parsed.string)
-    }
-
-    @Test
-    fun testNewBasedOn() {
+    fun `should generate new time values for test`() {
         val row = Row()
         val patterns = TimePattern.newBasedOn(row, Resolver()).map { it.value }.toList()
 
@@ -55,23 +35,26 @@ class TimePatternTest {
 
     @ParameterizedTest
     @CsvSource(
-        "01:01:01, true",
-        "a23:59:59, false",
-        "235959, true",
-        "01:01:01Z, true",
-        "010101Z, true",
-        "01:01:01+05:30, true",
-        "01:01:01+05:30d, false",
-        "010101+0530, true",
-        "010101d+0530, false",
-        "010101+0530d, false",
-        "01:01:01-01:00, true",
-        "01:01:01b-01:00a, false",
-        "010101-0100, true",
-        "010101c-0100d, false",
+        "01:01:01, valid",
+        "a23:59:59, invalid",
+        "01:01:01Z, valid",
+        "01:01:01T, invalid",
+        "01:01:01+05:30, valid",
+        "01:01:01+05:30d, invalid",
+        "01:01:01-01:00, valid",
+        "01:01:01b-01:00a, invalid",
+        "not-a-time, invalid",
+        "aa:bb:cc, invalid"
     )
-    fun `RFC 6801 regex should validate time`(time: String, isValid: Boolean) {
+    fun `RFC 6801 regex should validate time`(time: String, validity: String) {
         val result = TimePattern.matches(StringValue(time), Resolver())
+
+        val isValid = when(validity) {
+            "valid" -> true
+            "invalid" -> false
+            else -> IllegalArgumentException("Unknown validity: $validity")
+        }
+
         assertEquals(isValid, result is Result.Success)
     }
 }

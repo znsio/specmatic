@@ -28,15 +28,17 @@ object TimePattern : Pattern, ScalarType {
 
     override fun newBasedOn(resolver: Resolver): Sequence<TimePattern> = sequenceOf(this)
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(
+        row: Row,
+        resolver: Resolver,
+        config: NegativePatternConfiguration
+    ): Sequence<ReturnValue<Pattern>> {
         return scalarAnnotation(this, sequenceOf(NullPattern))
     }
 
-    override fun parse(value: String, resolver: Resolver): StringValue =
-        attempt {
-            RFC8601.parse(value)
-            StringValue(value)
-        }
+    override fun parse(value: String, resolver: Resolver): StringValue {
+        return RFC8601.validatedStringValue(value)
+    }
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         return encompasses(this, otherPattern, thisResolver, otherResolver, typeStack)

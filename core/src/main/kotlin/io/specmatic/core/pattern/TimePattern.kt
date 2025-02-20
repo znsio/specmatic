@@ -22,7 +22,7 @@ object TimePattern : Pattern, ScalarType {
         }
     }
 
-    override fun generate(resolver: Resolver): StringValue = StringValue(RFC8601.currentTime())
+    override fun generate(resolver: Resolver): StringValue = StringValue(ISO8601.currentTime)
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(this))
 
@@ -37,7 +37,7 @@ object TimePattern : Pattern, ScalarType {
     }
 
     override fun parse(value: String, resolver: Resolver): StringValue {
-        return RFC8601.validatedStringValue(value)
+        return ISO8601.validatedStringValue(value)
     }
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {

@@ -4,7 +4,7 @@ import io.specmatic.core.value.StringValue
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-class RFC8601 {
+class ISO8601 {
     companion object{
         fun validatedStringValue(time: String): StringValue {
             return try {
@@ -15,8 +15,9 @@ class RFC8601 {
             }
         }
 
-        fun currentTime(): String = LocalTime.now().format(
-            DateTimeFormatter.ISO_TIME
-        )
+        val currentTime: String get() =
+            LocalTime.now().format(
+                DateTimeFormatter.ISO_TIME
+            )
     }
 }

@@ -9,13 +9,13 @@ import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.specmatic.core.Configuration.Companion.configFilePath
-import io.specmatic.core.SourceProvider.filesystem
-import io.specmatic.core.SourceProvider.git
-import io.specmatic.core.SourceProvider.web
 import io.specmatic.core.azure.AzureAPI
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticConfigVersion.VERSION_1
 import io.specmatic.core.config.toSpecmaticConfig
+import io.specmatic.core.config.v2.ContractConfig
+import io.specmatic.core.config.v2.ContractConfig.FileSystemContractSource
+import io.specmatic.core.config.v2.ContractConfig.GitContractSource
 import io.specmatic.core.config.v3.Consumes
 import io.specmatic.core.config.v3.ConsumesDeserializer
 import io.specmatic.core.log.logger
@@ -37,7 +37,6 @@ import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import io.specmatic.core.utilities.GitMonoRepo
 import io.specmatic.core.utilities.GitRepo
 import io.specmatic.core.utilities.LocalFileSystemSource
-import io.specmatic.core.utilities.WebSource
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.JSONObjectValue
@@ -191,7 +190,7 @@ data class AttributeSelectionPattern(
 }
 
 data class SpecmaticConfig(
-    private val sources: List<Source>? = null,
+    private val contracts: List<ContractConfig>? = null,
     private val auth: Auth? = null,
     private val pipeline: Pipeline? = null,
     private val environments: Map<String, Environment>? = null,
@@ -216,8 +215,8 @@ data class SpecmaticConfig(
             return specmaticConfig.report
         }
 
-        fun getSources(specmaticConfig: SpecmaticConfig): List<Source>? {
-            return specmaticConfig.sources
+        fun getContracts(specmaticConfig: SpecmaticConfig): List<ContractConfig>? {
+            return specmaticConfig.contracts
         }
 
         @JsonIgnore
@@ -304,11 +303,11 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun stubPorts(defaultPort: Int): List<Int> {
-        return sources.orEmpty().flatMap {
-            it.stub.orEmpty().map { consumes ->
-                when(consumes) {
+        return contracts.orEmpty().flatMap {
+            it.consumes.orEmpty().map { contract ->
+                when (contract) {
                     is Consumes.StringValue -> defaultPort
-                    is Consumes.ObjectValue -> consumes.port
+                    is Consumes.ObjectValue -> contract.port
                 }
             }
         }.plus(defaultPort).distinct()
@@ -323,12 +322,14 @@ data class SpecmaticConfig(
         logger.log("Dependency projects")
         logger.log("-------------------")
 
-        val availableSources = sources ?: return logger.log("\nNo sources exists in the given Specmatic Config")
+        val availableContracts = contracts ?: return logger.log("\nNo sources exists in the given Specmatic Config")
 
-        availableSources.forEach { source ->
-            logger.log("In central repo ${source.repository}")
+        availableContracts.forEach { contract ->
+            if (contract.contractSource is GitContractSource) {
+                logger.log("In central repo ${contract.contractSource.url}")
+            }
 
-            source.test?.forEach { relativeContractPath ->
+            contract.provides?.forEach { relativeContractPath ->
                 logger.log("  Consumers of $relativeContractPath")
                 val consumers = azure.referencesToContract(relativeContractPath)
 
@@ -345,20 +346,29 @@ data class SpecmaticConfig(
         }
     }
 
-
     @JsonIgnore
     fun loadSources(): List<ContractSource> {
-        return sources.orEmpty().map { source ->
-            val stubPaths = source.specToStubPortMap().entries.map { ContractSourceEntry(it.key, it.value) }
-            val testPaths = source.test.orEmpty().map { ContractSourceEntry(it) }
+        return contracts.orEmpty().map { contract ->
+            val stubPaths = contract.specToStubPortMap().entries.map { ContractSourceEntry(it.key, it.value) }
+            val testPaths = contract.provides.orEmpty().map { ContractSourceEntry(it) }
 
-            when (source.provider) {
-                git -> when (source.repository) {
-                    null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
-                    else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
+            when (val contractSource = contract.contractSource) {
+                is GitContractSource -> when (contractSource.url) {
+                    null -> GitMonoRepo(testPaths, stubPaths, SourceProvider.git.toString())
+                    else -> GitRepo(
+                        contractSource.url,
+                        contractSource.branch,
+                        testPaths,
+                        stubPaths,
+                        SourceProvider.git.toString()
+                    )
                 }
-                filesystem, null -> LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
-                web -> WebSource(testPaths, stubPaths)
+
+                is FileSystemContractSource -> LocalFileSystemSource(
+                    contractSource.directory ?: ".", testPaths, stubPaths
+                )
+
+                else -> LocalFileSystemSource(".", testPaths, stubPaths)
             }
         }
     }
@@ -629,26 +639,6 @@ data class Source(
         test = test,
         stub = stub?.map { Consumes.StringValue(it) }
     )
-
-    fun specsUsedAsStub(): List<String> {
-        return stub.orEmpty().flatMap {
-            when (it) {
-                is Consumes.StringValue -> listOf(it.value)
-                is Consumes.ObjectValue -> it.specs
-            }
-        }
-    }
-
-    fun specToStubPortMap(): Map<String, Int?> {
-        return stub.orEmpty().flatMap {
-            when (it) {
-                is Consumes.StringValue -> listOf(it.value to null)
-                is Consumes.ObjectValue -> it.specs.map { specPath ->
-                    specPath to it.port
-                }
-            }
-        }.toMap()
-    }
 }
 
 data class RepositoryInfo(

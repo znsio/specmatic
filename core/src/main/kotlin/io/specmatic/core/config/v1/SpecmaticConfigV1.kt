@@ -5,6 +5,7 @@ import io.specmatic.core.*
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticVersionedConfig
 import io.specmatic.core.config.SpecmaticVersionedConfigLoader
+import io.specmatic.core.config.v2.ContractConfig
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
@@ -37,7 +38,7 @@ data class SpecmaticConfigV1 (
 ): SpecmaticVersionedConfig {
 	override fun transform(): SpecmaticConfig {
 		return SpecmaticConfig(
-			sources = this.sources,
+			contracts = this.sources.map { ContractConfig(it) },
 			auth = this.auth,
 			pipeline = this.pipeline,
 			environments = this.environments,

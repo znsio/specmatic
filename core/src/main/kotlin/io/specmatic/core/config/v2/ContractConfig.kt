@@ -88,4 +88,24 @@ data class ContractConfig(
             )
         }
     }
+
+    fun specsUsedAsStub(): List<String> {
+        return consumes.orEmpty().flatMap {
+            when (it) {
+                is Consumes.StringValue -> listOf(it.value)
+                is Consumes.ObjectValue -> it.specs
+            }
+        }
+    }
+
+    fun specToStubPortMap(): Map<String, Int?> {
+        return consumes.orEmpty().flatMap {
+            when (it) {
+                is Consumes.StringValue -> listOf(it.value to null)
+                is Consumes.ObjectValue -> it.specs.map { specPath ->
+                    specPath to it.port
+                }
+            }
+        }.toMap()
+    }
 }

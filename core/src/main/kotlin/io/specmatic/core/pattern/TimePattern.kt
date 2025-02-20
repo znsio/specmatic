@@ -22,21 +22,23 @@ object TimePattern : Pattern, ScalarType {
         }
     }
 
-    override fun generate(resolver: Resolver): StringValue = StringValue(RFC8601.currentTime())
+    override fun generate(resolver: Resolver): StringValue = StringValue(ISO8601.currentTime)
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(this))
 
     override fun newBasedOn(resolver: Resolver): Sequence<TimePattern> = sequenceOf(this)
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(
+        row: Row,
+        resolver: Resolver,
+        config: NegativePatternConfiguration
+    ): Sequence<ReturnValue<Pattern>> {
         return scalarAnnotation(this, sequenceOf(NullPattern))
     }
 
-    override fun parse(value: String, resolver: Resolver): StringValue =
-        attempt {
-            RFC8601.parse(value)
-            StringValue(value)
-        }
+    override fun parse(value: String, resolver: Resolver): StringValue {
+        return ISO8601.validatedStringValue(value)
+    }
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         return encompasses(this, otherPattern, thisResolver, otherResolver, typeStack)

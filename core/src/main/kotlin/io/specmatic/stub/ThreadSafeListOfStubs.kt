@@ -122,11 +122,9 @@ class ThreadSafeListOfStubs(httpStubs: List<HttpStubData>, private val specToPor
         val mock = listMatchResults.map { (result, stubData) ->
             if (result !is Result.Success) return@map Pair(result, stubData)
 
-            val response = if (stubData.partial == null) stubData.response
-            else stubData.responsePattern.generateResponse(stubData.partial.response, stubData.resolver)
-
+            val originalRequest = stubData.partial?.request ?: stubData.originalRequest
             val stubResponse = HttpStubResponse(
-                response,
+                response = stubData.partial?.response ?: stubData.response,
                 stubData.delayInMilliseconds,
                 stubData.contractPath,
                 feature = stubData.feature,
@@ -134,15 +132,14 @@ class ThreadSafeListOfStubs(httpStubs: List<HttpStubData>, private val specToPor
             )
 
             try {
-                val originalRequest =
-                    if (stubData.partial != null) stubData.partial.request
-                    else stubData.originalRequest
+                val resolvedResponse = stubResponse.resolveSubstitutions(
+                    request = httpRequest,
+                    originalRequest = originalRequest ?: httpRequest,
+                    data = stubData.data
+                ).response
 
-                stubResponse.resolveSubstitutions(
-                    httpRequest,
-                    originalRequest ?: httpRequest,
-                    stubData.data
-                )
+                val response = if (stubData.partial == null) resolvedResponse
+                else stubData.responsePattern.generateResponse(resolvedResponse, stubData.resolver)
 
                 result to stubData.copy(response = response)
             } catch (e: ContractException) {

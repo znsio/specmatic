@@ -2,10 +2,7 @@ package io.specmatic.core.pattern
 
 import io.specmatic.core.*
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.ListValue
-import io.specmatic.core.value.NullValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 
 data class ListPattern(
     override val pattern: Pattern,
@@ -59,14 +56,14 @@ data class ListPattern(
         resolver: Resolver,
         key: String?
     ): ReturnValue<Value> {
-        if(value !is JSONArrayValue)
-            return HasFailure(Result.Failure("Cannot resolve substitutions, expected list but got ${value.displayableType()}"))
+        val resolved = runCatching { substitution.resolveIfLookup(value, this) }.getOrElse { e -> return HasException(e) }
+        val resolvedValue = resolved as? JSONArrayValue ?: return HasFailure(Result.Failure("Cannot resolve substitutions, expected list but got ${value.displayableType()}"))
 
-        val updatedList = value.list.mapIndexed { index, listItem ->
+        val updatedList = resolvedValue.list.mapIndexed { index, listItem ->
             pattern.resolveSubstitutions(substitution, listItem, resolver).breadCrumb("[$index]")
         }.listFold()
 
-        return updatedList.ifValue { value.copy(list = it) }
+        return updatedList.ifValue(resolvedValue::copy)
     }
 
     override fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {

@@ -23,8 +23,8 @@ data class ClassifiedStub(val stub: HttpStubData, val category: StubCategory, va
     companion object {
         fun from(httpStubData: HttpStubData): ClassifiedStub {
             val type = when {
-                httpStubData.partial != null -> StubType.PARTIAL
                 httpStubData.data.jsonObject.isNotEmpty() -> StubType.DATA_LOOKUP
+                httpStubData.partial != null -> StubType.PARTIAL
                 else -> StubType.NORMAL
             }
 

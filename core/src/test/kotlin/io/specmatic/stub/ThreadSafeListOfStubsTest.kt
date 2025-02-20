@@ -231,5 +231,14 @@ class ThreadSafeListOfStubsTest {
                 StubCategory.PERSISTENT to StubType.PARTIAL
             ))
         }
+
+        @Test
+        fun `partial data lookup example should be classified as data lookup example and not partial`() {
+            val httpStubData = stubOf(StubCategory.PERSISTENT, StubType.PARTIAL).copy(data = JSONObjectValue(mapOf("key" to StringValue("value"))))
+            val classifiedStub = ClassifiedStub.from(httpStubData)
+
+            assertThat(classifiedStub.category).isEqualTo(StubCategory.PERSISTENT)
+            assertThat(classifiedStub.type).isEqualTo(StubType.DATA_LOOKUP)
+        }
     }
 }

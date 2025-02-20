@@ -14,7 +14,9 @@ data class JSONArrayValue(override val list: List<Value>) : Value, ListValue, JS
     override fun displayableType(): String = "json array"
     override fun exactMatchElseType(): Pattern = JSONArrayPattern(list.map { it.exactMatchElseType() })
     override fun type(): Pattern = JSONArrayPattern()
-    override fun deepPattern(): Pattern = ListPattern(AnythingPattern)
+    override fun deepPattern(): Pattern {
+        return if (list.isEmpty()) ListPattern(AnythingPattern) else ListPattern(list.first().deepPattern())
+    }
 
     private fun typeDeclaration(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations, typeDeclarationsStoreCall: TypeDeclarationsCallType): Pair<TypeDeclaration, ExampleDeclarations> = when {
         list.isEmpty() -> Pair(TypeDeclaration("[]", types), exampleDeclarations)

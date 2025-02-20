@@ -82,7 +82,7 @@ internal class SpecmaticConfigAllTest {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
         assertThat(config.getVersion()).isEqualTo(version)
         val sources = SpecmaticConfig.getSources(config)
-        assertThat(sources.size).isEqualTo(2)
+        assertThat(sources?.size).isEqualTo(2)
         val expectedSources = listOf(
             Source(
                 provider = git,
@@ -109,11 +109,14 @@ internal class SpecmaticConfigAllTest {
         "VERSION_2, ./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2_stub_port.json"
     )
     @ParameterizedTest
-    fun `should create SpecmaticConfig from the v2 config with stub ports`(version: SpecmaticConfigVersion, configFile: String) {
+    fun `should create SpecmaticConfig from the v2 config with stub ports`(
+        version: SpecmaticConfigVersion,
+        configFile: String
+    ) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
         assertThat(config.getVersion()).isEqualTo(version)
         val sources = SpecmaticConfig.getSources(config)
-        assertThat(sources.size).isEqualTo(2)
+        assertThat(sources?.size).isEqualTo(2)
         val expectedSources = listOf(
             Source(
                 provider = git,
@@ -159,9 +162,9 @@ internal class SpecmaticConfigAllTest {
 
         val contracts = specmaticConfigV2.contracts
 
-        assertThat(contracts.size).isEqualTo(2)
-        assertThat(contracts[0].contractSource).isInstanceOf(GitContractSource::class.java)
-        val gitContractSource = contracts[0].contractSource as GitContractSource
+        assertThat(contracts?.size).isEqualTo(2)
+        assertThat(contracts?.get(0)?.contractSource).isInstanceOf(GitContractSource::class.java)
+        val gitContractSource = contracts?.get(0)?.contractSource as GitContractSource
         assertThat(gitContractSource.url).isEqualTo("https://contracts")
         assertThat(gitContractSource.branch).isEqualTo("1.0.1")
         assertThat(contracts[0].provides).containsOnly("com/petstore/1.yaml")
@@ -229,11 +232,11 @@ internal class SpecmaticConfigAllTest {
         val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
         val SpecmaticConfigV2 = objectMapper.readValue(File(configFile).readText(), SpecmaticConfigV2::class.java)
 
-        val contracts = SpecmaticConfigV2.contracts
+        val contracts = SpecmaticConfigV2.contracts.orEmpty()
 
         assertThat(contracts.size).isEqualTo(2)
-        assertThat(contracts[0].contractSource).isInstanceOf(GitContractSource::class.java)
-        val gitContractSource = contracts[0].contractSource as GitContractSource
+        assertThat(contracts.get(0).contractSource).isInstanceOf(GitContractSource::class.java)
+        val gitContractSource = contracts.get(0).contractSource as GitContractSource
         assertThat(gitContractSource.url).isEqualTo("https://contracts")
         assertThat(gitContractSource.branch).isEqualTo("1.0.1")
         assertThat(contracts[0].provides).containsOnly("com/petstore/1.yaml")
@@ -816,7 +819,7 @@ internal class SpecmaticConfigAllTest {
 
         val configV2 = SpecmaticConfigV2.loadFrom(dslConfig) as SpecmaticConfigV2
 
-        assertThat(configV2.contracts.first().contractSource).isNull()
+        assertThat(configV2.contracts?.first()?.contractSource).isNull()
     }
 
     @Test
@@ -835,7 +838,7 @@ internal class SpecmaticConfigAllTest {
 
         val configV2 = SpecmaticConfigV2.loadFrom(dslConfig) as SpecmaticConfigV2
 
-        val contractSource = configV2.contracts.first().contractSource
+        val contractSource = configV2.contracts?.first()?.contractSource
 
         assertThat(contractSource).isNotNull()
         assertThat(contractSource).isInstanceOf(GitContractSource::class.java)
@@ -1047,7 +1050,10 @@ internal class SpecmaticConfigAllTest {
         "VERSION_2, ./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2_stub_port.json"
     )
     @ParameterizedTest
-    fun `given specmatic config v2 with stub port config, it should load sources`(version: SpecmaticConfigVersion, configFile: String) {
+    fun `given specmatic config v2 with stub port config, it should load sources`(
+        version: SpecmaticConfigVersion,
+        configFile: String
+    ) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
         assertThat(config.getVersion()).isEqualTo(version)
         val contractSources = config.loadSources()

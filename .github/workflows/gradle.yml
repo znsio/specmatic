@@ -48,10 +48,10 @@ jobs:
       with:
         name: Build artifacts ${{ matrix.os }}
         path: |
-          build/libs/*
-          build/distributions/*.zip
-          !build/libs/*javadoc*
-          !build/libs/*sources*
+          */build/libs/*
+          */build/distributions/*.zip
+          !*/build/libs/*javadoc*
+          !*/build/libs/*sources*
 
     - name: Upload core Gradle Log
       if: always()

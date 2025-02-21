@@ -42,6 +42,17 @@ jobs:
           exit 1
         fi
 
+    - name: Upload build artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: Build artifacts ${{ matrix.os }}
+        path: |
+          build/libs/*
+          build/distributions/*.zip
+          !build/libs/*javadoc*
+          !build/libs/*sources*
+
     - name: Upload core Gradle Log
       if: always()
       uses: actions/upload-artifact@v4

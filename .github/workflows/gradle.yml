@@ -22,6 +22,11 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
+    # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
+    # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@94baf225fe0a508e581a564467443d0e2379123b # v4.3.0
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 

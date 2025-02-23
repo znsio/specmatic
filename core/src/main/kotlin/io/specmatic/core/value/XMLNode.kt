@@ -310,6 +310,9 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
     fun firstNode(): XMLNode? =
         this.childNodes.filterIsInstance<XMLNode>().firstOrNull()
 
+    fun firstChild(): Value =
+        childNodes.first()
+
     fun findNodeByNameAttribute(valueOfNameAttribute: String): XMLNode {
         return this.childNodes.filterIsInstance<XMLNode>().find {
             it.attributes["name"]?.toStringLiteral() == valueOfNameAttribute

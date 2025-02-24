@@ -1547,6 +1547,7 @@ data class Feature(
     @Suppress("MemberVisibilityCanBePrivate")
     fun toOpenApiSchema(pattern: Pattern, resolver: Resolver? = null): Schema<Any> {
         val schema = when {
+            pattern is EmailPattern -> EmailSchema()
             pattern is NumberPattern -> {
                 val schema = if (pattern.isDoubleFormat) NumberSchema() else IntegerSchema()
                 schema.apply {

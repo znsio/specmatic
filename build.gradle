@@ -37,20 +37,14 @@ tasks.register('codeCoverageReport', JacocoReport) {
 
     // Add all relevant sourcesets from the subprojects
     subprojects.each {
-        if (!it.name.startsWith("spring-")) {
             sourceSets it.sourceSets.main
         }
-    }
 
     reports {
         xml.required = true
         html.required = true
         csv.required = false
     }
-}
-
-codeCoverageReport.dependsOn {
-    subprojects.findAll {!it.name.startsWith("spring-")}.test
 }
 
 sonarqube {

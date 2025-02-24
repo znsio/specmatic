@@ -12,6 +12,17 @@ val DebugLogger = ThreadSafeLog(Verbose(CompositePrinter()))
 @Suppress("unused")
 val InfoLogger = ThreadSafeLog(NonVerbose(CompositePrinter()))
 
+@Suppress("unused")
+fun <T> withLogger(logStrategy: LogStrategy, fn: () -> T): T {
+    val oldLogger = logger
+    logger = logStrategy
+    try {
+        return fn()
+    } finally {
+        logger = oldLogger
+    }
+}
+
 fun logException(fn: ()-> Unit): Int {
     return try {
         fn()

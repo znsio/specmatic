@@ -6,6 +6,12 @@ fun resetLogger() {
     logger = NonVerbose(CompositePrinter())
 }
 
+@Suppress("unused")
+val DebugLogger = ThreadSafeLog(Verbose(CompositePrinter()))
+
+@Suppress("unused")
+val InfoLogger = ThreadSafeLog(NonVerbose(CompositePrinter()))
+
 fun logException(fn: ()-> Unit): Int {
     return try {
         fn()

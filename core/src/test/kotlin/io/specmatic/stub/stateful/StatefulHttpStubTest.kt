@@ -652,6 +652,11 @@ class StatefulHttpStubConcurrencyTest {
                             )
                         )
                     )
+                } catch(t: Throwable) {
+                    println("Thread index: $threadIndex")
+                    println(t.message ?: t.localizedMessage)
+                    t.printStackTrace()
+                    throw t
                 } finally {
                     latch.countDown()
                 }

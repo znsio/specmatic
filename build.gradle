@@ -16,6 +16,7 @@ allprojects {
         mavenLocal()
         mavenCentral()
     }
+    group = 'io.specmatic'
 }
 
 subprojects {

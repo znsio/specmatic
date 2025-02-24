@@ -7,11 +7,6 @@ plugins {
     id 'signing'
 }
 
-apply plugin: "jacoco"
-jacoco {
-    toolVersion = "0.8.7"
-}
-
 application {
     mainClass.set("application.SpecmaticApplication")
 }
@@ -110,20 +105,6 @@ test {
     def junit5SystemExit = configurations.testRuntimeClasspath.files
             .find { it.name.contains('junit5-system-exit') }
     jvmArgumentProviders.add({["-javaagent:$junit5SystemExit"]} as CommandLineArgumentProvider)
-}
-
-jacocoTestReport {
-    dependsOn test
-    reports {
-        xml.required = true
-        html.required = false
-        csv.required = false
-    }
-}
-
-
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
 }
 
 java {

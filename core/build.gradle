@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -6,11 +7,6 @@ plugins {
     id 'org.jetbrains.kotlin.jvm'
     id 'org.jetbrains.kotlin.plugin.serialization'
     id 'signing'
-}
-
-apply plugin: "jacoco"
-jacoco {
-    toolVersion = "0.8.7"
 }
 
 repositories {
@@ -71,17 +67,8 @@ dependencies {
     implementation 'org.thymeleaf:thymeleaf:3.1.3.RELEASE'
 }
 
-test {
-    useJUnitPlatform()
-}
-
-
 jar {
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
-}
-
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
 }
 
 java {
@@ -140,7 +127,7 @@ tasks.withType(Sign).configureEach {
 }
 
 javadoc {
-    if(JavaVersion.current().isJava9Compatible()) {
+    if (JavaVersion.current().isJava9Compatible()) {
         options.addBooleanOption('html5', true)
     }
 }

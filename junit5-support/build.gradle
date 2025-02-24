@@ -37,18 +37,9 @@ dependencies {
     implementation 'org.fusesource.jansi:jansi:2.4.1'
 }
 
-test {
-    useJUnitPlatform()
-}
-
-
 jar {
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
     from '../version.properties'
-}
-
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
 }
 
 java {

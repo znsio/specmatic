@@ -2,15 +2,15 @@ package io.specmatic.core.config.v2
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import io.specmatic.core.*
-import io.specmatic.core.SpecmaticConfig.Companion.getAttributeSelectionPattern
 import io.specmatic.core.SpecmaticConfig.Companion.getAllPatternsMandatory
+import io.specmatic.core.SpecmaticConfig.Companion.getAttributeSelectionPattern
 import io.specmatic.core.SpecmaticConfig.Companion.getPipeline
 import io.specmatic.core.SpecmaticConfig.Companion.getRepository
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
-import io.specmatic.core.SpecmaticConfig.Companion.getWorkflowConfiguration
-import io.specmatic.core.SpecmaticConfig.Companion.getVirtualServiceConfiguration
-import io.specmatic.core.SpecmaticConfig.Companion.getTestConfiguration
 import io.specmatic.core.SpecmaticConfig.Companion.getStubConfiguration
+import io.specmatic.core.SpecmaticConfig.Companion.getTestConfiguration
+import io.specmatic.core.SpecmaticConfig.Companion.getVirtualServiceConfiguration
+import io.specmatic.core.SpecmaticConfig.Companion.getWorkflowConfiguration
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticVersionedConfig
 import io.specmatic.core.config.SpecmaticVersionedConfigLoader
@@ -36,7 +36,7 @@ data class SpecmaticConfigV2(
     val ignoreInlineExamples: Boolean? = null,
     val additionalExampleParamsFilePath: String? = getStringValue(Flags.ADDITIONAL_EXAMPLE_PARAMS_FILE),
     @field:JsonAlias("attribute_selection_pattern")
-    val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
+    val attributeSelectionPattern: AttributeSelectionPattern? = null,
     @field:JsonAlias("all_patterns_mandatory")
     val allPatternsMandatory: Boolean? = null,
     @field:JsonAlias("default_pattern_values")

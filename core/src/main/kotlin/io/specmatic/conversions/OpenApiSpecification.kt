@@ -45,7 +45,7 @@ import java.io.File
 
 private const val BEARER_SECURITY_SCHEME = "bearer"
 const val SERVICE_TYPE_HTTP = "HTTP"
-
+const val TEST_BASE_URL = "testBaseURL"
 const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"
 const val testDirectoryProperty = "specmaticTestsDirectory"
 
@@ -242,6 +242,8 @@ class OpenApiSpecification(
                 patterns = it.patterns + unreferencedSchemaPatterns
             )
         }
+
+        System.setProperty(TEST_BASE_URL, parsedOpenApi.servers.first().url)
 
         return Feature(
             updatedScenarios, name = name, path = openApiFilePath, sourceProvider = sourceProvider,

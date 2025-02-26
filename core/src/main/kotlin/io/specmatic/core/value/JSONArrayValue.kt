@@ -1,6 +1,8 @@
 package io.specmatic.core.value
 
 import io.specmatic.core.ExampleDeclarations
+import io.specmatic.core.Resolver
+import io.specmatic.core.Result
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.valueArrayToJsonString
 
@@ -59,6 +61,19 @@ data class JSONArrayValue(override val list: List<Value>) : Value, ListValue, JS
 
     override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> =
             typeDeclaration(exampleKey, types, exampleDeclarations) { value, innerKey, innerTypes, newExamples -> value.typeDeclarationWithoutKey(innerKey, innerTypes, newExamples) }
+
+    override fun checkIfAllRootLevelKeysAreAttributeSelected(
+        attributeSelectedFields: Set<String>,
+        resolver: Resolver
+    ): Result {
+        if(list.all { it is JSONObjectValue }.not()) return Result.Success()
+
+        return Result.fromResults(
+            results = list.map {
+                (it as JSONObjectValue).checkIfAllRootLevelKeysAreAttributeSelected(attributeSelectedFields, resolver)
+            }
+        )
+    }
 
     override fun toString() = valueArrayToJsonString(list)
     fun getElementAtIndex(first: String, rest: List<String>): Value? {

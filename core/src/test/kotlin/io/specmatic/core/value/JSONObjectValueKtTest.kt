@@ -1,5 +1,6 @@
 package io.specmatic.core.value
 
+import io.specmatic.core.Resolver
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -20,5 +21,40 @@ internal class JSONObjectValueKtTest {
     fun `format for rendering a JSON object in a snippet`() {
         val value = JSONObjectValue(mapOf("id" to NumberValue(10)))
         assertThat(value.valueErrorSnippet()).startsWith("JSON object ")
+    }
+
+    @Test
+    fun `checkIfAllRootLevelKeysAreAttributeSelected should return an error with the key error check list`() {
+        val value = JSONObjectValue(
+            mapOf(
+                "id" to NumberValue(10),
+                "name" to StringValue("name")
+            )
+        )
+
+        val result = value.checkIfAllRootLevelKeysAreAttributeSelected(
+            attributeSelectedFields = setOf("id", "age"),
+            resolver = Resolver()
+        )
+
+        assertThat(result.reportString()).contains("""Expected key named "age" was missing""")
+        assertThat(result.reportString()).contains("""Key named "name" was unexpected""")
+    }
+
+    @Test
+    fun `checkIfAllRootLevelKeysAreAttributeSelected should return Success if all the attribute selected keys are present`() {
+        val value = JSONObjectValue(
+            mapOf(
+                "id" to NumberValue(10),
+                "name" to StringValue("name")
+            )
+        )
+
+        val result = value.checkIfAllRootLevelKeysAreAttributeSelected(
+            attributeSelectedFields = setOf("id", "name"),
+            resolver = Resolver()
+        )
+
+        assertThat(result.isSuccess()).isTrue()
     }
 }

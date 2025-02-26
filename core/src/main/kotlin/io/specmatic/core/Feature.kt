@@ -581,13 +581,13 @@ data class Feature(
     private fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
-    fun generateContractTests(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<ContractTest> {
+    fun generateContractTests(suggestions: List<Scenario>, originalScenarios: List<Scenario> = emptyList(), fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<ContractTest> {
         val workflow = Workflow(specmaticConfig.getWorkflowDetails() ?: WorkflowDetails.default)
 
         return generateContractTestScenarios(suggestions, fn).map { (originalScenario, returnValue) ->
             returnValue.realise(
                 hasValue = { concreteTestScenario, comment ->
-                    scenarioAsTest(concreteTestScenario, comment, workflow, originalScenario)
+                    scenarioAsTest(concreteTestScenario, comment, workflow, originalScenario, originalScenarios)
                 },
                 orFailure = {
                     ScenarioTestGenerationFailure(originalScenario, it.failure)
@@ -621,9 +621,11 @@ data class Feature(
         concreteTestScenario: Scenario,
         comment: String?,
         workflow: Workflow,
-        originalScenario: Scenario
+        originalScenario: Scenario,
+        originalScenarios: List<Scenario> = emptyList()
     ) = ScenarioAsTest(
-        concreteTestScenario,
+        scenario = adjustTestDescription(concreteTestScenario, originalScenarios),
+        feature = this.copy(scenarios = originalScenarios),
         flagsBased,
         concreteTestScenario.sourceProvider,
         concreteTestScenario.sourceRepository,
@@ -635,6 +637,23 @@ data class Feature(
         workflow = workflow,
         originalScenario = originalScenario
     )
+
+    fun adjustTestDescription(scenario: Scenario, scenarios: List<Scenario> = this.scenarios): Scenario {
+        if (!isAcceptedResponsePossible(scenario, scenarios)) return scenario
+        return scenario.copy(
+            descriptionFromPlugin = null,
+            statusInDescription = "${scenario.statusInDescription}/202"
+        )
+    }
+
+    fun isAcceptedResponsePossible(scenario: Scenario, scenarios: List<Scenario> = this.scenarios): Boolean {
+        if (scenario.status == 202 || scenario.isNegative) return false
+        return this.scenarioAssociatedTo(
+            scenarios = scenarios,
+            path = scenario.path, method = scenario.method,
+            responseStatusCode = 202, contentType = scenario.requestContentType
+        ) != null
+    }
 
     private fun getBadRequestsOrDefault(scenario: Scenario): BadRequestOrDefault? {
         val badRequestResponses = scenarios.filter {
@@ -791,6 +810,7 @@ data class Feature(
         path: String,
         responseStatusCode: Int,
         contentType: String? = null,
+        scenarios: List<Scenario> = this.scenarios,
     ): Scenario? {
         return scenarios.firstOrNull {
             it.method == method && it.status == responseStatusCode && it.path == path

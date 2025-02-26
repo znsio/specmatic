@@ -38,6 +38,10 @@ data class HttpResponse(
                 else -> HttpStatusCode.fromValue(status).description
             }
 
+    fun withoutSpecmaticTypeHeader(): HttpResponse {
+        return this.copy(headers = this.headers.filterKeys { it != "X-Specmatic-Type" })
+    }
+
     fun specmaticResultHeaderValue(): String =
         this.headers.getOrDefault(SPECMATIC_RESULT_HEADER, "success")
 

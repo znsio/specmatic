@@ -1047,8 +1047,15 @@ fun List<ResponseDetails>.successResponse(): ResponseDetails? {
     return this.find { it.successResponse != null }
 }
 
-fun generateHttpResponseFrom(fakeResponse: ResponseDetails, httpRequest: HttpRequest): HttpResponse {
-    return fakeResponse.successResponse?.build(RequestContext(httpRequest))?.withRandomResultHeader()!!
+fun generateHttpResponseFrom(
+    fakeResponse: ResponseDetails,
+    httpRequest: HttpRequest,
+    withoutSpecmaticTypeHeader: Boolean = false
+): HttpResponse {
+    return fakeResponse.successResponse?.build(RequestContext(httpRequest))?.withRandomResultHeader()!!.let {
+        if(withoutSpecmaticTypeHeader) it.withoutSpecmaticTypeHeader()
+        else it
+    }
 }
 
 fun dumpIntoFirstAvailableStringField(httpResponse: HttpResponse, stringValue: String): HttpResponse {

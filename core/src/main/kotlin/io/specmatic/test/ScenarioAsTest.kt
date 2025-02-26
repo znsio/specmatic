@@ -5,12 +5,16 @@ import io.specmatic.core.*
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.logger
+import io.specmatic.core.pattern.HasException
+import io.specmatic.core.pattern.HasFailure
+import io.specmatic.core.pattern.HasValue
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.Value
 import io.specmatic.stub.SPECMATIC_RESPONSE_CODE_HEADER
 
 data class ScenarioAsTest(
     val scenario: Scenario,
+    private val feature: Feature,
     private val flagsBased: FlagsBased,
     private val sourceProvider: String? = null,
     private val sourceRepository: String? = null,
@@ -86,7 +90,7 @@ data class ScenarioAsTest(
     ): Pair<Result, HttpResponse?> {
         val request = testScenario.generateHttpRequest(flagsBased).let {
             workflow.updateRequest(it, originalScenario)
-        }.addHeader(SPECMATIC_RESPONSE_CODE_HEADER, testScenario.status.toString())
+        }.addHeaderIfMissing(SPECMATIC_RESPONSE_CODE_HEADER, testScenario.status.toString())
 
         try {
             testExecutor.setServerState(testScenario.serverState)
@@ -102,14 +106,28 @@ data class ScenarioAsTest(
             }
 
             val testResult = testResult(request, response, testScenario, flagsBased)
-            if (testResult is Result.Failure) {
+            if (testResult is Result.Failure && !(response.isAcceptedHenceValid() && ResponseMonitor.isMonitorLinkPresent(response))) {
                 return Pair(testResult.withBindings(testScenario.bindings, response), response)
             }
 
-            val postValidateResult = validators.asSequence().map { it.postValidate(testScenario, request, response) }.filterNotNull().firstOrNull()
-            val result = postValidateResult ?: testResult
+            val responseToCheckAndStore = when(testResult) {
+                is Result.Failure -> {
+                    val client = if (testExecutor is HttpClient) testExecutor.copy() else testExecutor
+                    val awaitedResponse = ResponseMonitor(feature, originalScenario, response).waitForResponse(client)
+                    when (awaitedResponse) {
+                        is HasValue -> awaitedResponse.value
+                        is HasFailure -> return Pair(awaitedResponse.failure.withBindings(testScenario.bindings, response), response)
+                        is HasException -> return Pair(awaitedResponse.toFailure().withBindings(testScenario.bindings, response), response)
+                    }
+                }
+                else -> response
+            }
 
-            testScenario.exampleRow?.let { ExampleProcessor.store(it, request, response) }
+            val result = validators.asSequence().mapNotNull {
+                it.postValidate(testScenario, request, responseToCheckAndStore)
+            }.firstOrNull() ?: Result.Success()
+
+            testScenario.exampleRow?.let { ExampleProcessor.store(it, request, responseToCheckAndStore) }
             return Pair(result.withBindings(testScenario.bindings, response), response)
         } catch (exception: Throwable) {
             return Pair(
@@ -130,6 +148,11 @@ data class ScenarioAsTest(
         }
 
         return result
+    }
+
+    private fun HttpResponse.isAcceptedHenceValid(): Boolean {
+        if (scenario.status == 202 && this.status == 202) return false
+        return feature.isAcceptedResponsePossible(scenario)
     }
 }
 

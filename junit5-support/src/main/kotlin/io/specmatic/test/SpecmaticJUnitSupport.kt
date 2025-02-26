@@ -537,7 +537,7 @@ open class SpecmaticJUnitSupport {
                     it.scenarios.forEach { scenario -> logger.debug(scenario.testDescription().prependIndent("  ")) }
                 }
             }
-            .generateContractTests(suggestions)
+            .generateContractTests(suggestions, originalScenarios = feature.scenarios)
 
         return Pair(tests, allEndpoints)
     }

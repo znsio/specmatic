@@ -3,7 +3,6 @@ package integration_tests
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
-import io.specmatic.core.Result
 import io.specmatic.core.SPECMATIC_TYPE_HEADER
 import io.specmatic.core.Scenario
 import io.specmatic.core.pattern.parsedJSONObject
@@ -13,7 +12,6 @@ import io.specmatic.stub.HttpStub
 import io.specmatic.stub.SPECMATIC_RESPONSE_CODE_HEADER
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.fail
 import org.junit.jupiter.api.Test
 
 class ResponseCodeHintingTest {
@@ -67,12 +65,12 @@ class ResponseCodeHintingTest {
                 }
             }
 
-            stub.client.execute(request.addHeader(SPECMATIC_RESPONSE_CODE_HEADER, "200")).let { response ->
+            stub.client.execute(request.addHeaderIfMissing(SPECMATIC_RESPONSE_CODE_HEADER, "200")).let { response ->
                 assertThat(response.status).isEqualTo(200)
                 assertThat(response.headers).doesNotContainEntry(SPECMATIC_TYPE_HEADER, "random")
             }
 
-            stub.client.execute(request.addHeader(SPECMATIC_RESPONSE_CODE_HEADER, "202")).let { response ->
+            stub.client.execute(request.addHeaderIfMissing(SPECMATIC_RESPONSE_CODE_HEADER, "202")).let { response ->
                 assertThat(response.status).isEqualTo(202)
                 assertThat(response.headers).doesNotContainEntry(SPECMATIC_TYPE_HEADER, "random")
             }
@@ -120,12 +118,12 @@ class ResponseCodeHintingTest {
         HttpStub(listOf(feature)).use { stub ->
             val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"name": "John Doe"}"""))
 
-            stub.client.execute(request.addHeader(SPECMATIC_RESPONSE_CODE_HEADER, "200")).let { response ->
+            stub.client.execute(request.addHeaderIfMissing(SPECMATIC_RESPONSE_CODE_HEADER, "200")).let { response ->
                 assertThat(response.status).isEqualTo(200)
                 assertThat(response.headers).containsEntry(SPECMATIC_TYPE_HEADER, "random")
             }
 
-            stub.client.execute(request.addHeader(SPECMATIC_RESPONSE_CODE_HEADER, "202")).let { response ->
+            stub.client.execute(request.addHeaderIfMissing(SPECMATIC_RESPONSE_CODE_HEADER, "202")).let { response ->
                 assertThat(response.status).isEqualTo(202)
                 assertThat(response.headers).containsEntry(SPECMATIC_TYPE_HEADER, "random")
             }
@@ -180,7 +178,7 @@ class ResponseCodeHintingTest {
                 assertThat(response.headers).doesNotContainEntry(SPECMATIC_TYPE_HEADER, "random")
             }
 
-            stub.client.execute(request.addHeader(SPECMATIC_RESPONSE_CODE_HEADER, "202")).let { response ->
+            stub.client.execute(request.addHeaderIfMissing(SPECMATIC_RESPONSE_CODE_HEADER, "202")).let { response ->
                 assertThat(response.status).isEqualTo(202)
                 assertThat(response.headers).containsEntry(SPECMATIC_TYPE_HEADER, "random")
             }
@@ -235,12 +233,12 @@ class ResponseCodeHintingTest {
                 assertThat(response.headers).doesNotContainEntry(SPECMATIC_TYPE_HEADER, "random")
             }
 
-            stub.client.execute(request.addHeader(SPECMATIC_RESPONSE_CODE_HEADER, "202")).let { response ->
+            stub.client.execute(request.addHeaderIfMissing(SPECMATIC_RESPONSE_CODE_HEADER, "202")).let { response ->
                 assertThat(response.status).isEqualTo(202)
                 assertThat(response.headers).doesNotContainEntry(SPECMATIC_TYPE_HEADER, "random")
             }
 
-            stub.client.execute(request.addHeader(SPECMATIC_RESPONSE_CODE_HEADER, "202")).let { response ->
+            stub.client.execute(request.addHeaderIfMissing(SPECMATIC_RESPONSE_CODE_HEADER, "202")).let { response ->
                 assertThat(response.status).isEqualTo(202)
                 assertThat(response.headers).containsEntry(SPECMATIC_TYPE_HEADER, "random")
             }
@@ -295,7 +293,7 @@ class ResponseCodeHintingTest {
                 assertThat(response.headers).doesNotContainEntry(SPECMATIC_TYPE_HEADER, "random")
             }
 
-            stub.client.execute(request.addHeader(SPECMATIC_RESPONSE_CODE_HEADER, "200")).let { response ->
+            stub.client.execute(request.addHeaderIfMissing(SPECMATIC_RESPONSE_CODE_HEADER, "200")).let { response ->
                 assertThat(response.status).isEqualTo(200)
                 assertThat(response.headers).containsEntry(SPECMATIC_TYPE_HEADER, "random")
             }
@@ -349,7 +347,7 @@ class ResponseCodeHintingTest {
                 assertThat(response.status).isIn(200)
             }
 
-            stub.client.execute(request.addHeader(SPECMATIC_RESPONSE_CODE_HEADER, "202")).let { response ->
+            stub.client.execute(request.addHeaderIfMissing(SPECMATIC_RESPONSE_CODE_HEADER, "202")).let { response ->
                 assertThat(response.status).isEqualTo(400)
             }
         }

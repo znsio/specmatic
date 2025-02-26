@@ -1,0 +1,4 @@
+sources:
+  - provider: filesystem
+    stub:
+      - monitor-pattern-spec.yaml

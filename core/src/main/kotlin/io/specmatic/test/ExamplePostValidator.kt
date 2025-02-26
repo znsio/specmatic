@@ -16,7 +16,7 @@ object ExamplePostValidator: ResponseValidator {
 
         val results = asserts.map { it.assert(currentFactStore, actualFactStore) }
 
-        val finalResults = results.filterIsInstance<Result.Failure>().ifEmpty { return Result.Success() }
+        val finalResults = results.filterIsInstance<Result.Failure>().ifEmpty { return null }
         return Result.fromFailures(finalResults)
     }
 

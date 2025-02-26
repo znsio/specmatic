@@ -140,10 +140,18 @@ class ResponseMonitor(
     }
 
     private fun JSONObjectValue.toResponse(): HttpResponse {
-        val responseObject = this.jsonObject[responsePath] as? JSONObjectValue
-            ?: throw ContractException(breadCrumb = responsePath, errorMessage = "Expected a json object")
+        val responseObject = this.jsonObject[responsePath] as? JSONObjectValue?: throw ContractException(
+            breadCrumb = responsePath,
+            errorMessage = "Expected a json object"
+        )
+
+        val statusCode = responseObject.findFirstChildByName("statusCode")?.toStringLiteral()?.toIntOrNull() ?: throw ContractException(
+            breadCrumb = responsePath,
+            errorMessage = "Missing or invalid status code"
+        )
+
         return HttpResponse(
-            status = responseObject.getInt("statusCode"),
+            status = statusCode,
             headers = responseObject.getMapOrEmpty("header"),
             body = responseObject.jsonObject["body"] ?: NullValue
         )

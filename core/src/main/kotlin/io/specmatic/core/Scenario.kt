@@ -331,7 +331,7 @@ data class Scenario(
             flagsBased.copy(unexpectedKeyCheck = ValidateUnexpectedKeys)
         } else flagsBased
 
-        val updatedResolver = updatedFlagBased.update(resolver.copy(mismatchMessages = mismatchMessages))
+        val updatedResolver = updatedFlagBased.update(resolver.copy(mismatchMessages = mismatchMessages, mockMode = true))
         val updatedScenario = newBasedOnAttributeSelectionFields(httpRequest.queryParams)
 
         val responseMatch = updatedScenario.matches(httpResponse, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)

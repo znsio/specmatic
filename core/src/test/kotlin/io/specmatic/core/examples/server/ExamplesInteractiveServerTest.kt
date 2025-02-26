@@ -363,7 +363,7 @@ class ExamplesInteractiveServerTest {
             )
 
             val result = ExamplesInteractiveServer.validateExample(Feature(listOf(scenario), name= ""), example)
-            assertThat(result).isInstanceOf(Result.Success::class.java)
+            assertThat(result.toResultIfAny()).isInstanceOf(Result.Success::class.java)
         }
 
         @Test
@@ -397,7 +397,18 @@ class ExamplesInteractiveServerTest {
             )
 
             val result = ExamplesInteractiveServer.validateExample(Feature(listOf(scenario), name= ""), example)
-            assertThat(result).isInstanceOf(Result.Success::class.java)
+            assertThat(result.report()).isEqualToNormalizingWhitespace("""
+                In scenario ""
+                  API: POST /add -> 200
+                  
+                    >> REQUEST.BODY.first
+                    
+                       Specification expected number but example contained "(string)"
+                    
+                    >> RESPONSE.BODY.result
+                    
+                       Specification expected number but example contained "(uuid)"
+            """.trimIndent())
         }
     }
 }

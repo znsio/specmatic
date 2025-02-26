@@ -688,7 +688,7 @@ class ExamplesInteractiveServer(
             return validateExample(feature, exampleFile)
         }
 
-        private fun validateExample(feature: Feature, scenarioStub: ScenarioStub): Results {
+        fun validateExample(feature: Feature, scenarioStub: ScenarioStub): Results {
             return feature.matchResultFlagBased(scenarioStub, InteractiveExamplesMismatchMessages)
         }
 

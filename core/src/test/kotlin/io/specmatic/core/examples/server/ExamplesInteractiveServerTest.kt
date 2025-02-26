@@ -1,13 +1,13 @@
 package io.specmatic.core.examples.server
 
 import io.specmatic.conversions.ExampleFromFile
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.QueryParameters
-import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
+import io.specmatic.core.*
+import io.specmatic.core.pattern.JSONObjectPattern
+import io.specmatic.core.pattern.NumberPattern
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.value.*
+import io.specmatic.mock.ScenarioStub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -326,6 +326,78 @@ class ExamplesInteractiveServerTest {
                     assertThat(value.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo("123-Main-Street")
                 }
             }
+        }
+    }
+
+    @Nested
+    inner class PatternTokenMatchTest {
+
+        @Test
+        fun `should be able to match on pattern tokens instead of literal values`() {
+            val scenario = Scenario(ScenarioInfo(
+                httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    httpPathPattern = buildHttpPathPattern("/add"),
+                    body = JSONObjectPattern(mapOf("first" to NumberPattern(), "second" to NumberPattern()))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    status = 200,
+                    body = JSONObjectPattern(mapOf("result" to NumberPattern()))
+                )
+            ))
+            val example = ScenarioStub(
+                request = HttpRequest(
+                    method = "POST",
+                    path = "/add",
+                    body = JSONObjectValue(mapOf(
+                        "first" to StringValue("(number)"),
+                        "second" to NumberValue(10)
+                    ))
+                ),
+                response = HttpResponse(
+                    status = 200,
+                    body = JSONObjectValue(mapOf(
+                        "result" to StringValue("(number)")
+                    ))
+                )
+            )
+
+            val result = ExamplesInteractiveServer.validateExample(Feature(listOf(scenario), name= ""), example)
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `should complain when pattern token does not match the underlying pattern`() {
+            val scenario = Scenario(ScenarioInfo(
+                httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    httpPathPattern = buildHttpPathPattern("/add"),
+                    body = JSONObjectPattern(mapOf("first" to NumberPattern(), "second" to NumberPattern()))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    status = 200,
+                    body = JSONObjectPattern(mapOf("result" to NumberPattern()))
+                )
+            ))
+            val example = ScenarioStub(
+                request = HttpRequest(
+                    method = "POST",
+                    path = "/add",
+                    body = JSONObjectValue(mapOf(
+                        "first" to StringValue("(string)"),
+                        "second" to NumberValue(10)
+                    ))
+                ),
+                response = HttpResponse(
+                    status = 200,
+                    body = JSONObjectValue(mapOf(
+                        "result" to StringValue("(uuid)")
+                    ))
+                )
+            )
+
+            val result = ExamplesInteractiveServer.validateExample(Feature(listOf(scenario), name= ""), example)
+            assertThat(result).isInstanceOf(Result.Success::class.java)
         }
     }
 }

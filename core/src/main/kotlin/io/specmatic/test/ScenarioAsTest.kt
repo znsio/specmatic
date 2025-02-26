@@ -90,7 +90,7 @@ data class ScenarioAsTest(
     ): Pair<Result, HttpResponse?> {
         val request = testScenario.generateHttpRequest(flagsBased).let {
             workflow.updateRequest(it, originalScenario)
-        }.addHeader(SPECMATIC_RESPONSE_CODE_HEADER, testScenario.status.toString())
+        }.addHeaderIfMissing(SPECMATIC_RESPONSE_CODE_HEADER, testScenario.status.toString())
 
         try {
             testExecutor.setServerState(testScenario.serverState)

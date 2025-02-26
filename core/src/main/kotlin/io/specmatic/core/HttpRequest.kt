@@ -67,7 +67,10 @@ data class HttpRequest(
         metadata = metadata
     )
 
-    fun addHeader(name: String, value: String): HttpRequest {
+    fun addHeaderIfMissing(name: String, value: String): HttpRequest {
+        if(headers.containsKey(name))
+            return this
+
         return this.copy(headers = headers.plus(name to value))
     }
 

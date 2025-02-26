@@ -581,13 +581,13 @@ data class Feature(
     private fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
-    fun generateContractTests(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<ContractTest> {
+    fun generateContractTests(suggestions: List<Scenario>, originalScenarios: List<Scenario> = emptyList(), fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<ContractTest> {
         val workflow = Workflow(specmaticConfig.getWorkflowDetails() ?: WorkflowDetails.default)
 
         return generateContractTestScenarios(suggestions, fn).map { (originalScenario, returnValue) ->
             returnValue.realise(
                 hasValue = { concreteTestScenario, comment ->
-                    scenarioAsTest(concreteTestScenario, comment, workflow, originalScenario)
+                    scenarioAsTest(concreteTestScenario, comment, workflow, originalScenario, originalScenarios)
                 },
                 orFailure = {
                     ScenarioTestGenerationFailure(originalScenario, it.failure)
@@ -621,10 +621,11 @@ data class Feature(
         concreteTestScenario: Scenario,
         comment: String?,
         workflow: Workflow,
-        originalScenario: Scenario
+        originalScenario: Scenario,
+        originalScenarios: List<Scenario> = emptyList()
     ) = ScenarioAsTest(
         scenario = adjustTestDescription(concreteTestScenario),
-        feature = this,
+        feature = this.copy(scenarios = originalScenarios),
         flagsBased,
         concreteTestScenario.sourceProvider,
         concreteTestScenario.sourceRepository,

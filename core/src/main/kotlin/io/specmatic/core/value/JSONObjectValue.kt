@@ -1,6 +1,8 @@
 package io.specmatic.core.value
 
 import io.specmatic.core.ExampleDeclarations
+import io.specmatic.core.Resolver
+import io.specmatic.core.Result
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.*
 
@@ -27,6 +29,22 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
         }.mapKeys {
             withoutOptionality(it.key)
         })
+    }
+
+    override fun checkIfAllRootLevelKeysAreAttributeSelected(
+        attributeSelectedFields: Set<String>,
+        resolver: Resolver
+    ): Result {
+        if (jsonObject.keys == attributeSelectedFields) return Result.Success()
+
+        return Result.fromResults(
+            results = resolver.findKeyErrorList(
+                attributeSelectedFields.associateBy { it },
+                jsonObject
+            ).map {
+                it.missingKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
+            }
+        )
     }
 
     override fun toString() = valueMapToPrettyJsonString(jsonObject)

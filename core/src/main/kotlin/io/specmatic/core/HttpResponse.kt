@@ -170,6 +170,17 @@ data class HttpResponse(
 
     private fun headersHasOnlyTextPlainContentTypeHeader() = headers.size == 1 && headers[CONTENT_TYPE] == "text/plain"
 
+    fun checkIfAllRootLevelKeysAreAttributeSelected(
+        attributeSelectedFields: Set<String>,
+        resolver: Resolver
+    ): Result {
+        if (body !is JSONComposite) return Result.Success()
+
+        return body.checkIfAllRootLevelKeysAreAttributeSelected(
+            attributeSelectedFields,
+            resolver
+        ).breadCrumb("RESPONSE.BODY")
+    }
 }
 
 fun isVanillaPatternToken(token: String) = isPatternToken(token) && token.indexOf(':') < 0

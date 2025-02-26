@@ -304,13 +304,19 @@ data class Scenario(
     }
 
     fun matchesResponse(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
-        val updatedUnexpectedKeyCheck = if (isRequestAttributeSelected(httpRequest)) {
-            ValidateUnexpectedKeys
-        } else unexpectedKeyCheck
+        val attributeSelectedFields = getFieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams)
 
-        val resolver = updatedResolver(mismatchMessages, updatedUnexpectedKeyCheck).copy(context = RequestContext(httpRequest))
+        if(attributeSelectedFields.isNotEmpty()) {
+            val attributeSelectionResult = httpResponse.checkIfAllRootLevelKeysAreAttributeSelected(attributeSelectedFields, resolver)
+            if(attributeSelectionResult.isSuccess().not()) return attributeSelectionResult
+        }
 
-        return matches(httpResponse, mismatchMessages, updatedUnexpectedKeyCheck, resolver)
+        return matches(
+            httpResponse = httpResponse,
+            mismatchMessages = mismatchMessages,
+            unexpectedKeyCheck = unexpectedKeyCheck,
+            resolver = updatedResolver(mismatchMessages, unexpectedKeyCheck).copy(context = RequestContext(httpRequest))
+        )
     }
 
     fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages, flagsBased: FlagsBased): Result {

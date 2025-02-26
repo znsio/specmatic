@@ -32,7 +32,9 @@ class SpecmaticJunitSupportTest {
             "./src/test/resources/spec_with_parameterized_paths.yaml",
             "",
             "",
-            TestConfig(emptyMap(), emptyMap())
+            TestConfig(emptyMap(), emptyMap()),
+            filterName = null,
+            filterNotName = null
         )
         val specEndpoints = result.second
         assertThat(specEndpoints.count()).isEqualTo(2)

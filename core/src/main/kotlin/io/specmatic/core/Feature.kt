@@ -624,7 +624,7 @@ data class Feature(
         originalScenario: Scenario,
         originalScenarios: List<Scenario> = emptyList()
     ) = ScenarioAsTest(
-        scenario = adjustTestDescription(concreteTestScenario),
+        scenario = adjustTestDescription(concreteTestScenario, originalScenarios),
         feature = this.copy(scenarios = originalScenarios),
         flagsBased,
         concreteTestScenario.sourceProvider,
@@ -638,17 +638,18 @@ data class Feature(
         originalScenario = originalScenario
     )
 
-    fun adjustTestDescription(scenario: Scenario): Scenario {
-        if (!isAcceptedResponsePossible(scenario)) return scenario
+    fun adjustTestDescription(scenario: Scenario, scenarios: List<Scenario> = this.scenarios): Scenario {
+        if (!isAcceptedResponsePossible(scenario, scenarios)) return scenario
         return scenario.copy(
             descriptionFromPlugin = null,
             statusInDescription = "${scenario.statusInDescription}/202"
         )
     }
 
-    fun isAcceptedResponsePossible(scenario: Scenario): Boolean {
+    fun isAcceptedResponsePossible(scenario: Scenario, scenarios: List<Scenario> = this.scenarios): Boolean {
         if (scenario.status == 202 || scenario.isNegative) return false
         return this.scenarioAssociatedTo(
+            scenarios = scenarios,
             path = scenario.path, method = scenario.method,
             responseStatusCode = 202, contentType = scenario.requestContentType
         ) != null
@@ -809,6 +810,7 @@ data class Feature(
         path: String,
         responseStatusCode: Int,
         contentType: String? = null,
+        scenarios: List<Scenario> = this.scenarios,
     ): Scenario? {
         return scenarios.firstOrNull {
             it.method == method && it.status == responseStatusCode && it.path == path

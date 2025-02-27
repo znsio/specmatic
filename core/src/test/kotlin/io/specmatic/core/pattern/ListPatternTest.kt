@@ -505,5 +505,58 @@ Feature: Recursive test
                 }
             }
         }
+
+        @Test
+        fun `should retain pattern token if it matches when resolver is in mock mode`() {
+            val innerPattern = JSONObjectPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()), typeAlias = "(Object)")
+            val pattern = ListPattern(innerPattern, typeAlias = "(List)")
+            val resolver = Resolver(newPatterns = mapOf("(List)" to pattern, "(Object)" to innerPattern), mockMode = true)
+            val validValues = listOf(
+                StringValue("(List)"),
+                JSONArrayValue(listOf(StringValue("(Object)"))),
+            )
+
+            assertThat(validValues).allSatisfy {
+                val fixedValue = pattern.fixValue(it, resolver)
+                println(fixedValue.toStringLiteral())
+                assertThat(fixedValue).isEqualTo(it)
+            }
+        }
+
+        @Test
+        fun `should generate value when pattern token does not match when resolver is in mock mode`() {
+            val innerPattern = JSONObjectPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()), typeAlias = "(Object)")
+            val pattern = ListPattern(innerPattern, typeAlias = "(List)")
+            val resolver = Resolver(newPatterns = mapOf("(List)" to pattern, "(Object)" to innerPattern), mockMode = true)
+            val invalidValues = listOf(
+                StringValue("(string)"),
+                JSONArrayValue(listOf(StringValue("(string)"))),
+            )
+
+            assertThat(invalidValues).allSatisfy {
+                val fixedValue = pattern.fixValue(it, resolver)
+                println(fixedValue.toStringLiteral())
+                assertThat(fixedValue).isNotEqualTo(it).isInstanceOf(JSONArrayValue::class.java)
+                assertThat((fixedValue as JSONArrayValue).list).hasOnlyElementsOfType(JSONObjectValue::class.java)
+            }
+        }
+
+        @Test
+        fun `should generate values even if pattern token matches but resolver is not in mock mode`() {
+            val innerPattern = JSONObjectPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()), typeAlias = "(Object)")
+            val pattern = ListPattern(innerPattern, typeAlias = "(List)")
+            val resolver = Resolver(newPatterns = mapOf("(List)" to pattern, "(Object)" to innerPattern), mockMode = false)
+            val validValues = listOf(
+                StringValue("(List)"),
+                JSONArrayValue(listOf(StringValue("(Object)"))),
+            )
+
+            assertThat(validValues).allSatisfy {
+                val fixedValue = pattern.fixValue(it, resolver)
+                println(fixedValue.toStringLiteral())
+                assertThat(fixedValue).isNotEqualTo(it).isInstanceOf(JSONArrayValue::class.java)
+                assertThat((fixedValue as JSONArrayValue).list).hasOnlyElementsOfType(JSONObjectValue::class.java)
+            }
+        }
     }
 }

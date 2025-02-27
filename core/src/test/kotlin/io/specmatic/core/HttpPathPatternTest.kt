@@ -339,5 +339,41 @@ internal class HttpPathPatternTest {
             println(unPrefixedFixedPath)
             assertThat(unPrefixedFixedPath).isEqualTo("pets/999")
         }
+
+        @Test
+        fun `should retain pattern token if it matches when resolver is in mock mode`() {
+            val urlPattern = buildHttpPathPattern("/pets/(id:number)")
+            val dictionary = mapOf("PATH.id" to NumberValue(999))
+            val resolver = Resolver(dictionary = dictionary, mockMode = true)
+            val validValue = "/pets/(number)"
+
+            val fixedPath = urlPattern.fixValue(validValue, resolver)
+            println(fixedPath)
+            assertThat(fixedPath).isEqualTo(validValue)
+        }
+
+        @Test
+        fun `should generate value when pattern token does not match when resolver is in mock mode`() {
+            val urlPattern = buildHttpPathPattern("/pets/(id:number)")
+            val dictionary = mapOf("PATH.id" to NumberValue(999))
+            val resolver = Resolver(dictionary = dictionary, mockMode = true)
+            val validValue = "/pets/(string)"
+
+            val fixedPath = urlPattern.fixValue(validValue, resolver)
+            println(fixedPath)
+            assertThat(fixedPath).isEqualTo("/pets/999")
+        }
+
+        @Test
+        fun `should generate values even if pattern token matches but resolver is not in mock mode`() {
+            val urlPattern = buildHttpPathPattern("/pets/(id:number)")
+            val dictionary = mapOf("PATH.id" to NumberValue(999))
+            val resolver = Resolver(dictionary = dictionary)
+            val validValue = "/pets/(number)"
+
+            val fixedPath = urlPattern.fixValue(validValue, resolver)
+            println(fixedPath)
+            assertThat(fixedPath).isEqualTo("/pets/999")
+        }
     }
 }

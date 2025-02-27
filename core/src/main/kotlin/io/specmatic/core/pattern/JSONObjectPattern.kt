@@ -29,6 +29,7 @@ data class JSONObjectPattern(
 ) : Pattern, PossibleJsonObjectPatternContainer {
 
     override fun fixValue(value: Value, resolver: Resolver): Value {
+        if (resolver.matchesPattern(null, this, value).isSuccess()) return value
         return JSONObjectValue(
             fix(
                 jsonPatternMap = pattern, jsonValueMap = (value as? JSONObjectValue)?.jsonObject.orEmpty(),

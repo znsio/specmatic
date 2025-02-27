@@ -46,6 +46,7 @@ data class AnyPattern(
     }
 
     override fun fixValue(value: Value, resolver: Resolver): Value {
+        if (resolver.matchesPattern(null, this, value).isSuccess()) return value
         val discBasedFixedValue = if (discriminator != null && value is JSONObjectValue && discriminator.property in value.jsonObject) {
             val discriminatorValue = value.jsonObject.getValue(discriminator.property).toStringLiteral()
             fixValue(

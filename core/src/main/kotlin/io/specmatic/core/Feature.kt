@@ -435,7 +435,7 @@ data class Feature(
     }
 
     fun fixSchemaFlagBased(discriminatorPatternName: String?, patternName: String, value: Value): Value {
-        val updatedResolver = flagsBased.update(scenarios.last().resolver)
+        val updatedResolver = flagsBased.update(scenarios.last().resolver).copy(mockMode = true)
         val pattern = getSchemaPattern(discriminatorPatternName, patternName, updatedResolver)
 
         if (pattern is AnyPattern && !discriminatorPatternName.isNullOrEmpty()) {

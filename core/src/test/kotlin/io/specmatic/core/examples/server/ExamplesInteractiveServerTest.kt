@@ -406,5 +406,33 @@ class ExamplesInteractiveServerTest {
             Specification expected number but example contained "(uuid)"
             """.trimIndent())
         }
+
+        @Test
+        fun `should match pattern tokens on schema examples`() {
+            val pattern = JSONObjectPattern(mapOf("first" to NumberPattern(), "second" to NumberPattern()))
+            val example = JSONObjectValue(mapOf("first" to StringValue("(number)"), "second" to NumberValue(10)))
+
+            val scenario = Scenario(ScenarioInfo(patterns = mapOf("(Test)" to pattern)))
+            val feature = Feature(listOf(scenario), name= "")
+
+            val result = feature.matchResultSchemaFlagBased(null, "Test", example, DefaultMismatchMessages)
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `should result in a failure on pattern token mismatch on schema examples`() {
+            val pattern = JSONObjectPattern(mapOf("first" to NumberPattern(), "second" to NumberPattern()))
+            val example = JSONObjectValue(mapOf("first" to StringValue("(string)"), "second" to NumberValue(10)))
+
+            val scenario = Scenario(ScenarioInfo(patterns = mapOf("(Test)" to pattern)))
+            val feature = Feature(listOf(scenario), name= "")
+
+            val result = feature.matchResultSchemaFlagBased(null, "Test", example, DefaultMismatchMessages)
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+            assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+            >> first
+            Expected number, actual was "(string)"
+            """.trimIndent())
+        }
     }
 }

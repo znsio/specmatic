@@ -396,7 +396,10 @@ data class Feature(
         mismatchMessages: MismatchMessages,
         breadCrumbIfDiscriminatorMismatch: String? = null
     ): Result {
-        val updatedResolver = flagsBased.update(scenarios.last().resolver).copy(mismatchMessages = mismatchMessages)
+        val updatedResolver = flagsBased.update(scenarios.last().resolver).copy(
+            mismatchMessages = mismatchMessages,
+            mockMode = true
+        )
 
         val pattern = runCatching {
             getSchemaPattern(discriminatorPatternName, patternName, updatedResolver)

@@ -18,7 +18,6 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.*
 import io.specmatic.core.value.*
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.test.traverse
 import picocli.CommandLine.*
 import java.io.File
 import java.lang.Thread.sleep
@@ -587,7 +586,7 @@ For example, to filter by HTTP methods:
                 val matchingExamples = getExistingExampleFiles(feature, scenario, examples)
                 examplesCount += matchingExamples.size
                 matchingExamples.map { (example, _) ->
-                    val exampleDictionary = example.toDictionary(scenario)
+                    val exampleDictionary = exampleToDictionary(example, scenario)
                     dictionary.putAll(exampleDictionary)
                 }
             }
@@ -608,101 +607,90 @@ For example, to filter by HTTP methods:
             } ?: emptyMap()
         }
 
-        private fun ExampleFromFile.toDictionary(scenario: Scenario): Map<String, Value> {
+        fun exampleToDictionary(example: ExampleFromFile, scenario: Scenario): Map<String, Value> {
             val requestPattern = resolvedHop(scenario.httpRequestPattern.body, scenario.resolver)
             val responsePattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
 
             val updatedResolver = scenario.resolver.ignoreAll()
-            val requestDictionary = this.request.body.toDictionary(requestPattern, updatedResolver)
-            val responseDictionary = this.response.body.toDictionary(responsePattern, updatedResolver)
+            val requestDictionary = example.request.body.toDictionary(requestPattern, updatedResolver)
+            val responseDictionary = example.response.body.toDictionary(responsePattern, updatedResolver)
             return requestDictionary.plus(responseDictionary)
         }
 
-        private fun Value.toDictionary(pattern: Pattern, resolver: Resolver): Map<String, Value> {
-            return pattern.getTypeAlias(this, resolver)?.let {
-                this.traverse(
-                    prefix = it,
-                    onScalar = { scalar, prefix -> scalar.handleScalar(this, pattern, prefix, resolver) },
-                    onComposite = { composite, prefix -> composite.handleComposite(this, pattern, prefix, resolver) },
-                    onAssert = { _, _ -> emptyMap() }
-                )
-            }.orEmpty()
-        }
-
-        private fun Value.handleComposite(patternValue: Value, pattern: Pattern, prefix: String, resolver: Resolver): Map<String, Value> {
-            val key = prefix.split(".").last()
-            return pattern.ifKeyIsNewSchema(patternValue, key, resolver) { subPattern ->
-                this.toDictionary(subPattern, resolver)
-            } ?: this.traverse(
-                prefix = "$prefix[*]",
-                onScalar = { scalar, innerPrefix -> scalar.handleScalar(patternValue, pattern, innerPrefix, resolver) },
-                onAssert = { _, _ -> emptyMap() }
-            )
-        }
-
-        private fun Value.handleScalar(patternValue: Value, pattern: Pattern, prefix: String, resolver: Resolver): Map<String, Value> {
-            val key = prefix.split(".").last()
-            val parentPatternKey = prefix.split(".").getOrElse(1) { prefix }
-
-            val parentPattern = pattern.getKeySchema(patternValue, parentPatternKey, resolver)
-            val keyPattern = parentPattern?.let { resolvedHop(it, resolver).getKeySchema(patternValue, key, resolver) }
-
-            if (parentPattern is DeferredPattern || keyPattern == null) return emptyMap()
-
-            return if (keyPattern.matches(this, resolver.validateAll()) is Result.Success) {
-                mapOf(prefix to this)
-            } else emptyMap()
-        }
-
-        private fun <T> Pattern.ifKeyIsNewSchema(value: Value, key: String, resolver: Resolver, block: (pattern: Pattern) -> T): T? {
-            val pattern = this.getKeySchema(value, key, resolver)
-            return if (pattern is DeferredPattern) {
-                block(resolvedHop(pattern, resolver))
-            } else null
-        }
-
-        private fun Pattern.getKeySchema(value: Value, key: String, resolver: Resolver): Pattern? {
+        private fun Pattern.getPatternWithTypeAlias(value: Value, resolver: Resolver): Pattern? {
             return when(this) {
-                is ListPattern -> {
-                    val patternValue = value.getInnerValueIfList()
-                    this.pattern.getKeySchema(patternValue, key, resolver)
-                }
-                is JSONObjectPattern -> {
-                    val pattern = this.pattern[key] ?: this.pattern["$key?"] ?: return null
-                    pattern.getKeySchema(value, key, resolver)
-                }
-                is AnyPattern -> this.pattern.firstOrNull { it.matches(value, resolver) is Result.Success }?.getKeySchema(value, key, resolver)
+                is ListPattern -> this.copy(typeAlias = this.typeAlias ?: this.pattern.typeAlias)
+                is AnyPattern -> this.matchingPatternOrNull(value, resolver)
                 else -> this
-            }
-        }
-
-        private fun Value.getInnerValueIfList(): Value {
-            return when(this) {
-                is JSONArrayValue -> this.list.first()
-                else -> this
-            }
-        }
-
-        private fun Pattern.getTypeAlias(value: Value, resolver: Resolver): String? {
-            return when(this) {
-                is ListPattern -> this.typeAlias ?: this.pattern.getTypeAlias(value, resolver)
-                is AnyPattern -> this.pattern.firstOrNull { it.matches(value, resolver) is Result.Success }?.getTypeAlias(value, resolver)
-                else -> this.typeAlias
-            }?.let { withoutPatternDelimiters(it) }
+            }?.takeIf { it.typeAlias != null }
         }
 
         private fun Resolver.ignoreAll(): Resolver {
             return this.copy(
-                patternMatchStrategy = matchAnything,
-                findKeyErrorCheck = findKeyErrorCheck.copy(unexpectedKeyCheck = IgnoreUnexpectedKeys)
+                findKeyErrorCheck = findKeyErrorCheck.copy(unexpectedKeyCheck = IgnoreUnexpectedKeys, patternKeyCheck = noPatternKeyCheck)
             )
         }
 
         private fun Resolver.validateAll(): Resolver {
-            return this.copy(
-                patternMatchStrategy = actualMatch,
-                findKeyErrorCheck = findKeyErrorCheck.copy(unexpectedKeyCheck = ValidateUnexpectedKeys)
-            )
+            return this.copy(patternMatchStrategy = actualMatch, findKeyErrorCheck = DefaultKeyCheck)
+        }
+
+        private fun Value.toEntry(prefix: String, pattern: Pattern, resolver: Resolver): Map<String, Value> {
+            val result = pattern.matches(this, resolver.validateAll())
+            return if (result.isSuccess() && pattern is ScalarType) mapOf(prefix to this) else emptyMap()
+        }
+
+        private fun Value.toDictionary(pattern: Pattern, resolver: Resolver, prefix: String = "", suffix: String = ""): Map<String, Value> {
+            return pattern.getPatternWithTypeAlias(this, resolver)?.let {
+                return this.traverse(it, resolver, "$prefix${withoutPatternDelimiters(it.typeAlias ?: "")}$suffix")
+            } ?: emptyMap()
+        }
+
+        private fun Value.traverse(pattern: Pattern, resolver: Resolver, prefix: String = ""): Map<String, Value> {
+            return when {
+                this is JSONObjectValue && pattern is JSONObjectPattern -> this.traverse(pattern, resolver, prefix)
+                this is JSONArrayValue && pattern is ListPattern -> this.traverse(pattern, resolver, prefix)
+                else -> this.toEntry(prefix, pattern, resolver)
+            }
+        }
+
+        private fun JSONObjectValue.traverse(pattern: JSONObjectPattern, resolver: Resolver, prefix: String): Map<String, Value> {
+            return this.jsonObject.flatMap { (key, value) ->
+                val keyPattern = pattern.getKeySchema(this, resolver, key) ?: return@flatMap emptyList()
+                keyPattern.ifNewSchema {
+                    value.toDictionary(resolvedHop(keyPattern, resolver), resolver).entries
+                } ?: value.traverse(keyPattern, resolver, "$prefix.$key").entries
+            }.associate { it.toPair() }
+        }
+
+        private fun JSONArrayValue.traverse(pattern: ListPattern, resolver: Resolver, prefix: String): Map<String, Value> {
+            val resolvedPattern = resolvedHop(pattern.pattern, resolver)
+            return pattern.ifNewSchema {
+                this.list.fold(emptyMap()) { acc, value -> acc.plus(value.toDictionary(resolvedPattern, resolver, suffix = "[*]")) }
+            } ?: this.list.fold(emptyMap()) { acc, value -> acc.plus(value.traverse(resolvedPattern, resolver, prefix = "$prefix[*]")) }
+        }
+
+        private fun <T> Pattern.ifNewSchema(block: () -> T): T? {
+            return when (this) {
+                is DeferredPattern -> block()
+                is ListPattern -> this.pattern.ifNewSchema(block)
+                else -> null
+            }
+        }
+
+        private fun Pattern.getKeySchema(value: Value, resolver: Resolver, key: String): Pattern? {
+            return when(this) {
+                is JSONObjectPattern -> this.pattern[key] ?: this.pattern["$key?"]
+                is AnyPattern -> this.matchingPatternOrNull(value, resolver)?.getKeySchema(value,resolver, key)
+                else -> null
+            }
+        }
+
+        private fun AnyPattern.matchingPatternOrNull(value: Value, resolver: Resolver): Pattern? {
+            return when {
+                this.pattern.size > 1 -> this.getMatchingPattern(value, resolver)
+                else -> this.getUpdatedPattern(resolver).firstOrNull()
+            }
         }
     }
 

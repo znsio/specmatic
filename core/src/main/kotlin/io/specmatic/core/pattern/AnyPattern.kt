@@ -201,6 +201,19 @@ data class AnyPattern(
         return Result.fromFailures(failuresWithUpdatedBreadcrumbs)
     }
 
+    fun getMatchingPattern(sampleData: Value?, resolver: Resolver): Pattern? {
+        val updatedPatterns = getUpdatedPattern(resolver)
+        return updatedPatterns.firstOrNull { resolver.matchesPattern(key, it, sampleData ?: EmptyString).isSuccess() }
+    }
+
+    fun getUpdatedPattern(resolver: Resolver): List<Pattern> {
+        return if (discriminator != null) {
+            discriminator.updatePatternsWithDiscriminator(pattern, resolver).listFold().takeIf {
+                it is HasValue<List<Pattern>>
+            }?.value ?: return emptyList()
+        } else pattern
+    }
+
     override fun generate(resolver: Resolver): Value {
         return resolver.resolveExample(example, pattern)
             ?: generateValue(resolver)

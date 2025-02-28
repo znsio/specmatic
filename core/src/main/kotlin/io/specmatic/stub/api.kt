@@ -514,7 +514,7 @@ fun loadContractStubs(
     stubData: List<Pair<String, ScenarioStub>>,
     strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
-    val contractInfoFromStubs: List<Pair<Feature, List<ScenarioStub>>> = stubData.flatMap { (stubFile, stub) ->
+    val contractInfoFromStubs: List<Pair<Feature, List<ScenarioStub>>> = stubData.mapNotNull { (stubFile, stub) ->
         val matchResults = features.map { (specFile, feature) ->
             try {
                 feature.matchingStub(stub, ContractAndStubMismatchMessages)
@@ -524,15 +524,14 @@ fun loadContractStubs(
             }
         }
 
-        matchResults.mapNotNull { matchResult ->
-            if(matchResult.feature == null) {
-                val errorMessage = stubMatchErrorMessage(listOf(matchResult), stubFile).prependIndent("  ")
+        when (val feature = matchResults.firstNotNullOfOrNull { it.feature }) {
+            null -> {
+                val errorMessage = stubMatchErrorMessage(matchResults, stubFile).prependIndent("  ")
                 if(strictMode) throw Exception(errorMessage)
                 else consoleLog(StringLog(errorMessage))
                 null
-            } else {
-                Pair(matchResult.feature, stub)
             }
+            else -> Pair(feature, stub)
         }
     }.groupBy { it.first }.mapValues { (_, value) -> value.map { it.second } }.entries.map { Pair(it.key, it.value) }
 

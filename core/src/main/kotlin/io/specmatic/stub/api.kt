@@ -323,11 +323,6 @@ fun loadContractStubsFromFiles(
         throw Exception(exitMessage)
     }
 
-    val implicitDataDirsInDataDirPaths = specPathToImplicitDataDirPaths(
-        specmaticConfig,
-        dataDirPaths
-    ).flatMap { it.second }.toSet()
-
     val features = contractPathDataList.mapNotNull { contractPathData ->
         loadIfOpenAPISpecification(contractPathData, specmaticConfig)
     }.overrideInlineExamplesWithSameNameFrom(
@@ -339,23 +334,21 @@ fun loadContractStubsFromFiles(
         dataDirPaths,
         specmaticConfig,
         strictMode
-    ).plus(
+    ).ifEmpty {
         loadExpectationsForFeatures(
             features,
             dataDirPaths,
-            strictMode,
-            implicitDataDirsInDataDirPaths
+            strictMode
         )
-    )
+    }
 }
 
 fun loadExpectationsForFeatures(
     features: List<Pair<String, Feature>>,
     dataDirPaths: List<String>,
-    strictMode: Boolean = false,
-    implicitDataDirPaths: Set<String> = emptySet()
+    strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
-    val dataFiles = dataDirFiles(dataDirPaths, implicitDataDirPaths)
+    val dataFiles = dataDirFiles(dataDirPaths)
     printDataFiles(dataFiles)
 
     val mockData = dataFiles.mapNotNull {
@@ -381,10 +374,9 @@ private fun  List<Pair<String, Feature>>.overrideInlineExamplesWithSameNameFrom(
 }
 
 private fun dataDirFiles(
-    dataDirPaths: List<String>,
-    implicitDataDirPaths: Set<String> = emptySet()
+    dataDirPaths: List<String>
 ): List<File> {
-    return allDirsInTree(dataDirPaths, implicitDataDirPaths).sorted().flatMap {
+    return allDirsInTree(dataDirPaths).sorted().flatMap {
         logIgnoredFiles(it)
         it.listFiles()?.toList()?.sorted() ?: emptyList<File>()
     }.filter { it.extension == "json" }
@@ -396,20 +388,32 @@ fun loadImplicitExpectationsFromDataDirsForFeature(
     specmaticConfig: SpecmaticConfig,
     strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
-    return specPathToImplicitDataDirPaths(specmaticConfig, dataDirPaths).flatMap { (specPath, implicitDataDirs) ->
+    return specPathToImplicitDataDirPaths(specmaticConfig, dataDirPaths).flatMap { (specPath, implicitOriginalDataDirPairList) ->
         val associatedFeatures = features.filter { it.first == specPath }
-        loadExpectationsForFeatures(
-            features = associatedFeatures,
-            dataDirPaths = implicitDataDirs,
-            strictMode = strictMode
-        )
+
+        implicitOriginalDataDirPairList.flatMap { (implicitDataDir, originalDataDir) ->
+            val implicitStubs = loadExpectationsForFeatures(
+                features = associatedFeatures,
+                dataDirPaths = listOf(implicitDataDir),
+                strictMode = strictMode
+            )
+            if(implicitStubs.all { (_, stubs) -> stubs.isEmpty() }) {
+                loadExpectationsForFeatures(
+                    features,
+                    listOf(originalDataDir),
+                    strictMode
+                )
+            } else {
+                implicitStubs
+            }
+        }
     }
 }
 
 private fun specPathToImplicitDataDirPaths(
     specmaticConfig: SpecmaticConfig,
     dataDirPaths: List<String>
-): List<Pair<String, List<String>>> {
+): List<Pair<String, List<ImplicitOriginalDataDirPair>>> {
     return specmaticConfig.loadSources().flatMap { contractSource ->
         stubDirectoryToContractPathFrom(contractSource)
     }.mapNotNull { (stubDirectory, stubContractPath) ->
@@ -422,10 +426,18 @@ private fun specPathToImplicitDataDirPaths(
         val stubContractPathWithDirectory =
             if (stubDirectory.isNotBlank()) "$stubDirectory${File.separator}$stubContractPath" else stubContractPath
         stubContractPathWithDirectory to dataDirPaths.sorted().map { dataDirPath ->
-            "$dataDirPath${File.separator}$implicitExamplesPath"
+            ImplicitOriginalDataDirPair(
+                implicitDataDir = "$dataDirPath${File.separator}$implicitExamplesPath",
+                dataDir = dataDirPath
+            )
         }
     }
 }
+
+data class ImplicitOriginalDataDirPair(
+    val implicitDataDir: String,
+    val dataDir: String
+)
 
 private fun stubDirectoryToContractPathFrom(contractSource: ContractSource): List<Pair<String, String>> {
     return contractSource.stubContracts.map { contractSourceEntry ->
@@ -531,25 +543,23 @@ fun loadContractStubs(
 }
 
 fun allDirsInTree(
-    dataDirPaths: List<String>,
-    implicitDataDirPaths: Set<String> = emptySet()
+    dataDirPaths: List<String>
 ): List<File> =
         dataDirPaths.map { File(it) }.filter {
             it.exists() && it.isDirectory
         }.flatMap {
             val fileList: List<File> = it.listFiles()?.toList()?.filterNotNull() ?: emptyList()
-            pathToFileListRecursive(fileList, implicitDataDirPaths).plus(it)
+            pathToFileListRecursive(fileList).plus(it)
         }
 
 private fun pathToFileListRecursive(
-    dataDirFiles: List<File>,
-    implicitDataDirPaths: Set<String>
+    dataDirFiles: List<File>
 ): List<File> =
         dataDirFiles.filter {
-            it.isDirectory && it.path !in implicitDataDirPaths
+            it.isDirectory
         }.map {
             val fileList: List<File> = it.listFiles()?.toList()?.filterNotNull() ?: emptyList()
-            pathToFileListRecursive(fileList, implicitDataDirPaths).plus(it)
+            pathToFileListRecursive(fileList).plus(it)
         }.flatten()
 
 private fun filesInDir(implicitDataDir: File): List<File>? {

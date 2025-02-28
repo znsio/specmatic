@@ -208,7 +208,7 @@ data class Resolver(
         val value = dictionary[dictionaryLookupPath] ?: defaultPatternValueFromDictionary(pattern) ?: return pattern.generate(this)
 
         val dictionaryValueMatchResult = pattern.matches(value, this)
-
+        if (dictionaryValueMatchResult is Result.Failure && isNegative) return pattern.generate(this)
         dictionaryValueMatchResult.throwOnFailure()
 
         return value

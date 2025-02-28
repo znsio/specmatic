@@ -717,7 +717,7 @@ data class Feature(
 
             negativeTestScenarios.filterNot { negativeTestScenarioR ->
                 negativeTestScenarioR.withDefault(false) { negativeTestScenario ->
-                    val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
+                    val sampleRequest = negativeTestScenario.generateHttpRequest()
                     originalScenario.httpRequestPattern.matches(sampleRequest, originalScenario.resolver).isSuccess()
                 }
             }.mapIndexed { index, negativeTestScenarioR ->

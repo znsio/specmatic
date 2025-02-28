@@ -539,10 +539,10 @@ paths:
                 {
                     "Base.id": 123,
                     "Base.type": "Base",
-                    "Base.terms[*]": "Term1",
+                    "Base.terms[*]": "Term2",
                     "Base[*].id": 123,
                     "Base[*].type": "Base",
-                    "Base[*].terms[*]": "Term1"
+                    "Base[*].terms[*]": "Term2"
                 }
                 """.trimIndent())
                 println(JSONObjectValue(dictionary).toStringLiteral())
@@ -572,9 +572,9 @@ paths:
                 val expectedDictionary = parsedJSONObject("""
                 {
                     "Base.type": "Base",
-                    "Base.terms[*]": "Term1",
+                    "Base.terms[*]": "Term2",
                     "Base[*].type": "Base",
-                    "Base[*].terms[*]": "Term1"
+                    "Base[*].terms[*]": "Term2"
                 }
                 """.trimIndent())
                 println(JSONObjectValue(dictionary).toStringLiteral())
@@ -613,12 +613,12 @@ paths:
                     "Nested.type": "Nested",
                     "Base.id": 123,
                     "Base.type": "Base",
-                    "Base.terms[*]": "Term1",
+                    "Base.terms[*]": "Term2",
                     "Nested.details.price": 100,
-                    "Nested.details.description[*]": "Desc1",
+                    "Nested.details.description[*]": "Desc2",
                     "Nested[*].type": "Nested",
                     "Nested[*].details.price": 100,
-                    "Nested[*].details.description[*]": "Desc1"
+                    "Nested[*].details.description[*]": "Desc2"
                 }
                 """.trimIndent())
                 println(JSONObjectValue(dictionary).toStringLiteral())
@@ -653,12 +653,11 @@ paths:
                 val dictionary = ExamplesCommand.ExampleToDictionary().exampleToDictionary(example, scenario)
                 val expectedDictionary = parsedJSONObject("""
                 {
-                    "Nested.type": "Nested",
                     "Base.id": 123,
                     "Base.type": "Base",
-                    "Base.terms[*]": "Term1",
+                    "Base.terms[*]": "Term2",
                     "Nested.details.price": 100,
-                    "Nested.details.description[*]": "Desc1"
+                    "Nested.details.description[*]": "Desc2"
                 }
                 """.trimIndent())
                 println(JSONObjectValue(dictionary).toStringLiteral())
@@ -673,7 +672,9 @@ paths:
                 {
                     "id": 123,
                     "type": "Base",
-                    "terms": ["Term1", "Term2"]
+                    "terms": ["Term1", "Term2"],
+                    "Nested.details.price": 100,
+                    "Nested.details.description[*]": "Desc2"
                 }
                 """.trimIndent())
             )
@@ -683,8 +684,7 @@ paths:
                 val expectedDictionary = parsedJSONObject("""
                 {
                     "Base.id": 123,
-                    "Base.type": "Base",
-                    "Base.terms[*]": "Term1"
+                    "Base.terms[*]": "Term2"
                 }
                 """.trimIndent())
                 println(JSONObjectValue(dictionary).toStringLiteral())
@@ -719,12 +719,11 @@ paths:
                 val dictionary = ExamplesCommand.ExampleToDictionary().exampleToDictionary(example, scenario)
                 val expectedDictionary = parsedJSONObject("""
                 {
-                    "AllOfSchema.type": "AllOf",
                     "Base.id": 123,
                     "Base.type": "Base",
-                    "Base.terms[*]": "Term1",
+                    "Base.terms[*]": "Term2",
                     "AllOfSchema.details.price": 100,
-                    "AllOfSchema.details.description[*]": "Desc1"
+                    "AllOfSchema.details.description[*]": "Desc2"
                 }
                 """.trimIndent())
                 println(JSONObjectValue(dictionary).toStringLiteral())
@@ -800,9 +799,9 @@ paths:
                 {
                     "Base.id": 123,
                     "Base.type": "Base",
-                    "Base.terms[*]": "Term1",
+                    "Base.terms[*]": "Term2",
                     "Nested.details.price": 100,
-                    "Nested.details.description[*]": "Desc1"
+                    "Nested.details.description[*]": "Desc2"
                 }
                 """.trimIndent())
                 println(JSONObjectValue(dictionary).toStringLiteral())

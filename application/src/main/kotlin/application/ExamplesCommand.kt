@@ -619,7 +619,7 @@ For example, to filter by HTTP methods:
 
         private fun Pattern.getPatternWithTypeAlias(value: Value, resolver: Resolver): Pattern? {
             return when(this) {
-                is ListPattern -> this.copy(typeAlias = this.pattern.typeAlias)
+                is ListPattern -> this.copy(typeAlias = this.typeAlias ?: this.pattern.typeAlias)
                 is AnyPattern -> this.matchingPatternOrNull(value, resolver)
                 else -> this
             }?.takeIf { it.typeAlias != null }
@@ -636,13 +636,8 @@ For example, to filter by HTTP methods:
         }
 
         private fun Value.toEntry(prefix: String, pattern: Pattern, resolver: Resolver): Map<String, Value> {
-            val typeAlias = withoutPatternDelimiters(pattern.typeAlias ?: "")
-            val suffix = if (pattern is ListPattern) "[*]" else ""
-
             val result = pattern.matches(this, resolver.validateAll())
-            return if (result.isSuccess() && pattern is ScalarType) {
-                mapOf("$prefix$typeAlias$suffix" to this)
-            } else emptyMap()
+            return if (result.isSuccess() && pattern is ScalarType) mapOf(prefix to this) else emptyMap()
         }
 
         private fun Value.toDictionary(pattern: Pattern, resolver: Resolver, prefix: String = "", suffix: String = ""): Map<String, Value> {
@@ -671,8 +666,8 @@ For example, to filter by HTTP methods:
         private fun JSONArrayValue.traverse(pattern: ListPattern, resolver: Resolver, prefix: String): Map<String, Value> {
             val resolvedPattern = resolvedHop(pattern.pattern, resolver)
             return pattern.ifNewSchema {
-                this.list.fold(emptyMap()) { acc, value -> acc.plus(value.toDictionary(resolvedPattern, resolver)) }
-            } ?: this.list.fold(emptyMap()) { acc, value -> acc.plus(value.traverse(resolvedPattern, resolver, "$prefix[*]")) }
+                this.list.fold(emptyMap()) { acc, value -> acc.plus(value.toDictionary(resolvedPattern, resolver, suffix = "[*]")) }
+            } ?: this.list.fold(emptyMap()) { acc, value -> acc.plus(value.traverse(resolvedPattern, resolver, prefix = "$prefix[*]")) }
         }
 
         private fun <T> Pattern.ifNewSchema(block: () -> T): T? {

@@ -2,14 +2,11 @@ package io.specmatic.core
 
 import io.specmatic.GENERATION
 import io.specmatic.core.pattern.*
-import io.specmatic.core.value.JSONObjectValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.Value
 import io.ktor.util.reflect.*
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.value.NumberValue
+import io.specmatic.core.value.*
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -679,6 +676,40 @@ internal class HttpHeadersPatternTest {
 
             val headerValue = fixedHeaders.getValue(headerName)
             assertThat(headerValue).matches("true|false")
+        }
+
+        @Test
+        fun `should retain pattern token if it matches when resolver is in mock mode`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val validValue = mapOf("number" to "(number)", "boolean" to "(boolean)")
+            val fixedValue = httpHeaders.fixValue(validValue, Resolver(mockMode = true))
+
+            println(fixedValue)
+            assertThat(fixedValue).isEqualTo(validValue)
+        }
+
+        @Test
+        fun `should generate value when pattern token does not match when resolver is in mock mode`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val validValue = mapOf("number" to "(string)", "boolean" to "(string)")
+            val fixedValue = httpHeaders.fixValue(validValue, Resolver(
+                mockMode = true, dictionary = mapOf("(number)" to NumberValue(999), "(boolean)" to BooleanValue(true))
+            ))
+
+            println(fixedValue)
+            assertThat(fixedValue).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
+        }
+
+        @Test
+        fun `should generate values even if pattern token matches but resolver is not in mock mode`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val validValue = mapOf("number" to "(number)", "boolean" to "(boolean)")
+            val fixedValue = httpHeaders.fixValue(validValue, Resolver(
+                dictionary = mapOf("(number)" to NumberValue(999), "(boolean)" to BooleanValue(true))
+            ))
+
+            println(fixedValue)
+            assertThat(fixedValue).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
         }
     }
 }

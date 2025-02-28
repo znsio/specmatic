@@ -608,6 +608,57 @@ internal class AnyPatternTest {
                 ))
             )
         }
+
+        @Test
+        fun `should retain pattern token if it matches when resolver is in mock mode`() {
+            val objectPattern = JSONObjectPattern(mapOf("type" to "object".toDiscriminator(), "number" to NumberPattern(), "string" to StringPattern()), typeAlias = "(Object)")
+            val pattern = AnyPattern(
+                pattern = listOf(objectPattern), typeAlias = "(AnyPattern)",
+                discriminatorValues = setOf("object"), discriminatorProperty = "type"
+            )
+            val resolver = Resolver(newPatterns = mapOf("(Object)" to objectPattern, "(AnyPattern)" to pattern), mockMode = true)
+            val validValues = listOf(StringValue("(Object)"), StringValue("(AnyPattern)"))
+
+            assertThat(validValues).allSatisfy {
+                val fixedValue = pattern.fixValue(it, resolver)
+                println(fixedValue.toStringLiteral())
+                assertThat(fixedValue).isEqualTo(it)
+            }
+        }
+
+        @Test
+        fun `should generate value when pattern token does not match when resolver is in mock mode`() {
+            val objectPattern = JSONObjectPattern(mapOf("type" to "object".toDiscriminator(), "number" to NumberPattern(), "string" to StringPattern()), typeAlias = "(Object)")
+            val pattern = AnyPattern(
+                pattern = listOf(objectPattern), typeAlias = "(AnyPattern)",
+                discriminatorValues = setOf("object"), discriminatorProperty = "type"
+            )
+            val resolver = Resolver(newPatterns = mapOf("(Object)" to objectPattern, "(AnyPattern)" to pattern), mockMode = true)
+            val invalidValues = listOf(StringValue("(string)"), StringValue("(number)"))
+
+            assertThat(invalidValues).allSatisfy {
+                val fixedValue = pattern.fixValue(it, resolver)
+                println(fixedValue.toStringLiteral())
+                assertThat(fixedValue).isNotEqualTo(it).isInstanceOf(JSONObjectValue::class.java)
+            }
+        }
+
+        @Test
+        fun `should generate values even if pattern token matches but resolver is not in mock mode`() {
+            val objectPattern = JSONObjectPattern(mapOf("type" to "object".toDiscriminator(), "number" to NumberPattern(), "string" to StringPattern()), typeAlias = "(Object)")
+            val pattern = AnyPattern(
+                pattern = listOf(objectPattern), typeAlias = "(AnyPattern)",
+                discriminatorValues = setOf("object"), discriminatorProperty = "type"
+            )
+            val resolver = Resolver(newPatterns = mapOf("(Object)" to objectPattern, "(AnyPattern)" to pattern), mockMode = false)
+            val values = listOf(StringValue("(Object)"), StringValue("(AnyPattern)"))
+
+            assertThat(values).allSatisfy {
+                val fixedValue = pattern.fixValue(it, resolver)
+                println(fixedValue.toStringLiteral())
+                assertThat(fixedValue).isNotEqualTo(it).isInstanceOf(JSONObjectValue::class.java)
+            }
+        }
     }
 
     private fun String.toDiscriminator(): ExactValuePattern {

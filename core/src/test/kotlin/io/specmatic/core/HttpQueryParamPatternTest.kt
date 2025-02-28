@@ -8,6 +8,7 @@ import io.specmatic.core.Result.Success
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
+import io.specmatic.core.value.BooleanValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.trimmedLinesList
@@ -633,6 +634,40 @@ class HttpQueryParamPatternTest {
                 "petId" to "999",
                 "owner" to "TODO"
             ))
+        }
+
+        @Test
+        fun `should retain pattern token if it matches when resolver is in mock mode`() {
+            val httpQueryPattern = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val validValue = QueryParameters(mapOf("number" to "(number)", "boolean" to "(boolean)"))
+            val fixedValue = httpQueryPattern.fixValue(validValue, Resolver(mockMode = true))
+
+            println(fixedValue)
+            assertThat(fixedValue).isEqualTo(validValue)
+        }
+
+        @Test
+        fun `should generate value when pattern token does not match when resolver is in mock mode`() {
+            val httpQueryPattern = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val validValue = QueryParameters(mapOf("number" to "(string)", "boolean" to "(string)"))
+            val fixedValue = httpQueryPattern.fixValue(validValue, Resolver(
+                mockMode = true, dictionary = mapOf("(number)" to NumberValue(999), "(boolean)" to BooleanValue(true))
+            ))
+
+            println(fixedValue)
+            assertThat(fixedValue.asMap()).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
+        }
+
+        @Test
+        fun `should generate values even if pattern token matches but resolver is not in mock mode`() {
+            val httpQueryPattern = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val validValue = QueryParameters(mapOf("number" to "(number)", "boolean" to "(boolean)"))
+            val fixedValue = httpQueryPattern.fixValue(validValue, Resolver(
+                dictionary = mapOf("(number)" to NumberValue(999), "(boolean)" to BooleanValue(true))
+            ))
+
+            println(fixedValue)
+            assertThat(fixedValue.asMap()).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
         }
     }
 }

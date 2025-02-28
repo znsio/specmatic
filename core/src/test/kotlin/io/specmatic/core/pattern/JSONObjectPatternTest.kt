@@ -2036,5 +2036,63 @@ components:
 
             assertThat(fixedValue).isEqualTo(generatedValue)
         }
+
+        @Test
+        fun `should retain pattern token if it matches when resolver is in mock mode`() {
+            val pattern = JSONObjectPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()), typeAlias = "(Test)")
+            val resolver = Resolver(newPatterns = mapOf("(Test)" to pattern), mockMode = true)
+            val validValues = listOf(
+                StringValue("(Test)"),
+                JSONObjectValue(mapOf("number" to StringValue("(number)"), "string" to StringValue("(string)")))
+            )
+
+            assertThat(validValues).allSatisfy {
+                val fixedValue = pattern.fixValue(it, resolver)
+                println(fixedValue.toStringLiteral())
+                assertThat(fixedValue).isEqualTo(it)
+            }
+        }
+
+        @Test
+        fun `should generate value when pattern token does not match when resolver is in mock mode`() {
+            val pattern = JSONObjectPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()))
+            val resolver = Resolver(
+                mockMode = true, newPatterns = mapOf("(Test)" to pattern),
+                dictionary = mapOf("(number)" to NumberValue(999), "(string)" to StringValue("TODO"))
+            )
+            val invalidValues = listOf(
+                StringValue("(string)"),
+                JSONObjectValue(mapOf("number" to StringValue("(string)"), "string" to NumberValue(999)))
+            )
+
+            assertThat(invalidValues).allSatisfy {
+                val fixedValue = pattern.fixValue(it, resolver)
+                println(fixedValue.toStringLiteral())
+                assertThat(fixedValue).isEqualTo(JSONObjectValue(mapOf(
+                    "number" to NumberValue(999), "string" to StringValue("TODO"))
+                ))
+            }
+        }
+
+        @Test
+        fun `should generate values even if pattern token matches but resolver is not in mock mode`() {
+            val pattern = JSONObjectPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()), typeAlias = "(Test)")
+            val resolver = Resolver(
+                newPatterns = mapOf("(Test)" to pattern),
+                dictionary = mapOf("(number)" to NumberValue(999), "(string)" to StringValue("TODO"))
+            )
+            val values = listOf(
+                StringValue("(Test)"),
+                JSONObjectValue(mapOf("number" to StringValue("(number)"), "string" to NumberValue(999)))
+            )
+
+            assertThat(values).allSatisfy {
+                val fixedValue = pattern.fixValue(it, resolver)
+                println(fixedValue.toStringLiteral())
+                assertThat(fixedValue).isEqualTo(JSONObjectValue(mapOf(
+                    "number" to NumberValue(999), "string" to StringValue("TODO"))
+                ))
+            }
+        }
     }
 }

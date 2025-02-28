@@ -2,9 +2,7 @@ package io.specmatic.core.examples.server
 
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.*
-import io.specmatic.core.pattern.JSONObjectPattern
-import io.specmatic.core.pattern.NumberPattern
-import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.value.*
 import io.specmatic.mock.ScenarioStub
@@ -405,6 +403,101 @@ class ExamplesInteractiveServerTest {
             >> RESPONSE.BODY.result
             Specification expected number but example contained "(uuid)"
             """.trimIndent())
+        }
+
+        @Test
+        fun `should match pattern tokens on schema examples`() {
+            val pattern = JSONObjectPattern(mapOf("first" to NumberPattern(), "second" to NumberPattern()))
+            val example = JSONObjectValue(mapOf("first" to StringValue("(number)"), "second" to NumberValue(10)))
+
+            val scenario = Scenario(ScenarioInfo(patterns = mapOf("(Test)" to pattern)))
+            val feature = Feature(listOf(scenario), name= "")
+
+            val result = feature.matchResultSchemaFlagBased(null, "Test", example, DefaultMismatchMessages)
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `should result in a failure on pattern token mismatch on schema examples`() {
+            val pattern = JSONObjectPattern(mapOf("first" to NumberPattern(), "second" to NumberPattern()))
+            val example = JSONObjectValue(mapOf("first" to StringValue("(string)"), "second" to NumberValue(10)))
+
+            val scenario = Scenario(ScenarioInfo(patterns = mapOf("(Test)" to pattern)))
+            val feature = Feature(listOf(scenario), name= "")
+
+            val result = feature.matchResultSchemaFlagBased(null, "Test", example, DefaultMismatchMessages)
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+            assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+            >> first
+            Expected number, actual was "(string)"
+            """.trimIndent())
+        }
+    }
+
+    @Nested
+    inner class FixExampleTests {
+        @Test
+        fun `should be able to fix invalid examples while retaining valid pattern tokens`(@TempDir tempDir: File) {
+            val scenario = Scenario(ScenarioInfo(
+                httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    httpPathPattern = buildHttpPathPattern("/"),
+                    body = JSONObjectPattern(mapOf(
+                        "string" to StringPattern(), "number" to NumberPattern(),
+                        "boolean" to BooleanPattern(), "date" to DatePattern
+                    ))
+                ),
+                httpResponsePattern = HttpResponsePattern(status = 200)
+            ))
+            val example = ScenarioStub(
+                request = HttpRequest(
+                    method = "POST", path = "/",
+                    body = JSONObjectValue(mapOf(
+                        "string" to StringValue("OK"),
+                        "number" to StringValue("TODO"),
+                        "boolean" to StringValue("(string)"),
+                        "date" to StringValue("(date)")
+                    ))
+                ),
+                response = HttpResponse.OK
+            )
+
+            val feature = Feature(listOf(scenario), name= "")
+            val exampleFile = File(tempDir, "example.json").apply { writeText(example.toJSON().toStringLiteral()) }
+            val result = ExamplesInteractiveServer.fixExample(feature, exampleFile)
+            val fixedExampleReqBody = ScenarioStub.readFromFile(exampleFile).request.body as JSONObjectValue
+
+            assertThat(result.status).isEqualTo(FixExampleStatus.SUCCEDED)
+            assertThat(fixedExampleReqBody.findFirstChildByName("string")).isEqualTo(StringValue("OK"))
+            assertThat(fixedExampleReqBody.findFirstChildByName("number")).isInstanceOf(NumberValue::class.java)
+            assertThat(fixedExampleReqBody.findFirstChildByName("boolean")).isInstanceOf(BooleanValue::class.java)
+            assertThat(fixedExampleReqBody.findFirstChildByName("date")).isEqualTo(StringValue("(date)"))
+        }
+
+        @Test
+        fun `should be able to fix invalid schema example while retaining valid pattern tokens`(@TempDir tempDir: File) {
+            val pattern = JSONObjectPattern(mapOf(
+                "string" to StringPattern(), "number" to NumberPattern(),
+                "boolean" to BooleanPattern(), "date" to DatePattern
+            ), typeAlias = "(Test)")
+            val example = JSONObjectValue(mapOf(
+                "string" to StringValue("OK"), "number" to StringValue("TODO"),
+                "boolean" to StringValue("(string)"), "date" to StringValue("(date)")
+            ))
+
+            val feature = Feature(listOf(Scenario(ScenarioInfo(patterns = mapOf("(Test)" to pattern)))), name= "")
+            val exampleFile = File(tempDir, "resource.Test.example.json").apply { writeText(example.toStringLiteral()) }
+            val result = ExamplesInteractiveServer.fixExample(feature, exampleFile)
+            val schemaExample = SchemaExample.fromFile(exampleFile).value
+            val exampleValue = schemaExample.value as JSONObjectValue
+
+            assertThat(result.status).isEqualTo(FixExampleStatus.SUCCEDED)
+            assertThat(schemaExample.discriminatorBasedOn).isNull()
+            assertThat(schemaExample.schemaBasedOn).isEqualTo("Test")
+            assertThat(exampleValue.findFirstChildByName("string")).isEqualTo(StringValue("OK"))
+            assertThat(exampleValue.findFirstChildByName("number")).isInstanceOf(NumberValue::class.java)
+            assertThat(exampleValue.findFirstChildByName("boolean")).isInstanceOf(BooleanValue::class.java)
+            assertThat(exampleValue.findFirstChildByName("date")).isEqualTo(StringValue("(date)"))
         }
     }
 }

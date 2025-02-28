@@ -16,6 +16,7 @@ data class ListPattern(
         get() = MemberList(emptyList(), pattern)
 
     override fun fixValue(value: Value, resolver: Resolver): Value {
+        if (resolver.matchesPattern(null, this, value).isSuccess()) return value
         if (value !is JSONArrayValue || (value.list.isEmpty() && resolver.allPatternsAreMandatory)) {
             return pattern.listOf(0.until(randomNumber(3)).mapIndexed { index, _ ->
                 attempt(breadCrumb = "[$index (random)]") { pattern.fixValue(NullValue, resolver) }

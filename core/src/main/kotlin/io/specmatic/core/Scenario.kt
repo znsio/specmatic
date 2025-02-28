@@ -852,7 +852,7 @@ data class Scenario(
                 isRequestAttributeSelected(httpRequest) -> ValidateUnexpectedKeys
                 else -> flagsBased.unexpectedKeyCheck
             }
-        ).update(resolver)
+        ).update(resolver).copy(mockMode = true)
 
         this.newBasedOnAttributeSelectionFields(httpRequest.queryParams).let { newScenario ->
             return Pair(

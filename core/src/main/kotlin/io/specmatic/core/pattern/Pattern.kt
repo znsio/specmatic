@@ -93,7 +93,7 @@ interface Pattern {
     }
 
     fun fixValue(value: Value, resolver: Resolver): Value {
-        return value.takeIf { matches(it, resolver).isSuccess() } ?: resolver.generate(this)
+        return value.takeIf { resolver.matchesPattern(null, this, value).isSuccess() } ?: resolver.generate(this)
     }
 
     val typeAlias: String?

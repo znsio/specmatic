@@ -4,7 +4,7 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.*
-import io.specmatic.stub.HttpStub
+import io.specmatic.stub.*
 import io.specmatic.stub.createStubFromContracts
 import io.specmatic.stub.httpRequestLog
 import io.specmatic.stub.httpResponseLog
@@ -479,5 +479,46 @@ class DictionaryTest {
 
             assertThat(result.results).hasSize(4)
         }
+    }
+
+    @Test
+    fun `basedOn bodies should use dictionary values when applicable`() {
+        val dictionary = mapOf("OBJECT.id" to NumberValue(123), "OBJECT.name" to StringValue("test"))
+        val scenario = Scenario(ScenarioInfo(
+            httpRequestPattern = HttpRequestPattern(
+                httpPathPattern = buildHttpPathPattern("/"), method = "GET",
+                body = JSONObjectPattern(mapOf(
+                    "id" to NumberPattern(),
+                    "name" to StringPattern()
+                ), typeAlias = "(OBJECT)")
+            ),
+            httpResponsePattern = HttpResponsePattern(status = 200)
+        )).copy(dictionary = dictionary)
+        val feature = Feature(listOf(scenario), name = "")
+
+
+        feature.enableGenerativeTesting().executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val isNegative = request.headers[SPECMATIC_RESPONSE_CODE_HEADER] != "200"
+                val requestBody = request.body as JSONObjectValue
+                val idValue = requestBody.findFirstChildByName("id")
+                val nameValue = requestBody.findFirstChildByName("name")
+
+                return HttpResponse.OK.also {
+                    val logs = listOf(request.toLogString(), it.toLogString())
+                    println(logs.joinToString(separator = "\n", postfix = "\n\n"))
+
+                    if (isNegative) {
+                        assertThat(requestBody).satisfiesAnyOf(
+                            { assertThat(idValue).isEqualTo(NumberValue(123)) },
+                            { assertThat(nameValue).isEqualTo(StringValue("test")) }
+                        )
+                    } else {
+                        assertThat(idValue).isEqualTo(NumberValue(123))
+                        assertThat(nameValue).isEqualTo(StringValue("test"))
+                    }
+                }
+            }
+        })
     }
 }

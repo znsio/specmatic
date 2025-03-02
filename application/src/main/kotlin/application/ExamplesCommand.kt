@@ -644,11 +644,11 @@ For example, to filter by HTTP methods:
             }.takeIf { it.typeAlias != null }
         }
 
-        private fun Pattern.toDictionary(value: Value, resolver: Resolver, target: MutableMap<String, Value>, suffix: String = "") {
+        private fun Pattern.toDictionary(value: Value, resolver: Resolver, target: MutableMap<String, Value>) {
             val patternWithTypeAlias = this.getWithTypeAlias() ?: return
             patternWithTypeAlias.traverse(
                 value = value, resolver = resolver, target = target,
-                prefix = "${withoutPatternDelimiters(this.typeAlias ?: "")}$suffix",
+                prefix = withoutPatternDelimiters(this.typeAlias ?: ""),
             )
         }
 
@@ -685,14 +685,15 @@ For example, to filter by HTTP methods:
             if (value !is JSONArrayValue) return
             value.list.forEach {
                 if (this.pattern.isDeferred(resolver)) {
-                    resolvedHop(this.pattern, resolver).toDictionary(it, resolver, target, suffix = "[*]")
+                    resolvedHop(this.pattern, resolver).toDictionary(it, resolver, target)
                 } else this.pattern.traverse(it, resolver, target, prefix = "$prefix[*]")
             }
         }
 
         private fun AnyPattern.traverse(value: Value, resolver: Resolver, target: MutableMap<String, Value>, prefix: String = "") {
             if (this.isScalarBasedPattern()) {
-                this.toEntry(value, resolver, prefix = prefix)?.let { target[it.first] = it.second }
+                val pattern = getUpdatedPattern(resolver).firstOrNull { it is ScalarType } ?: return
+                pattern.toEntry(value, resolver, prefix = prefix)?.let { target[it.first] = it.second }
                 return
             }
 

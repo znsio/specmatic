@@ -270,7 +270,7 @@ fun loadContractStubsFromImplicitPaths(
                                 consoleLog("Loading stub expectations from ${implicitDataDir.path}".prependIndent("  "))
                                 logIgnoredFiles(implicitDataDir)
 
-                                val stubDataFiles = filesInDir(implicitDataDir)?.toList()?.filter { it.extension == "json" }.orEmpty().sorted()
+                                val stubDataFiles = filesInDir(implicitDataDir)?.toList()?.filter { it.extension == "json" }.orEmpty()
                                 printDataFiles(stubDataFiles)
 
                                 stubDataFiles.mapNotNull {
@@ -419,7 +419,7 @@ private fun  List<Pair<String, Feature>>.overrideInlineExamplesWithSameNameFrom(
 private fun dataDirFiles(
     dataDirPaths: List<String>
 ): List<File> {
-    return allDirsInTree(dataDirPaths).sorted().flatMap {
+    return allDirsInTree(dataDirPaths).flatMap {
         logIgnoredFiles(it)
         it.listFiles()?.toList()?.sorted() ?: emptyList<File>()
     }.filter { it.extension == "json" }
@@ -474,7 +474,7 @@ private fun specPathToImplicitDataDirPaths(
 
         val stubContractPathWithDirectory =
             if (stubDirectory.isNotBlank()) "$stubDirectory${File.separator}$stubContractPath" else stubContractPath
-        stubContractPathWithDirectory to dataDirPaths.sorted().map { dataDirPath ->
+        stubContractPathWithDirectory to dataDirPaths.map { dataDirPath ->
             ImplicitOriginalDataDirPair(
                 implicitDataDir = "$dataDirPath${File.separator}$implicitExamplesPath",
                 dataDir = dataDirPath
@@ -498,7 +498,7 @@ private fun stubDirectoryToContractPathFrom(contractSource: ContractSource): Lis
 private fun printDataFiles(dataFiles: List<File>) {
     if (dataFiles.isNotEmpty()) {
         val dataFilesString = dataFiles.joinToString(System.lineSeparator()) { it.path.prependIndent("  ") }
-        consoleLog(StringLog("Reading the following stub files:${System.lineSeparator()}$dataFilesString".prependIndent("  ")))
+        consoleLog(StringLog("Scanning the following to find the matching stub files:${System.lineSeparator()}$dataFilesString".prependIndent("  ")))
     }
 }
 

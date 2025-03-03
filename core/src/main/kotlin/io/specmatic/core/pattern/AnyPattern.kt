@@ -201,11 +201,6 @@ data class AnyPattern(
         return Result.fromFailures(failuresWithUpdatedBreadcrumbs)
     }
 
-    fun getMatchingPattern(sampleData: Value?, resolver: Resolver): Pattern? {
-        val updatedPatterns = getUpdatedPattern(resolver)
-        return updatedPatterns.firstOrNull { resolver.matchesPattern(key, it, sampleData ?: EmptyString).isSuccess() }
-    }
-
     fun getUpdatedPattern(resolver: Resolver): List<Pattern> {
         return if (discriminator != null) {
             discriminator.updatePatternsWithDiscriminator(pattern, resolver).listFold().takeIf {
@@ -472,7 +467,7 @@ data class AnyPattern(
         } ?: NullValue // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
     }
 
-    private fun isScalarBasedPattern(): Boolean {
+    fun isScalarBasedPattern(): Boolean {
         return pattern.size == 2 &&
                 pattern.any { it is NullPattern} &&
                 pattern.filterNot { it is NullPattern }.filter { it is ScalarType }.size == 1

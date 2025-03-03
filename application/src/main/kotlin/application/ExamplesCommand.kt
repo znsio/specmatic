@@ -277,11 +277,14 @@ For example, to filter by HTTP methods:
         }
 
         private fun validateAllExamplesAssociatedToEachSpecIn(specsDir: File, examplesBaseDir: File): Int {
-            val validationResults = specsDir.walk().filter { it.isFile }.flatMapIndexed { index, it ->
-                val associatedExamplesDir = examplesBaseDir.associatedExampleDirFor(it) ?: return@flatMapIndexed emptyList()
+            var index = 1
+            val validationResults = specsDir.walk().filter { it.isFile }.flatMap { specFile ->
+                val associatedExamplesDir = examplesBaseDir.associatedExampleDirFor(specFile) ?: return@flatMap emptyList()
 
-                logger.log("${index.inc()}. Validating examples in ${associatedExamplesDir.name} associated to ${it.name}...${System.lineSeparator()}")
-                val results = validateExamplesDir(it, associatedExamplesDir).second.entries.map { entry ->
+                logger.log("$index. Validating examples in '${associatedExamplesDir.absolutePath}' associated to '${specFile.absolutePath}'...${System.lineSeparator()}")
+                index++
+
+                val results = validateExamplesDir(specFile, associatedExamplesDir).second.entries.map { entry ->
                     entry.toPair()
                 }
 

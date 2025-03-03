@@ -114,7 +114,6 @@ class OpenApiCoverageReportInput(
             endpointsWithoutTests.map { endpoint ->  TestResultRecord(
                 endpoint.path,
                 endpoint.method,
-                requestContentType = null,
                 endpoint.responseStatus,
                 TestResult.NotCovered,
                 endpoint.sourceProvider,
@@ -153,8 +152,7 @@ class OpenApiCoverageReportInput(
                         TestResultRecord(
                             api.path,
                             api.method,
-                            requestContentType = null,
-                            responseStatus = 0,
+                            0,
                             TestResult.MissingInSpec,
                             serviceType = SERVICE_TYPE_HTTP
                         )
@@ -173,9 +171,13 @@ class OpenApiCoverageReportInput(
     }
 
     private fun calculateCoverageCounts(methodMap: Map<String, Map<String?, Map<String, List<TestResultRecord>>>>): Pair<Int, Int> {
-        val total = methodMap.values.sumOf { it.values.sumOf { testResults -> testResults.size } }
-        val covered = methodMap.values.sumOf { it.values.count { testResults -> testResults.values.flatten().any { res -> res.isCovered } } }
-        return total to covered
+        val responseMaps = methodMap.values.flatMap { it.values }
+        val totalResponseGroupCount = responseMaps.sumOf { it.size }
+        val coveredResponseGroupCount = responseMaps.sumOf { responseMap ->
+            responseMap.values.count { testResults -> testResults.any { it.isCovered } }
+        }
+
+        return totalResponseGroupCount to coveredResponseGroupCount
     }
 
     private fun identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults: List<TestResultRecord>): List<TestResultRecord> {

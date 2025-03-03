@@ -9,7 +9,6 @@ import io.specmatic.core.filters.ScenarioFilterTags
 data class TestResultRecord(
     val path: String,
     val method: String,
-    val requestContentType: String?,
     val responseStatus: Int,
     val result: TestResult,
     val sourceProvider: String? = null,
@@ -20,7 +19,8 @@ data class TestResultRecord(
     val actualResponseStatus: Int = 0,
     val scenarioResult: Result? = null,
     val isValid: Boolean = true,
-    val isWip: Boolean = false
+    val isWip: Boolean = false,
+    val requestContentType: String? = null
 ) : FilterableExpression
 {
     val isExercised = result !in setOf(TestResult.MissingInSpec, TestResult.NotCovered)

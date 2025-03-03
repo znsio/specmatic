@@ -38,15 +38,15 @@ data class ScenarioAsTest(
 
         return TestResultRecord(
             convertPathParameterStyle(scenario.path),
-            scenario.method,
-            scenario.requestContentType,
-            scenario.status,
-            resultStatus,
-            sourceProvider,
-            sourceRepository,
-            sourceRepositoryBranch,
-            specification,
-            serviceType,
+            method = scenario.method,
+            requestContentType = scenario.requestContentType,
+            responseStatus = scenario.status,
+            result = resultStatus,
+            sourceProvider = sourceProvider,
+            sourceRepository = sourceRepository,
+            sourceRepositoryBranch = sourceRepositoryBranch,
+            specification = specification,
+            serviceType = serviceType,
             actualResponseStatus = response?.status ?: 0,
             scenarioResult = result
         )

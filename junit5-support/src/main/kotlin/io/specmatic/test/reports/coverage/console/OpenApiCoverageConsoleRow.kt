@@ -3,25 +3,25 @@ package io.specmatic.test.reports.coverage.console
 data class OpenApiCoverageConsoleRow(
     val method: String,
     val path: String,
-    val requestContentType: String?,
     val responseStatus: String,
     val count: String,
     val coveragePercentage: Int = 0,
     val remarks: Remarks,
     val showPath: Boolean = true,
     val showMethod: Boolean = true,
+    val requestContentType: String? = null
 ): CoverageRow {
     constructor(
         method: String,
         path: String,
-        requestContentType: String?,
         responseStatus: Int,
         count: Int,
         coveragePercentage: Int,
         remarks: Remarks,
         showPath: Boolean = true,
         showMethod: Boolean = true,
-    ) : this(method, path, requestContentType, responseStatus.toString(), count.toString(), coveragePercentage, remarks, showPath, showMethod)
+        requestContentType: String? = null
+    ) : this(method, path, responseStatus.toString(), count.toString(), coveragePercentage, remarks, showPath, showMethod, requestContentType)
 
     private val formattedCoveragePercentage: String
         get() = if (showPath) "$coveragePercentage%" else ""

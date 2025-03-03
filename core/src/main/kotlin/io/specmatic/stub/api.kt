@@ -350,6 +350,7 @@ fun loadExpectationsForFeatures(
 ): List<Pair<Feature, List<ScenarioStub>>> {
     val dataFiles = dataDirFiles(dataDirPaths)
     if(dataFiles.isNotEmpty()) {
+        logger.newLine()
         logger.log("Loading stub expectations for specs: ${features.joinToString(",") { it.first }}")
         printDataFiles(dataFiles)
     }
@@ -484,7 +485,8 @@ data class StubMatchResults(val feature: Feature?, val errorReport: StubMatchErr
 
 fun stubMatchErrorMessage(
     matchResults: List<StubMatchResults>,
-    stubFile: String
+    stubFile: String,
+    specs: List<String> = emptyList()
 ): String {
     val matchResultsWithErrorReports = matchResults.mapNotNull { it.errorReport }
 
@@ -501,7 +503,7 @@ fun stubMatchErrorMessage(
     }
 
     if(errorReports.isEmpty() || matchResults.isEmpty())
-        return "$stubFile didn't match any of the contracts\n${matchResults.firstOrNull()?.errorReport?.exceptionReport?.request?.requestNotRecognized()?.prependIndent("  ")}".trim()
+        return "$stubFile didn't match any of the contracts from ${specs.joinToString(", ")}\n${matchResults.firstOrNull()?.errorReport?.exceptionReport?.request?.requestNotRecognized()?.prependIndent("  ")}".trim()
 
 
 
@@ -530,7 +532,8 @@ fun loadContractStubs(
         }
 
         if(matchResults.all { it.feature == null }) {
-            val errorMessage = stubMatchErrorMessage(matchResults, stubFile).prependIndent("  ")
+            val specs = features.map { it.first }
+            val errorMessage = stubMatchErrorMessage(matchResults, stubFile, specs).prependIndent("  ")
             if(strictMode) throw Exception(errorMessage)
             else consoleLog(StringLog(errorMessage))
             return@flatMap emptyList()

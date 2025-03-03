@@ -77,12 +77,6 @@ data class ScenarioAsTest(
         )
     }
 
-    private fun logComment() {
-        if (annotations != null) {
-            logger.log(annotations)
-        }
-    }
-
     private fun executeTestAndReturnResultAndResponse(
         testScenario: Scenario,
         testExecutor: TestExecutor,

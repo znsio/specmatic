@@ -279,7 +279,11 @@ data class Scenario(
 
     fun generateHttpRequest(flagsBased: FlagsBased = DefaultStrategies): HttpRequest =
         scenarioBreadCrumb(this) {
-            httpRequestPattern.generate(flagsBased.update(resolver.copy(factStore = CheckFacts(expectedFacts))))
+            httpRequestPattern.generate(
+                flagsBased.update(
+                    resolver.copy(factStore = CheckFacts(expectedFacts), isNegative = this.isNegative)
+                )
+            )
         }
 
     fun generateHttpRequestV2(

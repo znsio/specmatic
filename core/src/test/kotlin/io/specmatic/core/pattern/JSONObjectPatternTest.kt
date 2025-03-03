@@ -3,6 +3,7 @@ package io.specmatic.core.pattern
 import io.specmatic.GENERATION
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
+import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.utilities.Flags.Companion.ALL_PATTERNS_MANDATORY
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
@@ -691,6 +692,30 @@ internal class JSONObjectPatternTest {
                 mapOf("address?" to NumberPattern()),
                 mapOf("address?" to BooleanPattern())
             )
+        }
+
+        @Test
+        fun `basedOn methods should generate with typeAlias copied from original pattern`() {
+            val pattern = JSONObjectPattern(mapOf(
+                "name" to StringPattern(), "address?" to StringPattern(), "age?" to NumberPattern()
+            ), typeAlias = "(Person)")
+
+            val resolver = Resolver()
+            val row = Row()
+            val config = NegativePatternConfiguration()
+            val methodToPatterns = mapOf(
+                "newBasedOn(resolver)" to pattern.newBasedOn(resolver).map { HasValue(it as Pattern) },
+                "newBasedOn(row, resolver)" to pattern.newBasedOn(row, resolver),
+                "negativeBasedOn(row, resolver, config)" to pattern.negativeBasedOn(row, resolver, config)
+            )
+
+            assertThat(methodToPatterns).allSatisfy { method, patternSequence->
+                assertThat(patternSequence.toList()).allSatisfy {
+                    assertThat(it.value.typeAlias)
+                        .withFailMessage("Failed for method $method, expected ${pattern.typeAlias}, but was ${it.value.typeAlias}")
+                        .isEqualTo(pattern.typeAlias)
+                }
+            }
         }
     }
 

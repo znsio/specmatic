@@ -349,7 +349,10 @@ fun loadExpectationsForFeatures(
     strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
     val dataFiles = dataDirFiles(dataDirPaths)
-    printDataFiles(dataFiles)
+    if(dataFiles.isNotEmpty()) {
+        logger.log("Loading stub expectations for specs: ${features.joinToString(",") { it.first }}")
+        printDataFiles(dataFiles)
+    }
 
     val mockData = dataFiles.mapNotNull {
         try {
@@ -401,7 +404,7 @@ fun loadImplicitExpectationsFromDataDirsForFeature(
             )
             if(implicitStubs.all { (_, stubs) -> stubs.isEmpty() }) {
                 loadExpectationsForFeatures(
-                    features,
+                    associatedFeatures,
                     listOf(originalDataDir),
                     strictMode
                 )

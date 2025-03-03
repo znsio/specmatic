@@ -749,9 +749,9 @@ data class Scenario(
     }
 
     fun useExamples(rawExternalisedExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Scenario {
-        val matchingRawExternalisedEamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>> = matchingRows(rawExternalisedExamples)
+        val matchingRawExternalisedExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>> = matchingRows(rawExternalisedExamples)
 
-        val externalisedExamples: List<Examples> = matchingRawExternalisedEamples.map { (operationId, rows) ->
+        val externalisedExamples: List<Examples> = matchingRawExternalisedExamples.map { (operationId, rows) ->
             if(rows.isEmpty())
                 return@map emptyList()
 

@@ -9,6 +9,7 @@ import io.specmatic.core.filters.ScenarioFilterTags
 data class TestResultRecord(
     val path: String,
     val method: String,
+    val requestContentType: String?,
     val responseStatus: Int,
     val result: TestResult,
     val sourceProvider: String? = null,
@@ -24,6 +25,7 @@ data class TestResultRecord(
 {
     val isExercised = result !in setOf(TestResult.MissingInSpec, TestResult.NotCovered)
     val isCovered = result !in setOf(TestResult.MissingInSpec, TestResult.NotCovered)
+
     fun isConnectionRefused() = actualResponseStatus == 0
     override fun populateExpressionData(expression: Expression): Expression {
         return expression.with(ScenarioFilterTags.PATH.key, path)

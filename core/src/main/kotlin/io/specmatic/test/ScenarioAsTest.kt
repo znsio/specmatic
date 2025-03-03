@@ -39,6 +39,7 @@ data class ScenarioAsTest(
         return TestResultRecord(
             convertPathParameterStyle(scenario.path),
             scenario.method,
+            scenario.requestContentType,
             scenario.status,
             resultStatus,
             sourceProvider,

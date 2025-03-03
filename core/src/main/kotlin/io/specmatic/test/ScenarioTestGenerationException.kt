@@ -33,6 +33,7 @@ class ScenarioTestGenerationException(
         return TestResultRecord(
             convertPathParameterStyle(scenario.path),
             scenario.method,
+            scenario.requestContentType,
             scenario.status,
             result.testResult(),
             scenario.sourceProvider,

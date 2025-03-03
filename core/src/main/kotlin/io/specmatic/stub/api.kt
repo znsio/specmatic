@@ -437,22 +437,22 @@ fun loadImplicitExpectationsFromDataDirsForFeature(
         } ?: throw ContractException("No associated feature found for spec '$specPath'")
 
         implicitOriginalDataDirPairList.flatMap { (implicitDataDir, originalDataDir) ->
-            logger.debug("Trying to load implicit stubs for $specPath from $implicitDataDir...")
+            logger.debug("Load examples for $specPath from $implicitDataDir...")
             val implicitStubs = loadExpectationsForFeatures(
                 features = listOf(associatedFeature),
                 dataDirPaths = listOf(implicitDataDir),
                 strictMode = strictMode
             )
             if(implicitStubs.all { (_, stubs) -> stubs.isEmpty() }) {
-                logger.debug("No implicit stubs found for $specPath in $originalDataDir")
-                logger.debug("Proceeding with loading stubs from $originalDataDir for $specPath")
+                logger.debug("No matching examples found for $specPath in $implicitDataDir")
+                logger.debug("Proceeding with loading stub expectations from $originalDataDir for $specPath")
                 loadExpectationsForFeatures(
                     listOf(associatedFeature),
                     listOf(originalDataDir),
                     strictMode
                 )
             } else {
-                logger.debug("Successfully loaded implicit stubs for $specPath in $implicitDataDir")
+                logger.debug("Successfully loaded stub expectations for $specPath in $implicitDataDir")
                 implicitStubs
             }
         }
@@ -591,7 +591,7 @@ fun loadContractStubs(
             if (matchResult.feature == null) {
                 null
             } else {
-                logger.debug("Successfully loaded the stub from '${stub.filePath.orEmpty()} for ${matchResult.feature.path}'")
+                logger.debug("Successfully loaded the stub expectation from '${stub.filePath.orEmpty()} for ${matchResult.feature.path}'")
                 Pair(matchResult.feature, stub)
             }
         }

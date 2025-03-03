@@ -677,7 +677,7 @@ class ExamplesInteractiveServer(
 
             val results = examples.associate { exampleFile ->
                 logger.debug("Validating ${exampleFile.name}")
-                exampleFile.name to validateExample(updatedFeature, exampleFile)
+                exampleFile.canonicalPath to validateExample(updatedFeature, exampleFile)
             }
 
             return results

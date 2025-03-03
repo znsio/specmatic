@@ -8,6 +8,7 @@ import io.specmatic.core.SuccessCriteria
 import io.specmatic.core.TestResult
 import io.specmatic.test.reports.coverage.console.Remarks
 import io.specmatic.test.reports.coverage.html.HtmlTemplateConfiguration.Companion.configureTemplateEngine
+import io.specmatic.test.reports.renderers.GroupedScenarioData
 import org.thymeleaf.context.Context
 import java.io.File
 import java.time.LocalDateTime
@@ -86,16 +87,18 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         return tableRows
     }
 
-    private fun updateScenarioData(scenarioData: Map<String, Map<String, Map<String, List<ScenarioData>>>>): Map<String, Map<String, Map<String, List<ScenarioData>>>> {
+    private fun updateScenarioData(scenarioData: GroupedScenarioData): GroupedScenarioData {
         scenarioData.forEach { (_, firstGroup) ->
             firstGroup.forEach { (_, secondGroup) ->
-                secondGroup.forEach { (_, scenariosList) ->
-                    scenariosList.forEach {
-                        val htmlResult = categorizeResult(it)
-                        val scenarioDetail = "${it.name} ${htmlResultToDetailPostFix(htmlResult)}"
+                secondGroup.forEach { (_, thirdGroup) ->
+                    thirdGroup.forEach { (_, scenariosList) ->
+                        scenariosList.forEach {
+                            val htmlResult = categorizeResult(it)
+                            val scenarioDetail = "${it.name} ${htmlResultToDetailPostFix(htmlResult)}"
 
-                        it.htmlResult = htmlResult
-                        it.details = if (it.details.isBlank()) scenarioDetail else "$scenarioDetail\n${it.details}"
+                            it.htmlResult = htmlResult
+                            it.details = if (it.details.isBlank()) scenarioDetail else "$scenarioDetail\n${it.details}"
+                        }
                     }
                 }
             }
@@ -113,17 +116,19 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         return totalCoveragePercentage >= apiSuccessCriteria.getMinThresholdPercentageOrDefault() || !apiSuccessCriteria.getEnforceOrDefault()
     }
 
-    private fun calculateTestGroupCounts(scenarioData: Map<String, Map<String, Map<String, List<ScenarioData>>>>) {
+    private fun calculateTestGroupCounts(scenarioData: GroupedScenarioData) {
         scenarioData.forEach { (_, firstGroup) ->
             firstGroup.forEach { (_, secondGroup) ->
-                secondGroup.forEach { (_, scenariosList) ->
-                    scenariosList.forEach {
-                        when (it.testResult) {
-                            TestResult.MissingInSpec -> totalMissing++
-                            TestResult.NotCovered -> totalSkipped++
-                            TestResult.Success -> totalSuccess++
-                            TestResult.Error -> totalErrors++
-                            else -> if (it.wip) totalErrors++ else totalFailures++
+                secondGroup.forEach { (_, thirdGroup) ->
+                    thirdGroup.forEach { (_, scenariosList) ->
+                        scenariosList.forEach {
+                            when (it.testResult) {
+                                TestResult.MissingInSpec -> totalMissing++
+                                TestResult.NotCovered -> totalSkipped++
+                                TestResult.Success -> totalSuccess++
+                                TestResult.Error -> totalErrors++
+                                else -> if (it.wip) totalErrors++ else totalFailures++
+                            }
                         }
                     }
                 }
@@ -143,9 +148,10 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
     }
 
     private fun getHtmlResultAndBadgeColor(tableRow: TableRow): Pair<HtmlResult, String> {
-        val scenarioList =
-            reportData.scenarioData[tableRow.firstGroupValue]?.get(tableRow.secondGroupValue)?.get(tableRow.response)
-                ?: emptyList()
+        val scenarioList = reportData.scenarioData[tableRow.firstGroupValue]
+            ?.get(tableRow.secondGroupValue)
+            ?.values?.fold(emptyList<ScenarioData>()) { acc, rows -> acc + rows[tableRow.response].orEmpty() }
+            .orEmpty()
 
         scenarioList.forEach {
             if (!it.valid) return Pair(it.htmlResult!!, "red")
@@ -178,7 +184,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         }
     }
 
-    private fun dumpTestData(testData: Map<String, Map<String, Map<String, List<ScenarioData>>>>): String {
+    private fun dumpTestData(testData: GroupedScenarioData): String {
         val mapper = ObjectMapper()
         val json = mapper.writeValueAsString(testData)
         mapper.enable(SerializationFeature.INDENT_OUTPUT)
@@ -202,7 +208,7 @@ data class HtmlReportData(
     val actuatorEnabled: Boolean,
     val totalTestDuration: Long,
     val tableRows: List<TableRow>,
-    val scenarioData: Map<String, Map<String, Map<String, List<ScenarioData>>>>
+    val scenarioData: GroupedScenarioData
 )
 
 data class HtmlTableConfig(
@@ -238,6 +244,7 @@ data class TableRow(
     val secondGroupValue: String,
     val showSecondGroup: Boolean,
     val secondGroupRowSpan: Int,
+    val requestContentType: String,
     val response: String,
     val exercised: Int,
     val result: Remarks,

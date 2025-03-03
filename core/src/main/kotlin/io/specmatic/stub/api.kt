@@ -389,7 +389,9 @@ fun loadImplicitExpectationsFromDataDirsForFeature(
     strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
     return specPathToImplicitDataDirPaths(specmaticConfig, dataDirPaths).flatMap { (specPath, implicitOriginalDataDirPairList) ->
-        val associatedFeatures = features.filter { it.first == specPath }
+        val associatedFeatures = features.filter { (specPathAssociatedToFeature, _) ->
+            File(specPathAssociatedToFeature).path == File(specPath).path
+        }
 
         implicitOriginalDataDirPairList.flatMap { (implicitDataDir, originalDataDir) ->
             val implicitStubs = loadExpectationsForFeatures(

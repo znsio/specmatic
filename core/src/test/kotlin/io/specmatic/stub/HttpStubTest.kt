@@ -2659,7 +2659,9 @@ components:
                 specmaticConfigFile,
                 contractPathData,
                 specmaticConfig,
-                listOf("src/test/resources/multi_port_stub_with_explicit_examples_dir/examples/stub")
+                listOf(
+                    "src/test/resources/multi_port_stub_with_explicit_examples_dir/examples/stub".replaceFileSeparator()
+                )
             )
 
             HttpStub(
@@ -2831,4 +2833,7 @@ components:
         }
     }
 
+    private fun String.replaceFileSeparator(): String {
+        return this.replace("/", File.separator)
+    }
 }

@@ -19,11 +19,13 @@ data class TestResultRecord(
     val actualResponseStatus: Int = 0,
     val scenarioResult: Result? = null,
     val isValid: Boolean = true,
-    val isWip: Boolean = false
+    val isWip: Boolean = false,
+    val requestContentType: String? = null
 ) : FilterableExpression
 {
     val isExercised = result !in setOf(TestResult.MissingInSpec, TestResult.NotCovered)
     val isCovered = result !in setOf(TestResult.MissingInSpec, TestResult.NotCovered)
+
     fun isConnectionRefused() = actualResponseStatus == 0
     override fun populateExpressionData(expression: Expression): Expression {
         return expression.with(ScenarioFilterTags.PATH.key, path)

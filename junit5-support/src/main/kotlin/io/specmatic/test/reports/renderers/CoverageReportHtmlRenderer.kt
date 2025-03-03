@@ -17,6 +17,8 @@ import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
 import io.specmatic.test.reports.coverage.html.*
 import java.util.*
 
+typealias GroupedScenarioData = Map<String, Map<String, Map<String, Map<String, List<ScenarioData>>>>>
+
 class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> {
 
     companion object {
@@ -71,21 +73,26 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
         }
 
         return report.getGroupedCoverageRows(updatedCoverageRows).flatMap { (_, methodGroup) ->
-            methodGroup.flatMap { (_, statusGroup) ->
-                statusGroup.flatMap { (_, coverageRows) ->
-                    coverageRows.map {
-                        TableRow(
-                            coveragePercentage = it.coveragePercentage,
-                            firstGroupValue = it.path,
-                            showFirstGroup = it.showPath,
-                            firstGroupRowSpan = methodGroup.values.sumOf { rows -> rows.size },
-                            secondGroupValue = it.method,
-                            showSecondGroup = it.showMethod,
-                            secondGroupRowSpan = statusGroup.values.sumOf { status -> status.size },
-                            response = it.responseStatus,
-                            exercised = it.count.toInt(),
-                            result = it.remarks
-                        )
+            val firstGroupRows = methodGroup.values.flatMap { it.values.flatMap { it.values } }
+            methodGroup.flatMap { (_, contentGroup) ->
+                val secondGroupRows = contentGroup.values.flatMap { it.values }
+                contentGroup.flatMap { (_, statusGroup) ->
+                    statusGroup.flatMap { (_, coverageRows) ->
+                        coverageRows.map {
+                            TableRow(
+                                coveragePercentage = it.coveragePercentage,
+                                firstGroupValue = it.path,
+                                showFirstGroup = it.showPath,
+                                firstGroupRowSpan = firstGroupRows.sumOf { rows -> rows.size },
+                                secondGroupValue = it.method,
+                                showSecondGroup = it.showMethod,
+                                secondGroupRowSpan = secondGroupRows.sumOf { rows -> rows.size },
+                                requestContentType = it.requestContentType.orEmpty(),
+                                response = it.responseStatus,
+                                exercised = it.count.toInt(),
+                                result = it.remarks
+                            )
+                        }
                     }
                 }
             }
@@ -96,41 +103,43 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
         return report.httpLogMessages.sumOf { it.duration() }
     }
 
-    private fun makeScenarioData(report: OpenAPICoverageConsoleReport): Map<String, Map<String, Map<String, List<ScenarioData>>>> {
-        val testData: MutableMap<String, MutableMap<String, MutableMap<String, MutableList<ScenarioData>>>> = mutableMapOf()
+    private fun makeScenarioData(report: OpenAPICoverageConsoleReport): GroupedScenarioData {
+        val testData: MutableMap<String, MutableMap<String, MutableMap<String, MutableMap<String, MutableList<ScenarioData>>>>> = mutableMapOf()
 
         for ((path, methodGroup) in report.getGroupedTestResultRecords(report.testResultRecords)) {
-            for ((method, statusGroup) in methodGroup) {
+            for ((method, contentGroup) in methodGroup) {
                 val methodMap = testData.getOrPut(path) { mutableMapOf() }
+                for ((contentType, statusGroup) in contentGroup) {
+                    val contentMap = methodMap.getOrPut(method) { mutableMapOf() }
+                    for ((status, testResults) in statusGroup) {
+                        val statusMap = contentMap.getOrPut(contentType.orEmpty()) { mutableMapOf() }
+                        val scenarioDataList = statusMap.getOrPut(status) { mutableListOf() }
 
-                for ((status, testResults) in statusGroup) {
-                    val statusMap = methodMap.getOrPut(method) { mutableMapOf() }
-                    val scenarioDataList = statusMap.getOrPut(status) { mutableListOf() }
+                        for (test in testResults) {
+                            val matchingLogMessage = report.httpLogMessages.firstOrNull {
+                                it.scenario == test.scenarioResult?.scenario
+                            }
+                            val scenarioName = getTestName(test, matchingLogMessage)
+                            val (requestString, requestTime) = getRequestString(test, matchingLogMessage)
+                            val (responseString, responseTime) = getResponseString(test, matchingLogMessage)
 
-                    for (test in testResults) {
-                        val matchingLogMessage = report.httpLogMessages.firstOrNull {
-                            it.scenario == test.scenarioResult?.scenario
-                        }
-                        val scenarioName = getTestName(test, matchingLogMessage)
-                        val (requestString, requestTime) = getRequestString(test, matchingLogMessage)
-                        val (responseString, responseTime) = getResponseString(test, matchingLogMessage)
-
-                        scenarioDataList.add(
-                            ScenarioData(
-                                name = scenarioName,
-                                baseUrl = getBaseUrl(test, matchingLogMessage),
-                                duration = matchingLogMessage?.duration() ?: 0,
-                                testResult = test.result,
-                                valid = test.isValid,
-                                wip = test.isWip,
-                                request = requestString,
-                                requestTime = requestTime,
-                                response = responseString,
-                                responseTime = responseTime,
-                                specFileName = getSpecFileName(test, matchingLogMessage),
-                                details = getReportDetail(test)
+                            scenarioDataList.add(
+                                ScenarioData(
+                                    name = scenarioName,
+                                    baseUrl = getBaseUrl(test, matchingLogMessage),
+                                    duration = matchingLogMessage?.duration() ?: 0,
+                                    testResult = test.result,
+                                    valid = test.isValid,
+                                    wip = test.isWip,
+                                    request = requestString,
+                                    requestTime = requestTime,
+                                    response = responseString,
+                                    responseTime = responseTime,
+                                    specFileName = getSpecFileName(test, matchingLogMessage),
+                                    details = getReportDetail(test)
+                                )
                             )
-                        )
+                        }
                     }
                 }
             }
@@ -179,14 +188,16 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
         report.getGroupedCoverageRows(exercisedRows).forEach { (_, methodGroup) ->
             val rowGroup = mutableListOf<OpenApiCoverageConsoleRow>()
 
-            methodGroup.forEach { (method, statusGroup) ->
-                statusGroup.forEach { (_, coverageRows) ->
-                    coverageRows.forEach {
-                        if (rowGroup.isEmpty()) {
-                            rowGroup.add(it.copy(showPath = true, showMethod = true))
-                        } else {
-                            val methodExists = rowGroup.any {row ->  row.method == method }
-                            rowGroup.add(it.copy(showPath = false, showMethod = !methodExists))
+            methodGroup.forEach { (method, contentGroup) ->
+                contentGroup.forEach { (_, statusGroup) ->
+                    statusGroup.forEach { (_, coverageRows) ->
+                        coverageRows.forEach {
+                            if (rowGroup.isEmpty()) {
+                                rowGroup.add(it.copy(showPath = true, showMethod = true))
+                            } else {
+                                val methodExists = rowGroup.any { row -> row.method == method }
+                                rowGroup.add(it.copy(showPath = false, showMethod = !methodExists))
+                            }
                         }
                     }
                 }

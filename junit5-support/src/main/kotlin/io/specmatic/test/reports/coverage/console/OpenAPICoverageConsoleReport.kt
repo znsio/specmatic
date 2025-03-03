@@ -4,6 +4,10 @@ import io.specmatic.test.TestInteractionsLog
 import io.specmatic.test.TestResultRecord
 import kotlin.math.roundToInt
 
+// GroupedBy Path -> Method -> RequestContentType -> ResponseStatusCode
+typealias GroupedTestResultRecords = Map<String, Map<String, Map<String?, Map<String, List<TestResultRecord>>>>>
+typealias GroupedCoverageRows = Map<String, Map<String, Map<String?, Map<String, List<OpenApiCoverageConsoleRow>>>>>
+
 data class OpenAPICoverageConsoleReport(
     val coverageRows: List<OpenApiCoverageConsoleRow>,
     val testResultRecords: List<TestResultRecord>,
@@ -25,20 +29,23 @@ data class OpenAPICoverageConsoleReport(
         return ((totalCountOfCoveredEndpointsWithResponseStatuses * 100) / totalCountOfEndpointsWithResponseStatuses).toDouble().roundToInt()
     }
 
-    fun getGroupedTestResultRecords(testResultRecords: List<TestResultRecord>): Map<String, Map<String, Map<String, List<TestResultRecord>>>> {
-        return testResultRecords.groupBy { it.path }.mapValues { serviceGroup ->
-            serviceGroup.value.groupBy { it.method }.mapValues { rpcGroup ->
-                rpcGroup.value.groupBy { it.responseStatus.toString() }
+    fun getGroupedTestResultRecords(testResultRecords: List<TestResultRecord>): GroupedTestResultRecords {
+        return testResultRecords.groupBy { it.path }.mapValues { (_, pathMap) ->
+            pathMap.groupBy { it.method }.mapValues { (_, methodMap) ->
+                methodMap.groupBy { it.requestContentType }.mapValues { (_, contentTypeMap) ->
+                    contentTypeMap.groupBy { it.responseStatus.toString() }
+                }
             }
         }
     }
 
-    fun getGroupedCoverageRows(coverageRows: List<OpenApiCoverageConsoleRow>): Map<String, Map<String, Map<String, List<OpenApiCoverageConsoleRow>>>> {
-        return coverageRows.groupBy { it.path }.mapValues { serviceGroup ->
-            serviceGroup.value.groupBy { it.method }.mapValues { rpcGroup ->
-                rpcGroup.value.groupBy { it.responseStatus }
+    fun getGroupedCoverageRows(coverageRows: List<OpenApiCoverageConsoleRow>): GroupedCoverageRows {
+        return coverageRows.groupBy { it.path }.mapValues { (_, pathMap) ->
+            pathMap.groupBy { it.method }.mapValues { (_, methodMap) ->
+                methodMap.groupBy { it.requestContentType }.mapValues { (_, contentTypeMap) ->
+                    contentTypeMap.groupBy { it.responseStatus }
+                }
             }
         }
     }
-
 }

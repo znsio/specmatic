@@ -22,6 +22,7 @@ import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.parseGherkinStringToFeature
+import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.ContractPathData.Companion.specToPortMap
 import io.specmatic.core.utilities.ContractSource
@@ -427,19 +428,19 @@ fun loadImplicitExpectationsFromDataDirsForFeature(
     strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
     return specPathToImplicitDataDirPaths(specmaticConfig, dataDirPaths).flatMap { (specPath, implicitOriginalDataDirPairList) ->
-        val associatedFeatures = features.filter { (specPathAssociatedToFeature, _) ->
-            File(specPathAssociatedToFeature).path == File(specPath).path
-        }
+        val associatedFeature = features.firstOrNull { (specPathAssociatedToFeature, _) ->
+            File(specPathAssociatedToFeature).canonicalPath == File(specPath).canonicalPath
+        } ?: throw ContractException("No associated feature found for spec '$specPath'")
 
         implicitOriginalDataDirPairList.flatMap { (implicitDataDir, originalDataDir) ->
             val implicitStubs = loadExpectationsForFeatures(
-                features = associatedFeatures,
+                features = listOf(associatedFeature),
                 dataDirPaths = listOf(implicitDataDir),
                 strictMode = strictMode
             )
             if(implicitStubs.all { (_, stubs) -> stubs.isEmpty() }) {
                 loadExpectationsForFeatures(
-                    associatedFeatures,
+                    listOf(associatedFeature),
                     listOf(originalDataDir),
                     strictMode
                 )

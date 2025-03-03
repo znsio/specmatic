@@ -2266,7 +2266,8 @@ components:
                 val specPath = specmaticConfigFile.parentFile.resolve(it.path).absolutePath
                 OpenApiSpecification.fromFile(specPath).toFeature().copy(path = it.path) to loadContractStubsFromImplicitPaths(
                     contractPathDataList = listOf(ContractPathData("", specPath)),
-                    specmaticConfig = specmaticConfig
+                    specmaticConfig = specmaticConfig,
+                    externalDataDirPaths = emptyList()
                 ).flatMap { it.second }
             }
         }
@@ -2830,6 +2831,84 @@ components:
                 }
             }
 
+        }
+    }
+
+    @Nested
+    inner class OverrideInlineExampleTests {
+        @Test
+        fun `should override inline example with an explicit external example with the same name`() {
+            val defaultSpecmaticConfig = Configuration.configFilePath
+
+            try {
+                Configuration.configFilePath = "src/test/resources/overriding_external_example_specmatic.yaml"
+
+                createStub(
+                    host = "localhost",
+                    port = 9000,
+                    timeoutMillis = 1000,
+                    strict = false,
+                    givenConfigFileName = "src/test/resources/overriding_external_example_specmatic.yaml",
+                    dataDirPaths = listOf("src/test/resources/openapi/has_overriding_external_examples_examples")
+                ).use { stub ->
+                    // externalised stub data loads as expected
+                    stub.client.execute(
+                        HttpRequest("GET", "/person/overriding_external_id")
+                    ).also {
+                        val responseBody = (it.body as JSONObjectValue).jsonObject
+                        assertThat(responseBody["id"]).isEqualTo(NumberValue(789))
+                        assertThat(responseBody["name"]).isEqualTo(StringValue("John External Doe"))
+                    }
+
+                    // inline stub data does not load as expected
+                    stub.client.execute(
+                        HttpRequest("GET", "/person/overridden_inline_id")
+                    ).also {
+                        val responseBody = (it.body as JSONObjectValue).jsonObject
+                        assertThat(responseBody["id"]).isNotEqualTo(NumberValue(1000))
+                        assertThat(responseBody["name"]).isNotEqualTo(StringValue("Unknown"))
+                    }
+                }
+            } finally {
+                Configuration.configFilePath = defaultSpecmaticConfig
+            }
+        }
+
+        @Test
+        fun `should override inline example with an implicit external example with the same name`() {
+            val defaultSpecmaticConfig = Configuration.configFilePath
+
+            try {
+                Configuration.configFilePath = "src/test/resources/overriding_external_example_specmatic.yaml"
+
+                createStub(
+                    host = "localhost",
+                    port = 9000,
+                    timeoutMillis = 1000,
+                    strict = false,
+                    givenConfigFileName = "src/test/resources/overriding_external_example_specmatic.yaml"
+                ).use { stub ->
+                    // externalised stub data loads as expected
+                    stub.client.execute(
+                        HttpRequest("GET", "/person/overriding_external_id")
+                    ).also {
+                        val responseBody = (it.body as JSONObjectValue).jsonObject
+                        assertThat(responseBody["id"]).isEqualTo(NumberValue(789))
+                        assertThat(responseBody["name"]).isEqualTo(StringValue("John External Doe"))
+                    }
+
+                    // inline stub data does not load as expected
+                    stub.client.execute(
+                        HttpRequest("GET", "/person/overridden_inline_id")
+                    ).also {
+                        val responseBody = (it.body as JSONObjectValue).jsonObject
+                        assertThat(responseBody["id"]).isNotEqualTo(NumberValue(1000))
+                        assertThat(responseBody["name"]).isNotEqualTo(StringValue("Unknown"))
+                    }
+                }
+            } finally {
+                Configuration.configFilePath = defaultSpecmaticConfig
+            }
         }
     }
 

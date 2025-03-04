@@ -72,7 +72,7 @@ fun parseContractFileToFeature(
     overlayContent: String = "",
     strictMode: Boolean = false
 ): Feature {
-    logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
+    logger.debug("Parsing spec file ${file.path}, absolute path ${file.canonicalPath}")
     return when (file.extension) {
         in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(
             hook.readContract(file.path),

@@ -345,7 +345,7 @@ fun loadContractStubsFromFiles(
     strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
     val contactPathsString = contractPathDataList.joinToString(System.lineSeparator()) { it.path }
-    consoleLog(StringLog("Loading the following contracts:${System.lineSeparator()}$contactPathsString"))
+    consoleLog(StringLog("Loading the following spec paths:${System.lineSeparator()}$contactPathsString"))
     consoleLog(StringLog(""))
 
     val invalidContractPaths = contractPathDataList.filter { File(it.path).exists().not() }.map { it.path }
@@ -362,7 +362,7 @@ fun loadContractStubsFromFiles(
         dataDirFiles(dataDirPaths)
     )
 
-    logger.debug("Loading stubs from implicit directories within the ${dataDirPaths.joinToString(", ")}")
+    logger.debug("Loading stubs from the example directories: '${dataDirPaths.joinToString(", ")}'")
     return loadImplicitExpectationsFromDataDirsForFeature(
         features,
         dataDirPaths,
@@ -370,8 +370,6 @@ fun loadContractStubsFromFiles(
         strictMode,
         contractPathDataList
     ).ifEmpty {
-        logger.debug("No implicit stubs found in ${dataDirPaths.joinToString(", ")}")
-        logger.debug("Loading all the stubs from ${dataDirPaths.joinToString(", ")} since no implicit stubs found")
         loadExpectationsForFeatures(
             features,
             dataDirPaths,
@@ -385,12 +383,16 @@ fun loadExpectationsForFeatures(
     dataDirPaths: List<String>,
     strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
+    logger.debug("Scanning the example directories: ${dataDirPaths.joinToString(", ")}...")
+
     val dataFiles = dataDirFiles(dataDirPaths)
-    if(dataFiles.isNotEmpty()) {
-        logger.newLine()
-        logger.log("Loading stub expectations for specs: ${features.joinToString(",") { it.first }}")
-        printDataFiles(dataFiles)
+    if(dataFiles.isEmpty()) {
+        logger.debug("No example directories/files found within '${dataDirPaths.joinToString(", ")}' OR '${dataDirPaths.joinToString(", ")}' don't exist, hence the example loading operation is skipped for these.")
     }
+
+    logger.newLine()
+    logger.log("Loading stub expectations for specs: ${features.joinToString(",") { it.first }}")
+    printDataFiles(dataFiles)
 
     val mockData = dataFiles.mapNotNull {
         try {
@@ -433,25 +435,27 @@ fun loadImplicitExpectationsFromDataDirsForFeature(
     return specPathToImplicitDataDirPaths(specmaticConfig, dataDirPaths, contractPathDataList).flatMap { (specPath, implicitOriginalDataDirPairList) ->
         val associatedFeature = features.firstOrNull { (specPathAssociatedToFeature, _) ->
             File(specPathAssociatedToFeature).canonicalPath == File(specPath).canonicalPath
-        } ?: return@flatMap emptyList()
+        }
+
+        if(associatedFeature == null) {
+            logger.debug("Skipping the loading of examples for '$specPath' as it is not a OpenAPI specification")
+            return@flatMap emptyList()
+        }
 
         implicitOriginalDataDirPairList.flatMap { (implicitDataDir, originalDataDir) ->
-            logger.debug("Loading examples for $specPath from $implicitDataDir...")
             val implicitStubs = loadExpectationsForFeatures(
                 features = listOf(associatedFeature),
                 dataDirPaths = listOf(implicitDataDir),
                 strictMode = strictMode
             )
             if(implicitStubs.all { (_, stubs) -> stubs.isEmpty() }) {
-                logger.debug("No matching examples found for $specPath in $implicitDataDir")
-                logger.debug("Proceeding with loading stub expectations from $originalDataDir for $specPath")
                 loadExpectationsForFeatures(
                     listOf(associatedFeature),
                     listOf(originalDataDir),
                     strictMode
                 )
             } else {
-                logger.debug("Successfully loaded stub expectations for $specPath in $implicitDataDir")
+                logger.debug("Successfully loaded stub expectations for $specPath in $implicitDataDir${System.lineSeparator()}")
                 implicitStubs
             }
         }
@@ -573,9 +577,9 @@ fun loadContractStubs(
             val errorMessage = stubMatchErrorMessage(matchResults, stubFile, specs).prependIndent("  ")
             if(strictMode) throw Exception(errorMessage)
             else {
-                val message = "No matching spec found for stub '${stubFile}':${System.lineSeparator()} $errorMessage"
+                val message = "No matching spec found for the stub expectation in '${stubFile}':${System.lineSeparator()} $errorMessage"
                 if (logIgnoredFiles) logger.log(message)
-                logger.debug(message)
+                logger.debug("${System.lineSeparator()}$message")
             }
             return@flatMap emptyList()
         }

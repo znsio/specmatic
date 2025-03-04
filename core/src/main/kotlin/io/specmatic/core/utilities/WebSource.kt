@@ -56,6 +56,10 @@ class WebSource(override val testContracts: List<ContractSourceEntry>, override 
         }
     }
 
+    override fun stubDirectoryToContractPath(contractPathDataList: List<ContractPathData>): List<Pair<String, String>> {
+        return emptyList()
+    }
+
     private fun toSpecificationPath(url: URL): String {
         val path = url.host + "/" + url.path.removePrefix("/")
         return path

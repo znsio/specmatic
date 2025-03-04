@@ -103,7 +103,10 @@
                     <td th:classappend="${row.showSecondGroup ? '' : 'hidden'}" th:attr="rowspan=${row.secondGroupRowSpan}, data-main=${row.showSecondGroup}, colspan=${tableConfig.secondGroupColSpan}">
                         [[${row.secondGroupValue}]]
                     </td>
-                    <td th:attr="colspan=${tableConfig.thirdGroupColSpan}">[[${row.response}]]</td>
+                    <td th:attr="colspan=${tableConfig.thirdGroupColSpan}">
+                        <p>[[${row.response}]]</p>
+                        <span class="text-xs">[[${row.requestContentType}]]</span>
+                    </td>
                     <td>[[${row.exercised}]]</td>
                     <td th:if="${lite == false}">
                         <span class="capitalize px-4 py-1.5 font-medium rounded-lg whitespace-nowrap" th:classappend="'bg-' + ${row.badgeColor} + '-300'">

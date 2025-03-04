@@ -4,6 +4,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
+import io.specmatic.core.log.DebugLogger
+import io.specmatic.core.log.withLogger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.ContractPathData.Companion.specToPortMap
@@ -18,7 +20,6 @@ import io.specmatic.mock.ScenarioStub
 import io.specmatic.osAgnosticPath
 import io.specmatic.shouldMatch
 import io.specmatic.test.HttpClient
-import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
@@ -367,206 +368,6 @@ And response-body (string)
     }
 
     @Test
-    fun `it should be able to stub out xml`() {
-        val gherkin = """Feature: Number
-Scenario: Accept a number
-When POST /number
-And request-body <data>(number)</data>
-Then status 200
-        """.trim()
-
-        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>10</data>"""))
-        val mock = ScenarioStub(request, HttpResponse.OK)
-
-        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
-            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
-        }
-
-        assertThat(postResponse.statusCode.value()).isEqualTo(200)
-    }
-
-    @Test
-    fun `it should be able to stub out xml containing an optional number value`() {
-        val gherkin = """Feature: Number
-Scenario: Accept a number
-When POST /number
-And request-body <data>(number?)</data>
-Then status 200
-        """.trim()
-
-        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>10</data>"""))
-        val mock = ScenarioStub(request, HttpResponse.OK)
-
-        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
-            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
-        }
-
-        assertThat(postResponse.statusCode.value()).isEqualTo(200)
-    }
-
-    @Test
-    fun `it should be able to stub out xml containing an optional number value using a type`() {
-        val gherkin = """Feature: Number
-Scenario: Accept a number
-When POST /number
-And request-body <data>(number?)</data>
-Then status 200
-        """.trim()
-
-        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>(number)</data>"""))
-        val mock = ScenarioStub(request, HttpResponse.OK)
-
-        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
-            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
-        }
-
-        assertThat(postResponse.statusCode.value()).isEqualTo(200)
-    }
-
-    @Test
-    fun `if the xml request value does not match but structure does then it returns a fake response`() {
-        val gherkin = """Feature: Number
-Scenario: Accept a number
-When POST /number
-And request-body <data>(number?)</data>
-Then status 200
-And response-body (number)
-        """.trim()
-
-        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>10</data>"""))
-        val expectedNumber = 100000
-        val mock = ScenarioStub(request, HttpResponse.ok(NumberValue(expectedNumber)))
-
-        HttpStub(gherkin, listOf(mock)).use { fake ->
-            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
-        }.let { postResponse ->
-            assertThat(postResponse.statusCode.value()).isEqualTo(200)
-            assertThat(postResponse.body?.toString()?.toInt() == expectedNumber)
-        }
-
-        HttpStub(gherkin, listOf(mock)).use { fake ->
-            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>20</data>""")
-        }.let { postResponse ->
-            assertThat(postResponse.statusCode.value()).isEqualTo(200)
-            assertThat(postResponse.body?.toString()?.toInt() != expectedNumber)
-        }
-    }
-
-    @Test
-    fun `it should be able to stub out xml containing an optional number value with an empty string`() {
-        val gherkin = """Feature: Number
-Scenario: Accept a number
-When POST /number
-And request-body <data>(number?)</data>
-Then status 200
-        """.trim()
-
-        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data></data>"""))
-        val mock = ScenarioStub(request, HttpResponse.OK)
-
-        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
-            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data></data>""")
-        }
-
-        assertThat(postResponse.statusCode.value()).isEqualTo(200)
-    }
-
-    @Test
-    fun `it should be able to stub out xml containing an optional number value with an empty node`() {
-        val gherkin = """Feature: Number
-Scenario: Accept a number
-When POST /number
-And request-body <data>(number?)</data>
-Then status 200
-        """.trim()
-
-        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data></data>"""))
-        val mock = ScenarioStub(request, HttpResponse.OK)
-
-        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
-            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data/>""")
-        }
-
-        assertThat(postResponse.statusCode.value()).isEqualTo(200)
-    }
-
-    @Test
-    fun `it should be able to stub out xml with an attribute`() {
-        val gherkin = """Feature: Number
-Scenario: Accept a number
-When POST /number
-And request-body <data number="(number)"/>
-Then status 200
-        """.trim()
-
-        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data number="10"/>"""))
-        val mock = ScenarioStub(request, HttpResponse.OK)
-
-        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
-            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data number="10"/>""")
-        }
-
-        assertThat(postResponse.statusCode.value()).isEqualTo(200)
-    }
-
-    @Test
-    fun `it should be able to stub out xml with an attribute using a type`() {
-        val gherkin = """Feature: Number
-Scenario: Accept a number
-When POST /number
-And request-body <data number="(number)"/>
-Then status 200
-        """.trim()
-
-        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data number="(number)"/>"""))
-        val mock = ScenarioStub(request, HttpResponse.OK)
-
-        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
-            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data number="10"/>""")
-        }
-
-        assertThat(postResponse.statusCode.value()).isEqualTo(200)
-    }
-
-    @Test
-    fun `it should be able to stub out xml with an optional attribute when specifying an attribute value in the stub`() {
-        val gherkin = """Feature: Number
-Scenario: Accept a number
-When POST /number
-And request-body <data number$XML_ATTR_OPTIONAL_SUFFIX="(number)"/>
-Then status 200
-        """.trim()
-
-        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data number="10"/>"""))
-        val mock = ScenarioStub(request, HttpResponse.OK)
-
-        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
-            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data number="10"/>""")
-        }
-
-        assertThat(postResponse.statusCode.value()).isEqualTo(200)
-    }
-
-    @Test
-    fun `it should be able to stub out xml with an optional attribute using no attribute in the stub`() {
-        val gherkin = """Feature: Number
-Scenario: Accept a number
-When POST /number
-And request-body <data number$XML_ATTR_OPTIONAL_SUFFIX="(number)"/>
-Then status 200
-        """.trim()
-
-        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data/>"""))
-        val mock = ScenarioStub(request, HttpResponse.OK)
-
-        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
-            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data/>""")
-        }
-
-        assertThat(postResponse.statusCode.value()).isEqualTo(200)
-    }
-
-    @Test
     fun `generate a bad request from an error message`() {
         val expectedResponse = HttpResponse(
             status = 400,
@@ -813,231 +614,6 @@ paths:
         }
     }
 
-    @Nested
-    inner class ExpectationPriorities {
-        private val featureWithBodyExamples = OpenApiSpecification.fromYAML(
-            """
-openapi: 3.0.1
-info:
-  title: Data API
-  version: "1"
-paths:
-  /:
-    post:
-      summary: Data
-      parameters: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                id:
-                  type: integer
-              required:
-                - id
-            examples:
-              200_OK:
-                value:
-                  id: 10
-      responses:
-        "200":
-          description: Data
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
-              examples:
-                200_OK:
-                  value:
-                    message: example_expectation
-""".trim(), ""
-        ).toFeature()
-
-        @Test
-        fun `expectations for payload from examples`() {
-            HttpStub(featureWithBodyExamples).use { stub ->
-                stub.client.execute(HttpRequest("POST", "/", emptyMap(), parsedJSONObject("""{"id": 10}""")))
-                    .let { response ->
-                        assertThat(response.status).isEqualTo(200)
-                        assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"example_expectation"}"""))
-                    }
-            }
-        }
-
-        @Test
-        fun `expectations from examples should have less priority than file expectations`() {
-            HttpStub(
-                featureWithBodyExamples, listOf(
-                    ScenarioStub(
-                        HttpRequest(
-                            method = "POST",
-                            path = "/",
-                            body = parsedJSONObject("""{"id": 10}""")
-                        ),
-                        HttpResponse(
-                            status = 200,
-                            body = parsedJSONObject("""{"message":"file_overrides_example_expectation"}""")
-                        )
-                    )
-                )
-            ).use { stub ->
-                stub.client.execute(HttpRequest("POST", "/", emptyMap(), parsedJSONObject("""{"id": 10}""")))
-                    .let { response ->
-                        assertThat(response.status).isEqualTo(200)
-                        assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"file_overrides_example_expectation"}"""))
-                    }
-            }
-        }
-
-        @Test
-        fun `expectations from examples should have less priority than dynamic expectations`() {
-            HttpStub(featureWithBodyExamples).use { stub ->
-                stub.setExpectation(
-                    ScenarioStub(
-                        HttpRequest(
-                            method = "POST",
-                            path = "/",
-                            body = parsedJSONObject("""{"id": 10}""")
-                        ),
-                        HttpResponse(
-                            status = 200,
-                            body = parsedJSONObject("""{"message":"dynamic_overrides_example_expectation"}""")
-                        )
-                    )
-                )
-                stub.client.execute(HttpRequest("POST", "/", emptyMap(), parsedJSONObject("""{"id": 10}""")))
-                    .let { response ->
-                        assertThat(response.status).isEqualTo(200)
-                        assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"dynamic_overrides_example_expectation"}"""))
-                    }
-            }
-        }
-
-        @Test
-        fun `should generate response as a json object with strings keys with values of any type when additional properties is set as true`() {
-            val openAPI =
-                """
----
-openapi: 3.0.1
-info:
-  title: API
-  version: 1
-paths:
-  /data:
-    get:
-      summary: Retrieve data
-      responses:
-        '200':
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-""".trimIndent()
-            val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
-            HttpStub(feature).use { stub ->
-                stub.client.execute(HttpRequest("GET", "/data")).let { response ->
-                    assertThat(response.status).isEqualTo(200)
-                    val responseValue = parsedJSON(response.body.toStringLiteral())
-                    responseValue shouldMatch DictionaryPattern(StringPattern(), AnythingPattern)
-                }
-            }
-
-        }
-
-        @Test
-        fun `should return stubbed response based on expectations set when additional properties is set as true`() {
-            val openAPI =
-                """
----
-openapi: 3.0.1
-info:
-  title: API
-  version: 1
-paths:
-  /data:
-    post:
-      summary: API
-      parameters: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
-      responses:
-        '200':
-          description: Successful response
-          content:
-            text/plain:
-              schema:
-                type: string
-""".trimIndent()
-            val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
-            HttpStub(feature).use { stub ->
-                stub.setExpectation(
-                    ScenarioStub(
-                        HttpRequest(
-                            method = "POST",
-                            path = "/data",
-                            body = parsedJSONObject("""{"id": 10}""")
-                        ),
-                        HttpResponse(
-                            status = 200,
-                            body = StringValue("response data")
-                        )
-                    )
-                )
-                stub.client.execute(HttpRequest("POST", "/data", emptyMap(), parsedJSONObject("""{"id": 10}""")))
-                    .let { response ->
-                        assertThat(response.status).isEqualTo(200)
-                        assertThat(response.body).isEqualTo(StringValue("response data"))
-                    }
-            }
-        }
-
-        @Test
-        fun `should return descriptive error message when there are no valid specifications loaded`() {
-            val httpStub = HttpStub(emptyList())
-            httpStub.use { stub ->
-                val response =
-                    stub.client.execute(HttpRequest("POST", "/data", emptyMap(), parsedJSONObject("""{"id": 10}""")))
-                assertThat(response.status).isEqualTo(400)
-                assertThat(response.body).isEqualTo(StringValue("No valid API specifications loaded"))
-            }
-        }
-    }
-
-    @Test
-    fun `should stub out a path having a space and return a randomised response`() {
-        val pathWithSpace = "/da ta"
-
-        val specification =
-            OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_space_in_path.yaml").toFeature()
-
-        HttpStub(specification).use { stub ->
-            val request = HttpRequest("GET", pathWithSpace)
-
-            val response = stub.client.execute(request)
-
-            assertThat(response.status).isEqualTo(200)
-            response.body.let {
-                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
-                it as JSONObjectValue
-
-                assertThat(it.jsonObject).containsKey("id")
-                assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
-            }
-        }
-    }
-
     @Test
     fun `should return health status as UP if the actuator health endpoint is hit`() {
         val specification =
@@ -1056,387 +632,6 @@ paths:
                 assertThat(it.jsonObject["status"]?.toStringLiteral()).isEqualTo("UP")
             }
         }
-    }
-
-    @Test
-    fun `should load a stub with a space in the path and return the stubbed response`() {
-        val pathWithSpace = "/da ta"
-
-        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_space_in_path.yaml"), timeoutMillis = 0).use { stub ->
-            val request = HttpRequest("GET", pathWithSpace)
-
-            val response = stub.client.execute(request)
-
-            assertThat(response.status).isEqualTo(200)
-            response.body.let {
-                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
-                it as JSONObjectValue
-
-                assertThat(it.jsonObject).containsEntry("id", NumberValue(10))
-            }
-        }
-    }
-
-    @Test
-    fun `should load a stub with query params and a space in the path and return the stubbed response`() {
-        val pathWithSpace = "/da ta"
-
-        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_query_and_space_in_path.yaml"), timeoutMillis = 0).use { stub ->
-            val request = HttpRequest("GET", pathWithSpace, queryParametersMap = mapOf("id" to "5"))
-
-            val response = stub.client.execute(request)
-
-            assertThat(response.status).isEqualTo(200)
-            response.body.let {
-                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
-                it as JSONObjectValue
-
-                assertThat(it.jsonObject).containsEntry("id", NumberValue(10))
-            }
-        }
-    }
-
-    @Test
-    fun `should load a stub with a space in query params and return the stubbed response`() {
-        val queryParamWithSpace = "id entifier"
-
-        val specification = OpenApiSpecification.fromYAML("""
-            openapi: 3.0.1
-            info:
-              title: Random
-              version: "1"
-            paths:
-              /data:
-                get:
-                  summary: Random
-                  parameters:
-                    - name: $queryParamWithSpace
-                      in: query
-                      schema:
-                        type: integer
-                  responses:
-                    "200":
-                      description: Random
-                      content:
-                        application/json:
-                          schema:
-                            type: object
-                            properties:
-                              id:
-                                type: integer
-        """.trimIndent(), ""
-        ).toFeature()
-
-        HttpStub(specification).use { stub ->
-            val request = HttpRequest("GET", "/data", queryParametersMap = mapOf(queryParamWithSpace to "5"))
-
-            val response = stub.client.execute(request)
-
-            assertThat(response.status).isEqualTo(200)
-            response.body.let {
-                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
-                it as JSONObjectValue
-
-                assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
-            }
-        }
-    }
-
-    @Test
-    fun `should stub out a request for boolean query param with capital T or F in the incoming request`() {
-        val specification = createStubFromContracts(listOf("src/test/resources/openapi/spec_with_boolean_query.yaml"), timeoutMillis = 0)
-
-        specification.use { stub ->
-            val request = HttpRequest("GET", "/data", queryParametersMap = mapOf("enabled" to "True"))
-
-            val response = stub.client.execute(request)
-
-            assertThat(response.status).isEqualTo(200)
-            response.body.let {
-                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
-                it as JSONObjectValue
-
-                assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
-            }
-        }
-    }
-
-    @Test
-    fun `should recognize a request for boolean query param with capital T or F in the incoming request`() {
-        val specification = OpenApiSpecification.fromYAML(
-            """
-            openapi: 3.0.1
-            info:
-              title: Random
-              version: "1"
-            paths:
-              /data:
-                get:
-                  summary: Random
-                  parameters:
-                    - name: enabled
-                      in: query
-                      schema:
-                        type: boolean
-                  responses:
-                    "200":
-                      description: Random
-                      content:
-                        application/json:
-                          schema:
-                            type: object
-                            properties:
-                              id:
-                                type: integer
-        """.trimIndent(), ""
-        ).toFeature()
-
-        HttpStub(specification).use { stub ->
-            val request = HttpRequest("GET", "/data", queryParametersMap = mapOf("enabled" to "True"))
-
-            val response = stub.client.execute(request)
-
-            assertThat(response.status).isEqualTo(200)
-            response.body.let {
-                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
-                it as JSONObjectValue
-
-                assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
-            }
-        }
-    }
-
-    @Test
-    fun `stub out a spec with no request body and respond to a request which has no body`() {
-        val specification = OpenApiSpecification.fromYAML("""
-            openapi: 3.0.1
-            info:
-              title: Random
-              version: "1"
-            paths:
-              /data:
-                get:
-                  summary: Random
-                  responses:
-                    "200":
-                      description: Random
-                      content:
-                        application/json:
-                          schema:
-                            type: object
-                            properties:
-                              id:
-                                type: integer
-        """.trimIndent(), "").toFeature()
-
-        HttpStub(specification).use { stub ->
-            val request = HttpRequest("GET", "/data", body = NoBodyValue)
-
-            val response = stub.client.execute(request)
-
-            assertThat(response.status).isEqualTo(200)
-            response.body.let {
-                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
-                it as JSONObjectValue
-
-                assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
-            }
-        }
-    }
-
-    @Test
-    fun `stub should load an expectation for a spec with no request body and respond to a request in the expectation`() {
-        val specification = OpenApiSpecification.fromYAML("""
-            openapi: 3.0.1
-            info:
-              title: Random
-              version: "1"
-            paths:
-              /data:
-                get:
-                  summary: Random
-                  responses:
-                    "200":
-                      description: Random
-                      content:
-                        application/json:
-                          schema:
-                            type: object
-                            properties:
-                              id:
-                                type: integer
-        """.trimIndent(), "").toFeature()
-
-        HttpStub(specification).use { stub ->
-            val request = HttpRequest("GET", "/data", body = NoBodyValue)
-
-            val response = stub.client.execute(request)
-
-            assertThat(response.status).isEqualTo(200)
-            response.body.let {
-                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
-                it as JSONObjectValue
-
-                assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
-            }
-        }
-    }
-
-
-    @Test
-    fun `should return randomized response with Content-Type as per the specification`() {
-        val specification = OpenApiSpecification.fromYAML(
-            """
-            openapi: 3.0.1
-            info:
-              title: Random
-              version: "1"
-            paths:
-              /data:
-                get:
-                  summary: Random
-                  responses:
-                    "200":
-                      description: Random
-                      content:
-                        text/html:
-                          schema:
-                            type: string
-        """.trimIndent(), ""
-        ).toFeature()
-
-        HttpStub(specification).use { stub ->
-            val request = HttpRequest("GET", "/data", body = NoBodyValue)
-
-            val response = stub.client.execute(request)
-
-            assertThat(response.headers["Content-Type"]).isEqualTo("text/html")
-        }
-    }
-
-    @Test
-    fun `should return stubbed response with Content-Type as per the specification`() {
-        val specification = OpenApiSpecification.fromYAML(
-            """
-            openapi: 3.0.1
-            info:
-              title: Random
-              version: "1"
-            paths:
-              /data:
-                get:
-                  summary: Random
-                  responses:
-                    "200":
-                      description: Random
-                      content:
-                        text/html:
-                          schema:
-                            type: string
-        """.trimIndent(), ""
-        ).toFeature()
-
-        HttpStub(specification).use { stub ->
-            val request = HttpRequest("GET", "/data", body = NoBodyValue)
-
-            val htmlContent = "<html><body>hi</body></html>"
-            val expectation = ScenarioStub(
-                request,
-                HttpResponse(200, headers = mapOf("Content-Type" to "text/html"), body = htmlContent)
-            )
-
-            val expectationResponse = stub.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectation.toJSON()))
-
-            assertThat(expectationResponse.status).isEqualTo(200)
-
-            val response = stub.client.execute(request)
-
-            assertThat(response.headers["Content-Type"]).isEqualTo("text/html")
-            assertThat(response.body.toStringLiteral()).isEqualTo(htmlContent)
-        }
-    }
-
-    @Test
-    fun `should reject expectation with Content-Type which is not as per the specification`() {
-        val specification = OpenApiSpecification.fromYAML(
-            """
-            openapi: 3.0.1
-            info:
-              title: Random
-              version: "1"
-            paths:
-              /data:
-                get:
-                  summary: Random
-                  responses:
-                    "200":
-                      description: Random
-                      content:
-                        text/html:
-                          schema:
-                            type: string
-        """.trimIndent(), ""
-        ).toFeature()
-
-        HttpStub(specification).use { stub ->
-            val request = HttpRequest("GET", "/data", body = NoBodyValue)
-
-            val htmlContent = "<html><body>hi</body></html>"
-
-            val incorrectContentType = "text/plain"
-            val expectationWithIncorrectContentType =
-                ScenarioStub(
-                    request,
-                    HttpResponse(200, headers = mapOf("Content-Type" to incorrectContentType), body = htmlContent)
-                )
-
-            stub.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectationWithIncorrectContentType.toJSON())).let { response ->
-                assertThat(response.status).isEqualTo(400)
-            }
-
-            val correctContentType = "text/html"
-            val expectationWithValidContentType =
-                ScenarioStub(
-                    request,
-                    HttpResponse(200, headers = mapOf("Content-Type" to correctContentType), body = htmlContent)
-                )
-
-            stub.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectationWithValidContentType.toJSON())).let { response ->
-                assertThat(response.status).isEqualTo(200)
-            }
-        }
-    }
-
-    @Test
-    fun `should fail request with incorrect response Content-Type`() {
-        val feature = OpenApiSpecification.fromYAML(
-            """
-            openapi: 3.0.1
-            info:
-              title: Random
-              version: "1"
-            paths:
-              /data:
-                get:
-                  summary: Random
-                  responses:
-                    "200":
-                      description: Random
-                      content:
-                        text/html:
-                          schema:
-                            type: string
-        """.trimIndent(), ""
-        ).toFeature()
-
-        val results = feature.executeTests(object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                return HttpResponse(200, headers = mapOf("Content-Type" to "text/plain"), body = "hi")
-            }
-        })
-
-        assertThat(results.success()).withFailMessage(results.report()).isFalse()
-        assertThat(results.report()).withFailMessage(results.report()).contains("Content-Type")
     }
 
     @Test
@@ -1535,321 +730,6 @@ components:
     }
 
     @Test
-    fun `a generative stub should respond to an invalid request with a 400 per the spec with the error in the message key`() {
-        val spec = """
-            openapi: 3.0.0
-            info:
-              title: Sample API
-              description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-              version: 0.1.9
-            servers:
-              - url: http://api.example.com/v1
-                description: Optional server description, e.g. Main (production) server
-              - url: http://staging-api.example.com
-                description: Optional server description, e.g. Internal staging server for testing
-            paths:
-              /hello:
-                post:
-                  summary: hello world
-                  description: Optional extended description in CommonMark or HTML.
-                  requestBody:
-                    content:
-                      application/json:
-                        schema:
-                          type: object
-                          required:
-                            - data
-                          properties:
-                            data:
-                              type: string
-                  responses:
-                    '200':
-                      description: Says hello
-                      content:
-                        text/plain:
-                          schema:
-                            type: string
-                    '400':
-                      description: Bad request
-                      content:
-                        application/json:
-                          schema:
-                            type: object
-                            required:
-                              - message
-                            properties:
-                              message:
-                                type: string
-        """.trimIndent()
-
-        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-
-        HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
-            val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
-            val response = stub.client.execute(request)
-
-            assertThat(response.status).isEqualTo(400)
-            assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
-
-            val responseBody = response.body as JSONObjectValue
-            assertThat(responseBody.jsonObject["message"]?.toStringLiteral()).contains("REQUEST.BODY.data")
-        }
-    }
-
-    @Test
-    fun `a generative stub should respond to an invalid request with a 422 with the error in the message key`() {
-        val spec = """
-            openapi: 3.0.0
-            info:
-              title: Sample API
-              description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-              version: 0.1.9
-            servers:
-              - url: http://api.example.com/v1
-                description: Optional server description, e.g. Main (production) server
-              - url: http://staging-api.example.com
-                description: Optional server description, e.g. Internal staging server for testing
-            paths:
-              /hello:
-                post:
-                  summary: hello world
-                  description: Optional extended description in CommonMark or HTML.
-                  requestBody:
-                    content:
-                      application/json:
-                        schema:
-                          type: object
-                          required:
-                            - data
-                          properties:
-                            data:
-                              type: string
-                  responses:
-                    '200':
-                      description: Says hello
-                      content:
-                        text/plain:
-                          schema:
-                            type: string
-                    '422':
-                      description: Bad request
-                      content:
-                        application/json:
-                          schema:
-                            type: object
-                            required:
-                              - message
-                            properties:
-                              message:
-                                type: string
-        """.trimIndent()
-
-        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-
-        HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
-            val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
-            val response = stub.client.execute(request)
-
-            assertThat(response.status).isEqualTo(422)
-            assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
-
-            val responseBody = response.body as JSONObjectValue
-            assertThat(responseBody.jsonObject["message"]?.toStringLiteral()).contains("REQUEST.BODY.data")
-        }
-    }
-
-    @Test
-    fun `a generative stub should respond to an invalid request with a 422 with the error in the message key 2 levels deep`() {
-        val spec = """
-            openapi: 3.0.0
-            info:
-              title: Sample API
-              description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-              version: 0.1.9
-            servers:
-              - url: http://api.example.com/v1
-                description: Optional server description, e.g. Main (production) server
-              - url: http://staging-api.example.com
-                description: Optional server description, e.g. Internal staging server for testing
-            paths:
-              /hello:
-                post:
-                  summary: hello world
-                  description: Optional extended description in CommonMark or HTML.
-                  requestBody:
-                    content:
-                      application/json:
-                        schema:
-                          type: object
-                          required:
-                            - data
-                          properties:
-                            data:
-                              type: string
-                  responses:
-                    '200':
-                      description: Says hello
-                      content:
-                        text/plain:
-                          schema:
-                            type: string
-                    '422':
-                      description: Bad request
-                      content:
-                        application/json:
-                          schema:
-                            type: object
-                            required:
-                              - error_info
-                            properties:
-                              error_info:
-                                type: object
-                                required:
-                                  - message
-                                properties:
-                                  message:
-                                    type: string
-        """.trimIndent()
-
-        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-
-        HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
-            val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
-            val response = stub.client.execute(request)
-
-            assertThat(response.status).isEqualTo(422)
-            assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
-
-            val responseBody = response.body as JSONObjectValue
-            assertThat(responseBody.findFirstChildByPath("error_info.message")?.toStringLiteral()).contains("REQUEST.BODY.data")
-        }
-    }
-
-    @Test
-    fun `a generative stub should return the error in any available string key in the 4xx response if message is not found`() {
-        val spec = """
-            openapi: 3.0.0
-            info:
-              title: Sample API
-              description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-              version: 0.1.9
-            servers:
-              - url: http://api.example.com/v1
-                description: Optional server description, e.g. Main (production) server
-              - url: http://staging-api.example.com
-                description: Optional server description, e.g. Internal staging server for testing
-            paths:
-              /hello:
-                post:
-                  summary: hello world
-                  description: Optional extended description in CommonMark or HTML.
-                  requestBody:
-                    content:
-                      application/json:
-                        schema:
-                          type: object
-                          required:
-                            - data
-                          properties:
-                            data:
-                              type: string
-                  responses:
-                    '200':
-                      description: Says hello
-                      content:
-                        text/plain:
-                          schema:
-                            type: string
-                    '422':
-                      description: Bad request
-                      content:
-                        application/json:
-                          schema:
-                            type: object
-                            required:
-                              - error_info
-                            properties:
-                              error_info:
-                                type: string
-        """.trimIndent()
-
-        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-
-        HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
-            val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
-            val response = stub.client.execute(request)
-
-            assertThat(response.status).isEqualTo(422)
-            assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
-
-            val responseBody = response.body as JSONObjectValue
-            assertThat(responseBody.jsonObject["error_info"]?.toStringLiteral()).contains("REQUEST.BODY.data")
-        }
-    }
-
-    @Test
-    fun `a generative stub should return a randomized 4xx response when it cannot find a string key`() {
-        val spec = """
-            openapi: 3.0.0
-            info:
-              title: Sample API
-              description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-              version: 0.1.9
-            servers:
-              - url: http://api.example.com/v1
-                description: Optional server description, e.g. Main (production) server
-              - url: http://staging-api.example.com
-                description: Optional server description, e.g. Internal staging server for testing
-            paths:
-              /hello:
-                post:
-                  summary: hello world
-                  description: Optional extended description in CommonMark or HTML.
-                  requestBody:
-                    content:
-                      application/json:
-                        schema:
-                          type: object
-                          required:
-                            - data
-                          properties:
-                            data:
-                              type: string
-                  responses:
-                    '200':
-                      description: Says hello
-                      content:
-                        text/plain:
-                          schema:
-                            type: string
-                    '422':
-                      description: Bad request
-                      content:
-                        application/json:
-                          schema:
-                            type: object
-                            required:
-                              - message
-                            properties:
-                              message:
-                                type: integer
-        """.trimIndent()
-
-        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-
-        HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
-            val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
-            val response = stub.client.execute(request)
-
-            assertThat(response.status).isEqualTo(422)
-            assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
-
-            val responseBody = response.body as JSONObjectValue
-            assertThat(responseBody.jsonObject["message"]).isInstanceOf(NumberValue::class.java)
-        }
-    }
-
-    @Test
     fun `stub should load an example for a spec with pattern as a path param`() {
         createStubFromContracts(listOf(("src/test/resources/openapi/spec_with_path_param.yaml")), timeoutMillis = 0).use { stub ->
             val request = HttpRequest("GET", "/users/abc123", queryParametersMap = mapOf("item" to "10"))
@@ -1864,8 +744,10 @@ components:
     @Test
     fun `stub should flag an error when a path param in an external example has an invalid type`() {
         val (output, _) = captureStandardOutput {
-            val stub = createStubFromContracts(listOf(("src/test/resources/openapi/spec_with_invalid_path_param_example.yaml")), timeoutMillis = 0)
-            stub.close()
+            withLogger(DebugLogger.logger) {
+                val stub = createStubFromContracts(listOf(("src/test/resources/openapi/spec_with_invalid_path_param_example.yaml")), timeoutMillis = 0)
+                stub.close()
+            }
         }
 
         assertThat(output).contains(">> REQUEST.PATH.userId")
@@ -2115,8 +997,142 @@ components:
     }
 
     @Test
-    fun `should accept extra fields in the request when extensible schema is set with no examples`() {
-        Flags.using(EXTENSIBLE_SCHEMA to "true") {
+    fun `should generate response as a json object with strings keys with values of any type when additional properties is set as true`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    get:
+      summary: Retrieve data
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+""".trimIndent()
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+        HttpStub(feature).use { stub ->
+            stub.client.execute(HttpRequest("GET", "/data")).let { response ->
+                assertThat(response.status).isEqualTo(200)
+                val responseValue = parsedJSON(response.body.toStringLiteral())
+                responseValue shouldMatch DictionaryPattern(StringPattern(), AnythingPattern)
+            }
+        }
+
+    }
+
+    @Test
+    fun `should return stubbed response based on expectations set when additional properties is set as true`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Successful response
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent()
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+        HttpStub(feature).use { stub ->
+            stub.setExpectation(
+                ScenarioStub(
+                    HttpRequest(
+                        method = "POST",
+                        path = "/data",
+                        body = parsedJSONObject("""{"id": 10}""")
+                    ),
+                    HttpResponse(
+                        status = 200,
+                        body = StringValue("response data")
+                    )
+                )
+            )
+            stub.client.execute(HttpRequest("POST", "/data", emptyMap(), parsedJSONObject("""{"id": 10}""")))
+                .let { response ->
+                    assertThat(response.status).isEqualTo(200)
+                    assertThat(response.body).isEqualTo(StringValue("response data"))
+                }
+        }
+    }
+
+    @Test
+    fun `should return descriptive error message when there are no valid specifications loaded`() {
+        val httpStub = HttpStub(emptyList())
+        httpStub.use { stub ->
+            val response =
+                stub.client.execute(HttpRequest("POST", "/data", emptyMap(), parsedJSONObject("""{"id": 10}""")))
+            assertThat(response.status).isEqualTo(400)
+            assertThat(response.body).isEqualTo(StringValue("No valid API specifications loaded"))
+        }
+    }
+
+    @Nested
+    inner class ExtensibleSchemaBasedStubTest {
+        @Test
+        fun `should accept extra fields in the request when extensible schema is set with no examples`() {
+            Flags.using(EXTENSIBLE_SCHEMA to "true") {
+                val feature: Feature = OpenApiSpecification.fromYAML(
+                    """
+            openapi: 3.0.3
+            info:
+              title: Simple API
+              version: 1.0.0
+            paths:
+              /:
+                post:
+                  summary: Simple POST endpoint
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - name
+                          properties:
+                            name:
+                              type: string
+                  responses:
+                    '204':
+                      description: OK
+            """.trimIndent(), ""
+                ).toFeature()
+
+                HttpStub(listOf(feature)).use { stub ->
+                    val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"name": "John Doe", "age": 30}"""))
+                    val response = stub.client.execute(request)
+
+                    assertThat(response.status).withFailMessage(response.body.toStringLiteral()).isEqualTo(204)
+                }
+            }
+        }
+
+        @Test
+        fun `should not accept extra fields in the request when extensible schema is not set`() {
             val feature: Feature = OpenApiSpecification.fromYAML(
                 """
             openapi: 3.0.3
@@ -2147,60 +1163,23 @@ components:
                 val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"name": "John Doe", "age": 30}"""))
                 val response = stub.client.execute(request)
 
-                assertThat(response.status).withFailMessage(response.body.toStringLiteral()).isEqualTo(204)
-            }
-        }
-    }
-
-    @Test
-    fun `should not accept extra fields in the request when extensible schema is not set`() {
-        val feature: Feature = OpenApiSpecification.fromYAML(
-            """
-            openapi: 3.0.3
-            info:
-              title: Simple API
-              version: 1.0.0
-            paths:
-              /:
-                post:
-                  summary: Simple POST endpoint
-                  requestBody:
-                    content:
-                      application/json:
-                        schema:
-                          type: object
-                          required:
-                            - name
-                          properties:
-                            name:
-                              type: string
-                  responses:
-                    '204':
-                      description: OK
-            """.trimIndent(), ""
-        ).toFeature()
-
-        HttpStub(listOf(feature)).use { stub ->
-            val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"name": "John Doe", "age": 30}"""))
-            val response = stub.client.execute(request)
-
-            assertThat(response.status).isEqualTo(400)
-            assertThat(response.body.toStringLiteral()).isEqualToNormalizingWhitespace(
-                """
+                assertThat(response.status).isEqualTo(400)
+                assertThat(response.body.toStringLiteral()).isEqualToNormalizingWhitespace(
+                    """
             In scenario "Simple POST endpoint. Response: OK"
             API: POST / -> 204
             >> REQUEST.BODY.age
             Key named age in the request was not in the contract
             """.trimIndent()
-            )
+                )
+            }
         }
-    }
 
-    @Test
-    fun `should use examples with extra fields when extensible schema is enabled`() {
-        Flags.using(EXTENSIBLE_SCHEMA to "true") {
-            val feature: Feature = OpenApiSpecification.fromYAML(
-                """
+        @Test
+        fun `should use examples with extra fields when extensible schema is enabled`() {
+            Flags.using(EXTENSIBLE_SCHEMA to "true") {
+                val feature: Feature = OpenApiSpecification.fromYAML(
+                    """
             openapi: 3.0.3
             info:
               title: Simple API
@@ -2232,29 +1211,1027 @@ components:
                             required:
                               - id
             """.trimIndent(), ""
-            ).toFeature()
+                ).toFeature()
 
-            val example = ScenarioStub(
-                request = HttpRequest(
-                    method = "POST", path = "/",
-                    body = parsedJSONObject("""{"name": "John Doe", "age": 30}""")
-                ),
-                response = HttpResponse(status = 201, body = parsedJSONObject("""{"id": "123"}"""))
-            )
+                val example = ScenarioStub(
+                    request = HttpRequest(
+                        method = "POST", path = "/",
+                        body = parsedJSONObject("""{"name": "John Doe", "age": 30}""")
+                    ),
+                    response = HttpResponse(status = 201, body = parsedJSONObject("""{"id": "123"}"""))
+                )
 
-            HttpStub(feature, listOf(example)).use { stub ->
-                val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"name": "John Doe", "age": 30}"""))
-                val response = stub.client.execute(request)
+                HttpStub(feature, listOf(example)).use { stub ->
+                    val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"name": "John Doe", "age": 30}"""))
+                    val response = stub.client.execute(request)
 
-                assertThat(response.status).withFailMessage(response.body.toStringLiteral()).isEqualTo(201)
-                val responseBody = response.body as JSONObjectValue
-                assertThat(responseBody.findFirstChildByPath("id")?.toStringLiteral()).isEqualTo("123")
+                    assertThat(response.status).withFailMessage(response.body.toStringLiteral()).isEqualTo(201)
+                    val responseBody = response.body as JSONObjectValue
+                    assertThat(responseBody.findFirstChildByPath("id")?.toStringLiteral()).isEqualTo("123")
+                }
             }
         }
     }
 
     @Nested
-    inner class MultiPortStubTests {
+    inner class GenerativeStubTest {
+        @Test
+        fun `a generative stub should respond to an invalid request with a 400 per the spec with the error in the message key`() {
+            val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+              version: 0.1.9
+            servers:
+              - url: http://api.example.com/v1
+                description: Optional server description, e.g. Main (production) server
+              - url: http://staging-api.example.com
+                description: Optional server description, e.g. Internal staging server for testing
+            paths:
+              /hello:
+                post:
+                  summary: hello world
+                  description: Optional extended description in CommonMark or HTML.
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - data
+                          properties:
+                            data:
+                              type: string
+                  responses:
+                    '200':
+                      description: Says hello
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    '400':
+                      description: Bad request
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - message
+                            properties:
+                              message:
+                                type: string
+        """.trimIndent()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+            HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+                val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(400)
+                assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
+
+                val responseBody = response.body as JSONObjectValue
+                assertThat(responseBody.jsonObject["message"]?.toStringLiteral()).contains("REQUEST.BODY.data")
+            }
+        }
+
+        @Test
+        fun `a generative stub should respond to an invalid request with a 422 with the error in the message key`() {
+            val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+              version: 0.1.9
+            servers:
+              - url: http://api.example.com/v1
+                description: Optional server description, e.g. Main (production) server
+              - url: http://staging-api.example.com
+                description: Optional server description, e.g. Internal staging server for testing
+            paths:
+              /hello:
+                post:
+                  summary: hello world
+                  description: Optional extended description in CommonMark or HTML.
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - data
+                          properties:
+                            data:
+                              type: string
+                  responses:
+                    '200':
+                      description: Says hello
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    '422':
+                      description: Bad request
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - message
+                            properties:
+                              message:
+                                type: string
+        """.trimIndent()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+            HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+                val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(422)
+                assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
+
+                val responseBody = response.body as JSONObjectValue
+                assertThat(responseBody.jsonObject["message"]?.toStringLiteral()).contains("REQUEST.BODY.data")
+            }
+        }
+
+        @Test
+        fun `a generative stub should respond to an invalid request with a 422 with the error in the message key 2 levels deep`() {
+            val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+              version: 0.1.9
+            servers:
+              - url: http://api.example.com/v1
+                description: Optional server description, e.g. Main (production) server
+              - url: http://staging-api.example.com
+                description: Optional server description, e.g. Internal staging server for testing
+            paths:
+              /hello:
+                post:
+                  summary: hello world
+                  description: Optional extended description in CommonMark or HTML.
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - data
+                          properties:
+                            data:
+                              type: string
+                  responses:
+                    '200':
+                      description: Says hello
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    '422':
+                      description: Bad request
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - error_info
+                            properties:
+                              error_info:
+                                type: object
+                                required:
+                                  - message
+                                properties:
+                                  message:
+                                    type: string
+        """.trimIndent()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+            HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+                val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(422)
+                assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
+
+                val responseBody = response.body as JSONObjectValue
+                assertThat(responseBody.findFirstChildByPath("error_info.message")?.toStringLiteral()).contains("REQUEST.BODY.data")
+            }
+        }
+
+        @Test
+        fun `a generative stub should return the error in any available string key in the 4xx response if message is not found`() {
+            val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+              version: 0.1.9
+            servers:
+              - url: http://api.example.com/v1
+                description: Optional server description, e.g. Main (production) server
+              - url: http://staging-api.example.com
+                description: Optional server description, e.g. Internal staging server for testing
+            paths:
+              /hello:
+                post:
+                  summary: hello world
+                  description: Optional extended description in CommonMark or HTML.
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - data
+                          properties:
+                            data:
+                              type: string
+                  responses:
+                    '200':
+                      description: Says hello
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    '422':
+                      description: Bad request
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - error_info
+                            properties:
+                              error_info:
+                                type: string
+        """.trimIndent()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+            HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+                val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(422)
+                assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
+
+                val responseBody = response.body as JSONObjectValue
+                assertThat(responseBody.jsonObject["error_info"]?.toStringLiteral()).contains("REQUEST.BODY.data")
+            }
+        }
+
+        @Test
+        fun `a generative stub should return a randomized 4xx response when it cannot find a string key`() {
+            val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+              version: 0.1.9
+            servers:
+              - url: http://api.example.com/v1
+                description: Optional server description, e.g. Main (production) server
+              - url: http://staging-api.example.com
+                description: Optional server description, e.g. Internal staging server for testing
+            paths:
+              /hello:
+                post:
+                  summary: hello world
+                  description: Optional extended description in CommonMark or HTML.
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - data
+                          properties:
+                            data:
+                              type: string
+                  responses:
+                    '200':
+                      description: Says hello
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    '422':
+                      description: Bad request
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - message
+                            properties:
+                              message:
+                                type: integer
+        """.trimIndent()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+            HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+                val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(422)
+                assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
+
+                val responseBody = response.body as JSONObjectValue
+                assertThat(responseBody.jsonObject["message"]).isInstanceOf(NumberValue::class.java)
+            }
+        }
+    }
+
+    @Nested
+    inner class ExpectationPrioritiesTest {
+        private val featureWithInlineExample = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.1
+info:
+  title: Data API
+  version: "1"
+paths:
+  /:
+    post:
+      summary: Data
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+              required:
+                - id
+            examples:
+              200_OK:
+                value:
+                  id: 10
+      responses:
+        "200":
+          description: Data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+              examples:
+                200_OK:
+                  value:
+                    message: inline_example_expectation
+""".trim(), ""
+        ).toFeature()
+
+        @Test
+        fun `should load and serve expectations for payload from inline examples`() {
+            HttpStub(featureWithInlineExample).use { stub ->
+                val response = stub.client.execute(
+                    HttpRequest(
+                        method = "POST",
+                        path = "/",
+                        headers = emptyMap(),
+                        body = parsedJSONObject("""{"id": 10}""")
+                    )
+                )
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"inline_example_expectation"}"""))
+            }
+        }
+
+        @Test
+        fun `should load and serve expectations from external example over the inline example based expectation`() {
+            HttpStub(
+                featureWithInlineExample, listOf(
+                    ScenarioStub(
+                        HttpRequest(
+                            method = "POST",
+                            path = "/",
+                            body = parsedJSONObject("""{"id": 10}""")
+                        ),
+                        HttpResponse(
+                            status = 200,
+                            body = parsedJSONObject("""{"message":"file_overrides_example_expectation"}""")
+                        )
+                    )
+                )
+            ).use { stub ->
+                val response = stub.client.execute(
+                    HttpRequest(
+                        method = "POST",
+                        path = "/",
+                        headers = emptyMap(),
+                        body = parsedJSONObject("""{"id": 10}""")
+                    )
+                )
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"file_overrides_example_expectation"}"""))
+            }
+        }
+
+        @Test
+        fun `should load and serve expectations from the dynamic expectation over the inline example based expectation`() {
+            HttpStub(featureWithInlineExample).use { stub ->
+                stub.setExpectation(
+                    ScenarioStub(
+                        HttpRequest(
+                            method = "POST",
+                            path = "/",
+                            body = parsedJSONObject("""{"id": 10}""")
+                        ),
+                        HttpResponse(
+                            status = 200,
+                            body = parsedJSONObject("""{"message":"dynamic_overrides_example_expectation"}""")
+                        )
+                    )
+                )
+                val response = stub.client.execute(
+                    HttpRequest(
+                        method = "POST",
+                        path = "/",
+                        headers = emptyMap(),
+                        body = parsedJSONObject("""{"id": 10}""")
+                    )
+                )
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"dynamic_overrides_example_expectation"}"""))
+            }
+        }
+
+        @Test
+        fun `should load and serve expectations from the implicit_examples_directory over the inline_example based expectation`() =
+            stubTest(
+                specPaths = listOf("src/test/resources/stub_with_implicit_examples/api.yaml"),
+                port = 9000,
+                dataDirPaths = emptyList()
+            ) { stub ->
+                val request = HttpRequest(
+                    method = "POST",
+                    path = "/",
+                    body = parsedJSONObject("""{"id": 10}""")
+                )
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
+                val responseBody = response.body as JSONObjectValue
+                assertThat(
+                    responseBody.findFirstChildByPath("message")?.toStringLiteral()
+                ).isEqualTo("response_from_implicit_examples_dir")
+            }
+
+        @Test
+        fun `should load and serve expectations from the explicit_examples_directory over the implicit_examples_directory based expectation`() =
+            stubTest(
+                specPaths = listOf("src/test/resources/stub_with_explicit_examples/api.yaml"),
+                port = 9000,
+                dataDirPaths = listOf("src/test/resources/stub_with_explicit_examples/common")
+            ) { stub ->
+                val request = HttpRequest(
+                    method = "POST",
+                    path = "/",
+                    body = parsedJSONObject("""{"id": 10}""")
+                )
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
+                val responseBody = response.body as JSONObjectValue
+                assertThat(
+                    responseBody.findFirstChildByPath("message")?.toStringLiteral()
+                ).isEqualTo("response_from_explicit_examples_dir")
+            }
+
+        @Test
+        fun `should load and serve expectations from the implicit_directory_within_explicit_examples_directory over the orphaned expectation from explicit_examples_directory`() =
+            stubTest(
+                specPaths = listOf("src/test/resources/stub_with_implicit_example_from_explicit_dir/api.yaml"),
+                port = 9000,
+                dataDirPaths = listOf("src/test/resources/stub_with_implicit_example_from_explicit_dir/common")
+            ) { stub ->
+                val request = HttpRequest(
+                    method = "POST",
+                    path = "/",
+                    body = parsedJSONObject("""{"id": 10}""")
+                )
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
+                val responseBody = response.body as JSONObjectValue
+                assertThat(
+                    responseBody.findFirstChildByPath("message")?.toStringLiteral()
+                ).isEqualTo("response_from_implicit_example_in_explicit_dir")
+            }
+
+        @ParameterizedTest
+        @CsvSource(
+            "Example Directories, Expected Response",
+            "'common,examples', response_from_implicit_example_in_common_dir",
+            "'examples,common', response_from_examples_dir",
+            useHeadersInDisplayName = true
+        )
+        fun `should load and serve expectations from the explicit examples directory that is loaded first over the ones which are loaded later`(
+            directories: String,
+            expectedResponse: String
+        ) =
+            stubTest(
+                specPaths = listOf("src/test/resources/stub_with_multiple_explicit_example_dirs/api.yaml"),
+                port = 9000,
+                dataDirPaths = directories.split(",").filter { it.isNotBlank() }.map {
+                    "src/test/resources/stub_with_multiple_explicit_example_dirs/$it"
+                }
+            ) { stub ->
+                val request = HttpRequest(
+                    method = "POST",
+                    path = "/",
+                    body = parsedJSONObject("""{"id": 10}""")
+                )
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
+                val responseBody = response.body as JSONObjectValue
+                assertThat(
+                    responseBody.findFirstChildByPath("message")?.toStringLiteral()
+                ).isEqualTo(expectedResponse)
+            }
+    }
+
+    @Nested
+    inner class SpecialRequestCasesTest {
+        @Test
+        fun `should stub out a path having a space and return a randomised response`() {
+            val pathWithSpace = "/da ta"
+
+            val specification =
+                OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_space_in_path.yaml").toFeature()
+
+            HttpStub(specification).use { stub ->
+                val request = HttpRequest("GET", pathWithSpace)
+
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                response.body.let {
+                    assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                    it as JSONObjectValue
+
+                    assertThat(it.jsonObject).containsKey("id")
+                    assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
+                }
+            }
+        }
+
+        @Test
+        fun `should load a stub with a space in the path and return the stubbed response`() {
+            val pathWithSpace = "/da ta"
+
+            createStubFromContracts(listOf("src/test/resources/openapi/spec_with_space_in_path.yaml"), timeoutMillis = 0).use { stub ->
+                val request = HttpRequest("GET", pathWithSpace)
+
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                response.body.let {
+                    assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                    it as JSONObjectValue
+
+                    assertThat(it.jsonObject).containsEntry("id", NumberValue(10))
+                }
+            }
+        }
+
+        @Test
+        fun `should load a stub with query params and a space in the path and return the stubbed response`() {
+            val pathWithSpace = "/da ta"
+
+            createStubFromContracts(listOf("src/test/resources/openapi/spec_with_query_and_space_in_path.yaml"), timeoutMillis = 0).use { stub ->
+                val request = HttpRequest("GET", pathWithSpace, queryParametersMap = mapOf("id" to "5"))
+
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                response.body.let {
+                    assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                    it as JSONObjectValue
+
+                    assertThat(it.jsonObject).containsEntry("id", NumberValue(10))
+                }
+            }
+        }
+
+        @Test
+        fun `should load a stub with a space in query params and return the stubbed response`() {
+            val queryParamWithSpace = "id entifier"
+
+            val specification = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /data:
+                get:
+                  summary: Random
+                  parameters:
+                    - name: $queryParamWithSpace
+                      in: query
+                      schema:
+                        type: integer
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+        """.trimIndent(), ""
+            ).toFeature()
+
+            HttpStub(specification).use { stub ->
+                val request = HttpRequest("GET", "/data", queryParametersMap = mapOf(queryParamWithSpace to "5"))
+
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                response.body.let {
+                    assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                    it as JSONObjectValue
+
+                    assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
+                }
+            }
+        }
+
+        @Test
+        fun `should stub out a request for boolean query param with capital T or F in the incoming request`() {
+            val specification = createStubFromContracts(listOf("src/test/resources/openapi/spec_with_boolean_query.yaml"), timeoutMillis = 0)
+
+            specification.use { stub ->
+                val request = HttpRequest("GET", "/data", queryParametersMap = mapOf("enabled" to "True"))
+
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                response.body.let {
+                    assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                    it as JSONObjectValue
+
+                    assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
+                }
+            }
+        }
+
+        @Test
+        fun `should recognize a request for boolean query param with capital T or F in the incoming request`() {
+            val specification = OpenApiSpecification.fromYAML(
+                """
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /data:
+                get:
+                  summary: Random
+                  parameters:
+                    - name: enabled
+                      in: query
+                      schema:
+                        type: boolean
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+        """.trimIndent(), ""
+            ).toFeature()
+
+            HttpStub(specification).use { stub ->
+                val request = HttpRequest("GET", "/data", queryParametersMap = mapOf("enabled" to "True"))
+
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                response.body.let {
+                    assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                    it as JSONObjectValue
+
+                    assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
+                }
+            }
+        }
+
+        @Test
+        fun `stub out a spec with no request body and respond to a request which has no body`() {
+            val specification = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /data:
+                get:
+                  summary: Random
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+        """.trimIndent(), "").toFeature()
+
+            HttpStub(specification).use { stub ->
+                val request = HttpRequest("GET", "/data", body = NoBodyValue)
+
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                response.body.let {
+                    assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                    it as JSONObjectValue
+
+                    assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
+                }
+            }
+        }
+
+        @Test
+        fun `stub should load an expectation for a spec with no request body and respond to a request in the expectation`() {
+            val specification = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /data:
+                get:
+                  summary: Random
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+        """.trimIndent(), "").toFeature()
+
+            HttpStub(specification).use { stub ->
+                val request = HttpRequest("GET", "/data", body = NoBodyValue)
+
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                response.body.let {
+                    assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                    it as JSONObjectValue
+
+                    assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
+                }
+            }
+        }
+    }
+
+    @Nested
+    inner class XmlStubTest {
+
+        @Test
+        fun `it should be able to stub out xml`() {
+            val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data>(number)</data>
+Then status 200
+        """.trim()
+
+            val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>10</data>"""))
+            val mock = ScenarioStub(request, HttpResponse.OK)
+
+            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+                RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
+            }
+
+            assertThat(postResponse.statusCode.value()).isEqualTo(200)
+        }
+
+        @Test
+        fun `it should be able to stub out xml containing an optional number value`() {
+            val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data>(number?)</data>
+Then status 200
+        """.trim()
+
+            val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>10</data>"""))
+            val mock = ScenarioStub(request, HttpResponse.OK)
+
+            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+                RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
+            }
+
+            assertThat(postResponse.statusCode.value()).isEqualTo(200)
+        }
+
+        @Test
+        fun `it should be able to stub out xml containing an optional number value using a type`() {
+            val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data>(number?)</data>
+Then status 200
+        """.trim()
+
+            val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>(number)</data>"""))
+            val mock = ScenarioStub(request, HttpResponse.OK)
+
+            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+                RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
+            }
+
+            assertThat(postResponse.statusCode.value()).isEqualTo(200)
+        }
+
+        @Test
+        fun `if the xml request value does not match but structure does then it returns a fake response`() {
+            val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data>(number?)</data>
+Then status 200
+And response-body (number)
+        """.trim()
+
+            val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>10</data>"""))
+            val expectedNumber = 100000
+            val mock = ScenarioStub(request, HttpResponse.ok(NumberValue(expectedNumber)))
+
+            HttpStub(gherkin, listOf(mock)).use { fake ->
+                RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
+            }.let { postResponse ->
+                assertThat(postResponse.statusCode.value()).isEqualTo(200)
+                assertThat(postResponse.body?.toString()?.toInt() == expectedNumber)
+            }
+
+            HttpStub(gherkin, listOf(mock)).use { fake ->
+                RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>20</data>""")
+            }.let { postResponse ->
+                assertThat(postResponse.statusCode.value()).isEqualTo(200)
+                assertThat(postResponse.body?.toString()?.toInt() != expectedNumber)
+            }
+        }
+
+        @Test
+        fun `it should be able to stub out xml containing an optional number value with an empty string`() {
+            val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data>(number?)</data>
+Then status 200
+        """.trim()
+
+            val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data></data>"""))
+            val mock = ScenarioStub(request, HttpResponse.OK)
+
+            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+                RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data></data>""")
+            }
+
+            assertThat(postResponse.statusCode.value()).isEqualTo(200)
+        }
+
+        @Test
+        fun `it should be able to stub out xml containing an optional number value with an empty node`() {
+            val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data>(number?)</data>
+Then status 200
+        """.trim()
+
+            val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data></data>"""))
+            val mock = ScenarioStub(request, HttpResponse.OK)
+
+            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+                RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data/>""")
+            }
+
+            assertThat(postResponse.statusCode.value()).isEqualTo(200)
+        }
+
+        @Test
+        fun `it should be able to stub out xml with an attribute`() {
+            val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data number="(number)"/>
+Then status 200
+        """.trim()
+
+            val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data number="10"/>"""))
+            val mock = ScenarioStub(request, HttpResponse.OK)
+
+            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+                RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data number="10"/>""")
+            }
+
+            assertThat(postResponse.statusCode.value()).isEqualTo(200)
+        }
+
+        @Test
+        fun `it should be able to stub out xml with an attribute using a type`() {
+            val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data number="(number)"/>
+Then status 200
+        """.trim()
+
+            val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data number="(number)"/>"""))
+            val mock = ScenarioStub(request, HttpResponse.OK)
+
+            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+                RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data number="10"/>""")
+            }
+
+            assertThat(postResponse.statusCode.value()).isEqualTo(200)
+        }
+
+        @Test
+        fun `it should be able to stub out xml with an optional attribute when specifying an attribute value in the stub`() {
+            val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data number$XML_ATTR_OPTIONAL_SUFFIX="(number)"/>
+Then status 200
+        """.trim()
+
+            val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data number="10"/>"""))
+            val mock = ScenarioStub(request, HttpResponse.OK)
+
+            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+                RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data number="10"/>""")
+            }
+
+            assertThat(postResponse.statusCode.value()).isEqualTo(200)
+        }
+
+        @Test
+        fun `it should be able to stub out xml with an optional attribute using no attribute in the stub`() {
+            val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data number$XML_ATTR_OPTIONAL_SUFFIX="(number)"/>
+Then status 200
+        """.trim()
+
+            val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data/>"""))
+            val mock = ScenarioStub(request, HttpResponse.OK)
+
+            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+                RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data/>""")
+            }
+
+            assertThat(postResponse.statusCode.value()).isEqualTo(200)
+        }
+
+    }
+
+    @Nested
+    inner class MultiPortStubTest {
 
         private fun scenarioStubsFrom(
             specmaticConfigFile: File,
@@ -2265,8 +2242,34 @@ components:
                 val specPath = specmaticConfigFile.parentFile.resolve(it.path).absolutePath
                 OpenApiSpecification.fromFile(specPath).toFeature().copy(path = it.path) to loadContractStubsFromImplicitPaths(
                     contractPathDataList = listOf(ContractPathData("", specPath)),
-                    specmaticConfig = specmaticConfig
+                    specmaticConfig = specmaticConfig,
+                    externalDataDirPaths = emptyList()
                 ).flatMap { it.second }
+            }
+        }
+
+        private fun implicitScenariosStubsFromExplicitDirs(
+            specmaticConfigFile: File,
+            contractPathData: List<ContractPathData>,
+            specmaticConfig: SpecmaticConfig,
+            dataDirPaths: List<String>
+        ): List<Pair<Feature, List<ScenarioStub>>> {
+            val features =  contractPathData.map {
+                val specPath = specmaticConfigFile.parentFile.resolve(it.path).absolutePath
+                it.path to OpenApiSpecification.fromFile(specPath).toFeature()
+            }
+
+            return loadImplicitExpectationsFromDataDirsForFeature(
+                features,
+                dataDirPaths,
+                specmaticConfig
+            ).map {
+                val (feature, _) = it
+                it.copy(
+                    first = feature.copy(
+                        path = specmaticConfigFile.parentFile.resolve(feature.path).absolutePath
+                    )
+                )
             }
         }
 
@@ -2623,6 +2626,62 @@ components:
             }
         }
 
+        @Test
+        fun `should serve requests from multiple ports as configured in specmatic config where stubs are loaded from explicit examples directory`() {
+            val specmaticConfigFile =
+                File("src/test/resources/multi_port_stub_with_explicit_examples_dir/specmatic.yaml")
+            val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+            val contractPathData = contractStubPaths(specmaticConfigFile.absolutePath)
+            val scenarioStubs = implicitScenariosStubsFromExplicitDirs(
+                specmaticConfigFile,
+                contractPathData,
+                specmaticConfig,
+                listOf(
+                    "src/test/resources/multi_port_stub_with_explicit_examples_dir/examples/stub".replaceFileSeparator()
+                )
+            )
+
+            HttpStub(
+                features = scenarioStubs.features(),
+                rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+                specmaticConfigPath = specmaticConfigFile.canonicalPath,
+                specToStubPortMap = contractPathData.map {
+                    it.copy(
+                        path = specmaticConfigFile.parentFile.resolve(it.path).absolutePath
+                    )
+                }.specToPortMap()
+            ).use { _ ->
+                val request = HttpRequest(
+                    method = "POST",
+                    path = "/products",
+                    body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
+                )
+                val importedProductResponse = HttpClient(
+                    endPointFromHostAndPort("localhost", 9001, null)
+                ).execute(request)
+                assertThat(
+                    (importedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+                ).isEqualTo("100")
+
+
+                val exportedProductResponse = HttpClient(
+                    endPointFromHostAndPort("localhost", 9002, null)
+                ).execute(request)
+                assertThat(
+                    (exportedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+                ).isEqualTo("200")
+
+
+                val anotherExportedProductResponse = HttpClient(
+                    endPointFromHostAndPort("localhost", 9003, null)
+                ).execute(request)
+                assertThat(
+                    (anotherExportedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")
+                        ?.toStringLiteral()
+                ).isEqualTo("300")
+            }
+        }
+
         @Nested
         inner class FeaturesAssociatedToTests {
 
@@ -2751,4 +2810,128 @@ components:
         }
     }
 
+    @Nested
+    inner class OverrideInlineExampleTest {
+        @Test
+        fun `should override inline example with an explicit external example with the same name`() {
+            val defaultSpecmaticConfig = Configuration.configFilePath
+
+            try {
+                Configuration.configFilePath = "src/test/resources/overriding_external_example_specmatic.yaml"
+
+                createStub(
+                    host = "localhost",
+                    port = 9000,
+                    timeoutMillis = 1000,
+                    strict = false,
+                    givenConfigFileName = "src/test/resources/overriding_external_example_specmatic.yaml",
+                    dataDirPaths = listOf("src/test/resources/openapi/has_overriding_external_examples_examples")
+                ).use { stub ->
+                    // externalised stub data loads as expected
+                    stub.client.execute(
+                        HttpRequest("GET", "/person/overriding_external_id")
+                    ).also {
+                        val responseBody = (it.body as JSONObjectValue).jsonObject
+                        assertThat(responseBody["id"]).isEqualTo(NumberValue(789))
+                        assertThat(responseBody["name"]).isEqualTo(StringValue("John External Doe"))
+                    }
+
+                    // inline stub data does not load as expected
+                    stub.client.execute(
+                        HttpRequest("GET", "/person/overridden_inline_id")
+                    ).also {
+                        val responseBody = (it.body as JSONObjectValue).jsonObject
+                        assertThat(responseBody["id"]).isNotEqualTo(NumberValue(1000))
+                        assertThat(responseBody["name"]).isNotEqualTo(StringValue("Unknown"))
+                    }
+                }
+            } finally {
+                Configuration.configFilePath = defaultSpecmaticConfig
+            }
+        }
+
+        @Test
+        fun `should override inline example with an implicit external example with the same name`() {
+            val defaultSpecmaticConfig = Configuration.configFilePath
+
+            try {
+                Configuration.configFilePath = "src/test/resources/overriding_external_example_specmatic.yaml"
+
+                createStub(
+                    host = "localhost",
+                    port = 9000,
+                    timeoutMillis = 1000,
+                    strict = false,
+                    givenConfigFileName = "src/test/resources/overriding_external_example_specmatic.yaml"
+                ).use { stub ->
+                    // externalised stub data loads as expected
+                    stub.client.execute(
+                        HttpRequest("GET", "/person/overriding_external_id")
+                    ).also {
+                        val responseBody = (it.body as JSONObjectValue).jsonObject
+                        assertThat(responseBody["id"]).isEqualTo(NumberValue(789))
+                        assertThat(responseBody["name"]).isEqualTo(StringValue("John External Doe"))
+                    }
+
+                    // inline stub data does not load as expected
+                    stub.client.execute(
+                        HttpRequest("GET", "/person/overridden_inline_id")
+                    ).also {
+                        val responseBody = (it.body as JSONObjectValue).jsonObject
+                        assertThat(responseBody["id"]).isNotEqualTo(NumberValue(1000))
+                        assertThat(responseBody["name"]).isNotEqualTo(StringValue("Unknown"))
+                    }
+                }
+            } finally {
+                Configuration.configFilePath = defaultSpecmaticConfig
+            }
+        }
+    }
+
+    private fun String.replaceFileSeparator(): String {
+        return this.replace("/", File.separator)
+    }
+
+    private fun createSpecmaticConfigFileWith(stubSpecPaths: List<String>, configFilePath: String): File {
+        val consumesEntries = stubSpecPaths.joinToString("\n") { "              - $it" }
+        val content = """
+            version: 2
+            contracts:
+              - filesystem:
+                  directory: "."
+                consumes:
+                    $consumesEntries
+        """.trimIndent()
+
+        val file = File(configFilePath)
+        file.createNewFile()
+        file.writeText(content)
+        return file
+    }
+
+    private fun stubTest(
+        specPaths: List<String>,
+        port: Int,
+        dataDirPaths: List<String>,
+        runTest: (ContractStub) -> Unit
+    ) {
+        val configFilePath = "src/test/resources/specmatic.yaml"
+        try {
+            createSpecmaticConfigFileWith(
+                stubSpecPaths = specPaths,
+                configFilePath = configFilePath
+            )
+            createStub(
+                host = "localhost",
+                port = port,
+                timeoutMillis = 0,
+                givenConfigFileName = configFilePath,
+                dataDirPaths = dataDirPaths
+            ).use { stub ->
+                runTest(stub)
+            }
+        } finally {
+            File(configFilePath).delete()
+        }
+    }
 }

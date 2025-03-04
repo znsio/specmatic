@@ -49,4 +49,10 @@ data class LocalFileSystemSource(
             )
         }
     }
+
+    override fun stubDirectoryToContractPath(contractPathDataList: List<ContractPathData>): List<Pair<String, String>> {
+        return stubContracts.map { contractSourceEntry ->
+            directory to contractSourceEntry.path
+        }
+    }
 }

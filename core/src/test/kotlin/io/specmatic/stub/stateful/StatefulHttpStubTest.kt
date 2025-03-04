@@ -34,7 +34,8 @@ class StatefulHttpStubMonitorPatternForPOSTRequestTest {
             val specPath = "$SPEC_DIR_PATH/monitor-pattern-spec.yaml"
             val scenarioStubs = loadContractStubsFromImplicitPaths(
                 contractPathDataList = listOf(ContractPathData("", specPath)),
-                specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml")
+                specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml"),
+                externalDataDirPaths = emptyList()
             ).flatMap { it.second }
 
             assertThat(scenarioStubs).withFailMessage(
@@ -127,7 +128,8 @@ class StatefulHttpStubMonitorPatternForPATCHRequestTest {
             val specPath = "$SPEC_DIR_PATH/monitor-pattern-spec.yaml"
             val scenarioStubs = loadContractStubsFromImplicitPaths(
                 contractPathDataList = listOf(ContractPathData("", specPath)),
-                specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml")
+                specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml"),
+                externalDataDirPaths = emptyList()
             ).flatMap { it.second }
 
             assertThat(scenarioStubs).withFailMessage(
@@ -718,7 +720,8 @@ class StatefulHttpStubSeedDataFromExamplesTest {
 
             val scenarioStubs = loadContractStubsFromImplicitPaths(
                 contractPathDataList = listOf(ContractPathData("", specPath)),
-                specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml")
+                specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml"),
+                externalDataDirPaths = emptyList()
             ).flatMap { it.second }
 
             httpStub = StatefulHttpStub(

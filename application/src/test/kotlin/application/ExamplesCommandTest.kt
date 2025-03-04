@@ -539,10 +539,7 @@ paths:
                 {
                     "Base.id": 123,
                     "Base.type": "Base",
-                    "Base.terms[*]": "Term2",
-                    "Base[*].id": 123,
-                    "Base[*].type": "Base",
-                    "Base[*].terms[*]": "Term2"
+                    "Base.terms[*]": "Term2"
                 }
                 """.trimIndent())
                 println(JSONObjectValue(dictionary).toStringLiteral())
@@ -572,9 +569,7 @@ paths:
                 val expectedDictionary = parsedJSONObject("""
                 {
                     "Base.type": "Base",
-                    "Base.terms[*]": "Term2",
-                    "Base[*].type": "Base",
-                    "Base[*].terms[*]": "Term2"
+                    "Base.terms[*]": "Term2"
                 }
                 """.trimIndent())
                 println(JSONObjectValue(dictionary).toStringLiteral())
@@ -615,10 +610,7 @@ paths:
                     "Base.type": "Base",
                     "Base.terms[*]": "Term2",
                     "Nested.details.price": 100,
-                    "Nested.details.description[*]": "Desc2",
-                    "Nested[*].type": "Nested",
-                    "Nested[*].details.price": 100,
-                    "Nested[*].details.description[*]": "Desc2"
+                    "Nested.details.description[*]": "Desc2"
                 }
                 """.trimIndent())
                 println(JSONObjectValue(dictionary).toStringLiteral())
@@ -672,9 +664,7 @@ paths:
                 {
                     "id": 123,
                     "type": "Base",
-                    "terms": ["Term1", "Term2"],
-                    "Nested.details.price": 100,
-                    "Nested.details.description[*]": "Desc2"
+                    "terms": ["Term1", "Term2"]
                 }
                 """.trimIndent())
             )
@@ -702,6 +692,8 @@ paths:
                 body = parsedJSONObject("""
                 {
                     "type": "AllOf",
+                    "id": 123,
+                    "terms": ["Term1", "Term2"],
                     "base": {
                         "id": 123,
                         "type": "Base",
@@ -719,6 +711,8 @@ paths:
                 val dictionary = ExamplesCommand.ExampleToDictionary().exampleToDictionary(example, scenario)
                 val expectedDictionary = parsedJSONObject("""
                 {
+                    "AllOfSchema.id": 123,
+                    "AllOfSchema.terms[*]": "Term2",
                     "Base.id": 123,
                     "Base.type": "Base",
                     "Base.terms[*]": "Term2",
@@ -741,6 +735,8 @@ paths:
                 body = parsedJSONObject("""
                 {
                     "type": "UNKNOWN",
+                    "id": 123,
+                    "terms": ["Term1", "Term2"],
                     "base": {
                         "id": 123,
                         "type": "Base",

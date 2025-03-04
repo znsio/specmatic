@@ -47,14 +47,15 @@ data class ScenarioAsTest(
 
         return TestResultRecord(
             convertPathParameterStyle(scenario.path),
-            scenario.method,
-            scenario.status,
-            resultStatus,
-            sourceProvider,
-            sourceRepository,
-            sourceRepositoryBranch,
-            specification,
-            serviceType,
+            method = scenario.method,
+            requestContentType = scenario.requestContentType,
+            responseStatus = scenario.status,
+            result = resultStatus,
+            sourceProvider = sourceProvider,
+            sourceRepository = sourceRepository,
+            sourceRepositoryBranch = sourceRepositoryBranch,
+            specification = specification,
+            serviceType = serviceType,
             actualResponseStatus = response?.status ?: 0,
             scenarioResult = result
         )
@@ -87,12 +88,6 @@ data class ScenarioAsTest(
     }
 
     override fun getBaseURL(): String = baseURL
-
-    private fun logComment() {
-        if (annotations != null) {
-            logger.log(annotations)
-        }
-    }
 
     private fun executeTestAndReturnResultAndResponse(
         testScenario: Scenario,

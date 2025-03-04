@@ -385,11 +385,11 @@ fun loadExpectationsForFeatures(
     dataDirPaths: List<String>,
     strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
-    logger.debug("${System.lineSeparator()}Scanning the example directories: ${dataDirPaths.withAbsolutePaths()}...")
+    logger.debug("${System.lineSeparator()}Scanning the example directories:${System.lineSeparator()} ${dataDirPaths.withAbsolutePaths()}...")
 
     val dataFiles = dataDirFiles(dataDirPaths)
     if(dataFiles.isEmpty()) {
-        logger.debug("No example directories/files found within '${dataDirPaths.withAbsolutePaths()}' OR '${dataDirPaths.withAbsolutePaths()}' don't exist, hence the example loading operation is skipped for these.")
+        logger.debug("No example directories/files found within:${System.lineSeparator()} '${dataDirPaths.withAbsolutePaths()}' ${System.lineSeparator()}OR the above directories don't exist, hence the example loading operation is skipped for these.")
     }
 
     logger.newLine()
@@ -411,7 +411,7 @@ fun loadExpectationsForFeatures(
 }
 
 private fun List<String>.withAbsolutePaths(): String {
-    return this.joinToString("${System.lineSeparator()}-") { "$it (absolute path ${File(it).canonicalPath})" }.prependIndent("  ")
+    return this.joinToString(System.lineSeparator()) { "- $it (absolute path ${File(it).canonicalPath})".prependIndent("  ") }
 }
 
 private fun  List<Pair<String, Feature>>.overrideInlineExamplesWithSameNameFrom(dataFiles: List<File>): List<Pair<String, Feature>> {

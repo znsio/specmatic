@@ -385,23 +385,23 @@ fun loadExpectationsForFeatures(
     dataDirPaths: List<String>,
     strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
-    logger.debug("${System.lineSeparator()}Scanning the example directories:${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
+    logger.debug("${System.lineSeparator()}${"Scanning the example directories:".prependIndent("  ")}${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
 
     val dataFiles = dataDirFiles(dataDirPaths)
     if(dataFiles.isEmpty()) {
         val existingDataFiles = dataFiles.groupBy { it.exists() }
         if(existingDataFiles.isNotEmpty()) {
-            logger.debug("Skipped example loading since no example directories/files found within:${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
+            logger.debug("${"Skipped example loading since no example directories/files found within:".prependIndent("  ")}${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
         }
 
         val nonExistentDataFiles = dataFiles.groupBy { it.exists().not() }
         if(nonExistentDataFiles.isNotEmpty()) {
-            logger.debug("Skipped example loading since the example directories do not exist:${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
+            logger.debug("${"Skipped example loading since the example directories do not exist:".prependIndent("  ")}${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
         }
     }
 
     logger.newLine()
-    logger.log("Scanning for stub expectations for specs:${System.lineSeparator()}${features.joinToString(",") { "- ${it.first}" }}")
+    logger.log("${"Scanning for stub expectations for specs:".prependIndent("  ")}${System.lineSeparator()}${features.joinToString(",") { "- ${it.first}" }}")
     printDataFiles(dataFiles)
 
     val mockData = dataFiles.mapNotNull {

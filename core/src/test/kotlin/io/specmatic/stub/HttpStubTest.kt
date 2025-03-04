@@ -1720,7 +1720,7 @@ paths:
             }
 
         @Test
-        fun `should load and serve expectations from the implicit_directory_within_explicit_examples_directory over the stranded expectation from explicit_examples_directory`() =
+        fun `should load and serve expectations from the implicit_directory_within_explicit_examples_directory over the orphaned expectation from explicit_examples_directory`() =
             stubTest(
                 specPaths = listOf("src/test/resources/stub_with_implicit_example_from_explicit_dir/api.yaml"),
                 port = 9000,

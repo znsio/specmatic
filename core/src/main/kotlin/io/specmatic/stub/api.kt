@@ -509,8 +509,9 @@ data class ImplicitOriginalDataDirPair(
 
 private fun printDataFiles(dataFiles: List<File>) {
     if (dataFiles.isNotEmpty()) {
-        val dataFilesString = dataFiles.joinToString(System.lineSeparator()) { "- ${it.path}".prependIndent("  ") }
-        consoleLog(StringLog("Scanning the following to find the matching stub files:${System.lineSeparator()}$dataFilesString"))
+        val dataFilesString = dataFiles.joinToString(System.lineSeparator()) { "- ${it.path}" }
+        val message = "Scanning the following to find the matching stub files:".prependIndent("  ")
+        consoleLog(StringLog("$message${System.lineSeparator()}$dataFilesString"))
     }
 }
 

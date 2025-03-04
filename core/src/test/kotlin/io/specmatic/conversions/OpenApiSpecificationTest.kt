@@ -8892,13 +8892,15 @@ paths:
                 scenario = firstScenario,
                 feature = feature,
                 originalScenario = firstScenario,
-                flagsBased = DefaultStrategies
+                flagsBased = DefaultStrategies,
+                baseURL = ""
             )
             val secondScenarioAsTest = ScenarioAsTest(
                 scenario = secondScenario,
                 feature = feature,
                 originalScenario = secondScenario,
-                flagsBased = DefaultStrategies
+                flagsBased = DefaultStrategies,
+                baseURL = ""
             )
 
             firstScenarioAsTest.runTest(object: TestExecutor {
@@ -8960,7 +8962,8 @@ paths:
                 scenario = firstScenario,
                 feature = feature,
                 originalScenario = firstScenario,
-                flagsBased = DefaultStrategies
+                flagsBased = DefaultStrategies,
+                baseURL = ""
             )
             firstScenarioAsTest.runTest(object: TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
@@ -9031,13 +9034,15 @@ paths:
                 scenario = firstScenario,
                 feature = feature,
                 originalScenario = firstScenario,
-                flagsBased = DefaultStrategies
+                flagsBased = DefaultStrategies,
+                baseURL = ""
             )
             val secondScenarioAsTest = ScenarioAsTest(
                 scenario = secondScenario,
                 feature = feature,
                 originalScenario = secondScenario,
-                flagsBased = DefaultStrategies
+                flagsBased = DefaultStrategies,
+                baseURL = ""
             )
             firstScenarioAsTest.runTest(object: TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
@@ -9106,13 +9111,15 @@ paths:
                 scenario = firstScenario,
                 feature = feature,
                 originalScenario = firstScenario,
-                flagsBased = DefaultStrategies
+                flagsBased = DefaultStrategies,
+                baseURL = ""
             )
             val secondScenarioAsTest = ScenarioAsTest(
                 scenario = secondScenario,
                 feature = feature,
                 originalScenario = secondScenario,
-                flagsBased = DefaultStrategies
+                flagsBased = DefaultStrategies,
+                baseURL = ""
             )
 
             firstScenarioAsTest.runTest(object: TestExecutor {
@@ -9197,13 +9204,15 @@ paths:
                 scenario = firstScenario,
                 feature = feature,
                 originalScenario = firstScenario,
-                flagsBased = DefaultStrategies
+                flagsBased = DefaultStrategies,
+                baseURL = ""
             )
             val secondScenarioAsTest = ScenarioAsTest(
                 scenario = secondScenario,
                 feature = feature,
                 originalScenario = secondScenario,
-                flagsBased = DefaultStrategies
+                flagsBased = DefaultStrategies,
+                baseURL = ""
             )
 
             firstScenarioAsTest.runTest(object: TestExecutor {

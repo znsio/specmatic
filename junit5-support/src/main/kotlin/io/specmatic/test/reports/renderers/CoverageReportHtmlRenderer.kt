@@ -6,15 +6,18 @@ import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.Flags
 import io.specmatic.test.SpecmaticJUnitSupport
-import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
-import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
-import io.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.BASE_URL
 import io.specmatic.test.TestInteractionsLog.displayName
 import io.specmatic.test.TestInteractionsLog.duration
 import io.specmatic.test.TestResultRecord
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
-import io.specmatic.test.reports.coverage.html.*
+import io.specmatic.test.reports.coverage.html.HtmlReport
+import io.specmatic.test.reports.coverage.html.HtmlReportData
+import io.specmatic.test.reports.coverage.html.HtmlReportInformation
+import io.specmatic.test.reports.coverage.html.HtmlTableConfig
+import io.specmatic.test.reports.coverage.html.ScenarioData
+import io.specmatic.test.reports.coverage.html.TableRow
 import java.util.*
 
 class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> {
@@ -144,9 +147,7 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
     }
 
     private fun getBaseUrl(testResult: TestResultRecord, httpLogMessage: HttpLogMessage?): String {
-        val host = Flags.getStringValue(HOST).orEmpty()
-        val port = Flags.getStringValue(PORT).orEmpty()
-        val baseUrlFromFlags = Flags.getStringValue(TEST_BASE_URL) ?: if (host.isNotBlank() && port.isNotBlank()) "$host:$port" else null
+        val baseUrlFromFlags = Flags.getStringValue(BASE_URL)
         return httpLogMessage?.targetServer ?: baseUrlFromFlags ?: "Unknown baseURL"
     }
 

@@ -15,18 +15,16 @@ import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.core.utilities.newXMLBuilder
 import io.specmatic.core.utilities.xmlToString
 import io.specmatic.test.SpecmaticJUnitSupport
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.BASE_URL
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME_PROPERTY
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME_PROPERTY
-import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.OVERLAY_FILE_PATH
-import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.STRICT_MODE
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
-import io.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
 import io.specmatic.test.listeners.ContractExecutionListener
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
@@ -64,14 +62,12 @@ class TestCommand : Callable<Unit> {
     @CommandLine.Parameters(arity = "0..*", description = ["Contract file paths"])
     var contractPaths: List<String> = emptyList()
 
-    @Option(names = ["--host"], description = ["The host to bind to, e.g. localhost or some locally bound IP"], defaultValue = "localhost")
-    lateinit var host: String
-
-    @Option(names = ["--port"], description = ["The port to bind to"])
-    var port: Int = 0
-
-    @Option(names = ["--testBaseURL"], description = ["The base URL, use this instead of host and port"], defaultValue = "")
-    lateinit var testBaseURL: String
+    @Option(
+        names = ["--baseURL"],
+        description = ["The base URL, will override URL from 'servers' field of the OpenAPI spec"],
+        defaultValue = ""
+    )
+    lateinit var baseURL: String
 
     @Option(names = ["--suggestionsPath"], description = ["Location of the suggestions file"], defaultValue = "")
     lateinit var suggestionsPath: String
@@ -110,9 +106,6 @@ For example, to filter by HTTP methods:
 
     @Option(names = ["--env"], description = ["Environment name"])
     var envName: String = ""
-
-    @Option(names = ["--https"], description = ["Use https instead of the default http"], required = false)
-    var useHttps: Boolean = false
 
     @Option(names = ["--timeout"], description = ["Specify a timeout in seconds for the test requests. Default value is ${DEFAULT_TIMEOUT_IN_MILLISECONDS / 1000}"], required = false)
     var timeout: Long? = null
@@ -157,28 +150,12 @@ For example, to filter by HTTP methods:
             System.setProperty(CONFIG_FILE_PATH, it)
         }
 
-        if(port == 0) {
-            port = when {
-                useHttps -> 443
-                else -> 9000
-            }
-        }
-
-        val protocol = when {
-            port == 443 -> "https"
-            useHttps -> "https"
-            else -> "http"
-        }
-
         val timeoutInMs = timeoutInMs ?: timeout?.times(1000) ?: DEFAULT_TIMEOUT_IN_MILLISECONDS
 
-        System.setProperty(HOST, host)
-        System.setProperty(PORT, port.toString())
         System.setProperty(SPECMATIC_TEST_TIMEOUT, timeoutInMs.toString())
         System.setProperty(SUGGESTIONS_PATH, suggestionsPath)
         System.setProperty(INLINE_SUGGESTIONS, suggestions)
         System.setProperty(ENV_NAME, envName)
-        System.setProperty("protocol", protocol)
         System.setProperty(FILTER, filter)
         System.setProperty(OVERLAY_FILE_PATH, overlayFilePath.orEmpty())
         System.setProperty(STRICT_MODE, strictMode.toString())
@@ -199,8 +176,8 @@ For example, to filter by HTTP methods:
             System.setProperty(VARIABLES_FILE_NAME, it)
         }
 
-        if(testBaseURL.isNotEmpty())
-            System.setProperty(TEST_BASE_URL, testBaseURL)
+        if (baseURL.isNotEmpty())
+            System.setProperty(BASE_URL, baseURL)
 
         if(contractPaths.isNotEmpty()) System.setProperty(CONTRACT_PATHS, contractPaths.joinToString(","))
 

@@ -404,7 +404,9 @@ fun loadExpectationsForFeatures(
         }
     }
 
-    return loadContractStubs(features, mockData, strictMode)
+    return loadContractStubs(features, mockData, strictMode).also {
+        logger.debug(System.lineSeparator())
+    }
 }
 
 private fun  List<Pair<String, Feature>>.overrideInlineExamplesWithSameNameFrom(dataFiles: List<File>): List<Pair<String, Feature>> {
@@ -579,8 +581,8 @@ fun loadContractStubs(
             if(strictMode) throw Exception(errorMessage)
             else {
                 val message = "No matching spec found for the stub expectation in '${stubFile}':${System.lineSeparator()} $errorMessage"
-                if (logIgnoredFiles) logger.log(message)
-                logger.debug("${System.lineSeparator()}$message")
+                if (logIgnoredFiles) logger.log(message.prependIndent("  "))
+                logger.debug("${System.lineSeparator()}$message".prependIndent("  "))
             }
             return@flatMap emptyList()
         }
@@ -589,11 +591,9 @@ fun loadContractStubs(
             if (matchResult.feature == null) {
                 null
             } else {
-                logger.debug("Successfully loaded the stub expectation from '${stub.filePath.orEmpty()} for ${matchResult.feature.path}'")
+                logger.debug("Successfully loaded the stub expectation from '${stub.filePath.orEmpty()} for ${matchResult.feature.path}'".prependIndent("  "))
                 Pair(matchResult.feature, stub)
             }
-        }.also {
-            logger.debug(System.lineSeparator())
         }
     }.groupBy { it.first }.mapValues { (_, value) -> value.map { it.second } }.entries.map { Pair(it.key, it.value) }
 

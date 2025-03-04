@@ -331,7 +331,7 @@ enum class FailureReason(val fluffLevel: Int, val objectMatchOccurred: Boolean) 
     StatusMismatch(2, false),
     IdentifierMismatch(1, false),
     MethodMismatch(2, false),
-    ContentTypeMismatch(1, false),
+    ContentTypeMismatch(0, false),
     RequestMismatchButStatusAlsoWrong(2, false),
     URLPathMisMatch(2, false),
     SOAPActionMismatch(2, false),

@@ -389,7 +389,15 @@ fun loadExpectationsForFeatures(
 
     val dataFiles = dataDirFiles(dataDirPaths)
     if(dataFiles.isEmpty()) {
-        logger.debug("No example directories/files found within:${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}${System.lineSeparator()}OR the above directories don't exist, hence the example loading operation is skipped for these.")
+        val existingDataFiles = dataFiles.groupBy { it.exists() }
+        if(existingDataFiles.isNotEmpty()) {
+            logger.debug("Skipped example loading since no example directories/files found within:${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
+        }
+
+        val nonExistentDataFiles = dataFiles.groupBy { it.exists().not() }
+        if(nonExistentDataFiles.isNotEmpty()) {
+            logger.debug("Skipped example loading since the example directories do not exist:${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
+        }
     }
 
     logger.newLine()

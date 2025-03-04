@@ -292,7 +292,7 @@ fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, sele
     }
 
     logger.debug("Spec file paths in $configFilePath:")
-    logger.debug(contractPathData.joinToString(System.lineSeparator()) { it.path }.prependIndent("  "))
+    logger.debug(contractPathData.joinToString(System.lineSeparator()) { "- ${it.path}" })
 
     return contractPathData
 }

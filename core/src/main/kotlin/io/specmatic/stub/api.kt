@@ -345,7 +345,7 @@ fun loadContractStubsFromFiles(
     specmaticConfig: SpecmaticConfig,
     strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
-    val contactPathsString = contractPathDataList.joinToString(System.lineSeparator()) { it.path }
+    val contactPathsString = contractPathDataList.joinToString(System.lineSeparator()) { "- ${it.path}" }
     logger.newLine()
     consoleLog(StringLog("Loading the following spec files:${System.lineSeparator()}$contactPathsString"))
     consoleLog(StringLog(""))
@@ -419,7 +419,7 @@ fun loadExpectationsForFeatures(
 }
 
 private fun List<String>.withAbsolutePaths(): String {
-    return this.joinToString(System.lineSeparator()) { "- $it (absolute path ${File(it).canonicalPath})".prependIndent("  ") }
+    return this.joinToString(System.lineSeparator()) { "- $it (absolute path ${File(it).canonicalPath})" }
 }
 
 private fun  List<Pair<String, Feature>>.overrideInlineExamplesWithSameNameFrom(dataFiles: List<File>): List<Pair<String, Feature>> {

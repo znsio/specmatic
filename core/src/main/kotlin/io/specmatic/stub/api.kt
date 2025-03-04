@@ -346,7 +346,8 @@ fun loadContractStubsFromFiles(
     strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
     val contactPathsString = contractPathDataList.joinToString(System.lineSeparator()) { it.path }
-    consoleLog(StringLog("Loading the following spec paths:${System.lineSeparator()}$contactPathsString"))
+    logger.newLine()
+    consoleLog(StringLog("Loading the following spec files:${System.lineSeparator()}$contactPathsString"))
     consoleLog(StringLog(""))
 
     val invalidContractPaths = contractPathDataList.filter { File(it.path).exists().not() }.map { it.path }

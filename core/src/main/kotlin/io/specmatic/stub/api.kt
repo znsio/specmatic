@@ -401,7 +401,7 @@ fun loadExpectationsForFeatures(
     }
 
     logger.newLine()
-    logger.log("Scanning for stub expectations for specs: ${features.joinToString(",") { "- ${it.first}" }}")
+    logger.log("Scanning for stub expectations for specs:${System.lineSeparator()}${features.joinToString(",") { "- ${it.first}" }}")
     printDataFiles(dataFiles)
 
     val mockData = dataFiles.mapNotNull {
@@ -510,7 +510,7 @@ data class ImplicitOriginalDataDirPair(
 private fun printDataFiles(dataFiles: List<File>) {
     if (dataFiles.isNotEmpty()) {
         val dataFilesString = dataFiles.joinToString(System.lineSeparator()) { "- ${it.path}".prependIndent("  ") }
-        consoleLog(StringLog("Scanning the following to find the matching stub files:${System.lineSeparator()}$dataFilesString".prependIndent("  ")))
+        consoleLog(StringLog("Scanning the following to find the matching stub files:${System.lineSeparator()}$dataFilesString"))
     }
 }
 

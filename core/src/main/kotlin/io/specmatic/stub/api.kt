@@ -364,8 +364,7 @@ fun loadContractStubsFromFiles(
         dataDirFiles(dataDirPaths)
     )
 
-    val dataDirPathsString = dataDirPaths.joinToString(", ") { "$it (absolute path ${File(it).canonicalPath})" }
-    logger.debug("Loading stubs from the following example directories: '$dataDirPathsString'")
+    logger.debug("Loading stubs from the following example directories: '${dataDirPaths.withAbsolutePaths()}'")
     return loadImplicitExpectationsFromDataDirsForFeature(
         features,
         dataDirPaths,
@@ -386,11 +385,11 @@ fun loadExpectationsForFeatures(
     dataDirPaths: List<String>,
     strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
-    logger.debug("${System.lineSeparator()}Scanning the example directories: ${dataDirPaths.joinToString(", ")}...")
+    logger.debug("${System.lineSeparator()}Scanning the example directories: ${dataDirPaths.withAbsolutePaths()}...")
 
     val dataFiles = dataDirFiles(dataDirPaths)
     if(dataFiles.isEmpty()) {
-        logger.debug("No example directories/files found within '${dataDirPaths.joinToString(", ")}' OR '${dataDirPaths.joinToString(", ")}' don't exist, hence the example loading operation is skipped for these.")
+        logger.debug("No example directories/files found within '${dataDirPaths.withAbsolutePaths()}' OR '${dataDirPaths.withAbsolutePaths()}' don't exist, hence the example loading operation is skipped for these.")
     }
 
     logger.newLine()
@@ -409,6 +408,10 @@ fun loadExpectationsForFeatures(
     return loadContractStubs(features, mockData, strictMode).also {
         logger.debug(System.lineSeparator())
     }
+}
+
+private fun List<String>.withAbsolutePaths(): String {
+    return this.joinToString(", ") { "$it (absolute path ${File(it).canonicalPath})" }
 }
 
 private fun  List<Pair<String, Feature>>.overrideInlineExamplesWithSameNameFrom(dataFiles: List<File>): List<Pair<String, Feature>> {

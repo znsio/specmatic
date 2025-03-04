@@ -1,22 +1,29 @@
 package integration_tests
 
+import io.ktor.client.request.*
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
+import io.specmatic.core.HttpRequest
 import io.specmatic.core.log.*
+import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.ADDITIONAL_EXAMPLE_PARAMS_FILE
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.value.*
+import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.captureStandardOutput
 import io.specmatic.test.ExampleProcessor
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
 
 class LoadTestsFromExternalisedFiles {
 
@@ -436,6 +443,82 @@ class LoadTestsFromExternalisedFiles {
 
         assertThat(results.successCount).isEqualTo(2)
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `example load with content type mismatch should clearly indicate the error`(@TempDir tempDir: File) {
+        val specFile = tempDir.resolve("api.yaml").also { it.writeText("{}") }
+        val scenarioStub = ScenarioStub(
+            request = HttpRequest(path = "/", method = "GET", headers = mapOf("Content-Type" to "text/plain")),
+            response = HttpResponse(status = 200, headers = mapOf("Content-Type" to "text/html"))
+        )
+        tempDir.resolve("api_examples").mkdirs()
+        val exampleFile = tempDir.resolve("api_examples/example.json")
+        exampleFile.writeText(scenarioStub.toJSON().toStringLiteral())
+
+        val scenario = Scenario(ScenarioInfo(
+            scenarioName = "Simple GET Endpoint",
+            httpRequestPattern = HttpRequestPattern(
+                httpPathPattern = buildHttpPathPattern("/"), method = "GET",
+                headersPattern = HttpHeadersPattern(contentType = "application/json")
+            ),
+            httpResponsePattern = HttpResponsePattern(
+                status = 200,
+                headersPattern = HttpHeadersPattern(contentType = "application/json")
+            )
+        ))
+        val feature = Feature(listOf(scenario), name = "", path = specFile.canonicalPath, strictMode = true)
+
+        val exception = assertThrows<ContractException> { feature.loadExternalisedExamplesAndListUnloadableExamples() }
+        assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+        The example ${exampleFile.canonicalPath} is unused due to ERRORS:
+        GET / -> 200 does not match any operation in the specification
+        In scenario "Simple GET Endpoint"
+        API: GET / -> 200    
+        >> REQUEST.HEADERS.Content-Type
+        Expected application/json, actual was text/plain   
+        >> RESPONSE.HEADERS.Content-Type
+        Expected application/json, actual was text/html
+        """.trimIndent())
+    }
+
+    @Test
+    fun `content type mismatch when multiple content types exist on the same path should be reported correctly`(@TempDir tempDir: File) {
+        val specFile = tempDir.resolve("api.yaml").also { it.writeText("{}") }
+        val scenarioStub = ScenarioStub(
+            request = HttpRequest(path = "/", method = "GET", headers = mapOf("Content-Type" to "text/html")),
+            response = HttpResponse(status = 200, headers = mapOf("Content-Type" to "text/plain"))
+        )
+        tempDir.resolve("api_examples").mkdirs()
+        val exampleFile = tempDir.resolve("api_examples/example.json")
+        exampleFile.writeText(scenarioStub.toJSON().toStringLiteral())
+
+        val scenarios = listOf("application/json", "text/plain").map { contentType ->
+            Scenario(ScenarioInfo(
+                scenarioName = "Simple GET Endpoint with content type $contentType",
+                httpRequestPattern = HttpRequestPattern(
+                    httpPathPattern = buildHttpPathPattern("/"), method = "GET",
+                    headersPattern = HttpHeadersPattern(contentType = contentType)
+                ),
+                httpResponsePattern = HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(contentType = "text/plain"))
+            ))
+        }
+        val feature = Feature(scenarios, name = "", path = specFile.canonicalPath, strictMode = true)
+
+        val exception = assertThrows<ContractException> { feature.loadExternalisedExamplesAndListUnloadableExamples() }
+        println(exception.report())
+        assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+        The example ${exampleFile.canonicalPath} is unused due to ERRORS:
+        GET / -> 200 does not match any operation in the specification
+        In scenario "Simple GET Endpoint with content type application/json"
+        API: GET / -> 200
+        >> REQUEST.HEADERS.Content-Type
+        Expected application/json, actual was text/html
+        In scenario "Simple GET Endpoint with content type text/plain"
+        API: GET / -> 200
+        >> REQUEST.HEADERS.Content-Type
+        Expected text/plain, actual was text/html
+        """.trimIndent())
     }
 
     @Nested

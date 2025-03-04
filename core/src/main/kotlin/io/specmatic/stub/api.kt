@@ -363,7 +363,8 @@ fun loadContractStubsFromFiles(
         dataDirFiles(dataDirPaths)
     )
 
-    logger.debug("Loading stubs from the example directories: '${dataDirPaths.joinToString(", ")}'")
+    val dataDirPathsString = dataDirPaths.joinToString(", ") { "$it (absolute path ${File(it).canonicalPath})" }
+    logger.debug("Loading stubs from the following example directories: '$dataDirPathsString'")
     return loadImplicitExpectationsFromDataDirsForFeature(
         features,
         dataDirPaths,
@@ -458,7 +459,7 @@ fun loadImplicitExpectationsFromDataDirsForFeature(
                     strictMode
                 )
             } else {
-                logger.debug("Successfully loaded stub expectations for $specPath in $implicitDataDir${System.lineSeparator()}")
+                logger.debug("Successfully loaded stub expectations for $specPath from $implicitDataDir${System.lineSeparator()}")
                 implicitStubs
             }
         }
@@ -580,9 +581,11 @@ fun loadContractStubs(
             val errorMessage = stubMatchErrorMessage(matchResults, stubFile, specs).prependIndent("  ")
             if(strictMode) throw Exception(errorMessage)
             else {
-                val message = "No matching spec found for the stub expectation in '${stubFile}':${System.lineSeparator()} $errorMessage"
-                if (logIgnoredFiles) logger.log(message.prependIndent("  "))
-                logger.debug("${System.lineSeparator()}$message".prependIndent("  "))
+                val message = "Error loading stub expectation file '${stubFile}':${System.lineSeparator()} $errorMessage"
+                if (logIgnoredFiles)
+                    logger.log(message.prependIndent("  "))
+                else
+                    logger.debug("${System.lineSeparator()}$message".prependIndent("  "))
             }
             return@flatMap emptyList()
         }

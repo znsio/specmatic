@@ -265,7 +265,7 @@ fun loadContractStubsFromImplicitPaths(
                     val stubData = when {
                         implicitDataDirs.any { it.isDirectory } -> {
                             implicitDataDirs.filter { it.isDirectory }.flatMap { implicitDataDir ->
-                                consoleLog("Loading stub expectations from ${implicitDataDir.path}".prependIndent("  "))
+                                consoleLog("Scanning for stub expectations from ${implicitDataDir.path}".prependIndent("  "))
                                 logIgnoredFiles(implicitDataDir)
 
                                 val stubDataFiles = filesInDir(implicitDataDir)?.toList()?.filter { it.extension == "json" }.orEmpty()
@@ -364,7 +364,7 @@ fun loadContractStubsFromFiles(
         dataDirFiles(dataDirPaths)
     )
 
-    logger.debug("Loading stubs from the following example directories: '${dataDirPaths.withAbsolutePaths()}'")
+    logger.debug("Scanning for stub expectations from the following example directories: '${dataDirPaths.withAbsolutePaths()}'")
     return loadImplicitExpectationsFromDataDirsForFeature(
         features,
         dataDirPaths,
@@ -393,7 +393,7 @@ fun loadExpectationsForFeatures(
     }
 
     logger.newLine()
-    logger.log("Loading stub expectations for specs: ${features.joinToString(",") { it.first }}")
+    logger.log("Scanning for stub expectations for specs: ${features.joinToString(",") { it.first }}")
     printDataFiles(dataFiles)
 
     val mockData = dataFiles.mapNotNull {

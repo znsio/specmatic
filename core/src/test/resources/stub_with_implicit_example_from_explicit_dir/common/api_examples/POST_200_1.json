@@ -1,0 +1,15 @@
+{
+    "http-request": {
+        "path": "/",
+        "method": "POST",
+        "body": {
+            "id": 10
+        }
+    },
+    "http-response": {
+        "status": 200,
+        "body": {
+            "message": "response_from_implicit_example_in_explicit_dir"
+        }
+    }
+}

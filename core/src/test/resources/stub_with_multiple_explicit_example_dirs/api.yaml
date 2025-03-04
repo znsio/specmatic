@@ -1,0 +1,39 @@
+openapi: 3.0.1
+info:
+  title: Data API
+  version: "1"
+paths:
+  /:
+    post:
+      summary: Data
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+              required:
+                - id
+            examples:
+              200_OK:
+                value:
+                  id: 10
+      responses:
+        "200":
+          description: Data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+              examples:
+                200_OK:
+                  value:
+                    message: inline_example_expectation

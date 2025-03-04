@@ -97,10 +97,10 @@ echo Pushing to remote
 git push
 
 echo Publishing locally first
-./gradlew publishToMavenLocal
+./gradlew publishToMavenLocal publishMavenJavaPublicationToStagingDeployRepository
 
 echo Publishing to maven
-./gradlew publish
+./gradlew ./gradlew core:jreleaserDeploy junit5-support:jreleaserDeploy application:jreleaserDeploy
 
 echo
 

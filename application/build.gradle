@@ -1,10 +1,12 @@
 plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
     id 'application'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
     id 'org.jetbrains.kotlin.jvm'
     id 'org.jetbrains.kotlin.plugin.serialization'
-    id 'maven-publish'
-    id 'signing'
+    id 'org.jreleaser'
 }
 
 application {
@@ -104,7 +106,7 @@ test {
     finalizedBy jacocoTestReport
     def junit5SystemExit = configurations.testRuntimeClasspath.files
             .find { it.name.contains('junit5-system-exit') }
-    jvmArgumentProviders.add({["-javaagent:$junit5SystemExit"]} as CommandLineArgumentProvider)
+    jvmArgumentProviders.add({ ["-javaagent:$junit5SystemExit"] } as CommandLineArgumentProvider)
 }
 
 java {
@@ -149,13 +151,8 @@ publishing {
     }
     repositories {
         maven {
-            def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2"
-            def snapshotsRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots"
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            credentials {
-                username = project.hasProperty("ossrhUsername") ? project.getProperty("ossrhUsername") : ""
-                password = project.hasProperty("ossrhPassword") ? project.getProperty("ossrhPassword") : ""
-            }
+            name = "stagingDeploy"
+            url = project.layout.buildDirectory.dir('staging-deploy')
         }
     }
 }
@@ -166,4 +163,47 @@ signing {
 
 tasks.withType(Sign).configureEach {
     onlyIf { project.hasProperty("signing.keyId") }
+}
+
+jreleaser {
+    gitRootSearch = true
+
+    release {
+        github {
+            enabled = false
+        }
+    }
+
+    signing {
+        active = 'ALWAYS'
+        armored = true
+    }
+
+    deploy {
+        maven {
+            mavenCentral {
+                core {
+                    stage = 'UPLOAD'
+                    active = project.version.get().endsWith('-SNAPSHOT') ? 'SNAPSHOT' : 'RELEASE'
+                    url = project.version.get().endsWith('-SNAPSHOT') ? 'https://central.sonatype.com/repository/maven-snapshots' : 'https://central.sonatype.com/api/v1/publisher'
+                    stagingRepositories.add("build/staging-deploy")
+
+                    snapshotSupported = true
+                    applyMavenCentralRules = true
+
+                    artifactOverride {
+                        artifactId = 'specmatic-core'
+                        jar = true
+                        sourceJar = true
+                        javadocJar = true
+                        verifyPom = true
+                    }
+
+                    stagingRepository('build/staging-deploy')
+
+                    namespace = 'io.specmatic'
+                }
+            }
+        }
+    }
 }

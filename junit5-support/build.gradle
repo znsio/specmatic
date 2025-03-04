@@ -1,9 +1,10 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
+    id 'signing'
     id 'org.jetbrains.kotlin.jvm'
     id 'org.jetbrains.kotlin.plugin.serialization'
-    id 'signing'
+    id 'org.jreleaser'
 }
 
 repositories {
@@ -78,14 +79,8 @@ publishing {
     }
     repositories {
         maven {
-            // change URLs to point to your repos, e.g. http://my.org/repo
-            def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2"
-            def snapshotsRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots"
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            credentials {
-                username = project.hasProperty("ossrhUsername") ? project.getProperty("ossrhUsername") : ""
-                password = project.hasProperty("ossrhPassword") ? project.getProperty("ossrhPassword") : ""
-            }
+            name = "stagingDeploy"
+            url = project.layout.buildDirectory.dir('staging-deploy')
         }
     }
 }
@@ -99,7 +94,7 @@ tasks.withType(Sign).configureEach {
 }
 
 javadoc {
-    if(JavaVersion.current().isJava9Compatible()) {
+    if (JavaVersion.current().isJava9Compatible()) {
         options.addBooleanOption('html5', true)
     }
 }
@@ -107,5 +102,48 @@ javadoc {
 compileKotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xjvm-default=all")
+    }
+}
+
+jreleaser {
+    gitRootSearch = true
+
+    release {
+        github {
+            enabled = false
+        }
+    }
+
+    signing {
+        active = 'ALWAYS'
+        armored = true
+    }
+
+    deploy {
+        maven {
+            mavenCentral {
+                core {
+                    stage = 'UPLOAD'
+                    active = project.version.get().endsWith('-SNAPSHOT') ? 'SNAPSHOT' : 'RELEASE'
+                    url = project.version.get().endsWith('-SNAPSHOT') ? 'https://central.sonatype.com/repository/maven-snapshots' : 'https://central.sonatype.com/api/v1/publisher'
+                    stagingRepositories.add("build/staging-deploy")
+
+                    snapshotSupported = true
+                    applyMavenCentralRules = true
+
+                    artifactOverride {
+                        artifactId = 'specmatic-core'
+                        jar = true
+                        sourceJar = true
+                        javadocJar = true
+                        verifyPom = true
+                    }
+
+                    stagingRepository('build/staging-deploy')
+
+                    namespace = 'io.specmatic'
+                }
+            }
+        }
     }
 }

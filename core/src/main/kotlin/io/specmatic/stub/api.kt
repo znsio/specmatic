@@ -22,11 +22,8 @@ import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.parseGherkinStringToFeature
-import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.ContractPathData.Companion.specToPortMap
-import io.specmatic.core.utilities.ContractSource
-import io.specmatic.core.utilities.LocalFileSystemSource
 import io.specmatic.core.utilities.contractStubPaths
 import io.specmatic.core.utilities.examplesDirFor
 import io.specmatic.core.utilities.exitWithMessage
@@ -370,7 +367,8 @@ fun loadContractStubsFromFiles(
         features,
         dataDirPaths,
         specmaticConfig,
-        strictMode
+        strictMode,
+        contractPathDataList
     ).ifEmpty {
         logger.debug("No implicit stubs found in ${dataDirPaths.joinToString(", ")}")
         logger.debug("Loading all the stubs from ${dataDirPaths.joinToString(", ")} since no implicit stubs found")
@@ -429,15 +427,16 @@ fun loadImplicitExpectationsFromDataDirsForFeature(
     features: List<Pair<String, Feature>>,
     dataDirPaths: List<String>,
     specmaticConfig: SpecmaticConfig,
-    strictMode: Boolean = false
+    strictMode: Boolean = false,
+    contractPathDataList: List<ContractPathData> = emptyList()
 ): List<Pair<Feature, List<ScenarioStub>>> {
-    return specPathToImplicitDataDirPaths(specmaticConfig, dataDirPaths).flatMap { (specPath, implicitOriginalDataDirPairList) ->
+    return specPathToImplicitDataDirPaths(specmaticConfig, dataDirPaths, contractPathDataList).flatMap { (specPath, implicitOriginalDataDirPairList) ->
         val associatedFeature = features.firstOrNull { (specPathAssociatedToFeature, _) ->
             File(specPathAssociatedToFeature).canonicalPath == File(specPath).canonicalPath
-        } ?: throw ContractException("No associated feature found for spec '$specPath'")
+        } ?: return@flatMap emptyList()
 
         implicitOriginalDataDirPairList.flatMap { (implicitDataDir, originalDataDir) ->
-            logger.debug("Load examples for $specPath from $implicitDataDir...")
+            logger.debug("Loading examples for $specPath from $implicitDataDir...")
             val implicitStubs = loadExpectationsForFeatures(
                 features = listOf(associatedFeature),
                 dataDirPaths = listOf(implicitDataDir),
@@ -461,10 +460,11 @@ fun loadImplicitExpectationsFromDataDirsForFeature(
 
 private fun specPathToImplicitDataDirPaths(
     specmaticConfig: SpecmaticConfig,
-    dataDirPaths: List<String>
+    dataDirPaths: List<String>,
+    contractPathDataList: List<ContractPathData>
 ): List<Pair<String, List<ImplicitOriginalDataDirPair>>> {
     return specmaticConfig.loadSources().flatMap { contractSource ->
-        stubDirectoryToContractPathFrom(contractSource)
+        contractSource.stubDirectoryToContractPath(contractPathDataList)
     }.mapNotNull { (stubDirectory, stubContractPath) ->
         if (stubContractPath.isContractFile().not()) {
             return@mapNotNull null
@@ -487,13 +487,6 @@ data class ImplicitOriginalDataDirPair(
     val implicitDataDir: String,
     val dataDir: String
 )
-
-private fun stubDirectoryToContractPathFrom(contractSource: ContractSource): List<Pair<String, String>> {
-    return contractSource.stubContracts.map { contractSourceEntry ->
-        if (contractSource is LocalFileSystemSource) contractSource.directory to contractSourceEntry.path
-        else "" to contractSourceEntry.path
-    }
-}
 
 private fun printDataFiles(dataFiles: List<File>) {
     if (dataFiles.isNotEmpty()) {

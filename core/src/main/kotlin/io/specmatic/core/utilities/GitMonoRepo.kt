@@ -45,4 +45,14 @@ data class GitMonoRepo(override val testContracts: List<ContractSourceEntry>, ov
             )
         }
     }
+
+    override fun stubDirectoryToContractPath(contractPathDataList: List<ContractPathData>): List<Pair<String, String>> {
+        return stubContracts.mapNotNull { contractSourceEntry ->
+            val directory = contractPathDataList.firstOrNull {
+                it.specificationPath.orEmpty() == contractSourceEntry.path
+            }?.baseDir ?: return@mapNotNull null
+
+            directory to contractSourceEntry.path
+        }
+    }
 }

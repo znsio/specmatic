@@ -299,9 +299,10 @@ For example, to filter by HTTP methods:
         private fun validateAllExamplesAssociatedToEachSpecIn(specsDir: File, examplesBaseDir: File): Map<String, Result> {
             var ordinal = 1
 
-            val validationResults = specsDir.walk().filter { it.isFile && it.extension == "yaml" }.flatMap { specFile ->
+            val validationResults = specsDir.walk().filter { it.isFile && it.extension in CONTRACT_EXTENSIONS }.flatMap { specFile ->
                 val relativeSpecPath = specsDir.toPath().relativize(specFile.toPath()).toString()
-                val associatedExamplesDir = examplesBaseDir.resolve(relativeSpecPath.replace(".yaml", "_examples"))
+                val associatedExamplesDir =
+                    examplesBaseDir.resolve(relativeSpecPath.substringBeforeLast(".").plus("_examples"))
 
                 if (associatedExamplesDir.exists().not() || associatedExamplesDir.isDirectory.not()) {
                     return@flatMap emptyList()

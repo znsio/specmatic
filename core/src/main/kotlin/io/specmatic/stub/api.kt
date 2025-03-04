@@ -241,6 +241,7 @@ fun loadContractStubsFromImplicitPaths(
     return contractPathDataList.map { Pair(File(it.path), it) }.flatMap { (contractPath, contractSource) ->
         when {
             contractPath.isFile && contractPath.extension in CONTRACT_EXTENSIONS -> {
+                logger.newLine()
                 consoleLog(StringLog("Loading $contractPath"))
 
                 if(hasOpenApiFileExtension(contractPath.path) && !isOpenAPI(contractPath.path.trim())) {
@@ -383,7 +384,7 @@ fun loadExpectationsForFeatures(
     dataDirPaths: List<String>,
     strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
-    logger.debug("Scanning the example directories: ${dataDirPaths.joinToString(", ")}...")
+    logger.debug("${System.lineSeparator()}Scanning the example directories: ${dataDirPaths.joinToString(", ")}...")
 
     val dataFiles = dataDirFiles(dataDirPaths)
     if(dataFiles.isEmpty()) {
@@ -591,6 +592,8 @@ fun loadContractStubs(
                 logger.debug("Successfully loaded the stub expectation from '${stub.filePath.orEmpty()} for ${matchResult.feature.path}'")
                 Pair(matchResult.feature, stub)
             }
+        }.also {
+            logger.debug(System.lineSeparator())
         }
     }.groupBy { it.first }.mapValues { (_, value) -> value.map { it.second } }.entries.map { Pair(it.key, it.value) }
 

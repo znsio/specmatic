@@ -132,7 +132,7 @@ class StubCommand : Callable<Unit> {
                 true -> {
                     specmaticConfigPath = File(Configuration.configFilePath).canonicalPath
 
-                    logger.debug("No explicit spec paths provided for the stub. Using the spec paths configured for stubs in the configuration file '$specmaticConfigPath'")
+                    logger.debug("Using the spec paths configured for stubs in the configuration file '$specmaticConfigPath'")
                     specmaticConfig.contractStubPathData()
                 }
                 else -> contractPaths.map {

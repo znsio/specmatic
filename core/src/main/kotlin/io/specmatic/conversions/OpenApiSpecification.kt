@@ -402,7 +402,7 @@ class OpenApiSpecification(
         val data: List<Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>>> =
             openApiPaths().map { (openApiPath, pathItem) ->
                 val scenariosAndExamples = openApiOperations(pathItem).map { (httpMethod, openApiOperation) ->
-                    logger.debug("\n\nProcessing $httpMethod $openApiPath")
+                    logger.debug("${System.lineSeparator()}Processing $httpMethod $openApiPath")
 
                     try {
                         openApiOperation.validateParameters()

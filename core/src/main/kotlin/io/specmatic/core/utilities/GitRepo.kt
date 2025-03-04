@@ -93,6 +93,16 @@ data class GitRepo(
         }
     }
 
+    override fun stubDirectoryToContractPath(contractPathDataList: List<ContractPathData>): List<Pair<String, String>> {
+        return stubContracts.mapNotNull { contractSourceEntry ->
+            val directory = contractPathDataList.firstOrNull {
+                it.specificationPath.orEmpty() == contractSourceEntry.path
+            }?.baseDir ?: return@mapNotNull null
+
+            directory to contractSourceEntry.path
+        }
+    }
+
     private fun isClean(contractsRepoDir: File): Boolean {
         val sourceGit = getSystemGit(contractsRepoDir.path)
         return sourceGit.statusPorcelain().isEmpty()

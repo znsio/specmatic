@@ -20,6 +20,7 @@ sealed interface ContractSource {
     fun getLatest(sourceGit: SystemGit)
     fun pushUpdates(sourceGit: SystemGit)
     fun loadContracts(selector: ContractsSelectorPredicate, workingDirectory: String, configFilePath: String): List<ContractPathData>
+    fun stubDirectoryToContractPath(contractPathDataList: List<ContractPathData>): List<Pair<String, String>>
 }
 
 fun commitAndPush(sourceGit: SystemGit) {

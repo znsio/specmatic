@@ -3,6 +3,8 @@ package integration_tests
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
+import io.specmatic.core.log.DebugLogger
+import io.specmatic.core.log.withLogger
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
@@ -145,8 +147,10 @@ class PartialExampleTest {
     @Test
     fun `partial with invalid json value should get rejected` () {
         val (output, _) = captureStandardOutput {
-            val stub = createStubFromContracts(listOf(("src/test/resources/openapi/substitutions/spec_with_invalid_partial_json_value.yaml")), timeoutMillis = 0)
-            stub.close()
+            withLogger(DebugLogger) {
+                val stub = createStubFromContracts(listOf(("src/test/resources/openapi/substitutions/spec_with_invalid_partial_json_value.yaml")), timeoutMillis = 0)
+                stub.close()
+            }
         }
 
         println(output)

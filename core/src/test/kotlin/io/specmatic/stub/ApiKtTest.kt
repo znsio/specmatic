@@ -546,10 +546,10 @@ sample.json didn't match math.$CONTRACT_EXTENSION
         val results = Results(listOf(Result.Failure("failed", null, "", FailureReason.URLPathMisMatch)))
         val exceptionReport = StubMatchExceptionReport(HttpRequest("POST", "/test"), NoMatchingScenario(results))
         val stubMatchResults = StubMatchResults(null, StubMatchErrorReport(exceptionReport, "/path/to/contract"))
-        val errorMessage = stubMatchErrorMessage(listOf(stubMatchResults), "stubfile.json")
+        val errorMessage = stubMatchErrorMessage(listOf(stubMatchResults), "stubfile.json", listOf("spec1.yaml"))
 
         assertThat(errorMessage).isEqualTo("""
-            stubfile.json didn't match any of the contracts
+            stubfile.json didn't match any of the contracts from spec1.yaml
               No matching REST stub or contract found for method POST and path /test
 """.trimIndent())
         println(errorMessage)

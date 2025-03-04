@@ -109,10 +109,10 @@ table.addEventListener("click", async (event) => {
                         return await generateRowExamples(nearestTableRow, rowValues);
                     }
                     case "Validate": {
-                        return await validateRowExamples(nearestTableRow);
+                        return await validateRowExamples(nearestTableRow, rowValues);
                     }
                     default: {
-                        return await testRowExample(nearestTableRow);
+                        return await testRowExample(nearestTableRow, rowValues);
                     }
                 }
             }
@@ -191,9 +191,10 @@ bulkValidateBtn.addEventListener("click", async () => {
                 break;
             }
 
-            await validateRowExamples(selectedTableRow);
+            const rowValues = extractRowValues(selectedTableRow);
+            await validateRowExamples(selectedTableRow, rowValues);
             const originalYScroll = scrollYPosition;
-            await goToDetails(selectedTableRow, extractRowValues(selectedTableRow));
+            await goToDetails(selectedTableRow, rowValues);
             scrollYPosition = originalYScroll;
             break;
         }
@@ -268,7 +269,8 @@ async function validateAllSelected() {
     const rowsWithExamples = selectedRows.filter(row => row.getAttribute("data-generate") === "success");
 
     for (const row of rowsWithExamples) {
-        const success = await validateRowExamples(row, true);
+        const rowValues = extractRowValues(row);
+        const success = await validateRowExamples(row, rowValues, true);
         if (!success) {
             errorsCount++;
         }
@@ -312,9 +314,10 @@ bulkTestBtn.addEventListener("click", async () => {
         }
 
         case "details": {
-            await testRowExample(selectedTableRow);
+            const rowValues = extractRowValues(selectedTableRow);
+            await testRowExample(selectedTableRow, rowValues);
             const originalYScroll = scrollYPosition
-            await goToDetails(selectedTableRow, extractRowValues(selectedTableRow));
+            await goToDetails(selectedTableRow, rowValues);
             scrollYPosition = originalYScroll;
             break;
         }
@@ -334,7 +337,8 @@ async function testAllSelected() {
 
     let failureCount = 0;
     for (const row of rowsWithValidations) {
-        const result = await testRowExample(row, true);
+        const rowValues = extractRowValues(row);
+        const result = await testRowExample(row, rowValues, true);
 
         if (!result) {
             failureCount++;
@@ -414,7 +418,7 @@ async function generateRowExamples(tableRow, rowValues, bulkMode = false) {
     return {success: true, created: createdCount, existed: existedCount, count: totalCount};
 }
 
-async function validateRowExamples(tableRow, bulkMode = false) {
+async function validateRowExamples(tableRow, rowValues, bulkMode = false) {
     tableRow.setAttribute("data-valid", "processing");
     const exampleData = getExampleData(tableRow);
 
@@ -425,10 +429,10 @@ async function validateRowExamples(tableRow, bulkMode = false) {
         }
     }
 
-    const {exampleAbsPath, errorMessage, errorList, isPartialFailure} = await validateExample(exampleData);
+    const {exampleAbsPath, errorMessage, errorList, isPartialFailure} = await validateExample(rowValues, exampleData);
 
     if (errorMessage && !exampleAbsPath) {
-        if (!bulkMode) createAlert("Validation Failed", `Error: ${error ?? "Unknown Error"}`, true);
+        if (!bulkMode) createAlert("Validation Failed", `Error: ${errorMessage ?? "Unknown Error"}`, true);
         tableRow.setAttribute("data-valid", "failed");
         return false;
     }
@@ -447,10 +451,10 @@ async function validateRowExamples(tableRow, bulkMode = false) {
     return true;
 }
 
-async function testRowExample(tableRow, bulkMode = false) {
+async function testRowExample(tableRow, rowValues, bulkMode = false) {
     tableRow.setAttribute("data-test", "processing");
 
-    const isExampleValid = await validateRowExamples(tableRow, bulkMode);
+    const isExampleValid = await validateRowExamples(tableRow, rowValues, bulkMode);
     if (!isExampleValid) {
         createAlert("Invalid Example or Network Failure", `Example name: ${parseFileName(getExampleData(tableRow))}`, true);
         return false;
@@ -1025,11 +1029,11 @@ async function generateExample(pathInfo, bulkMode) {
     }
 }
 
-async function validateExample(exampleFile) {
+async function validateExample(rowValues, exampleFile) {
     try {
         const resp = await fetch(`${getHostPort()}/_specmatic/examples/validate`, {
             method: "POST",
-            body: JSON.stringify({exampleFile}),
+            body: JSON.stringify({...rowValues, exampleFile}),
             headers: {
                 "Content-Type": "application/json",
             }

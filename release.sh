@@ -100,7 +100,7 @@ echo Publishing locally first
 ./gradlew publishToMavenLocal publishMavenJavaPublicationToStagingDeployRepository
 
 echo Publishing to maven
-./gradlew ./gradlew core:jreleaserDeploy junit5-support:jreleaserDeploy application:jreleaserDeploy
+./gradlew core:jreleaserDeploy junit5-support:jreleaserDeploy application:jreleaserDeploy
 
 echo
 

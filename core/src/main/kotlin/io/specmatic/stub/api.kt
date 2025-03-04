@@ -401,7 +401,7 @@ fun loadExpectationsForFeatures(
     }
 
     logger.newLine()
-    logger.log("Scanning for stub expectations for specs: ${features.joinToString(",") { it.first }}")
+    logger.log("Scanning for stub expectations for specs: ${features.joinToString(",") { "- ${it.first}" }}")
     printDataFiles(dataFiles)
 
     val mockData = dataFiles.mapNotNull {

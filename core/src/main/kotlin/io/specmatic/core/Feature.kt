@@ -1852,17 +1852,19 @@ data class Feature(
 
                 try {
                     val example = ScenarioStub.parse(File(externalizedExamplePath).readText())
+                    val result = matchResultFlagBased(example, DefaultMismatchMessages).toResultIfAny()
 
                     val method = example.requestMethod()
                     val path = example.requestPath()
                     val responseCode = example.responseStatus()
-                    val errorMessage = "    $method $path -> $responseCode does not match any operation in the specification"
-                    if(strictMode.not()) logger.log(errorMessage)
-                    "The example $externalizedExamplePath is unused due to error: $errorMessage"
+                    val message = "$method $path -> $responseCode does not match any operation in the specification\n${result.reportString()}"
+
+                    if(strictMode.not()) logger.log(message)
+                    "The example $externalizedExamplePath is unused due to ERRORS:\n$message"
                 } catch(e: Throwable) {
                     val errorMessage = "    Could not parse the example: ${exceptionCauseMessage(e)}"
                     if(strictMode.not()) logger.log(errorMessage)
-                    "The example $externalizedExamplePath is unused due to error: $errorMessage"
+                    "The example $externalizedExamplePath is unused due to ERRORS:\n$errorMessage"
                 }
             }
             if(strictMode && errorMessages.isNotEmpty()) {

@@ -463,7 +463,6 @@ fun loadImplicitExpectationsFromDataDirsForFeature(
                     strictMode
                 )
             } else {
-                logger.debug("Successfully loaded stub expectations for $specPath from $implicitDataDir${System.lineSeparator()}")
                 implicitStubs
             }
         }

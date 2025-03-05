@@ -553,7 +553,6 @@ private fun dataFilesLogForStubScan(dataFiles: List<File>): StringLog {
     }
 
     return StringLog(buildString {
-        append(System.lineSeparator())
         append("The stub files being scanned to associate with the above mentioned specs:".prependIndent(" "))
         append(System.lineSeparator())
         append(dataFilesString)

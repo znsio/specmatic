@@ -243,8 +243,8 @@ fun loadContractStubsFromImplicitPaths(
         when {
             specFile.isFile && specFile.extension in CONTRACT_EXTENSIONS -> {
                 val cachedFeature = cachedFeatures.firstOrNull { it.path == specFile.path }
-                logger.newLine()
                 if(cachedFeature == null) {
+                    logger.newLine()
                     consoleLog(StringLog("Loading the spec file: $specFile${System.lineSeparator()}"))
                 }
 
@@ -264,6 +264,7 @@ fun loadContractStubsFromImplicitPaths(
                         contractSource.specificationPath,
                         specmaticConfig = specmaticConfig
                     )
+                    consoleDebug(featuresLogForStubScan(listOf(Pair(specFile.path, feature))))
 
                     consoleLog(dataFilesLogForStubScan(
                         implicitDataDirs.flatMap { filesInDir(it).orEmpty() },
@@ -376,7 +377,6 @@ fun loadContractStubsFromFiles(
         consoleLog(dataFilesLogForStubScan(dataFiles, listOf(dataDirPath).relativePaths()))
     }
 
-    logger.debug("Scanning for stub expectations from the following example directories:${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
     val explicitStubs = loadImplicitExpectationsFromDataDirsForFeature(
         features,
         dataDirPaths,
@@ -530,6 +530,7 @@ private fun logStubScanForDebugging(
         val existingDataFiles = dataFiles.groupBy { it.exists() }
         if (existingDataFiles.isNotEmpty()) {
             logger.debug(featuresLogForStubScan(features))
+            logger.debug(System.lineSeparator())
             logger.debug(
                 "${
                     "Skipped example loading since no example directories/files found within:".prependIndent(
@@ -542,6 +543,7 @@ private fun logStubScanForDebugging(
         val nonExistentDataFiles = dataFiles.groupBy { it.exists().not() }
         if (nonExistentDataFiles.isNotEmpty()) {
             logger.debug(featuresLogForStubScan(features))
+            logger.debug(System.lineSeparator())
             logger.debug(
                 "${"Skipped example loading since the example directories do not exist:".prependIndent(INDENT)}${System.lineSeparator()}${
                     dataFiles.map { it.canonicalPath }.withAbsolutePaths()
@@ -711,7 +713,7 @@ private fun logPartialErrorMessages(
     val errorMessage = stubMatchErrorMessageForNonEmpty(errorReports, stubFile).takeIf { errorReports.isNotEmpty() }
     if (errorMessage != null) {
         val errorMessagePrefix = "Error loading stub expectation file '${stubFile}':".prependIndent(INDENT)
-        val message = "$errorMessagePrefix${System.lineSeparator()}$errorMessage"
+        val message = "$errorMessagePrefix${System.lineSeparator()}$errorMessage${System.lineSeparator()}"
         logger.log(message)
     }
     val errorMessageForDebugLogs = stubMatchErrorMessageForEmpty(
@@ -721,7 +723,7 @@ private fun logPartialErrorMessages(
     ).takeIf { matchResults.isEmpty() || errorReports.isEmpty() }
     if (errorMessageForDebugLogs != null) {
         val errorMessagePrefix = "Skipped loading the stub expectation from '${stubFile}':".prependIndent(INDENT)
-        logger.debug("$errorMessagePrefix${System.lineSeparator()}$errorMessageForDebugLogs")
+        logger.debug("$errorMessagePrefix${System.lineSeparator()}$errorMessageForDebugLogs${System.lineSeparator()}")
     }
 }
 

@@ -304,15 +304,15 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun stubPorts(defaultPort: Int): List<Int> {
+    fun stubBaseUrls(defaultBaseUrl: String): List<String> {
         return sources.flatMap {
             it.stub.orEmpty().map { consumes ->
                 when(consumes) {
-                    is Consumes.StringValue -> defaultPort
-                    is Consumes.ObjectValue -> consumes.port
+                    is Consumes.StringValue -> defaultBaseUrl
+                    is Consumes.ObjectValue -> consumes.baseUrl
                 }
             }
-        }.plus(defaultPort).distinct()
+        }.plus(defaultBaseUrl).distinct()
     }
 
     @JsonIgnore
@@ -348,7 +348,7 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun loadSources(): List<ContractSource> {
         return sources.map { source ->
-            val stubPaths = source.specToStubPortMap().entries.map { ContractSourceEntry(it.key, it.value) }
+            val stubPaths = source.specToStubBaseUrlMap().entries.map { ContractSourceEntry(it.key, it.value) }
             val testPaths = source.test.orEmpty().map { ContractSourceEntry(it) }
 
             when (source.provider) {
@@ -660,20 +660,15 @@ data class Source(
         }
     }
 
-    fun specToStubPortMap(): Map<String, Int?> {
+    fun specToStubBaseUrlMap(): Map<String, String?> {
         return stub.orEmpty().flatMap {
             when (it) {
                 is Consumes.StringValue -> listOf(it.value to null)
                 is Consumes.ObjectValue -> it.specs.map { specPath ->
-                    specPath to it.port
+                    specPath to it.baseUrl
                 }
             }
         }.toMap()
-    }
-
-    private fun String.canonicalPath(relativeTo: File): String {
-        if (provider == web) return this
-        return relativeTo.parentFile?.resolve(this)?.canonicalPath ?: File(this).canonicalPath
     }
 }
 

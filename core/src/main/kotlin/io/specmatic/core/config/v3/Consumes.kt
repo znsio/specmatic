@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode
 
 sealed class Consumes {
     data class StringValue(@get:JsonValue val value: String) : Consumes()
-    data class ObjectValue(val specs: List<String>, val port: Int) : Consumes()
+    data class ObjectValue(val specs: List<String>, val baseUrl: String) : Consumes()
 }
 
 class ConsumesDeserializer : JsonDeserializer<List<Consumes>>() {
@@ -25,8 +25,8 @@ class ConsumesDeserializer : JsonDeserializer<List<Consumes>>() {
                             if(specsNode.isArray.not()) throw JsonMappingException(p, "'specs' should be a list of string")
 
                             val specs = specsNode.map { it.asText() }
-                            val port = element["port"]?.asInt() ?: throw JsonMappingException(p, "Missing 'port' key")
-                            Consumes.ObjectValue(specs, port)
+                            val baseUrl = element["baseUrl"]?.asText() ?: throw JsonMappingException(p, "Missing 'baseUrl' key")
+                            Consumes.ObjectValue(specs, baseUrl)
                         }
                         else -> throw JsonMappingException(p, "Invalid type for consumes entry")
                     }

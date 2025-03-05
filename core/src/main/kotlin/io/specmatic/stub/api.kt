@@ -23,7 +23,7 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.utilities.ContractPathData
-import io.specmatic.core.utilities.ContractPathData.Companion.specToPortMap
+import io.specmatic.core.utilities.ContractPathData.Companion.specToBaseUrlMap
 import io.specmatic.core.utilities.contractStubPaths
 import io.specmatic.core.utilities.examplesDirFor
 import io.specmatic.core.utilities.exitWithMessage
@@ -55,7 +55,7 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
         host,
         port,
         ::consoleLog,
-        specToStubPortMap = mapOf(contractBehaviour.specification.orEmpty() to port)
+        specToStubBaseUrlMap = mapOf(contractBehaviour.specification.orEmpty() to endPointFromHostAndPort(host, port, null))
     )
 }
 
@@ -169,7 +169,7 @@ internal fun createStub(
         specmaticConfigPath = File(configFileName).canonicalPath,
         timeoutMillis = timeoutMillis,
         strictMode = strict,
-        specToStubPortMap = stubValues.contractStubPaths.specToPortMap()
+        specToStubBaseUrlMap = stubValues.contractStubPaths.specToBaseUrlMap()
     )
 }
 
@@ -213,7 +213,7 @@ internal fun createStubFromContracts(
         ::consoleLog,
         specmaticConfigPath = File(getConfigFilePath()).canonicalPath,
         timeoutMillis = timeoutMillis,
-        specToStubPortMap = contractPathData.specToPortMap()
+        specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
     )
 }
 

@@ -264,8 +264,7 @@ fun loadContractStubsFromImplicitPaths(
                         contractSource.specificationPath,
                         specmaticConfig = specmaticConfig
                     )
-                    consoleDebug(featuresLogForStubScan(listOf(Pair(specFile.path, feature))))
-
+                    consoleLog("")
                     consoleLog(dataFilesLogForStubScan(
                         implicitDataDirs.flatMap { filesInDir(it).orEmpty() },
                         implicitDataDirs.map { it.path }.relativePaths()
@@ -293,6 +292,12 @@ fun loadContractStubsFromImplicitPaths(
                     }
 
                     val implicitExampleDirs = stubData.map { File(it.first) }
+                    consoleDebug(featuresLogForStubScan(listOf(Pair(specFile.path, feature))))
+                    logStubScanForDebugging(
+                        listOf(Pair(specFile.path, feature)),
+                        implicitExampleDirs,
+                        implicitDataDirs.map { it.path }.relativePaths()
+                    )
                     loadContractStubs(
                         features = listOf(
                             Pair(
@@ -373,6 +378,7 @@ fun loadContractStubsFromFiles(
 
     dataDirPaths.forEach { dataDirPath ->
         val dataFiles = dataDirFiles(listOf(dataDirPath))
+        consoleLog("")
         consoleLog(dataFilesLogForStubScan(dataFiles, listOf(dataDirPath).relativePaths()))
     }
 
@@ -383,6 +389,7 @@ fun loadContractStubsFromFiles(
         strictMode,
         contractPathDataList
     ).ifEmpty {
+        logger.debug(featuresLogForStubScan(features))
         loadExpectationsForFeatures(
             features,
             dataDirPaths,
@@ -404,9 +411,10 @@ fun loadContractStubsFromFiles(
 fun loadExpectationsForFeatures(
     features: List<Pair<String, Feature>>,
     dataDirPaths: List<String>,
-    strictMode: Boolean = false
+    strictMode: Boolean = false,
+    dirsToBeSkipped: Set<String> = emptySet()
 ): List<Pair<Feature, List<ScenarioStub>>> {
-    val dataFiles = dataDirFiles(dataDirPaths)
+    val dataFiles = dataDirFiles(dataDirPaths, dirsToBeSkipped)
     logStubScanForDebugging(features, dataFiles, dataDirPaths)
 
     val mockData = dataFiles.mapNotNull {
@@ -442,9 +450,12 @@ private fun  List<Pair<String, Feature>>.overrideInlineExamplesWithSameNameFrom(
 }
 
 private fun dataDirFiles(
-    dataDirPaths: List<String>
+    dataDirPaths: List<String>,
+    dirsToBeSkipped: Set<String> = emptySet()
 ): List<File> {
-    return allDirsInTree(dataDirPaths).flatMap {
+    return allDirsInTree(dataDirPaths).filter {
+        it.path !in dirsToBeSkipped
+    }.flatMap {
         logIgnoredFiles(it)
         it.listFiles()?.toList()?.sorted() ?: emptyList<File>()
     }.filter { it.extension == "json" }
@@ -466,6 +477,7 @@ fun loadImplicitExpectationsFromDataDirsForFeature(
             logger.debug("Skipping the loading of examples for '$specPath' as it is not a OpenAPI specification")
             return@flatMap emptyList()
         }
+        logger.debug(featuresLogForStubScan(listOf(associatedFeature)))
 
         implicitOriginalDataDirPairList.flatMap { (implicitDataDir, originalDataDir) ->
             val implicitStubs = loadExpectationsForFeatures(
@@ -475,9 +487,10 @@ fun loadImplicitExpectationsFromDataDirsForFeature(
             )
             if(implicitStubs.all { (_, stubs) -> stubs.isEmpty() }) {
                 loadExpectationsForFeatures(
-                    listOf(associatedFeature),
-                    listOf(originalDataDir),
-                    strictMode
+                    features = listOf(associatedFeature),
+                    dataDirPaths = listOf(originalDataDir),
+                    strictMode = strictMode,
+                    dirsToBeSkipped = setOf(implicitDataDir)
                 )
             } else {
                 implicitStubs
@@ -522,9 +535,7 @@ private fun logStubScanForDebugging(
     dataDirPaths: List<String>
 ) {
     if (dataFiles.isNotEmpty()) {
-        logger.debug(featuresLogForStubScan(features))
-        logger.debug(System.lineSeparator())
-        consoleDebug(dataFilesLogForStubScan(dataFiles, dataDirPaths.relativePaths()))
+        consoleDebug(dataFilesLogForStubScan(dataFiles, dataDirPaths.relativePaths(), true))
     } else {
         val existingDataFiles = dataFiles.groupBy { it.exists() }
         if (existingDataFiles.isNotEmpty()) {
@@ -553,6 +564,13 @@ private fun logStubScanForDebugging(
 }
 
 private fun featuresLogForStubScan(features: List<Pair<String, *>>): String {
+    if(features.size == 1) {
+        val feature = features.single()
+        return buildString {
+            append(System.lineSeparator())
+            append("Scanning for stub expectations for '${feature.first}'".prependIndent(" "))
+        }
+    }
     return buildString {
         append(System.lineSeparator())
         append("Scanning for stub expectations for specs:".prependIndent(" "))
@@ -561,7 +579,11 @@ private fun featuresLogForStubScan(features: List<Pair<String, *>>): String {
     }
 }
 
-private fun dataFilesLogForStubScan(dataFiles: List<File>, dataDirPaths: List<String>): StringLog {
+private fun dataFilesLogForStubScan(
+    dataFiles: List<File>,
+    dataDirPaths: List<String>,
+    debugMode: Boolean = false
+): StringLog {
     if(dataFiles.isEmpty()) {
         return StringLog("No examples directory provided or found.")
     }
@@ -571,10 +593,10 @@ private fun dataFilesLogForStubScan(dataFiles: List<File>, dataDirPaths: List<St
     }
 
     return StringLog(buildString {
-        append("Scanning example files from '${dataDirPaths.joinToString(", ")}'".prependIndent(" "))
+        val messagePrefix = if(debugMode) "Scanning example files from" else "Example files in"
+        append("$messagePrefix '${dataDirPaths.joinToString(", ")}'".prependIndent(" "))
         append(System.lineSeparator())
         append(dataFilesString)
-        append(System.lineSeparator())
     })
 }
 
@@ -678,10 +700,10 @@ fun loadContractStubs(
                 if (logIgnoredFiles) {
                     val errorMessage = stubMatchErrorMessage(matchResults, stubFile, specs)
                     val message = "Error loading stub expectation file '${stubFile}':${System.lineSeparator()} $errorMessage"
-                    logger.log(message.prependIndent(INDENT))
+                    logger.log(message.prependIndent(" "))
                 }
                 else {
-                    logPartialErrorMessages(errorReports, stubFile, matchResults, specs)
+                    logPartialErrorMessages(errorReports, stubFile, matchResults)
                 }
             }
             return@flatMap emptyList()
@@ -706,23 +728,18 @@ fun loadContractStubs(
 private fun logPartialErrorMessages(
     errorReports: List<StubMatchErrorReport>,
     stubFile: String,
-    matchResults: List<StubMatchResults>,
-    specs: List<String>
+    matchResults: List<StubMatchResults>
 ) {
     val errorMessage = stubMatchErrorMessageForNonEmpty(errorReports, stubFile).takeIf { errorReports.isNotEmpty() }
     if (errorMessage != null) {
-        val errorMessagePrefix = "Error loading stub expectation file '${stubFile}':".prependIndent(INDENT)
-        val message = "$errorMessagePrefix${System.lineSeparator()}$errorMessage${System.lineSeparator()}"
+        val errorMessagePrefix = "Error loading stub expectation file '${stubFile}':".prependIndent(" ")
+        val message = "$errorMessagePrefix${System.lineSeparator()}${errorMessage.prependIndent(INDENT)}"
         logger.log(message)
+        logger.newLine()
     }
-    val errorMessageForDebugLogs = stubMatchErrorMessageForEmpty(
-        matchResults,
-        stubFile,
-        specs
-    ).takeIf { matchResults.isEmpty() || errorReports.isEmpty() }
-    if (errorMessageForDebugLogs != null) {
-        val errorMessagePrefix = "Skipped loading the stub expectation from '${stubFile}':".prependIndent(INDENT)
-        logger.debug("$errorMessagePrefix${System.lineSeparator()}$errorMessageForDebugLogs${System.lineSeparator()}")
+    if (matchResults.isEmpty() || errorReports.isEmpty()) {
+        val errorMessageForDebugLog = "Skipped loading the stub expectation from '${stubFile}' as it didn't match the spec".prependIndent(" ")
+        logger.debug(errorMessageForDebugLog)
     }
 }
 

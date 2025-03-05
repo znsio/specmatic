@@ -265,14 +265,17 @@ fun loadContractStubsFromImplicitPaths(
                         specmaticConfig = specmaticConfig
                     )
 
-                    consoleLog(dataFilesLogForStubScan(implicitDataDirs))
+                    consoleLog(dataFilesLogForStubScan(
+                        implicitDataDirs.flatMap { filesInDir(it).orEmpty() },
+                        implicitDataDirs.map { it.path }.relativePaths()
+                    ))
                     val stubData = when {
                         implicitDataDirs.any { it.isDirectory } -> {
                             implicitDataDirs.filter { it.isDirectory }.flatMap { implicitDataDir ->
 
                                 val stubDataFiles =
                                     filesInDir(implicitDataDir)?.toList()?.sorted()?.filter { it.extension == "json" }.orEmpty()
-                                logStubScanForDebugging(listOf(Pair(feature.path, feature)), stubDataFiles)
+                                logStubScanForDebugging(listOf(Pair(feature.path, feature)), stubDataFiles, implicitDataDirs.map { it.path })
                                 logIgnoredFiles(implicitDataDir)
 
                                 stubDataFiles.mapNotNull {
@@ -369,7 +372,7 @@ fun loadContractStubsFromFiles(
         loadIfOpenAPISpecification(contractPathData, specmaticConfig)
     }.overrideInlineExamplesWithSameNameFrom(dataFiles)
 
-    consoleLog(dataFilesLogForStubScan(dataFiles))
+    consoleLog(dataFilesLogForStubScan(dataFiles, dataDirPaths.relativePaths()))
     logger.debug("Scanning for stub expectations from the following example directories:${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
     val explicitStubs = loadImplicitExpectationsFromDataDirsForFeature(
         features,
@@ -402,7 +405,7 @@ fun loadExpectationsForFeatures(
     strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
     val dataFiles = dataDirFiles(dataDirPaths)
-    logStubScanForDebugging(features, dataFiles)
+    logStubScanForDebugging(features, dataFiles, dataDirPaths)
 
     val mockData = dataFiles.mapNotNull {
         try {
@@ -418,6 +421,12 @@ fun loadExpectationsForFeatures(
 
 private fun List<String>.withAbsolutePaths(): String {
     return this.joinToString(System.lineSeparator()) { "- $it (absolute path ${File(it).canonicalPath})".prependIndent(INDENT) }
+}
+
+private fun List<String>.relativePaths(): List<String> {
+    return this.map {
+        File(it).canonicalFile.relativeTo(File(".").canonicalFile).path
+    }.map { ".${File.separator}$it" }
 }
 
 private fun  List<Pair<String, Feature>>.overrideInlineExamplesWithSameNameFrom(dataFiles: List<File>): List<Pair<String, Feature>> {
@@ -505,10 +514,14 @@ data class ImplicitOriginalDataDirPair(
     val dataDir: String
 )
 
-private fun logStubScanForDebugging(features: List<Pair<String, *>>, dataFiles: List<File>) {
+private fun logStubScanForDebugging(
+    features: List<Pair<String, *>>,
+    dataFiles: List<File>,
+    dataDirPaths: List<String>
+) {
     if (dataFiles.isNotEmpty()) {
         logger.debug(featuresLogForStubScan(features))
-        consoleDebug(dataFilesLogForStubScan(dataFiles))
+        consoleDebug(dataFilesLogForStubScan(dataFiles, dataDirPaths.relativePaths()))
     } else {
         val existingDataFiles = dataFiles.groupBy { it.exists() }
         if (existingDataFiles.isNotEmpty()) {
@@ -543,7 +556,7 @@ private fun featuresLogForStubScan(features: List<Pair<String, *>>): String {
     }
 }
 
-private fun dataFilesLogForStubScan(dataFiles: List<File>): StringLog {
+private fun dataFilesLogForStubScan(dataFiles: List<File>, dataDirPaths: List<String>): StringLog {
     if(dataFiles.isEmpty()) {
         return StringLog("No examples directory provided or found.")
     }
@@ -553,7 +566,7 @@ private fun dataFilesLogForStubScan(dataFiles: List<File>): StringLog {
     }
 
     return StringLog(buildString {
-        append("The stub files being scanned to associate with the above mentioned specs:".prependIndent(" "))
+        append("Scanning example files from '${dataDirPaths.joinToString(", ")}'".prependIndent(" "))
         append(System.lineSeparator())
         append(dataFilesString)
         append(System.lineSeparator())

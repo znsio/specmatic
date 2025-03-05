@@ -1,7 +1,15 @@
 package io.specmatic.test
 
 import io.specmatic.conversions.convertPathParameterStyle
-import io.specmatic.core.*
+import io.specmatic.core.ContractAndResponseMismatch
+import io.specmatic.core.Feature
+import io.specmatic.core.FlagsBased
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
+import io.specmatic.core.Result
+import io.specmatic.core.Scenario
+import io.specmatic.core.ValidateUnexpectedKeys
+import io.specmatic.core.Workflow
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.logger
@@ -25,6 +33,7 @@ data class ScenarioAsTest(
     private val validators: List<ResponseValidator> = emptyList(),
     private val originalScenario: Scenario,
     private val workflow: Workflow = Workflow(),
+    private val baseURL: String,
 ) : ContractTest {
 
     companion object {
@@ -56,12 +65,12 @@ data class ScenarioAsTest(
         return scenario.testDescription()
     }
 
-    override fun runTest(testBaseURL: String, timeoutInMilliseconds: Long): Pair<Result, HttpResponse?> {
+    override fun runTest(timeoutInMilliseconds: Long): Pair<Result, HttpResponse?> {
         val log: (LogMessage) -> Unit = { logMessage ->
             logger.log(logMessage.withComment(this.annotations))
         }
 
-        val httpClient = HttpClient(testBaseURL, log = log, timeoutInMilliseconds = timeoutInMilliseconds)
+        val httpClient = HttpClient(baseURL, log = log, timeoutInMilliseconds = timeoutInMilliseconds)
 
         return runTest(httpClient)
     }
@@ -77,6 +86,8 @@ data class ScenarioAsTest(
             validators = this.validators.plus(validator)
         )
     }
+
+    override fun getBaseURL(): String = baseURL
 
     private fun executeTestAndReturnResultAndResponse(
         testScenario: Scenario,

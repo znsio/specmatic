@@ -4,26 +4,58 @@ import io.cucumber.gherkin.GherkinDocumentBuilder
 import io.cucumber.gherkin.Parser
 import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
-import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
+import io.cucumber.messages.types.FeatureChild
+import io.cucumber.messages.types.GherkinDocument
+import io.cucumber.messages.types.Step
+import io.cucumber.messages.types.TableRow
+import io.cucumber.messages.types.Tag
 import io.ktor.http.*
-import io.specmatic.conversions.*
+import io.specmatic.conversions.ExampleFromFile
+import io.specmatic.conversions.IncludedSpecification
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.conversions.WSDLFile
+import io.specmatic.conversions.WsdlSpecification
+import io.specmatic.conversions.testDirectoryEnvironmentVariable
+import io.specmatic.conversions.testDirectoryProperty
+import io.specmatic.conversions.wsdlContentToFeature
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.Examples.Companion.examplesFrom
-import io.specmatic.core.utilities.*
-import io.specmatic.core.value.*
+import io.specmatic.core.utilities.capitalizeFirstChar
+import io.specmatic.core.utilities.examplesDirFor
+import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.jsonStringToValueMap
+import io.specmatic.core.utilities.readEnvVarOrProperty
+import io.specmatic.core.value.NumberValue
+import io.specmatic.core.value.ScalarValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.True
+import io.specmatic.core.value.Value
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStubData
-import io.specmatic.test.*
-import io.swagger.v3.oas.models.*
+import io.specmatic.test.ContractTest
+import io.specmatic.test.ExamplePostValidator
+import io.specmatic.test.ScenarioAsTest
+import io.specmatic.test.ScenarioTestGenerationException
+import io.specmatic.test.ScenarioTestGenerationFailure
+import io.specmatic.test.TestExecutor
+import io.swagger.v3.oas.models.Components
+import io.swagger.v3.oas.models.OpenAPI
+import io.swagger.v3.oas.models.Operation
+import io.swagger.v3.oas.models.PathItem
+import io.swagger.v3.oas.models.Paths
 import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.info.Info
 import io.swagger.v3.oas.models.media.*
-import io.swagger.v3.oas.models.parameters.*
+import io.swagger.v3.oas.models.parameters.HeaderParameter
+import io.swagger.v3.oas.models.parameters.Parameter
+import io.swagger.v3.oas.models.parameters.PathParameter
+import io.swagger.v3.oas.models.parameters.QueryParameter
+import io.swagger.v3.oas.models.parameters.RequestBody
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
 import java.io.File
@@ -39,7 +71,9 @@ fun parseContractFileToFeature(
     securityConfiguration: SecurityConfiguration? = null,
     specmaticConfig: SpecmaticConfig = loadSpecmaticConfigOrDefault(getConfigFilePath()),
     overlayContent: String = "",
-    strictMode: Boolean = false
+    strictMode: Boolean = false,
+    baseURL: String = "",
+    serverURLIndex: Int? = null
 ): Feature {
     return parseContractFileToFeature(
         File(contractPath),
@@ -51,7 +85,9 @@ fun parseContractFileToFeature(
         securityConfiguration,
         specmaticConfig,
         overlayContent,
-        strictMode
+        strictMode,
+        baseURL,
+        serverURLIndex
     )
 }
 
@@ -70,7 +106,9 @@ fun parseContractFileToFeature(
     securityConfiguration: SecurityConfiguration? = null,
     specmaticConfig: SpecmaticConfig = loadSpecmaticConfigOrDefault(getConfigFilePath()),
     overlayContent: String = "",
-    strictMode: Boolean = false
+    strictMode: Boolean = false,
+    baseURL: String = "",
+    serverURLIndex: Int? = null
 ): Feature {
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
     return when (file.extension) {
@@ -85,10 +123,22 @@ fun parseContractFileToFeature(
             specmaticConfig = specmaticConfig,
             overlayContent = overlayContent,
             strictMode = strictMode
-        ).toFeature()
+        ).toFeature(baseURL, serverURLIndex)
         WSDL -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
         else -> throw unsupportedFileExtensionContractException(file.path, file.extension)
+    }
+}
+
+fun checkIfServersExist(file: File, hook: Hook, overlayContent: String): Boolean {
+    return when (file.extension) {
+        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.checkIfServersExist(
+            yamlContent = hook.readContract(file.path),
+            openApiFilePath = file.path,
+            overlayContent = overlayContent
+        )
+
+        else -> true
     }
 }
 
@@ -125,7 +175,8 @@ data class Feature(
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
     val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
     val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig),
-    val strictMode: Boolean = false
+    val strictMode: Boolean = false,
+    val baseURL: String = ""
 ): IFeature {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         return this.copy(flagsBased = this.flagsBased.copy(
@@ -590,13 +641,19 @@ data class Feature(
         return generateContractTestScenarios(suggestions, fn).map { (originalScenario, returnValue) ->
             returnValue.realise(
                 hasValue = { concreteTestScenario, comment ->
-                    scenarioAsTest(concreteTestScenario, comment, workflow, originalScenario, originalScenarios)
+                    scenarioAsTest(
+                        concreteTestScenario,
+                        comment,
+                        workflow,
+                        originalScenario,
+                        originalScenarios
+                    )
                 },
                 orFailure = {
-                    ScenarioTestGenerationFailure(originalScenario, it.failure)
+                    ScenarioTestGenerationFailure(originalScenario, it.failure, baseURL)
                 },
                 orException = {
-                    ScenarioTestGenerationException(originalScenario, it.t, it.message, it.breadCrumb)
+                    ScenarioTestGenerationException(originalScenario, it.t, it.message, it.breadCrumb, baseURL)
                 }
             )
         }
@@ -638,7 +695,8 @@ data class Feature(
         comment,
         validators = listOf(ExamplePostValidator),
         workflow = workflow,
-        originalScenario = originalScenario
+        originalScenario = originalScenario,
+        baseURL = baseURL
     )
 
     fun adjustTestDescription(scenario: Scenario, scenarios: List<Scenario> = this.scenarios): Scenario {

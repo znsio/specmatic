@@ -8,16 +8,28 @@ import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.ignoreLog
 import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.*
-import io.specmatic.core.utilities.*
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.Examples
+import io.specmatic.core.pattern.Row
+import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.getLongValue
+import io.specmatic.core.utilities.contractTestPathsFrom
+import io.specmatic.core.utilities.createIfDoesNotExist
+import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.exitIfAnyDoNotExist
+import io.specmatic.core.utilities.exitWithMessage
+import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.stub.hasOpenApiFileExtension
 import io.specmatic.stub.isOpenAPI
-import io.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.*
+import io.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.InvalidPortError
+import io.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.InvalidURLSchemeError
+import io.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.Success
+import io.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.URIParsingError
 import io.specmatic.test.reports.OpenApiCoverageReportProcessor
 import io.specmatic.test.reports.coverage.Endpoint
 import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
@@ -58,10 +70,8 @@ open class SpecmaticJUnitSupport {
         const val WORKING_DIRECTORY = "workingDirectory"
         const val INLINE_SUGGESTIONS = "suggestions"
         const val SUGGESTIONS_PATH = "suggestionsPath"
-        const val HOST = "host"
-        const val PORT = "port"
-        const val PROTOCOL = "protocol"
-        const val TEST_BASE_URL = "testBaseURL"
+        const val BASE_URL = "baseURL"
+        const val SERVER_URL_INDEX = "serverURLIndex"
         const val ENV_NAME = "environment"
         const val VARIABLES_FILE_NAME = "variablesFileName"
         const val FILTER_NAME_PROPERTY = "filterName"
@@ -274,6 +284,25 @@ open class SpecmaticJUnitSupport {
 
                     val testScenariosAndEndpointsPairList = contractFilePaths.filter {
                         File(it.path).extension in CONTRACT_EXTENSIONS
+                    }.onEach {
+                        if (getTestBaseURL().isNotBlank() || (hasOpenApiFileExtension(it.path) && !isOpenAPI(it.path)))
+                            return@onEach
+
+                        val contractFile = File(it.path)
+
+                        if (!checkIfServersExist(
+                                file = contractFile,
+                                hook = CommandHook(HookName.test_load_contract),
+                                overlayContent = overlayContent
+                            )
+                        ) {
+                            throw TestAbortedException(
+                                "No baseURL is provided and servers field of " +
+                                        "${contractFile.name} doesn't contain any URL."
+                            )
+                        }
+
+                        return@onEach
                     }.map {
                         loadTestScenarios(
                             it.path,
@@ -316,16 +345,8 @@ open class SpecmaticJUnitSupport {
             return loadExceptionAsTestError(e)
         }
 
-        val testBaseURL = try {
-            constructTestBaseURL()
-        } catch (e: Throwable) {
-            logger.logError(e)
-            logger.newLine()
-            throw(e)
-        }
-
         return try {
-            dynamicTestStream(testScenarios, testBaseURL, timeoutInMilliseconds)
+            dynamicTestStream(testScenarios, timeoutInMilliseconds)
         } catch(e: Throwable) {
             logger.logError(e)
             loadExceptionAsTestError(e)
@@ -334,26 +355,37 @@ open class SpecmaticJUnitSupport {
 
     private fun dynamicTestStream(
         testScenarios: Sequence<ContractTest>,
-        testBaseURL: String,
         timeoutInMilliseconds: Long
     ): Stream<DynamicTest> {
-        try {
-            if(queryActuator().failed && actuatorFromSwagger(testBaseURL).failed)
-                logger.log("EndpointsAPI and SwaggerUI URL missing; cannot calculate actual coverage")
-        } catch (exception: Throwable) {
-            logger.log(exception, "Failed to query actuator with error")
-        }
 
         logger.newLine()
 
+        val actuatorForURLExists = mutableMapOf<String, Boolean>()
+
         return testScenarios.map { contractTest ->
             DynamicTest.dynamicTest(contractTest.testDescription()) {
+                if (!actuatorForURLExists.containsKey(contractTest.getBaseURL())) {
+                    try {
+                        if (queryActuator().failed && actuatorFromSwagger(contractTest.getBaseURL()).failed) {
+                            logger.log(
+                                "EndpointsAPI and SwaggerUI URL missing for ${contractTest.getBaseURL()}; " +
+                                        "cannot calculate actual coverage"
+                            )
+                            actuatorForURLExists[contractTest.getBaseURL()] = false
+                        } else {
+                            actuatorForURLExists[contractTest.getBaseURL()] = true
+                        }
+                    } catch (exception: Throwable) {
+                        logger.log(exception, "Failed to query actuator with error")
+                    }
+                }
+
                 threads.add(Thread.currentThread().name)
 
                 var testResult: Pair<Result, HttpResponse?>? = null
 
                 try {
-                    testResult = contractTest.runTest(testBaseURL, timeoutInMilliseconds)
+                    testResult = contractTest.runTest(timeoutInMilliseconds)
                     val (result) = testResult
 
                     if (result is Result.Success && result.isPartialSuccess()) {
@@ -384,34 +416,23 @@ open class SpecmaticJUnitSupport {
         }.asStream()
     }
 
-    fun constructTestBaseURL(): String {
-        val testBaseURL = System.getProperty(TEST_BASE_URL)
-        if (testBaseURL != null) {
-            when (val validationResult = validateURI(testBaseURL)) {
-                Success -> return testBaseURL
-                else -> throw TestAbortedException("${validationResult.message} in $TEST_BASE_URL environment variable")
+    fun getTestBaseURL(): String {
+        val baseURL = System.getProperty(BASE_URL)
+        if (baseURL != null) {
+            when (val validationResult = validateURI(baseURL)) {
+                Success -> return baseURL
+                else -> throw TestAbortedException("${validationResult.message} in $BASE_URL environment variable")
             }
         }
 
-        val hostProperty = System.getProperty(HOST)
-            ?: throw TestAbortedException("Please specify $TEST_BASE_URL OR $HOST and $PORT as environment variables")
-        val host = if (hostProperty.startsWith("http")) {
-            URI(hostProperty).host
-        } else {
-            hostProperty
-        }
-        val protocol = System.getProperty(PROTOCOL) ?: "http"
-        val port = System.getProperty(PORT)
+        return ""
+    }
 
-        if (!isNumeric(port)) {
-            throw TestAbortedException("Please specify a number value for $PORT environment variable")
-        }
-
-        val urlConstructedFromProtocolHostAndPort = "$protocol://$host:$port"
-
-        return when (validateURI(urlConstructedFromProtocolHostAndPort)) {
-            Success -> urlConstructedFromProtocolHostAndPort
-            else -> throw TestAbortedException("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
+    private fun getServerURLIndex(): Int {
+        return try {
+            System.getProperty(SERVER_URL_INDEX)?.takeIf { it.isNotBlank() }?.toInt() ?: 0
+        } catch (e: NumberFormatException) {
+            throw ContractException("$SERVER_URL_INDEX should be a value of type integer")
         }
     }
 
@@ -479,7 +500,9 @@ open class SpecmaticJUnitSupport {
                 securityConfiguration,
                 specmaticConfig = specmaticConfig ?: SpecmaticConfig(),
                 overlayContent = overlayContent,
-                strictMode = strictMode
+                strictMode = strictMode,
+                baseURL = getTestBaseURL(),
+                serverURLIndex = getServerURLIndex()
             ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
 
         feature.validateExamplesOrException()
@@ -526,7 +549,7 @@ open class SpecmaticJUnitSupport {
 
         val excludedEndpoints = filteredOutScenarioPaths.filter { it !in filteredScenarioPaths }
 
-        openApiCoverageReportInput.addExcludedAPIs(excludedEndpoints);
+        openApiCoverageReportInput.addExcludedAPIs(excludedEndpoints)
         val tests: Sequence<ContractTest> = feature
             .copy(scenarios = filteredScenarios.toList())
             .also {

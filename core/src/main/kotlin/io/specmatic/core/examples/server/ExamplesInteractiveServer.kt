@@ -231,11 +231,11 @@ class ExamplesInteractiveServer(
 
                     val request = call.receive<ExampleTestRequest>()
                     try {
-                        val feature = parseContractFileToFeature(getContractFile())
+                        val feature = parseContractFileToFeature(getContractFile(), baseURL = testBaseUrl)
 
                         val contractTest = feature.createContractTestFromExampleFile(request.exampleFile).value
 
-                        val (result, testLog) = testExample(contractTest, testBaseUrl)
+                        val (result, testLog) = testExample(contractTest)
 
                         call.respond(HttpStatusCode.OK, ExampleTestResponse(result, testLog, exampleFile = File(request.exampleFile)))
                     } catch (e: Throwable) {
@@ -371,8 +371,8 @@ class ExamplesInteractiveServer(
             }
         }
 
-        fun testExample(test: ContractTest, testBaseUrl: String): Pair<Result, String> {
-            val testResult = test.runTest(testBaseUrl, timeoutInMilliseconds = DEFAULT_TIMEOUT_IN_MILLISECONDS)
+        fun testExample(test: ContractTest): Pair<Result, String> {
+            val testResult = test.runTest(timeoutInMilliseconds = DEFAULT_TIMEOUT_IN_MILLISECONDS)
             val testLog = TestInteractionsLog.testHttpLogMessages.lastOrNull { it.scenario == testResult.first.scenario }
 
             return testResult.first to (testLog?.combineLog() ?: "No Test Logs Found")

@@ -1,14 +1,17 @@
 package io.specmatic.core
 
+import io.mockk.every
+import io.mockk.mockk
 import io.specmatic.DefaultStrategies
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.pattern.*
-import io.specmatic.core.value.*
+import io.specmatic.core.value.EmptyString
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.True
+import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.test.TestExecutor
-import io.mockk.every
-import io.mockk.mockk
 import io.specmatic.test.ScenarioAsTest
+import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Test
@@ -555,7 +558,8 @@ paths:
         ))
 
         val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
-        val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario)
+        val contractTest =
+            ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario, baseURL = "")
 
         val (result, response) = contractTest.runTest(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -614,7 +618,8 @@ paths:
         ))
 
         val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
-        val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario)
+        val contractTest =
+            ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario, baseURL = "")
 
         val (result, response) = contractTest.runTest(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -675,7 +680,8 @@ paths:
         ))
 
         val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario))
-        val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario)
+        val contractTest =
+            ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario, baseURL = "")
 
         val (result, response) = contractTest.runTest(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -707,7 +713,8 @@ paths:
         ))
 
         val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario))
-        val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario)
+        val contractTest =
+            ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario, baseURL = "")
 
         val (result, response) = contractTest.runTest(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {

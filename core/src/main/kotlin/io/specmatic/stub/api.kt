@@ -358,7 +358,6 @@ fun loadContractStubsFromFiles(
     val contactPathsString = contractPathDataList.joinToString(System.lineSeparator()) { "- ${it.path}".prependIndent(INDENT) }
     logger.newLine()
     consoleLog(StringLog("Loading the following spec files:${System.lineSeparator()}$contactPathsString${System.lineSeparator()}"))
-    val dataFiles = dataDirFiles(dataDirPaths)
 
     val invalidContractPaths = contractPathDataList.filter { File(it.path).exists().not() }.map { it.path }
     if (invalidContractPaths.isNotEmpty() && strictMode) {
@@ -370,9 +369,13 @@ fun loadContractStubsFromFiles(
 
     val features = contractPathDataList.mapNotNull { contractPathData ->
         loadIfOpenAPISpecification(contractPathData, specmaticConfig)
-    }.overrideInlineExamplesWithSameNameFrom(dataFiles)
+    }.overrideInlineExamplesWithSameNameFrom(dataDirFiles(dataDirPaths))
 
-    consoleLog(dataFilesLogForStubScan(dataFiles, dataDirPaths.relativePaths()))
+    dataDirPaths.forEach { dataDirPath ->
+        val dataFiles = dataDirFiles(listOf(dataDirPath))
+        consoleLog(dataFilesLogForStubScan(dataFiles, listOf(dataDirPath).relativePaths()))
+    }
+
     logger.debug("Scanning for stub expectations from the following example directories:${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
     val explicitStubs = loadImplicitExpectationsFromDataDirsForFeature(
         features,

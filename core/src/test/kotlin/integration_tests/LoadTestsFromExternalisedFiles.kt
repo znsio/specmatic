@@ -1,6 +1,5 @@
 package integration_tests
 
-import io.ktor.client.request.*
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject

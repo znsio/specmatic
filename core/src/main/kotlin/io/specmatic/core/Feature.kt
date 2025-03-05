@@ -468,19 +468,16 @@ data class Feature(
     }
 
     fun matchResultFlagBased(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages): Results {
-        val results = scenarios.map {
-            it.matches(request, response, mismatchMessages, flagsBased)
+        val results = scenarios.map { it.matches(request, response, mismatchMessages, flagsBased) }
+
+        val resultsWithMinimumFluff = Results(results).withoutFluff()
+        if (resultsWithMinimumFluff.results.isEmpty()) {
+            return Result.Failure(
+                "${request.method} ${request.path} -> ${response.status} does not match any operation in the specification"
+            ).let { Results(listOf(it)) }
         }
 
-        if(results.any { it.isSuccess() })
-            return Results(results).withoutFluff()
-
-        val deepErrors = results.filterNot { it.isFluffy(0) }
-
-        if(deepErrors.isNotEmpty())
-            return Results(deepErrors)
-
-        return Results(listOf(Result.Failure("No matching specification found for this example")))
+        return resultsWithMinimumFluff
     }
 
     fun matchResult(request: HttpRequest, response: HttpResponse): Result {

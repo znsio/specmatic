@@ -591,6 +591,36 @@ fun stubMatchErrorMessage(
     stubFile: String,
     specs: List<String> = emptyList()
 ): String {
+    val errorReports = stubMatchErrorReports(matchResults)
+
+    if(errorReports.isEmpty() || matchResults.isEmpty())
+        return stubMatchErrorMessageForEmpty(matchResults, stubFile, specs)
+
+    return stubMatchErrorMessageForNonEmpty(errorReports, stubFile)
+}
+
+private fun stubMatchErrorMessageForEmpty(
+    matchResults: List<StubMatchResults>,
+    stubFile: String,
+    specs: List<String>
+): String {
+    return "$stubFile didn't match any of the contracts from ${specs.joinToString(", ")}\n${matchResults.firstOrNull()?.errorReport?.exceptionReport?.request?.requestNotRecognized()?.prependIndent(INDENT)}".trim()
+}
+
+private fun stubMatchErrorMessageForNonEmpty(
+    errorReports: List<StubMatchErrorReport>,
+    stubFile: String
+): String {
+    return errorReports.joinToString("${System.lineSeparator()}${System.lineSeparator()}") { (exceptionReport, contractFilePath) ->
+        "$stubFile didn't match $contractFilePath${System.lineSeparator()}${
+            exceptionReport.message.prependIndent(
+                "  "
+            )
+        }"
+    }
+}
+
+private fun stubMatchErrorReports(matchResults: List<StubMatchResults>): List<StubMatchErrorReport> {
     val matchResultsWithErrorReports = matchResults.mapNotNull { it.errorReport }
 
     val errorReports: List<StubMatchErrorReport> = matchResultsWithErrorReports.map {
@@ -604,19 +634,7 @@ fun stubMatchErrorMessage(
             it.hasErrors()
         }
     }
-
-    if(errorReports.isEmpty() || matchResults.isEmpty())
-        return "$stubFile didn't match any of the contracts from ${specs.joinToString(", ")}\n${matchResults.firstOrNull()?.errorReport?.exceptionReport?.request?.requestNotRecognized()?.prependIndent(INDENT)}".trim()
-
-
-
-    return errorReports.joinToString("${System.lineSeparator()}${System.lineSeparator()}") { (exceptionReport, contractFilePath) ->
-        "$stubFile didn't match $contractFilePath${System.lineSeparator()}${
-            exceptionReport.message.prependIndent(
-                "  "
-            )
-        }"
-    }
+    return errorReports
 }
 
 fun loadContractStubs(
@@ -637,14 +655,18 @@ fun loadContractStubs(
 
         if(matchResults.all { it.feature == null }) {
             val specs = features.map { it.first }
-            val errorMessage = stubMatchErrorMessage(matchResults, stubFile, specs).prependIndent(INDENT)
-            if(strictMode) throw Exception(errorMessage)
+            val errorReports = stubMatchErrorReports(matchResults)
+
+            if (strictMode) throw Exception(stubMatchErrorMessage(matchResults, stubFile, specs))
             else {
-                val message = "Error loading stub expectation file '${stubFile}':${System.lineSeparator()} $errorMessage"
-                if (logIgnoredFiles)
+                if (logIgnoredFiles) {
+                    val errorMessage = stubMatchErrorMessage(matchResults, stubFile, specs)
+                    val message = "Error loading stub expectation file '${stubFile}':${System.lineSeparator()} $errorMessage"
                     logger.log(message.prependIndent(INDENT))
-                else
-                    logger.debug("${System.lineSeparator()}$message".prependIndent(INDENT))
+                }
+                else {
+                    logPartialErrorMessages(errorReports, stubFile, matchResults, specs)
+                }
             }
             return@flatMap emptyList()
         }
@@ -663,6 +685,28 @@ fun loadContractStubs(
     val missingFeatures = features.map { it.second }.filter { it !in stubbedFeatures }
 
     return contractInfoFromStubs.plus(missingFeatures.map { Pair(it, emptyList()) })
+}
+
+private fun logPartialErrorMessages(
+    errorReports: List<StubMatchErrorReport>,
+    stubFile: String,
+    matchResults: List<StubMatchResults>,
+    specs: List<String>
+) {
+    val errorMessage = stubMatchErrorMessageForNonEmpty(errorReports, stubFile).takeIf { errorReports.isNotEmpty() }
+    val errorMessagePrefix = "Error loading stub expectation file '${stubFile}':".prependIndent(INDENT)
+    if (errorMessage != null) {
+        val message = "$errorMessagePrefix${System.lineSeparator()}$errorMessage"
+        logger.log(message)
+    }
+    val errorMessageForDebugLogs = stubMatchErrorMessageForEmpty(
+        matchResults,
+        stubFile,
+        specs
+    ).takeIf { matchResults.isEmpty() || errorReports.isEmpty() }
+    if (errorMessageForDebugLogs != null) {
+        logger.debug("$errorMessagePrefix${System.lineSeparator()}$errorMessageForDebugLogs")
+    }
 }
 
 fun allDirsInTree(

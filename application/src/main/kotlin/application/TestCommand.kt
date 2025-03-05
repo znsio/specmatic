@@ -62,6 +62,35 @@ class TestCommand : Callable<Unit> {
     @CommandLine.Parameters(arity = "0..*", description = ["Contract file paths"])
     var contractPaths: List<String> = emptyList()
 
+    @Deprecated(
+        "--https, --port, --host and --testBaseURL are deprecated " +
+                "& will be removed from future versions. Use '--baseURL' instead."
+    )
+    @Option(
+        names = ["--host"],
+        description = ["The host to bind to, e.g. localhost or some locally bound IP"],
+        defaultValue = "localhost"
+    )
+    lateinit var host: String
+
+    @Deprecated(
+        "--https, --port, --host and --testBaseURL are deprecated" +
+                "& will be removed from future versions. Use '--baseURL' instead."
+    )
+    @Option(names = ["--port"], description = ["The port to bind to"])
+    var port: Int = 0
+
+    @Deprecated(
+        "--https, --port, --host and --testBaseURL are deprecated" +
+                "& will be removed from future versions. Use '--baseURL' instead."
+    )
+    @Option(
+        names = ["--testBaseURL"],
+        description = ["The base URL, use this instead of host and port"],
+        defaultValue = ""
+    )
+    lateinit var testBaseURL: String
+
     @Option(
         names = ["--baseURL"],
         description = ["The base URL, will override URL from 'servers' field of the OpenAPI spec"],
@@ -107,6 +136,13 @@ For example, to filter by HTTP methods:
     @Option(names = ["--env"], description = ["Environment name"])
     var envName: String = ""
 
+    @Deprecated(
+        "--https, --port, --host and --testBaseURL are deprecated" +
+                "& will be removed from future versions. Use '--baseURL' instead."
+    )
+    @Option(names = ["--https"], description = ["Use https instead of the default http"], required = false)
+    var useHttps: Boolean = false
+
     @Option(names = ["--timeout"], description = ["Specify a timeout in seconds for the test requests. Default value is ${DEFAULT_TIMEOUT_IN_MILLISECONDS / 1000}"], required = false)
     var timeout: Long? = null
 
@@ -148,6 +184,26 @@ For example, to filter by HTTP methods:
         configFileName?.let {
             Configuration.configFilePath = it
             System.setProperty(CONFIG_FILE_PATH, it)
+        }
+
+        if (port == 0) {
+            port = when {
+                useHttps -> 443
+                else -> 9000
+            }
+        }
+
+        val protocol = when {
+            port == 443 -> "https"
+            useHttps -> "https"
+            else -> "http"
+        }
+
+        if (baseURL.isBlank()) {
+            baseURL = when {
+                testBaseURL.isNotBlank() -> testBaseURL
+                else -> "$protocol://$host:$port"
+            }
         }
 
         val timeoutInMs = timeoutInMs ?: timeout?.times(1000) ?: DEFAULT_TIMEOUT_IN_MILLISECONDS

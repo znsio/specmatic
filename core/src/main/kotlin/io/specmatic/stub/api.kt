@@ -242,8 +242,11 @@ fun loadContractStubsFromImplicitPaths(
     return contractPathDataList.map { Pair(File(it.path), it) }.flatMap { (specFile, contractSource) ->
         when {
             specFile.isFile && specFile.extension in CONTRACT_EXTENSIONS -> {
-                logger.newLine()
-                consoleLog(StringLog("Loading the spec file: $specFile"))
+                val cachedFeature = cachedFeatures.firstOrNull { it.path == specFile.path }
+                if(cachedFeature == null) {
+                    logger.newLine()
+                    consoleLog(StringLog("Loading the spec file: $specFile${System.lineSeparator()}"))
+                }
 
                 if(hasOpenApiFileExtension(specFile.path) && !isOpenAPI(specFile.path.trim())) {
                     logger.log("Ignoring ${specFile.path} as it is not an OpenAPI specification")
@@ -252,10 +255,7 @@ fun loadContractStubsFromImplicitPaths(
                 else try {
                     val implicitDataDirs = implicitDirsForSpecifications(specFile)
                     val externalDataDirs = dataDirFiles(externalDataDirPaths)
-
-                    val feature = cachedFeatures.firstOrNull {
-                        it.path == specFile.path
-                    } ?: parseContractFileToFeature(
+                    val feature = cachedFeature ?: parseContractFileToFeature(
                         specFile,
                         CommandHook(HookName.stub_load_contract),
                         contractSource.provider,
@@ -354,7 +354,7 @@ fun loadContractStubsFromFiles(
 ): List<Pair<Feature, List<ScenarioStub>>> {
     val contactPathsString = contractPathDataList.joinToString(System.lineSeparator()) { "- ${it.path}".prependIndent(INDENT) }
     logger.newLine()
-    consoleLog(StringLog("Loading the following spec files:${System.lineSeparator()}$contactPathsString"))
+    consoleLog(StringLog("Loading the following spec files:${System.lineSeparator()}$contactPathsString${System.lineSeparator()}"))
     val dataFiles = dataDirFiles(dataDirPaths)
 
     val invalidContractPaths = contractPathDataList.filter { File(it.path).exists().not() }.map { it.path }

@@ -129,7 +129,7 @@ internal class SpecmaticConfigAllTest {
                     Consumes.StringValue("com/petstore/payment.yaml"),
                     Consumes.ObjectValue(
                         specs = listOf("com/petstore/order1.yaml", "com/petstore/order2.yaml"),
-                        port = 9001
+                        baseUrl = "http://localhost:9001"
                     )
                 ),
                 directory = "contracts"
@@ -247,7 +247,7 @@ internal class SpecmaticConfigAllTest {
             Consumes.StringValue("com/petstore/payment.yaml"),
             Consumes.ObjectValue(
                 specs = listOf("com/petstore/order1.yaml", "com/petstore/order2.yaml"),
-                port = 9001
+                baseUrl = "http://localhost:9001"
             )
         )
     }
@@ -293,7 +293,7 @@ internal class SpecmaticConfigAllTest {
                     Consumes.StringValue("com/petstore/payment.yaml"),
                     Consumes.ObjectValue(
                         specs = listOf("com/petstore/order.yaml"),
-                        port = 9001
+                        baseUrl = "http://localhost:9001"
                     )
                 )
             )
@@ -347,7 +347,7 @@ internal class SpecmaticConfigAllTest {
         assertThat((contractConfig.consumes?.get(0) as Consumes.StringValue).value)
             .isEqualTo("com/petstore/payment.yaml")
         val consumesObjectValue = contractConfig.consumes?.get(1) as Consumes.ObjectValue
-        assertThat(consumesObjectValue.port).isEqualTo(9001)
+        assertThat(consumesObjectValue.baseUrl).isEqualTo("http://localhost:9001")
         assertThat(consumesObjectValue.specs).containsOnly("com/petstore/order.yaml")
     }
 
@@ -388,7 +388,7 @@ internal class SpecmaticConfigAllTest {
         assertThat((contractConfig.consumes?.get(0) as Consumes.StringValue).value)
             .isEqualTo("com/petstore/payment.yaml")
         val consumesObjectValue = contractConfig.consumes?.get(1) as Consumes.ObjectValue
-        assertThat(consumesObjectValue.port).isEqualTo(9001)
+        assertThat(consumesObjectValue.baseUrl).isEqualTo("http://localhost:9001")
         assertThat(consumesObjectValue.specs).containsOnly("com/petstore/order.yaml")
     }
 
@@ -1065,8 +1065,8 @@ internal class SpecmaticConfigAllTest {
                 testContracts = listOf("com/petstore/1.yaml").toContractSourceEntries(),
                 stubContracts = listOf(
                     ContractSourceEntry("com/petstore/payment.yaml"),
-                    ContractSourceEntry("com/petstore/order1.yaml", 9001),
-                    ContractSourceEntry("com/petstore/order2.yaml", 9001)
+                    ContractSourceEntry("com/petstore/order1.yaml", "http://localhost:9001"),
+                    ContractSourceEntry("com/petstore/order2.yaml", "http://localhost:9001")
                 )
             )
         )

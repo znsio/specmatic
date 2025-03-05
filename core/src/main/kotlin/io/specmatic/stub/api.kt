@@ -18,6 +18,7 @@ import io.specmatic.core.git.SystemGit
 import io.specmatic.core.isContractFile
 import io.specmatic.core.loadSpecmaticConfigOrDefault
 import io.specmatic.core.log.StringLog
+import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.parseContractFileToFeature
@@ -243,7 +244,7 @@ fun loadContractStubsFromImplicitPaths(
         when {
             contractPath.isFile && contractPath.extension in CONTRACT_EXTENSIONS -> {
                 logger.newLine()
-                consoleLog(StringLog("Loading $contractPath in order to scan and load the examples present in implicit (_examples) examples directory.."))
+                consoleLog(StringLog("Loading the spec file: $contractPath"))
 
                 if(hasOpenApiFileExtension(contractPath.path) && !isOpenAPI(contractPath.path.trim())) {
                     logger.log("Ignoring ${contractPath.path} as it is not an OpenAPI specification")
@@ -251,6 +252,8 @@ fun loadContractStubsFromImplicitPaths(
                 }
                 else try {
                     val implicitDataDirs = implicitDirsForSpecifications(contractPath)
+                    consoleLog(dataFilesLogForStubScan(implicitDataDirs))
+
                     val externalDataDirs = dataDirFiles(externalDataDirPaths)
 
                     val feature = parseContractFileToFeature(
@@ -268,7 +271,7 @@ fun loadContractStubsFromImplicitPaths(
                             implicitDataDirs.filter { it.isDirectory }.flatMap { implicitDataDir ->
 
                                 val stubDataFiles = filesInDir(implicitDataDir)?.toList()?.filter { it.extension == "json" }.orEmpty()
-                                logStubScan(listOf(Pair(feature.path, feature)), stubDataFiles)
+                                logStubScanForDebugging(listOf(Pair(feature.path, feature)), stubDataFiles)
                                 logIgnoredFiles(implicitDataDir)
 
                                 stubDataFiles.mapNotNull {
@@ -347,8 +350,9 @@ fun loadContractStubsFromFiles(
 ): List<Pair<Feature, List<ScenarioStub>>> {
     val contactPathsString = contractPathDataList.joinToString(System.lineSeparator()) { "- ${it.path}".prependIndent(INDENT) }
     logger.newLine()
-    consoleLog(StringLog("Loading the following spec files in order to scan and load the examples present in the explicitly provided examples directories:${System.lineSeparator()}$contactPathsString"))
-    consoleLog(StringLog(""))
+    consoleLog(StringLog("Loading the following spec files:${System.lineSeparator()}$contactPathsString"))
+    val dataFiles = dataDirFiles(dataDirPaths)
+    consoleLog(dataFilesLogForStubScan(dataFiles))
 
     val invalidContractPaths = contractPathDataList.filter { File(it.path).exists().not() }.map { it.path }
     if (invalidContractPaths.isNotEmpty() && strictMode) {
@@ -360,9 +364,7 @@ fun loadContractStubsFromFiles(
 
     val features = contractPathDataList.mapNotNull { contractPathData ->
         loadIfOpenAPISpecification(contractPathData, specmaticConfig)
-    }.overrideInlineExamplesWithSameNameFrom(
-        dataDirFiles(dataDirPaths)
-    )
+    }.overrideInlineExamplesWithSameNameFrom(dataFiles)
 
     logger.debug("Scanning for stub expectations from the following example directories:${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
     return loadImplicitExpectationsFromDataDirsForFeature(
@@ -386,19 +388,7 @@ fun loadExpectationsForFeatures(
     strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
     val dataFiles = dataDirFiles(dataDirPaths)
-    if(dataFiles.isEmpty()) {
-        val existingDataFiles = dataFiles.groupBy { it.exists() }
-        if(existingDataFiles.isNotEmpty()) {
-            logger.debug("${"Skipped example loading since no example directories/files found within:".prependIndent(INDENT)}${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
-        }
-
-        val nonExistentDataFiles = dataFiles.groupBy { it.exists().not() }
-        if(nonExistentDataFiles.isNotEmpty()) {
-            logger.debug("${"Skipped example loading since the example directories do not exist:".prependIndent(INDENT)}${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
-        }
-    }
-
-    logStubScan(features, dataFiles)
+    logStubScanForDebugging(features, dataFiles)
 
     val mockData = dataFiles.mapNotNull {
         try {
@@ -501,27 +491,60 @@ data class ImplicitOriginalDataDirPair(
     val dataDir: String
 )
 
-private fun logStubScan(features: List<Pair<String, *>>, dataFiles: List<File>) {
+private fun logStubScanForDebugging(features: List<Pair<String, *>>, dataFiles: List<File>) {
     if (dataFiles.isNotEmpty()) {
-        logger.newLine()
-        logger.log(buildString {
-            append("Scanning for stub expectations for specs:".prependIndent(" "))
-            append(System.lineSeparator())
-            append(features.joinToString(System.lineSeparator()) { "- ${it.first}".prependIndent(INDENT) })
-        })
-
-        val dataFilesString = dataFiles.joinToString(System.lineSeparator()) { file ->
-            "- ${file.path}".prependIndent(INDENT)
+        logger.debug(featuresLogForStubScan(features))
+        consoleDebug(dataFilesLogForStubScan(dataFiles))
+    } else {
+        val existingDataFiles = dataFiles.groupBy { it.exists() }
+        if (existingDataFiles.isNotEmpty()) {
+            logger.debug(featuresLogForStubScan(features))
+            logger.debug(
+                "${
+                    "Skipped example loading since no example directories/files found within:".prependIndent(
+                        INDENT
+                    )
+                }${System.lineSeparator()}${dataFiles.map { it.canonicalPath }.withAbsolutePaths()}"
+            )
         }
 
-        consoleLog(StringLog(buildString {
-            append(System.lineSeparator())
-            append("The stub files being scanned to associate with the above mentioned specs:".prependIndent(" "))
-            append(System.lineSeparator())
-            append(dataFilesString)
-            append(System.lineSeparator())
-        }))
+        val nonExistentDataFiles = dataFiles.groupBy { it.exists().not() }
+        if (nonExistentDataFiles.isNotEmpty()) {
+            logger.debug(featuresLogForStubScan(features))
+            logger.debug(
+                "${"Skipped example loading since the example directories do not exist:".prependIndent(INDENT)}${System.lineSeparator()}${
+                    dataFiles.map { it.canonicalPath }.withAbsolutePaths()
+                }"
+            )
+        }
     }
+}
+
+private fun featuresLogForStubScan(features: List<Pair<String, *>>): String {
+    return buildString {
+        append(System.lineSeparator())
+        append("Scanning for stub expectations for specs:".prependIndent(" "))
+        append(System.lineSeparator())
+        append(features.joinToString(System.lineSeparator()) { "- ${it.first}".prependIndent(INDENT) })
+    }
+}
+
+private fun dataFilesLogForStubScan(dataFiles: List<File>): StringLog {
+    if(dataFiles.isEmpty()) {
+        return StringLog("No examples directory provided or found.")
+    }
+
+    val dataFilesString = dataFiles.joinToString(System.lineSeparator()) { file ->
+        "- ${file.canonicalPath}".prependIndent(INDENT)
+    }
+
+    return StringLog(buildString {
+        append(System.lineSeparator())
+        append("The stub files being scanned to associate with the above mentioned specs:".prependIndent(" "))
+        append(System.lineSeparator())
+        append(dataFilesString)
+        append(System.lineSeparator())
+    })
 }
 
 class StubMatchExceptionReport(val request: HttpRequest, val e: NoMatchingScenario) {

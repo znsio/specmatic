@@ -6,7 +6,11 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
+import io.mockk.verify
+import io.specmatic.conversions.OpenApiSpecification.Companion.getImplicitOverlayContent
 import io.specmatic.core.*
+import io.specmatic.core.Result.Failure
+import io.specmatic.core.Result.Success
 import io.specmatic.core.log.CompositePrinter
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.LogStrategy
@@ -41,8 +45,8 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledOnOs
-import org.junit.jupiter.api.condition.OS
-import org.junit.jupiter.api.io.CleanupMode
+import org.junit.jupiter.api.condition.OS.WINDOWS
+import org.junit.jupiter.api.io.CleanupMode.ALWAYS
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -957,7 +961,7 @@ Scenario: Get product by id
                     ), HttpResponse.ok("success")
                 )
             ) {
-                assertThat(this).isInstanceOf(Result.Success::class.java)
+                assertThat(this).isInstanceOf(Success::class.java)
             }
 
             with(
@@ -970,7 +974,7 @@ Scenario: Get product by id
                 )
             ) {
 
-                assertThat(this).isInstanceOf(Result.Success::class.java)
+                assertThat(this).isInstanceOf(Success::class.java)
             }
         }
 
@@ -2163,7 +2167,7 @@ Scenario: Get product by id
                 ), HttpResponse.ok("success")
             )
 
-            assertThat(result).isInstanceOf(Result.Success::class.java)
+            assertThat(result).isInstanceOf(Success::class.java)
         }
 
         val openAPIYaml = openAPIToString(openAPI)
@@ -3773,7 +3777,7 @@ paths:
             val response = HttpResponse.OK
 
             val stub: HttpStubData = feature.matchingStub(request, response)
-            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Success::class.java)
         }
 
         @Test
@@ -3828,7 +3832,7 @@ paths:
             val response = HttpResponse.OK
 
             val stub: HttpStubData = feature.matchingStub(request, response)
-            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Success::class.java)
         }
 
         @Test
@@ -3838,7 +3842,7 @@ paths:
             val response = HttpResponse.OK
 
             val stub: HttpStubData = feature.matchingStub(request, response)
-            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Success::class.java)
         }
 
         @Test
@@ -3884,7 +3888,7 @@ paths:
                     response
                 )
 
-            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Success::class.java)
         }
 
     }
@@ -4845,7 +4849,7 @@ paths:
         }
 
         @Test
-        fun `run contract tests from an OpenAPI XML spec`(@TempDir(cleanup = CleanupMode.ALWAYS) dir: File) {
+        fun `run contract tests from an OpenAPI XML spec`(@TempDir(cleanup = ALWAYS) dir: File) {
             val contractString = """
                 openapi: 3.0.3
                 info:
@@ -4926,7 +4930,7 @@ paths:
             val stubMatchResult =
                 stubData.requestType.body.matches(parsedValue(xmlSnippet), xmlFeature.scenarios.first().resolver)
 
-            assertThat(stubMatchResult).isInstanceOf(Result.Success::class.java)
+            assertThat(stubMatchResult).isInstanceOf(Success::class.java)
         }
 
         private fun assertMatchesResponseSnippet(path: String, xmlSnippet: String, xmlFeature: Feature) {
@@ -4939,13 +4943,13 @@ paths:
             val stubMatchResult =
                 stubData.responsePattern.body.matches(parsedValue(xmlSnippet), xmlFeature.scenarios.first().resolver)
 
-            assertThat(stubMatchResult).isInstanceOf(Result.Success::class.java)
+            assertThat(stubMatchResult).isInstanceOf(Success::class.java)
         }
 
     }
 
     @Test
-    fun `support for exporting values from a wrapper spec file`(@TempDir(cleanup = CleanupMode.ALWAYS) tempDir: File) {
+    fun `support for exporting values from a wrapper spec file`(@TempDir(cleanup = ALWAYS) tempDir: File) {
         val openAPI = """
             ---
             openapi: "3.0.1"
@@ -5011,7 +5015,7 @@ paths:
     }
 
     @Test
-    fun `support for multipart form data tests`(@TempDir(cleanup = CleanupMode.ALWAYS) tempDir: File) {
+    fun `support for multipart form data tests`(@TempDir(cleanup = ALWAYS) tempDir: File) {
         val openAPI = """
             ---
             openapi: "3.0.1"
@@ -5091,7 +5095,7 @@ paths:
     }
 
     @Nested
-    @DisabledOnOs(OS.WINDOWS)
+    @DisabledOnOs(WINDOWS)
     inner class MultiPartRequestBody {
         private val openAPI = """
             ---
@@ -5201,7 +5205,7 @@ paths:
         }
 
         @Test
-        fun `support for multipart form data file stub`(@TempDir(cleanup = CleanupMode.ALWAYS) tempDir: File) {
+        fun `support for multipart form data file stub`(@TempDir(cleanup = ALWAYS) tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")
             openAPIFile.writeText(openAPI)
 
@@ -5255,7 +5259,7 @@ paths:
         }
 
         @Test
-        fun `support for multipart form data file stub and validate content`(@TempDir(cleanup = CleanupMode.ALWAYS) tempDir: File) {
+        fun `support for multipart form data file stub and validate content`(@TempDir(cleanup = ALWAYS) tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")
             openAPIFile.writeText(openAPI)
 
@@ -5311,7 +5315,7 @@ paths:
         }
 
         @Test
-        fun `support for multipart form data non-file stub and validate content`(@TempDir(cleanup = CleanupMode.ALWAYS) tempDir: File) {
+        fun `support for multipart form data non-file stub and validate content`(@TempDir(cleanup = ALWAYS) tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")
             openAPIFile.writeText(openAPI)
 
@@ -5404,10 +5408,10 @@ paths:
         val requestPattern = scenario.httpRequestPattern
 
         val matchingRequest = HttpRequest("POST", "/users", body = parsedJSON("""{"id": null}"""))
-        assertThat(requestPattern.matches(matchingRequest, resolver)).isInstanceOf(Result.Success::class.java)
+        assertThat(requestPattern.matches(matchingRequest, resolver)).isInstanceOf(Success::class.java)
 
         val nonMatchingRequest = HttpRequest("POST", "/users", body = parsedJSON("""{"id": 10}"""))
-        assertThat(requestPattern.matches(nonMatchingRequest, resolver)).isInstanceOf(Result.Failure::class.java)
+        assertThat(requestPattern.matches(nonMatchingRequest, resolver)).isInstanceOf(Failure::class.java)
     }
 
     @Test
@@ -5467,7 +5471,7 @@ paths:
 
         assertThat(results).hasSize(1)
 
-        assertThat(results[0]).isInstanceOf(Result.Success::class.java)
+        assertThat(results[0]).isInstanceOf(Success::class.java)
     }
 
     @Test
@@ -5542,7 +5546,7 @@ paths:
         assertThat(results).hasSize(1)
         println(results.single().reportString())
 
-        assertThat(results.single()).isInstanceOf(Result.Success::class.java)
+        assertThat(results.single()).isInstanceOf(Success::class.java)
     }
 
     @Test
@@ -5604,7 +5608,7 @@ paths:
         assertThat(results).hasSize(1)
         println(results.single().reportString())
 
-        assertThat(results.single()).isInstanceOf(Result.Success::class.java)
+        assertThat(results.single()).isInstanceOf(Success::class.java)
     }
 
     @Test
@@ -5666,7 +5670,7 @@ paths:
         assertThat(results).hasSize(1)
         println(results.single().reportString())
 
-        assertThat(results.single()).isInstanceOf(Result.Success::class.java)
+        assertThat(results.single()).isInstanceOf(Success::class.java)
     }
 
     @Test
@@ -6066,7 +6070,7 @@ paths:
         val result = match.single().second
         println(result.reportString())
 
-        assertThat(result).isInstanceOf(Result.Success::class.java)
+        assertThat(result).isInstanceOf(Success::class.java)
     }
 
     @Test
@@ -6652,7 +6656,7 @@ paths:
                     ), HttpResponse.ok("success")
                 )
 
-            assertThat(result).isInstanceOf(Result.Success::class.java)
+            assertThat(result).isInstanceOf(Success::class.java)
         }
     }
 
@@ -6983,7 +6987,7 @@ paths:
                         )
                     ), HttpResponse(200, parsedJSONObject("{\"filename\": \"ThIsi5ByT3sD4tA\"}"))
                 )
-            assertThat(result).isInstanceOf(Result.Success::class.java)
+            assertThat(result).isInstanceOf(Success::class.java)
         }
     }
 
@@ -7373,7 +7377,7 @@ paths:
 
         val request = HttpRequest("GET", "/api/nocontent", queryParams = QueryParameters(mapOf("id" to "123")))
         feature.matchResult(request, HttpResponse.OK).let { result ->
-            assertThat(result).withFailMessage(result.reportString()).isInstanceOf(Result.Success::class.java)
+            assertThat(result).withFailMessage(result.reportString()).isInstanceOf(Success::class.java)
         }
     }
 
@@ -7465,14 +7469,14 @@ paths:
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "abc123"}""")),
             HttpResponse.OK
         ).let { matchResult ->
-            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Success::class.java)
         }
 
         feature.matchResult(
             HttpRequest("POST", "/person", body = NoBodyValue),
             HttpResponse.OK
         ).let { matchResult ->
-            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Failure::class.java)
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Failure::class.java)
         }
     }
 
@@ -7513,14 +7517,14 @@ paths:
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "abc123"}""")),
             HttpResponse.OK
         ).let { matchResult ->
-            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Success::class.java)
         }
 
         feature.matchResult(
             HttpRequest("POST", "/person", body = NoBodyValue),
             HttpResponse.OK
         ).let { matchResult ->
-            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Failure::class.java)
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Failure::class.java)
         }
     }
 
@@ -7561,14 +7565,14 @@ paths:
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "abc123"}""")),
             HttpResponse.OK
         ).let { matchResult ->
-            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Success::class.java)
         }
 
         feature.matchResult(
             HttpRequest("POST", "/person", body = NoBodyValue),
             HttpResponse.OK
         ).let { matchResult ->
-            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Success::class.java)
         }
     }
 
@@ -7608,14 +7612,14 @@ paths:
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "abc123"}""")),
             HttpResponse.OK
         ).let { matchResult ->
-            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Success::class.java)
         }
 
         feature.matchResult(
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": 10}""")),
             HttpResponse.OK
         ).let { matchResult ->
-            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Success::class.java)
         }
 
         HttpStub(feature).use { stub ->
@@ -7666,7 +7670,7 @@ paths:
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": null}""")),
             HttpResponse.OK
         ).let { matchResult ->
-            assertThat(matchResult).isInstanceOf(Result.Failure::class.java)
+            assertThat(matchResult).isInstanceOf(Failure::class.java)
         }
     }
 
@@ -7707,7 +7711,7 @@ paths:
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": null}""")),
             HttpResponse.OK
         ).let { matchResult ->
-            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Success::class.java)
         }
     }
 
@@ -7745,7 +7749,7 @@ paths:
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "abc123"}""")),
             HttpResponse(204, EmptyString)
         ).let { matchResult ->
-            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Success::class.java)
         }
     }
 
@@ -9955,6 +9959,68 @@ paths:
         } catch (e: Throwable) {
             println(exceptionCauseMessage(e))
         }
+    }
+
+    @Test
+    fun `should return true when servers exist in OpenAPI`() {
+        val yamlContent = """
+            openapi: 3.0.0
+            servers:
+              - url: "http://example.com"
+        """.trimIndent()
+
+        val result = OpenApiSpecification.checkIfServersExist(yamlContent, "path/to/openapi.yaml", "")
+        assertThat(result).isTrue()
+    }
+
+    @Test
+    fun `should return false when no servers exist in OpenAPI`() {
+        val yamlContent = """
+            openapi: 3.0.0
+            info:
+              title: Test API
+        """.trimIndent()
+
+        val result = OpenApiSpecification.checkIfServersExist(yamlContent, "", "")
+        assertThat(result).isFalse()
+    }
+
+    @Test
+    fun `should return false when YAML content is invalid`() {
+        val invalidYamlContent = """
+            invalid yaml content
+        """.trimIndent()
+
+        val result = OpenApiSpecification.checkIfServersExist(invalidYamlContent, "path/to/openapi.yaml", "")
+        assertThat(result).isFalse()
+    }
+
+    @Test
+    fun `should correctly apply both overlay content and implicit overlay`() {
+        val yamlContent = """
+            openapi: 3.0.0
+            servers:
+              - url: "http://original-url.com"
+        """.trimIndent()
+
+        val overlayContent = """
+            servers:
+              - url: "http://overlay-url.com"
+        """.trimIndent()
+
+        val implicitOverlay = """
+            servers:
+              - url: "http://implicit-overlay-url.com"
+        """.trimIndent()
+
+        mockkObject(OpenApiSpecification)
+        every { getImplicitOverlayContent("path/to/openapi.yaml") } returns implicitOverlay
+
+        val result = OpenApiSpecification.checkIfServersExist(yamlContent, "path/to/openapi.yaml", overlayContent)
+
+        assertThat(result).isTrue()
+
+        verify(exactly = 1) { getImplicitOverlayContent("path/to/openapi.yaml") }
     }
 }
 

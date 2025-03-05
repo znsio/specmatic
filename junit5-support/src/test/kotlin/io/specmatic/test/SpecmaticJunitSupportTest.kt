@@ -49,7 +49,7 @@ class SpecmaticJunitSupportTest {
     }
 
     @Test
-    fun `should take the domain from the host system property when it is an URI`() {
+    fun `should take the baseURL correctly`() {
         val baseURL = "http://test.com:8080/v1"
         System.setProperty(BASE_URL, baseURL)
         lateinit var url: String
@@ -61,7 +61,7 @@ class SpecmaticJunitSupportTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["http://invalid url.com", "http://localhost:abcd/", "http://localhost:80 80/", "http://localhost:a123/test"])
-    fun `testBaseURL system property should be valid URI`(invalidURL: String) {
+    fun `baseURL system property should be valid URI`(invalidURL: String) {
         System.setProperty(BASE_URL, invalidURL)
         val ex = assertThrows<TestAbortedException> {
             SpecmaticJUnitSupport().getTestBaseURL()

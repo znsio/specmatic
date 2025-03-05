@@ -187,7 +187,7 @@ class OpenApiSpecification(
             val parsedOpenApi: OpenAPI? = parseResult.openAPI
 
             if (parsedOpenApi != null) {
-                return parsedOpenApi.servers.isNotEmpty()
+                return parsedOpenApi.servers.isNotEmpty() && parsedOpenApi.servers.any { it.url != "/" }
             }
 
             return false

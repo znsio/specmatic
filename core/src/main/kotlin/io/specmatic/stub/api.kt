@@ -585,7 +585,7 @@ private fun dataFilesLogForStubScan(
     debugMode: Boolean = false
 ): StringLog {
     if(dataFiles.isEmpty()) {
-        return StringLog("No examples directory provided or found.")
+        return StringLog("Skipped the non-existent example directories:${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
     }
 
     val dataFilesString = dataFiles.joinToString(System.lineSeparator()) { file ->

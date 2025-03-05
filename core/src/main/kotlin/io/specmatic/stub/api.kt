@@ -699,11 +699,13 @@ fun loadContractStubs(
             else {
                 if (logIgnoredFiles) {
                     val errorMessage = stubMatchErrorMessage(matchResults, stubFile, specs)
-                    val message = "Error loading stub expectation file '${stubFile}':${System.lineSeparator()} $errorMessage"
-                    logger.log(message.prependIndent(" "))
+                    val message = ">> Error loading stub expectation file '${stubFile}':${System.lineSeparator()} $errorMessage"
+                    logger.newLine()
+                    logger.log(message.prependIndent(INDENT))
+                    logger.newLine()
                 }
                 else {
-                    logPartialErrorMessages(errorReports, stubFile, matchResults)
+                    logPartialErrorMessages(errorReports, stubFile, matchResults, specs)
                 }
             }
             return@flatMap emptyList()
@@ -728,17 +730,20 @@ fun loadContractStubs(
 private fun logPartialErrorMessages(
     errorReports: List<StubMatchErrorReport>,
     stubFile: String,
-    matchResults: List<StubMatchResults>
+    matchResults: List<StubMatchResults>,
+    specs: List<String>
 ) {
     val errorMessage = stubMatchErrorMessageForNonEmpty(errorReports, stubFile).takeIf { errorReports.isNotEmpty() }
     if (errorMessage != null) {
-        val errorMessagePrefix = "Error loading stub expectation file '${stubFile}':".prependIndent(" ")
-        val message = "$errorMessagePrefix${System.lineSeparator()}${errorMessage.prependIndent(INDENT)}"
+        val errorMessagePrefix = ">> Error loading stub expectation file '${stubFile}':".prependIndent(INDENT)
+        val message = "$errorMessagePrefix${System.lineSeparator()}${errorMessage.prependIndent(INDENT.plus(" "))}"
+        logger.newLine()
         logger.log(message)
         logger.newLine()
     }
     if (matchResults.isEmpty() || errorReports.isEmpty()) {
-        val errorMessageForDebugLog = "Skipped loading the stub expectation from '${stubFile}' as it didn't match the spec".prependIndent(" ")
+        consoleDebug("")
+        val errorMessageForDebugLog = ">> Skipped loading the stub expectation from '${stubFile}' as it didn't match the spec(s) '${specs.joinToString(", ")}'".prependIndent(INDENT)
         logger.debug(errorMessageForDebugLog)
     }
 }

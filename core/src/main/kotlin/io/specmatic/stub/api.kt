@@ -243,8 +243,8 @@ fun loadContractStubsFromImplicitPaths(
         when {
             specFile.isFile && specFile.extension in CONTRACT_EXTENSIONS -> {
                 val cachedFeature = cachedFeatures.firstOrNull { it.path == specFile.path }
+                logger.newLine()
                 if(cachedFeature == null) {
-                    logger.newLine()
                     consoleLog(StringLog("Loading the spec file: $specFile${System.lineSeparator()}"))
                 }
 
@@ -524,6 +524,7 @@ private fun logStubScanForDebugging(
 ) {
     if (dataFiles.isNotEmpty()) {
         logger.debug(featuresLogForStubScan(features))
+        logger.debug(System.lineSeparator())
         consoleDebug(dataFilesLogForStubScan(dataFiles, dataDirPaths.relativePaths()))
     } else {
         val existingDataFiles = dataFiles.groupBy { it.exists() }
@@ -556,7 +557,6 @@ private fun featuresLogForStubScan(features: List<Pair<String, *>>): String {
         append("Scanning for stub expectations for specs:".prependIndent(" "))
         append(System.lineSeparator())
         append(features.joinToString(System.lineSeparator()) { "- ${it.first}".prependIndent(INDENT) })
-        append(System.lineSeparator())
     }
 }
 

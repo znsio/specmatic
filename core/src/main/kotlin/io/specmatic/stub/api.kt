@@ -265,10 +265,16 @@ fun loadContractStubsFromImplicitPaths(
                         specmaticConfig = specmaticConfig
                     )
                     consoleLog("")
-                    consoleLog(dataFilesLogForStubScan(
-                        implicitDataDirs.flatMap { filesInDir(it).orEmpty() },
-                        implicitDataDirs.map { it.path }.relativePaths()
-                    ))
+
+                    val dataFiles = implicitDataDirs.flatMap { filesInDir(it).orEmpty() }
+                    if(dataFiles.isEmpty()) {
+                        debugLogNonExistentDataFiles(implicitDataDirs.map { it.path }.relativePaths())
+                    } else {
+                        consoleLog(dataFilesLogForStubScan(
+                            dataFiles,
+                            implicitDataDirs.map { it.path }.relativePaths()
+                        ))
+                    }
                     val stubData = when {
                         implicitDataDirs.any { it.isDirectory } -> {
                             implicitDataDirs.filter { it.isDirectory }.flatMap { implicitDataDir ->
@@ -379,7 +385,11 @@ fun loadContractStubsFromFiles(
     dataDirPaths.forEach { dataDirPath ->
         val dataFiles = dataDirFiles(listOf(dataDirPath))
         consoleLog("")
-        consoleLog(dataFilesLogForStubScan(dataFiles, listOf(dataDirPath).relativePaths()))
+        if(dataFiles.isEmpty()) {
+            debugLogNonExistentDataFiles(dataDirPaths)
+        } else {
+            consoleLog(dataFilesLogForStubScan(dataFiles, listOf(dataDirPath).relativePaths()))
+        }
     }
 
     val explicitStubs = loadImplicitExpectationsFromDataDirsForFeature(
@@ -406,6 +416,10 @@ fun loadContractStubsFromFiles(
     )
 
     return explicitStubs.plus(implicitStubs)
+}
+
+private fun debugLogNonExistentDataFiles(dataDirPaths: List<String>) {
+    consoleDebug(StringLog("Skipped the non-existent example directories:${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}"))
 }
 
 fun loadExpectationsForFeatures(
@@ -585,7 +599,7 @@ private fun dataFilesLogForStubScan(
     debugMode: Boolean = false
 ): StringLog {
     if(dataFiles.isEmpty()) {
-        return StringLog("Skipped the non-existent example directories:${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}")
+        return StringLog("")
     }
 
     val dataFilesString = dataFiles.joinToString(System.lineSeparator()) { file ->

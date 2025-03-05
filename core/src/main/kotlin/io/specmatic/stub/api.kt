@@ -708,8 +708,8 @@ private fun logPartialErrorMessages(
     specs: List<String>
 ) {
     val errorMessage = stubMatchErrorMessageForNonEmpty(errorReports, stubFile).takeIf { errorReports.isNotEmpty() }
-    val errorMessagePrefix = "Error loading stub expectation file '${stubFile}':".prependIndent(INDENT)
     if (errorMessage != null) {
+        val errorMessagePrefix = "Error loading stub expectation file '${stubFile}':".prependIndent(INDENT)
         val message = "$errorMessagePrefix${System.lineSeparator()}$errorMessage"
         logger.log(message)
     }
@@ -719,6 +719,7 @@ private fun logPartialErrorMessages(
         specs
     ).takeIf { matchResults.isEmpty() || errorReports.isEmpty() }
     if (errorMessageForDebugLogs != null) {
+        val errorMessagePrefix = "Skipped loading the stub expectation from '${stubFile}':".prependIndent(INDENT)
         logger.debug("$errorMessagePrefix${System.lineSeparator()}$errorMessageForDebugLogs")
     }
 }

@@ -276,7 +276,6 @@ fun loadContractStubsFromImplicitPaths(
 
                                 val stubDataFiles =
                                     filesInDir(implicitDataDir)?.toList()?.sorted()?.filter { it.extension == "json" }.orEmpty()
-                                logStubScanForDebugging(listOf(Pair(feature.path, feature)), stubDataFiles, implicitDataDirs.map { it.path })
                                 logIgnoredFiles(implicitDataDir)
 
                                 stubDataFiles.mapNotNull {

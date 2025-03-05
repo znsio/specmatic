@@ -556,6 +556,7 @@ private fun featuresLogForStubScan(features: List<Pair<String, *>>): String {
         append("Scanning for stub expectations for specs:".prependIndent(" "))
         append(System.lineSeparator())
         append(features.joinToString(System.lineSeparator()) { "- ${it.first}".prependIndent(INDENT) })
+        append(System.lineSeparator())
     }
 }
 

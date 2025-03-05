@@ -1,6 +1,7 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.core.value.StringValue
+import io.specmatic.stub.captureStandardOutput
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -14,6 +15,15 @@ class RegExSpecTest {
         val invalidRegex = "/^a{10}\$/"
         assertThrows<Exception> { RegExSpec(invalidRegex) }
             .also { assertThat(it.message).isEqualTo("Invalid regex $invalidRegex. OpenAPI follows ECMA-262 regular expressions, which do not support / / delimiters like those used in many programming languages") }
+    }
+
+    @Test
+    fun `should warn if the random generated string from the regex does not match back with the regex`() {
+        val regex = "^\\\\d{6}$"
+        val (consoleOutput, _) = captureStandardOutput {
+            RegExSpec(regex)
+        }
+        assertThat(consoleOutput).contains("WARNING: Please check the regex $regex. We generated a random string")
     }
 
     @Test

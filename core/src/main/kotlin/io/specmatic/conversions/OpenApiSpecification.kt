@@ -1342,7 +1342,7 @@ class OpenApiSpecification(
             is DateTimeSchema -> DateTimePattern
             is DateSchema -> DatePattern
             is BooleanSchema -> BooleanPattern(example = schema.example?.toString())
-            is ObjectSchema -> {
+            is ObjectSchema, is MapSchema -> {
                 if (schema.additionalProperties is Schema<*>) {
                     toDictionaryPattern(schema, typeStack)
                 } else if (noPropertiesDefinedInSchema(schema)) {
@@ -1602,7 +1602,7 @@ class OpenApiSpecification(
     }
 
     private fun toXMLPattern(
-        schema: Schema<Any>, nodeNameFromProperty: String? = null, typeStack: List<String>
+        schema: Schema<*>, nodeNameFromProperty: String? = null, typeStack: List<String>
     ): XMLPattern {
         val name = schema.xml?.name ?: nodeNameFromProperty
 
@@ -1759,7 +1759,7 @@ class OpenApiSpecification(
         )
     }
 
-    private fun noPropertiesDefinedInSchema(valueSchema: Schema<Any>) = valueSchema.properties == null
+    private fun noPropertiesDefinedInSchema(valueSchema: Schema<*>) = valueSchema.properties == null
 
     private fun toFreeFormDictionaryWithStringKeysPattern(): DictionaryPattern {
         return DictionaryPattern(
@@ -1777,7 +1777,8 @@ class OpenApiSpecification(
         val maxProperties: Int? = schema.maxProperties
         val jsonObjectPattern = toJSONObjectPattern(schemaProperties, if(patternName.isNotBlank()) "(${patternName})" else "").copy(
             minProperties = minProperties,
-            maxProperties = maxProperties
+            maxProperties = maxProperties,
+            additionalProperties = schema.additionalProperties == true
         )
         return cacheComponentPattern(patternName, jsonObjectPattern)
     }

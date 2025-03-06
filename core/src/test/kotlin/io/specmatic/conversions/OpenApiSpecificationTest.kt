@@ -9940,6 +9940,52 @@ paths:
         )
     }
 
+    @Test
+    fun `object schema with defined properties and additionalProperties set to true should convert to JsonObject pattern`() {
+        val specContent = """
+        openapi: '3.0.3'
+        info:
+          title: Simple API
+          version: '1.0'
+        paths:
+          /test:
+            post:
+              summary: A simple test
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      ${"$"}ref: '#/components/schemas/Example'
+              responses:
+                '200':
+                  description: OK
+        components:
+          schemas:
+            Example:
+              type: object
+              properties:
+                name:
+                  type: string
+                address:
+                  type: string
+              required:
+                - name
+              additionalProperties: true
+        """.trimIndent()
+        val specification = OpenApiSpecification.fromYAML(specContent, "")
+        val feature = specification.toFeature()
+        val scenario =  feature.scenarios.first()
+        val requestBodyPattern = resolvedHop(scenario.httpRequestPattern.body, scenario.resolver)
+
+        assertThat(requestBodyPattern).isInstanceOf(JSONObjectPattern::class.java)
+        requestBodyPattern as JSONObjectPattern
+        assertThat(requestBodyPattern.typeAlias).isEqualTo("(Example)")
+        assertThat(requestBodyPattern.additionalProperties).isTrue()
+        assertThat(requestBodyPattern.pattern).isEqualTo(mapOf(
+            "name" to StringPattern(), "address?" to StringPattern()
+        ))
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

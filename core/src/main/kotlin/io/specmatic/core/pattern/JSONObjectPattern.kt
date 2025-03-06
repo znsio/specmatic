@@ -25,7 +25,8 @@ data class JSONObjectPattern(
     private val unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys,
     override val typeAlias: String? = null,
     val minProperties: Int? = null,
-    val maxProperties: Int? = null
+    val maxProperties: Int? = null,
+    val additionalProperties: Boolean = false
 ) : Pattern, PossibleJsonObjectPatternContainer {
 
     override fun fixValue(value: Value, resolver: Resolver): Value {
@@ -33,7 +34,7 @@ data class JSONObjectPattern(
         return JSONObjectValue(
             fix(
                 jsonPatternMap = pattern, jsonValueMap = (value as? JSONObjectValue)?.jsonObject.orEmpty(),
-                resolver = resolver, jsonPattern = this
+                resolver = resolver.withAdditionalProperties(additionalProperties), jsonPattern = this
             )
         )
     }
@@ -271,7 +272,7 @@ data class JSONObjectPattern(
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        val resolverWithNullType = withNullPattern(resolver)
+        val resolverWithNullType = withNullPattern(resolver.withAdditionalProperties(additionalProperties))
         if (sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData, resolver.mismatchMessages)
 
@@ -617,4 +618,9 @@ internal fun mapEncompassesMap(
     }
 
     return Result.fromResults(previousResults + missingFixedKeyErrors + keyErrors)
+}
+
+private fun Resolver.withAdditionalProperties(additionalProperties: Boolean): Resolver {
+    return if (!additionalProperties) this
+    else this.withUnexpectedKeyCheck(IgnoreUnexpectedKeys)
 }

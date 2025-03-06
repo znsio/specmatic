@@ -17,6 +17,7 @@ import io.specmatic.stub.captureStandardOutput
 import io.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.checkerframework.common.value.qual.StringVal
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.params.ParameterizedTest
@@ -1742,6 +1743,28 @@ components:
         assertThat(value).isEqualTo(JSONObjectValue())
     }
 
+    @Test
+    fun `should return success when matching with additional keys if additionalProperties is set`() {
+        val pattern = JSONObjectPattern(mapOf("name" to StringPattern()), additionalProperties = true)
+        val value = JSONObjectValue(mapOf("name" to StringValue("John"), "extraKey" to StringValue("extraValue")))
+        val result = pattern.matches(value, Resolver().withUnexpectedKeyCheck(ValidateUnexpectedKeys))
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should complain if mandatory keys are missing even when additionalProperties is set`() {
+        val pattern = JSONObjectPattern(mapOf("name" to StringPattern()), additionalProperties = true)
+        val value = JSONObjectValue(mapOf("extraKey" to StringValue("extraValue")))
+        val result = pattern.matches(value, Resolver().withUnexpectedKeyCheck(ValidateUnexpectedKeys))
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        >> name
+        Expected key named "name" was missing
+        """.trimIndent())
+    }
+
     @Nested
     inner class FixValueTests {
         @Test
@@ -2118,6 +2141,25 @@ components:
                     "number" to NumberValue(999), "string" to StringValue("TODO"))
                 ))
             }
+        }
+
+        @Test
+        fun `should not remove extra keys when additionalProperties is set`() {
+            val pattern = JSONObjectPattern(mapOf("name" to StringPattern(), "age" to NumberPattern()), additionalProperties = true)
+            val value = JSONObjectValue(mapOf(
+                "name" to StringValue("John"),
+                "age" to StringValue("10"),
+                "extraKey" to StringValue("extraValue")
+            ))
+            val fixedValue = pattern.fixValue(value, Resolver(dictionary = mapOf("(number)" to NumberValue(999))))
+
+            assertThat(fixedValue).isInstanceOf(JSONObjectValue::class.java)
+            fixedValue as JSONObjectValue
+            assertThat(fixedValue.jsonObject).isEqualTo(mapOf(
+                "name" to StringValue("John"),
+                "age" to NumberValue(999),
+                "extraKey" to StringValue("extraValue")
+            ))
         }
     }
 }

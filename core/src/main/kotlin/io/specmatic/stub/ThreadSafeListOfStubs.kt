@@ -9,15 +9,15 @@ import io.specmatic.mock.ScenarioStub
 
 class ThreadSafeListOfStubs(
     private val httpStubs: MutableList<HttpStubData>,
-    private val specToPortMap: Map<String, Int>
+    private val specToBaseUrlMap: Map<String, String>
 ) {
     val size: Int
         get() {
             return httpStubs.size
         }
 
-    fun stubAssociatedTo(port: Int, defaultPort: Int): ThreadSafeListOfStubs {
-        return portToListOfStubsMap(defaultPort)[port] ?: emptyStubs()
+    fun stubAssociatedTo(baseUrl: String, defaultBaseUrl: String): ThreadSafeListOfStubs {
+        return baseUrlToListOfStubsMap(defaultBaseUrl)[baseUrl] ?: emptyStubs()
     }
 
     fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {
@@ -120,12 +120,12 @@ class ThreadSafeListOfStubs(
         return Pair(mock?.second, listMatchResults)
     }
 
-    private fun portToListOfStubsMap(defaultPort: Int): Map<Int, ThreadSafeListOfStubs> {
+    private fun baseUrlToListOfStubsMap(defaultBaseUrl: String): Map<String, ThreadSafeListOfStubs> {
         synchronized(this) {
             return httpStubs.groupBy {
-                specToPortMap[it.contractPath] ?: defaultPort
+                specToBaseUrlMap[it.contractPath] ?: defaultBaseUrl
             }.mapValues { (_, stubs) ->
-                ThreadSafeListOfStubs(stubs as MutableList<HttpStubData>, specToPortMap)
+                ThreadSafeListOfStubs(stubs as MutableList<HttpStubData>, specToBaseUrlMap)
             }
         }
     }

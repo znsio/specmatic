@@ -7,7 +7,7 @@ import java.io.File
 
 data class ContractSourceEntry(
     val path: String,
-    val port: Int? = null
+    val baseUrl: String? = null
 )
 
 sealed interface ContractSource {

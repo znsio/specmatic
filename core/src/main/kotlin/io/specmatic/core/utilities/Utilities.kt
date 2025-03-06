@@ -274,11 +274,11 @@ data class ContractPathData(
     val repository: String? = null,
     val branch: String? = null,
     val specificationPath: String? = null,
-    val port: Int? = null
+    val baseUrl: String? = null
 ) {
     companion object {
-        fun List<ContractPathData>.specToPortMap(): Map<String, Int?> {
-            return this.associate { File(it.path).path to it.port }
+        fun List<ContractPathData>.specToBaseUrlMap(): Map<String, String?> {
+            return this.associate { File(it.path).path to it.baseUrl }
         }
     }
 }

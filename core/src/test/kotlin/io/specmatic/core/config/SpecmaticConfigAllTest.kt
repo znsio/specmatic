@@ -272,7 +272,7 @@ internal class SpecmaticConfigAllTest {
                     "com/petstore/payment.yaml",
                     {
                         "specs": ["com/petstore/order.yaml"],
-                        "port": 9001
+                        "baseUrl": "http://localhost:9001"
                     }
                 ]
             }
@@ -334,7 +334,7 @@ internal class SpecmaticConfigAllTest {
               - com/petstore/1.yaml
             consumes:
               - com/petstore/payment.yaml
-              - port: 9001
+              - baseUrl: http://localhost:9001
                 specs:
                 - com/petstore/order.yaml
         """.trimIndent()
@@ -375,7 +375,7 @@ internal class SpecmaticConfigAllTest {
               url: https://contracts
             consumes:
               - com/petstore/payment.yaml
-              - port: 9001
+              - baseUrl: http://localhost:9001
                 specs:
                 - com/petstore/order.yaml
         """.trimIndent()

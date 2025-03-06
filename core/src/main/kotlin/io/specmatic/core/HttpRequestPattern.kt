@@ -92,7 +92,7 @@ data class HttpRequestPattern(
 
         val matchFailures = mutableListOf<Failure>()
         val matchingSecurityScheme: OpenAPISecurityScheme = securitySchemes.firstOrNull {
-            when (val result = it.matches(httpRequest)) {
+            when (val result = it.matches(httpRequest, resolver)) {
                 is Failure -> false.also { matchFailures.add(result) }
                 is Success -> true
             }

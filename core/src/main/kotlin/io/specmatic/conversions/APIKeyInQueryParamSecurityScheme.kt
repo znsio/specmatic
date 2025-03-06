@@ -8,8 +8,12 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.value.StringValue
 
 data class APIKeyInQueryParamSecurityScheme(val name: String, private val apiKey:String?) : OpenAPISecurityScheme {
-    override fun matches(httpRequest: HttpRequest): Result {
-        return if (httpRequest.queryParams.containsKey(name)) Result.Success() else Result.Failure("API-key named $name was not present in query string")
+    override fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
+        return if (httpRequest.queryParams.containsKey(name) || resolver.mockMode) Result.Success()
+        else Result.Failure(
+            breadCrumb = "QUERY-PARAMS.$name",
+            message = resolver.mismatchMessages.expectedKeyWasMissing("API-Key", name)
+        )
     }
 
     override fun removeParam(httpRequest: HttpRequest): HttpRequest {

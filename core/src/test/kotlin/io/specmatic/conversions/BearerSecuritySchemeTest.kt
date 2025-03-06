@@ -2,6 +2,7 @@ package io.specmatic.conversions
 
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.Resolver
+import io.specmatic.core.Result
 import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -68,5 +69,14 @@ class BearerSecuritySchemeTest {
                 ignoreCase = true
             )
         }.count()).isEqualTo(1)
+    }
+
+    @Test
+    fun `should not result in failure when authorization header is missing and resolver is in mock mode`() {
+        val httpRequest = HttpRequest(headers = emptyMap())
+        val resolver = Resolver(mockMode = true)
+        val result = BearerSecurityScheme("abcd1234").matches(httpRequest, resolver)
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 }

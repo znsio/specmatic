@@ -2,6 +2,7 @@ package io.specmatic.conversions
 
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.Resolver
+import io.specmatic.core.Result
 import io.specmatic.core.Result.*
 import io.specmatic.core.pattern.Row
 import org.apache.http.HttpHeaders.AUTHORIZATION
@@ -102,5 +103,14 @@ class BasicAuthSecuritySchemeTest {
         val result = basicAuthSecurityScheme.isInRow(row)
 
         assertFalse(result, "Expected false when authorization header is not present in row")
+    }
+
+    @Test
+    fun `should not result in failure when authorization header is missing and resolver is in mock mode`() {
+        val httpRequest = HttpRequest(headers = emptyMap())
+        val resolver = Resolver(mockMode = true)
+        val result = basicAuthSecurityScheme.matches(httpRequest, resolver)
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 }

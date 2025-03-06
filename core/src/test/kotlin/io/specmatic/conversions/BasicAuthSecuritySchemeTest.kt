@@ -1,6 +1,7 @@
 package io.specmatic.conversions
 
 import io.specmatic.core.HttpRequest
+import io.specmatic.core.Resolver
 import io.specmatic.core.Result.*
 import io.specmatic.core.pattern.Row
 import org.apache.http.HttpHeaders.AUTHORIZATION
@@ -16,7 +17,7 @@ class BasicAuthSecuritySchemeTest {
     fun `matches should return failure when authorization header is missing`() {
         val httpRequest = HttpRequest(headers = emptyMap())
 
-        val result = basicAuthSecurityScheme.matches(httpRequest)
+        val result = basicAuthSecurityScheme.matches(httpRequest, Resolver())
 
         assertTrue(result is Failure, "Expected failure when authorization header is missing")
     }
@@ -25,7 +26,7 @@ class BasicAuthSecuritySchemeTest {
     fun `matches should return failure when authorization header is not prefixed with Basic`() {
         val httpRequest = HttpRequest(headers = mapOf(AUTHORIZATION to "Bearer token"))
 
-        val result = basicAuthSecurityScheme.matches(httpRequest)
+        val result = basicAuthSecurityScheme.matches(httpRequest, Resolver())
 
         assertTrue(result is Failure, "Expected failure when authorization header is not prefixed with Basic")
     }
@@ -35,7 +36,7 @@ class BasicAuthSecuritySchemeTest {
         val credentials = "charlie123:pqrxyz"
         val httpRequest = HttpRequest(headers = mapOf(AUTHORIZATION to "Basic ${String(Base64.getEncoder().encode(credentials.toByteArray()))}"))
 
-        val result = basicAuthSecurityScheme.matches(httpRequest)
+        val result = basicAuthSecurityScheme.matches(httpRequest, Resolver())
 
         assertThat(result).withFailMessage(result.reportString()).isInstanceOf(Success::class.java)
     }
@@ -45,7 +46,7 @@ class BasicAuthSecuritySchemeTest {
         val credentialsWithoutPassword = "charlie123"
         val httpRequest = HttpRequest(headers = mapOf(AUTHORIZATION to "Basic ${String(Base64.getEncoder().encode(credentialsWithoutPassword.toByteArray()))}"))
 
-        val result = basicAuthSecurityScheme.matches(httpRequest)
+        val result = basicAuthSecurityScheme.matches(httpRequest, Resolver())
 
         assertThat(result).withFailMessage(result.reportString()).isInstanceOf(Failure::class.java)
     }
@@ -55,7 +56,7 @@ class BasicAuthSecuritySchemeTest {
         val nonBase64String = "!@#$%"
         val httpRequest = HttpRequest(headers = mapOf(AUTHORIZATION to "Basic $nonBase64String"))
 
-        val result = basicAuthSecurityScheme.matches(httpRequest)
+        val result = basicAuthSecurityScheme.matches(httpRequest, Resolver())
 
         assertThat(result.reportString()).contains("Invalid base64 encoding")
     }

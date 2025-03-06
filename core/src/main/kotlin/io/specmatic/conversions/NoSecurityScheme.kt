@@ -7,7 +7,7 @@ import io.specmatic.core.Result
 import io.specmatic.core.pattern.Row
 
 class NoSecurityScheme : OpenAPISecurityScheme {
-    override fun matches(httpRequest: HttpRequest): Result {
+    override fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
         return Result.Success()
     }
 

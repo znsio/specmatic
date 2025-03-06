@@ -8,15 +8,23 @@ import org.apache.http.HttpHeaders.AUTHORIZATION
 import java.util.Base64
 
 data class BasicAuthSecurityScheme(private val token: String? = null) : OpenAPISecurityScheme {
-    override fun matches(httpRequest: HttpRequest): Result {
-        val authHeaderValue: String = httpRequest.headers[AUTHORIZATION]
-            ?: return Result.Failure("$AUTHORIZATION header is missing in request")
+    override fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
+        val authHeaderValue: String = httpRequest.headers[AUTHORIZATION] ?: return when(resolver.mockMode) {
+            true -> Result.Success()
+            else -> Result.Failure(
+                breadCrumb = "HEADERS.$AUTHORIZATION",
+                message = resolver.mismatchMessages.expectedKeyWasMissing("Header", AUTHORIZATION)
+            )
+        }
 
-        if (!authHeaderValue.lowercase().startsWith("basic"))
-            return Result.Failure("$AUTHORIZATION header must be prefixed with \"Basic\"")
+        if (!authHeaderValue.lowercase().startsWith("basic")) {
+            return Result.Failure(
+                breadCrumb = "HEADERS.$AUTHORIZATION",
+                message = "$AUTHORIZATION header must be prefixed with \"Basic\""
+            )
+        }
 
         val base64Credentials = authHeaderValue.substringAfter(" ").trim()
-
         return validateBase64EncodedCredentials(base64Credentials)
     }
 

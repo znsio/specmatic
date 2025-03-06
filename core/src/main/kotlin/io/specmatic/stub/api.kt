@@ -755,8 +755,7 @@ private fun logPartialErrorMessages(
         logger.newLine()
     }
     if (matchResults.isEmpty() || errorReports.isEmpty()) {
-        consoleDebug("")
-        val errorMessageForDebugLog = ">> Skipped loading the stub expectation from '${stubFile}' as it didn't match the spec(s) '${specs.joinToString(", ")}'".prependIndent(INDENT)
+        val errorMessageForDebugLog = "Skipped loading the stub expectation from '${stubFile}' as it didn't match the spec(s) '${specs.joinToString(", ")}'".prependIndent(INDENT)
         logger.debug(errorMessageForDebugLog)
     }
 }

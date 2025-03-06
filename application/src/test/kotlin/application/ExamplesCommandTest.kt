@@ -526,7 +526,7 @@ paths:
 
             assertThat(exitCode).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
-            No example files found in ${examplesDir}
+            No example files found in $examplesDir
             """.trimIndent())
         }
     }

@@ -289,7 +289,7 @@ For example, to filter by HTTP methods:
                 logger.log("$externalExampleDir does not exist, did not find any files to validate")
                 return FAILURE_EXIT_CODE to emptyMap()
             }
-            if (externalExamples.none()) {
+            if (externalExamples.isEmpty()) {
                 logger.log("No example files found in $externalExampleDir")
                 return SUCCESS_EXIT_CODE to emptyMap()
             }

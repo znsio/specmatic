@@ -42,15 +42,15 @@ class HTTPStubEngine {
             specToStubPortMap = specToPortMap
         ).also {
             consoleLog(NewLineLogMessage)
-            consoleLog(StringLog(serverStartupMessage(specToPortMap)))
+            consoleLog(StringLog(serverStartupMessage(specToPortMap, port)))
             consoleLog(StringLog("Press Ctrl + C to stop."))
         }
     }
 
-    private fun serverStartupMessage(specToStubPortMap: Map<String, Int?>): String {
+    private fun serverStartupMessage(specToStubPortMap: Map<String, Int?>, defaultPort: Int): String {
         val newLine = System.lineSeparator()
         val portToSpecs: Map<Int, List<String>> = specToStubPortMap.entries
-            .groupBy({ it.value ?: 9000 }, { it.key })
+            .groupBy({ it.value ?: defaultPort }, { it.key })
 
         val messageBuilder = StringBuilder("Stub server is running on the following URLs:")
 

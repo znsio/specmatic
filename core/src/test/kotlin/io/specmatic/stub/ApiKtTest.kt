@@ -3,6 +3,8 @@ package io.specmatic.stub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import io.specmatic.core.*
+import io.specmatic.core.log.DebugLogger
+import io.specmatic.core.log.withLogger
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.value.*
 import io.specmatic.mock.NoMatchingScenario
@@ -367,27 +369,27 @@ Feature: Math API
 """.trim())
 
         val (stdout, stubInfo) =  captureStandardOutput {
-            loadContractStubs(listOf(Pair("math.$CONTRACT_EXTENSION", feature)), listOf(Pair("sample.json", ScenarioStub(
-                HttpRequest(method = "POST", path = "/square", body = StringValue("10")),
-                HttpResponse(status = 200, body = "not a number")
-            ))))
+            loadContractStubs(
+                listOf(Pair("math.$CONTRACT_EXTENSION", feature)),
+                listOf(
+                    Pair(
+                        "sample.json", ScenarioStub(
+                            HttpRequest(method = "POST", path = "/square", body = StringValue("10")),
+                            HttpResponse(status = 200, body = "not a number")
+                        )
+                    )
+                ),
+                logIgnoredFiles = true
+            )
         }
 
         assertThat(stubInfo.single().first).isEqualTo(feature)
         assertThat(stubInfo.single().second).isEmpty()
-
-        val expectedOnStandardOutput =
-"""
-sample.json didn't match math.$CONTRACT_EXTENSION
-    In scenario "Square of a number"
-    API: POST /square -> 200
-  
-      >> RESPONSE.BODY
-  
-         ${ContractAndStubMismatchMessages.mismatchMessage("number", """"not a number"""")}
-""".trim()
-
-        assertThat(stdout).contains(expectedOnStandardOutput)
+        assertThat(stdout).contains("sample.json didn't match math.$CONTRACT_EXTENSION")
+        assertThat(stdout).contains("""In scenario "Square of a number"""")
+        assertThat(stdout).contains("API: POST /square -> 200")
+        assertThat(stdout).contains(">> RESPONSE.BODY")
+        assertThat(stdout).contains(ContractAndStubMismatchMessages.mismatchMessage("number", """"not a number""""))
     }
 
     @Test
@@ -441,19 +443,29 @@ Feature: Math API
         And response-body (number)
 """.trim())
 
-        val (output, stubInfo) = captureStandardOutput { loadContractStubs(listOf(Pair("math.$CONTRACT_EXTENSION", feature)), listOf(Pair("sample.json", ScenarioStub(
-            HttpRequest(method = "POST", path = "/square", body = StringValue("""{"number": 10, "unexpected": "data"}""")),
-            HttpResponse(status = 200, body = "20")
-        )))) }
+        val (output, stubInfo) = captureStandardOutput { loadContractStubs(
+            listOf(Pair("math.$CONTRACT_EXTENSION", feature)),
+            listOf(
+                Pair(
+                    "sample.json", ScenarioStub(
+                        HttpRequest(
+                            method = "POST",
+                            path = "/square",
+                            body = StringValue("""{"number": 10, "unexpected": "data"}""")
+                        ),
+                        HttpResponse(status = 200, body = "20")
+                    )
+                )
+            ),
+            logIgnoredFiles = true
+        ) }
         assertThat(stubInfo.single().first).isEqualTo(feature)
         assertThat(stubInfo.single().second).isEmpty()
-        assertThat(output).contains("""sample.json didn't match math.$CONTRACT_EXTENSION
-    In scenario "Square of a number"
-    API: POST /square -> 200
-  
-      >> REQUEST.BODY.unexpected
-  
-         ${ContractAndStubMismatchMessages.unexpectedKey("key", "unexpected")}""")
+        assertThat(output).contains("sample.json didn't match math.spec")
+        assertThat(output).contains("""In scenario "Square of a number"""")
+        assertThat(output).contains("API: POST /square -> 200")
+        assertThat(output).contains(">> REQUEST.BODY.unexpected")
+        assertThat(output).contains(ContractAndStubMismatchMessages.unexpectedKey("key", "unexpected"))
     }
 
     @Test
@@ -468,22 +480,28 @@ Feature: Math API
         | number | (number) |
 """.trim())
 
-        val (output, stubInfo) = captureStandardOutput {  loadContractStubs(listOf(Pair("math.$CONTRACT_EXTENSION", feature)), listOf(Pair("sample.json", ScenarioStub(
-            HttpRequest(method = "POST", path = "/square", body = StringValue("""10""")),
-            HttpResponse(status = 200, body = """{"number": 10, "unexpected": "data"}""")
-        )))) }
+        val (output, stubInfo) = captureStandardOutput {
+            loadContractStubs(
+                listOf(Pair("math.$CONTRACT_EXTENSION", feature)),
+                listOf(
+                    Pair(
+                        "sample.json", ScenarioStub(
+                            HttpRequest(method = "POST", path = "/square", body = StringValue("""10""")),
+                            HttpResponse(status = 200, body = """{"number": 10, "unexpected": "data"}""")
+                        )
+                    )
+                ),
+                logIgnoredFiles = true
+            )
+        }
         assertThat(stubInfo.single().first).isEqualTo(feature)
         assertThat(stubInfo.single().second).isEmpty()
 
-        assertThat(output).contains("""
-sample.json didn't match math.$CONTRACT_EXTENSION
-    In scenario "Square of a number"
-    API: POST /square -> 200
-  
-      >> RESPONSE.BODY.unexpected
-  
-         ${ContractAndStubMismatchMessages.unexpectedKey("key", "unexpected")}
-  """.trimIndent())
+        assertThat(output).contains("sample.json didn't match math.spec")
+        assertThat(output).contains("""In scenario "Square of a number"""")
+        assertThat(output).contains("API: POST /square -> 200")
+        assertThat(output).contains(">> RESPONSE.BODY.unexpected")
+        assertThat(output).contains(ContractAndStubMismatchMessages.unexpectedKey("key", "unexpected"))
     }
 
     private fun fakeResponse(request: HttpRequest, behaviour: Feature): HttpResponse {

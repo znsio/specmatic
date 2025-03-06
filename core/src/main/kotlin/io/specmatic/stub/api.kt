@@ -237,9 +237,12 @@ fun loadContractStubsFromImplicitPaths(
     contractPathDataList: List<ContractPathData>,
     specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
     externalDataDirPaths: List<String>,
-    cachedFeatures: List<Feature> = emptyList()
+    cachedFeatures: List<Feature> = emptyList(),
+    processedInvalidSpecs: List<String> = emptyList()
 ): List<Pair<Feature, List<ScenarioStub>>> {
-    return contractPathDataList.map { Pair(File(it.path), it) }.flatMap { (specFile, contractSource) ->
+    return contractPathDataList.filter {
+        it.path !in processedInvalidSpecs
+    }.map { Pair(File(it.path), it) }.flatMap { (specFile, contractSource) ->
         when {
             specFile.isFile && specFile.extension in CONTRACT_EXTENSIONS -> {
                 val cachedFeature = cachedFeatures.firstOrNull { it.path == specFile.path }
@@ -247,25 +250,19 @@ fun loadContractStubsFromImplicitPaths(
                     logger.newLine()
                     consoleLog(StringLog("Loading the spec file: $specFile${System.lineSeparator()}"))
                 }
+                val feature = cachedFeature ?: loadIfOpenAPISpecification(
+                    contractSource,
+                    specmaticConfig
+                )?.second
 
-                if(hasOpenApiFileExtension(specFile.path) && !isOpenAPI(specFile.path.trim())) {
-                    logger.log("Ignoring ${specFile.path} as it is not an OpenAPI specification")
+                if(feature == null) {
                     emptyList()
                 }
                 else try {
                     val implicitDataDirs = implicitDirsForSpecifications(specFile)
                     val externalDataDirs = dataDirFiles(externalDataDirPaths)
-                    val feature = cachedFeature ?: parseContractFileToFeature(
-                        specFile,
-                        CommandHook(HookName.stub_load_contract),
-                        contractSource.provider,
-                        contractSource.repository,
-                        contractSource.branch,
-                        contractSource.specificationPath,
-                        specmaticConfig = specmaticConfig
-                    )
-                    consoleLog("")
 
+                    consoleLog("")
                     val dataFiles = implicitDataDirs.flatMap { filesInDir(it).orEmpty() }
                     if(dataFiles.isEmpty()) {
                         debugLogNonExistentDataFiles(implicitDataDirs.map { it.path }.relativePaths())
@@ -331,7 +328,8 @@ fun loadContractStubsFromImplicitPaths(
                     } ?: emptyList(),
                     specmaticConfig = specmaticConfig,
                     externalDataDirPaths = externalDataDirPaths,
-                    cachedFeatures = cachedFeatures
+                    cachedFeatures = cachedFeatures,
+                    processedInvalidSpecs = processedInvalidSpecs
                 )
             }
             else -> emptyList()
@@ -412,7 +410,8 @@ fun loadContractStubsFromFiles(
         contractPathDataList = contractPathDataList,
         specmaticConfig = specmaticConfig,
         externalDataDirPaths = dataDirPaths,
-        cachedFeatures = features.map { it.second }
+        cachedFeatures = features.map { it.second },
+        processedInvalidSpecs = contractPathDataList.filter { isInvalidOpenAPISpecification(it.path) }.map { it.path }
     )
 
     return explicitStubs.plus(implicitStubs)
@@ -824,15 +823,21 @@ fun implicitContractDataDir(contractPath: String, customBase: String? = null): F
 }
 
 fun loadIfOpenAPISpecification(contractPathData: ContractPathData, specmaticConfig: SpecmaticConfig): Pair<String, Feature>? {
-    if (recognizedExtensionButNotOpenAPI(contractPathData) || isOpenAPI(contractPathData.path))
-        return Pair(contractPathData.path, parseContractFileToFeature(contractPathData.path, CommandHook(HookName.stub_load_contract), contractPathData.provider, contractPathData.repository, contractPathData.branch, contractPathData.specificationPath).copy(specmaticConfig = specmaticConfig))
+    if(hasOpenApiFileExtension(contractPathData.path).not()) {
+        logger.log("Ignoring ${contractPathData.path} as it does not have a recognized specification extension")
+        return null
+    }
+    if(isOpenAPI(contractPathData.path).not()) {
+        logger.log("Ignoring ${contractPathData.path} as it is not a valid OpenAPI specification")
+        return null
+    }
 
-    logger.log("Ignoring ${contractPathData.path} as it does not have a recognized specification extension")
-    return null
+    return Pair(contractPathData.path, parseContractFileToFeature(contractPathData.path, CommandHook(HookName.stub_load_contract), contractPathData.provider, contractPathData.repository, contractPathData.branch, contractPathData.specificationPath).copy(specmaticConfig = specmaticConfig))
 }
 
-private fun recognizedExtensionButNotOpenAPI(contractPathData: ContractPathData) =
-    !hasOpenApiFileExtension(contractPathData.path) && File(contractPathData.path).extension in CONTRACT_EXTENSIONS
+fun isInvalidOpenAPISpecification(specPath: String): Boolean {
+    return hasOpenApiFileExtension(specPath).not() || isOpenAPI(specPath).not()
+}
 
 fun isOpenAPI(path: String): Boolean =
     try {

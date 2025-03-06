@@ -291,7 +291,7 @@ For example, to filter by HTTP methods:
             }
             if (externalExamples.none()) {
                 logger.log("No example files found in $externalExampleDir")
-                return FAILURE_EXIT_CODE to emptyMap()
+                return SUCCESS_EXIT_CODE to emptyMap()
             }
             return SUCCESS_EXIT_CODE to validateExternalExamples(feature, externalExamples)
         }

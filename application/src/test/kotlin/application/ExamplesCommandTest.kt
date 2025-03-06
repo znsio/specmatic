@@ -511,6 +511,24 @@ paths:
                 assertThat(examplesToValidate.name).isEqualTo(expected)
             }
         }
+
+        @Test
+        fun `should not result in exit code 1 when example folder is empty`(@TempDir tempDir: File) {
+            val copiedSpecFile = specFile.copyTo(tempDir.resolve("spec.yaml"))
+            val examplesDir = tempDir.resolve("spec_examples").also { it.mkdirs() }
+
+            val command = ExamplesCommand.Validate().also {
+                it.contractFile = copiedSpecFile
+                it.examplesToValidate = ExamplesCommand.Validate.ExamplesToValidate.EXTERNAL
+            }
+            val (stdOut, exitCode) = captureStandardOutput { command.call() }
+            println(stdOut)
+
+            assertThat(exitCode).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            No example files found in ${examplesDir}
+            """.trimIndent())
+        }
     }
 
     @Nested

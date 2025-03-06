@@ -331,7 +331,7 @@ class ScenarioTest {
     }
 
     @Test
-    fun `should throw when security schema defined in the example is invalid`() {
+    fun `should throw an exception when security schema defined in the example is invalid`() {
         val scenario = Scenario(
             name = "SIMPLE POST",
             httpRequestPattern = HttpRequestPattern(

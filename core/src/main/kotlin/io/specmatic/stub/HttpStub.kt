@@ -291,7 +291,7 @@ class HttpStub(
                         isFlushTransientStubsRequest(httpRequest) -> handleFlushTransientStubsRequest(httpRequest)
                         else -> serveStubResponse(
                             httpRequest,
-                            baseUrl = "${call.request.local.scheme}://${call.request.local.localHost}:${call.request.local.localPort}",
+                            baseUrl = "${call.request.local.scheme}://${call.request.local.serverHost}:${call.request.local.serverPort}",
                             defaultBaseUrl = endPointFromHostAndPort(resolved(host), port, keyData)
                         )
                     }

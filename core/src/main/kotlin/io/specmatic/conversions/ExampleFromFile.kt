@@ -7,14 +7,7 @@ import io.specmatic.core.QueryParameters
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.examples.server.SchemaExample
 import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.HasFailure
-import io.specmatic.core.pattern.HasValue
-import io.specmatic.core.pattern.ResponseExample
-import io.specmatic.core.pattern.ResponseValueExample
-import io.specmatic.core.pattern.ReturnValue
-import io.specmatic.core.pattern.Row
-import io.specmatic.core.pattern.attempt
-import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.URIUtils.parseQuery
 import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.JSONObjectValue
@@ -66,7 +59,10 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         ).let { ExampleProcessor.resolve(it, ExampleProcessor::ifNotExitsToLookupPattern) }
     }
 
-    constructor(file: File) : this(json = attempt("Error reading example file ${file.canonicalPath}") { parsedJSONObject(file.readText()) }, file = file)
+    constructor(file: File) : this(
+        json = attempt("Error reading example file ${file.canonicalPath}") { parsedJSONObject(file.readTextWithoutBom()) },
+        file = file
+    )
 
     private fun JSONObjectValue.findByPath(path: String): Value? {
         return  findFirstChildByPath("partial.$path") ?: findFirstChildByPath(path)

@@ -5,6 +5,8 @@ import io.specmatic.core.MismatchMessages
 import io.specmatic.core.utilities.jsonStringToValueArray
 import io.specmatic.core.utilities.jsonStringToValueMap
 import io.specmatic.core.value.*
+import org.apache.commons.io.input.BOMInputStream
+import java.io.File
 
 const val XML_ATTR_OPTIONAL_SUFFIX = ".opt"
 const val DEFAULT_OPTIONAL_SUFFIX = "?"
@@ -373,4 +375,9 @@ fun parsedScalarValue(content: String?): Value {
         trimmed.lowercase() in setOf("true", "false") -> BooleanValue(trimmed.toBoolean())
         else -> StringValue(trimmed)
     }
+}
+
+fun File.readTextWithoutBom(): String {
+    val bomStream = BOMInputStream.builder().setInputStream(this.inputStream()).setInclude(false).get()
+    return bomStream.reader().readText()
 }

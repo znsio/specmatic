@@ -417,7 +417,7 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOn(row: Row, flagsBased: FlagsBased): Sequence<ReturnValue<Scenario>> {
+    fun newBasedOn(row: Row, flagsBased: FlagsBased): Sequence<ReturnValue<Scenario>> {
         val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
         val resolver =
             Resolver(expectedFacts, false, patterns)

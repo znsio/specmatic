@@ -1,0 +1,3 @@
+package io.specmatic.core.examples.module
+
+class ExampleTransformationModuleTest

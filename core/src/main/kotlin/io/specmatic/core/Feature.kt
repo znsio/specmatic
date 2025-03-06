@@ -734,6 +734,10 @@ data class Feature(
         }
     }
 
+    fun negativeScenarioFor(scenario: Scenario): Scenario {
+        return scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
+    }
+
     fun generateBackwardCompatibilityTestScenarios(): List<Scenario> =
         scenarios.flatMap { scenario ->
             scenario.copy(examples = emptyList()).generateBackwardCompatibilityScenarios()

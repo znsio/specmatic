@@ -1,22 +1,55 @@
 package application
 
 import io.specmatic.conversions.ExampleFromFile
-import io.specmatic.core.*
+import io.specmatic.core.CONTRACT_EXTENSIONS
+import io.specmatic.core.DefaultKeyCheck
+import io.specmatic.core.FailureReason
+import io.specmatic.core.Feature
+import io.specmatic.core.Resolver
+import io.specmatic.core.Result
+import io.specmatic.core.Results
+import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
+import io.specmatic.core.Scenario
+import io.specmatic.core.actualMatch
+import io.specmatic.core.examples.module.ExampleExternalisationModule
+import io.specmatic.core.examples.module.ExampleFixModule
+import io.specmatic.core.examples.module.ExampleGenerationModule
+import io.specmatic.core.examples.module.ExampleTransformationModule
+import io.specmatic.core.examples.module.ExampleValidationModule
+import io.specmatic.core.examples.server.ExampleModule
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.externaliseInlineExamples
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.fixExample
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesDirPath
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesFromDir
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExistingExampleFiles
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateExample
 import io.specmatic.core.examples.server.FixExampleResult
 import io.specmatic.core.examples.server.FixExampleStatus
+import io.specmatic.core.examples.server.ScenarioFilter
 import io.specmatic.core.examples.server.defaultExternalExampleDirFrom
 import io.specmatic.core.examples.server.loadExternalExamples
-import io.specmatic.core.log.*
-import io.specmatic.core.pattern.*
-import io.specmatic.core.utilities.*
-import io.specmatic.core.value.*
+import io.specmatic.core.log.CompositePrinter
+import io.specmatic.core.log.ConsolePrinter
+import io.specmatic.core.log.NonVerbose
+import io.specmatic.core.log.StringLog
+import io.specmatic.core.log.Verbose
+import io.specmatic.core.log.consoleLog
+import io.specmatic.core.log.logger
+import io.specmatic.core.noPatternKeyCheck
+import io.specmatic.core.parseContractFileToFeature
+import io.specmatic.core.pattern.AnyPattern
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.DeferredPattern
+import io.specmatic.core.pattern.IgnoreUnexpectedKeys
+import io.specmatic.core.pattern.JSONObjectPattern
+import io.specmatic.core.pattern.ListPattern
+import io.specmatic.core.pattern.Pattern
+import io.specmatic.core.pattern.ScalarType
+import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.pattern.resolvedHop
+import io.specmatic.core.pattern.withoutPatternDelimiters
+import io.specmatic.core.utilities.capitalizeFirstChar
+import io.specmatic.core.utilities.consolePrintableURL
+import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.exitWithMessage
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
 import picocli.CommandLine.*
 import java.io.File
@@ -40,7 +73,7 @@ private const val FAILURE_EXIT_CODE = 1
         ExamplesCommand.Fix::class
     ]
 )
-class ExamplesCommand : Callable<Int> {
+open class ExamplesCommand : Callable<Int> {
     @Option(
         names = ["--filter-name"],
         description = ["Use only APIs with this value in their name"],
@@ -103,6 +136,10 @@ For example, to filter by HTTP methods:
     )
     var allowOnlyMandatoryKeysInJSONObject: Boolean = false
 
+    private val exampleGenerationModule = ExampleGenerationModule(ExampleModule())
+
+    fun resetExampleFileNameCounter() = exampleGenerationModule.resetExampleFileNameCounter()
+
     override fun call(): Int {
         if (contractFile == null) {
             println("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
@@ -114,23 +151,26 @@ For example, to filter by HTTP methods:
         }
 
         configureLogger(this.verbose)
+        dictionaryFile?.also {
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, it.path)
+        }
 
         try {
-            dictionaryFile?.also {
-                System.setProperty(SPECMATIC_STUB_DICTIONARY, it.path)
-            }
-
-            ExamplesInteractiveServer.generate(
-                contractFile!!,
-                ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter),
-                extensive, allowOnlyMandatoryKeysInJSONObject
-            )
+            generateExamples()
         } catch (e: Throwable) {
             logger.log(e)
             return FAILURE_EXIT_CODE
         }
 
         return SUCCESS_EXIT_CODE
+    }
+
+    open fun generateExamples() {
+        exampleGenerationModule.generate(
+            contractFile!!,
+            ScenarioFilter(filterName, filterNotName, filter),
+            allowOnlyMandatoryKeysInJSONObject
+        )
     }
 
     @Command(
@@ -216,6 +256,8 @@ For example, to filter by HTTP methods:
             }
         }
 
+        private val exampleValidationModule = ExampleValidationModule()
+
         override fun call(): Int {
             configureLogger(this.verbose)
 
@@ -272,7 +314,7 @@ For example, to filter by HTTP methods:
             }
 
             try {
-                validateExample(contractFile, exampleFile).throwOnFailure()
+                exampleValidationModule.validateExample(contractFile, exampleFile).throwOnFailure()
                 logger.log("The provided example ${exampleFile.name} is valid.")
                 return SUCCESS_EXIT_CODE
             } catch (e: ContractException) {
@@ -357,22 +399,22 @@ For example, to filter by HTTP methods:
         }
 
         private fun validateInlineExamples(feature: Feature): Map<String, Result> {
-            return ExamplesInteractiveServer.validateInlineExamples(
+            return exampleValidationModule.validateInlineExamples(
                 feature,
                 examples = feature.stubsFromExamples.mapValues { (_, stub) ->
                     stub.map { (request, response) ->
                         ScenarioStub(request, response)
                     }
                 },
-                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter)
+                scenarioFilter = ScenarioFilter(filterName, filterNotName, filter)
             )
         }
 
         private fun validateExternalExamples(feature: Feature, externalExamples: List<File>): Map<String, Result> {
-            return ExamplesInteractiveServer.validateExamples(
+            return exampleValidationModule.validateExamples(
                 feature,
                 examples = externalExamples,
-                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter)
+                scenarioFilter = ScenarioFilter(filterName, filterNotName, filter)
             )
         }
 
@@ -424,11 +466,6 @@ For example, to filter by HTTP methods:
             return this.any { it.value is Result.Failure }
         }
 
-        private fun File.associatedExampleDirFor(specFile: File): File? {
-            return this.walk().firstOrNull { exampleDir ->
-                exampleDir.isFile.not() && exampleDir.nameWithoutExtension == "${specFile.nameWithoutExtension}_examples"
-            }
-        }
     }
 
     @Command(
@@ -565,11 +602,13 @@ For example, to filter by HTTP methods:
         @Option(names = ["--debug"], description = ["Debug Logs"])
         var verbose: Boolean = false
 
+        private val exampleTransformationModule = ExampleTransformationModule(ExampleModule())
+
         override fun call() {
             configureLogger(verbose)
 
             if(allowOnlyMandatoryKeysInPayload) {
-                ExamplesInteractiveServer.transformExistingExamples(
+                exampleTransformationModule.transformExistingExamples(
                     contractFile,
                     overlayFile,
                     examplesDir
@@ -589,9 +628,11 @@ For example, to filter by HTTP methods:
         @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
         lateinit var contractFile: File
 
+        private val exampleExternalisationModule = ExampleExternalisationModule(ExampleModule())
+
         override fun call() {
             try {
-                val examplesDir = externaliseInlineExamples(contractFile)
+                val examplesDir = exampleExternalisationModule.externaliseInlineExamples(contractFile)
                 consoleLog("${System.lineSeparator()}The inline examples were successfully exported to $examplesDir")
                 exitProcess(0)
             } catch(e: Exception) {
@@ -615,10 +656,14 @@ For example, to filter by HTTP methods:
         @Option(names = ["--out", "--o"], description = ["Output file path, defaults to contractfile_dictionary.json"], required = false)
         private var outputFilePath: File? = null
 
+        private val exampleModule = ExampleModule()
+
         override fun call() {
             val baseDictionary = getBaseDictionary()
             val feature = parseContractFileToFeature(contractFile)
-            val examples = getExamplesDirPath(contractFile).getExamplesFromDir()
+            val examples = exampleModule.getExamplesFromDir(
+                dir = exampleModule.getExamplesDirPath(contractFile)
+            )
             var examplesCount = 0
 
             val dictionary = buildMap {
@@ -627,7 +672,7 @@ For example, to filter by HTTP methods:
                     val responsePattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
                     val ignoreResolver = scenario.resolver.ignoreAll()
 
-                    val matchingExamples = getExistingExampleFiles(feature, scenario, examples)
+                    val matchingExamples = exampleModule.getExistingExampleFiles(feature, scenario, examples)
                     examplesCount += matchingExamples.size
                     matchingExamples.forEach { (example, _) ->
                         example.toDictionary(requestPattern, responsePattern, ignoreResolver, target = this)
@@ -767,6 +812,8 @@ For example, to filter by HTTP methods:
         @Option(names = ["--examples"], description = ["Examples directory path"], required = false)
         var examplesDirPath: File? = null
 
+        private val exampleFixModule = ExampleFixModule(ExampleValidationModule())
+
         override fun call(): Int {
             exitIfSpecFileDoesNotExist()
 
@@ -776,7 +823,7 @@ For example, to filter by HTTP methods:
 
             val results = examplesDir.walk().filter { it.isFile && it.extension == "json" }.map { exampleFile ->
                 try {
-                    fixExample(feature, exampleFile)
+                    exampleFixModule.fixExample(feature, exampleFile)
                 } catch (e: Exception) {
                     FixExampleResult(
                         status = FixExampleStatus.FAILED,

@@ -3,8 +3,7 @@ package application
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
-import io.specmatic.core.examples.server.ExamplesInteractiveServer
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesDirPath
+import io.specmatic.core.examples.server.ExampleModule
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.AnyPattern
 import io.specmatic.core.pattern.parsedJSONObject
@@ -25,7 +24,7 @@ class ExamplesCommandTest {
     companion object {
         fun withExampleFile(request: HttpRequest, response: HttpResponse, contractFile: File, block: (exampleFile: ExampleFromFile) -> Unit) {
             val example = ScenarioStub(request, response).toJSON()
-            val examplesDirectory = getExamplesDirPath(contractFile).also { it.mkdirs() }
+            val examplesDirectory = ExampleModule().getExamplesDirPath(contractFile).also { it.mkdirs() }
             val exampleFile = examplesDirectory.resolve("example.json")
             exampleFile.writeText(example.toStringLiteral())
 
@@ -37,9 +36,11 @@ class ExamplesCommandTest {
         }
     }
 
+    private val examplesCommand = ExamplesCommand()
+
     @AfterEach
     fun resetCounter() {
-        ExamplesInteractiveServer.resetExampleFileNameCounter()
+        examplesCommand.resetExampleFileNameCounter()
     }
 
     @Test
@@ -315,7 +316,7 @@ paths:
         examplesDir.deleteRecursively()
         examplesDir.mkdirs()
 
-        ExamplesCommand().also {
+        examplesCommand.also {
             it.contractFile = specFile
         }.call()
 
@@ -413,7 +414,7 @@ paths:
         val exampleFile = examplesDir.resolve("example.json")
         exampleFile.writeText(example)
 
-        ExamplesCommand().also {
+        examplesCommand.also {
             it.contractFile = specFile
         }.call()
 

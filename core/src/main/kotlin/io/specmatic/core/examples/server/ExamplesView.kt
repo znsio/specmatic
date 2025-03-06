@@ -3,10 +3,7 @@ package io.specmatic.core.examples.server
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesFromDir
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExistingExampleFiles
 import io.specmatic.core.pattern.*
-import io.specmatic.core.value.NullValue
 import org.thymeleaf.TemplateEngine
 import org.thymeleaf.context.Context
 import org.thymeleaf.templatemode.TemplateMode
@@ -15,8 +12,10 @@ import java.io.File
 
 class ExamplesView {
     companion object {
+        private val exampleModule = ExampleModule()
+
         fun getEndpoints(feature: Feature, examplesDir: File): List<Endpoint> {
-            val examples = examplesDir.getExamplesFromDir()
+            val examples = exampleModule.getExamplesFromDir(examplesDir)
             val scenarioExamplesPairList = getScenarioExamplesPairs(feature, examples)
 
             return scenarioExamplesPairList.map { (scenario, example) ->
@@ -55,7 +54,7 @@ class ExamplesView {
 
         private fun getScenarioExamplesPairs(feature: Feature, examples: List<ExampleFromFile>): List<Pair<Scenario, Pair<File, Result>?>> {
             return feature.scenarios.flatMap { scenario ->
-                getExistingExampleFiles(feature, scenario, examples).map { exRes ->
+                exampleModule.getExistingExampleFiles(feature, scenario, examples).map { exRes ->
                     scenario to Pair(exRes.first.file, exRes.second)
                 }.ifEmpty { listOf(scenario to null) }
             }

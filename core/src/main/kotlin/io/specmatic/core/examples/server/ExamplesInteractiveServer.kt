@@ -16,7 +16,6 @@ import io.specmatic.core.Feature
 import io.specmatic.core.Result
 import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.examples.module.ExampleFixModule
-import io.specmatic.core.examples.module.ExampleGenerationModule
 import io.specmatic.core.examples.module.ExampleValidationModule
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.examples.server.SchemaExamplesView.Companion.schemaExamplesToTableRows
@@ -43,13 +42,11 @@ class ExamplesInteractiveServer(
     private val filterName: String,
     private val filterNotName: String,
     private val filter: String,
-    externalDictionaryFile: File? = null,
-    private val allowOnlyMandatoryKeysInJSONObject: Boolean
+    externalDictionaryFile: File? = null
 ) : Closeable {
     private var contractFileFromRequest: File? = null
 
     private val exampleModule = ExampleModule()
-    private val exampleGenerationModule = ExampleGenerationModule(exampleModule)
     private val exampleValidationModule = ExampleValidationModule()
     private val exampleFixModule = ExampleFixModule(exampleValidationModule)
 
@@ -117,31 +114,6 @@ class ExamplesInteractiveServer(
                         call.respond(HttpStatusCode.OK, "File and content updated successfully!")
                     } catch (e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, exceptionCauseMessage(e))
-                    }
-                }
-
-                post("/_specmatic/examples/generate") {
-                    val contractFile = getContractFile()
-
-                    try {
-                        val request = call.receive<GenerateExampleRequest>()
-                        val generatedExamples = if (request.isSchemaBased) {
-                            exampleGenerationModule.generateForSchemaBased(contractFile, request.path, request.method)
-                        } else {
-                            exampleGenerationModule.generate(
-                                contractFile,
-                                request.method,
-                                request.path,
-                                request.responseStatusCode,
-                                request.contentType,
-                                request.bulkMode,
-                                allowOnlyMandatoryKeysInJSONObject,
-                            )
-                        }
-
-                        call.respond(HttpStatusCode.OK, GenerateExampleResponse.from(generatedExamples))
-                    } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
 

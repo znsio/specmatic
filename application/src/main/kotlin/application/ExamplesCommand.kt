@@ -8,12 +8,10 @@ import io.specmatic.core.Feature
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.Results
-import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.Scenario
 import io.specmatic.core.actualMatch
 import io.specmatic.core.examples.module.ExampleExternalisationModule
 import io.specmatic.core.examples.module.ExampleFixModule
-import io.specmatic.core.examples.module.ExampleGenerationModule
 import io.specmatic.core.examples.module.ExampleTransformationModule
 import io.specmatic.core.examples.module.ExampleValidationModule
 import io.specmatic.core.examples.server.ExampleModule
@@ -73,104 +71,11 @@ private const val FAILURE_EXIT_CODE = 1
         ExamplesCommand.Fix::class
     ]
 )
-open class ExamplesCommand : Callable<Int> {
-    @Option(
-        names = ["--filter-name"],
-        description = ["Use only APIs with this value in their name"],
-        defaultValue = "\${env:SPECMATIC_FILTER_NAME}",
-        hidden = true
-    )
-    var filterName: String = ""
-
-    @Option(
-        names = ["--filter-not-name"],
-        description = ["Use only APIs which do not have this value in their name"],
-        defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}",
-        hidden = true
-    )
-    var filterNotName: String = ""
-
-    @Option(
-        names = ["--extensive"],
-        description = ["Generate all examples (by default, generates one example per 2xx API)"],
-        defaultValue = "false"
-    )
-    var extensive: Boolean = false
-
-    @Parameters(index = "0", description = ["Contract file path"], arity = "0..1")
-    var contractFile: File? = null
-
-    @Option(names = ["--debug"], description = ["Debug logs"])
-    var verbose = false
-
-    @Option(names = ["--dictionary"], description = ["External Dictionary File Path, defaults to dictionary.json"])
-    var dictionaryFile: File? = null
-
-    @Option(
-        names= ["--filter"],
-        description = [
-            """
-Filter tests matching the specified filtering criteria
-
-You can filter tests based on the following keys:
-- `METHOD`: HTTP methods (e.g., GET, POST)
-- `PATH`: Request paths (e.g., /users, /product)
-- `STATUS`: HTTP response status codes (e.g., 200, 400)
-- `HEADERS`: Request headers (e.g., Accept, X-Request-ID)
-- `QUERY-PARAM`: Query parameters (e.g., status, productId)
-- `EXAMPLE-NAME`: Example name (e.g., create-product, active-status)
-
-To specify multiple values for the same filter, separate them with commas. 
-For example, to filter by HTTP methods: 
---filter="METHOD='GET,POST'"
-           """
-        ],
-        required = false
-    )
-    var filter: String = ""
-
-    @Option(
-        names = ["--allow-only-mandatory-keys-in-payload"],
-        description = ["Generate examples with only mandatory keys in the json request and response payloads"],
-        required = false
-    )
-    var allowOnlyMandatoryKeysInJSONObject: Boolean = false
-
-    private val exampleGenerationModule = ExampleGenerationModule(ExampleModule())
-
-    fun resetExampleFileNameCounter() = exampleGenerationModule.resetExampleFileNameCounter()
+class ExamplesCommand : Callable<Int> {
 
     override fun call(): Int {
-        if (contractFile == null) {
-            println("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
-            return FAILURE_EXIT_CODE
-        }
-        if (!contractFile!!.exists()) {
-            logger.log("Could not find file ${contractFile!!.path}")
-            return FAILURE_EXIT_CODE
-        }
-
-        configureLogger(this.verbose)
-        dictionaryFile?.also {
-            System.setProperty(SPECMATIC_STUB_DICTIONARY, it.path)
-        }
-
-        try {
-            generateExamples()
-        } catch (e: Throwable) {
-            logger.log(e)
-            return FAILURE_EXIT_CODE
-        }
-
-        return SUCCESS_EXIT_CODE
-    }
-
-    open fun generateExamples() {
-        exampleGenerationModule.generate(
-            contractFile!!,
-            ScenarioFilter(filterName, filterNotName, filter),
-            allowOnlyMandatoryKeysInJSONObject
-        )
+        logger.log("Please use one of the subcommands. Use --help to view the list of available subcommands.")
+        return FAILURE_EXIT_CODE
     }
 
     @Command(
@@ -552,8 +457,7 @@ For example, to filter by HTTP methods:
                     filterName,
                     filterNotName,
                     filter,
-                    dictFile,
-                    allowOnlyMandatoryKeysInJSONObject
+                    dictFile
                 )
                 addShutdownHook()
 

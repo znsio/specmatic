@@ -20,22 +20,51 @@ fun toJSONObjectPattern(map: Map<String, Pattern>, typeAlias: String? = null): J
     return JSONObjectPattern(map.minus("..."), missingKeyStrategy, typeAlias)
 }
 
+sealed interface AdditionalProperties {
+    fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern>
+
+    data object NoAdditionalProperties : AdditionalProperties {
+        override fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern> {
+            return patternMap
+        }
+    }
+
+    data object FreeForm : AdditionalProperties {
+        override fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern> {
+            val extraKeys = valueMap.excludingPatternKeys(patternMap)
+            return patternMap + extraKeys.associateWith { AnyValuePattern }
+        }
+    }
+
+    data class PatternConstrained(val pattern: Pattern): AdditionalProperties {
+        override fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern> {
+            val extraKeys = valueMap.excludingPatternKeys(patternMap)
+            return patternMap + extraKeys.associateWith { pattern }
+        }
+    }
+
+    fun Map<String, Value>.excludingPatternKeys(pattern: Map<String, Pattern>): Set<String> {
+        val patternKeys = pattern.keys.map(::withoutOptionality).toSet()
+        return keys.minus(patternKeys)
+    }
+}
+
 data class JSONObjectPattern(
     override val pattern: Map<String, Pattern> = emptyMap(),
     private val unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys,
     override val typeAlias: String? = null,
     val minProperties: Int? = null,
     val maxProperties: Int? = null,
-    val additionalProperties: Boolean = false
+    val additionalProperties: AdditionalProperties = AdditionalProperties.NoAdditionalProperties
 ) : Pattern, PossibleJsonObjectPatternContainer {
 
     override fun fixValue(value: Value, resolver: Resolver): Value {
         if (resolver.matchesPattern(null, this, value).isSuccess()) return value
+        val valueMap = (value as? JSONObjectValue)?.jsonObject.orEmpty()
+        val adjustedPattern = additionalProperties.updatePatternMap(pattern, valueMap)
+
         return JSONObjectValue(
-            fix(
-                jsonPatternMap = pattern, jsonValueMap = (value as? JSONObjectValue)?.jsonObject.orEmpty(),
-                resolver = resolver.withAdditionalProperties(additionalProperties), jsonPattern = this
-            )
+            fix(jsonPatternMap = adjustedPattern, jsonValueMap = valueMap, resolver = resolver, jsonPattern = this)
         )
     }
 
@@ -272,7 +301,7 @@ data class JSONObjectPattern(
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        val resolverWithNullType = withNullPattern(resolver.withAdditionalProperties(additionalProperties))
+        val resolverWithNullType = withNullPattern(resolver)
         if (sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData, resolver.mismatchMessages)
 
@@ -291,7 +320,7 @@ data class JSONObjectPattern(
             if (shouldMakePropertyMandatory(it.value, resolver)) {
                 withoutOptionality(it.key)
             } else it.key
-        }
+        }.let { additionalProperties.updatePatternMap(it, sampleData.jsonObject) }
 
         val keyErrors: List<Result.Failure> = resolverWithNullType.findKeyErrorList(adjustedPattern, sampleData.jsonObject).map {
             if (pattern[it.name] != null) {
@@ -304,7 +333,7 @@ data class JSONObjectPattern(
         data class ResultWithDiscriminatorStatus(val result: Result, val isDiscriminator: Boolean)
 
         val resultsWithDiscriminator: List<ResultWithDiscriminatorStatus> =
-            mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
+            mapZip(adjustedPattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
                 val innerResolver = addPatternToSeen(patternValue, updatedResolver)
                 val result = innerResolver.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
 
@@ -618,9 +647,4 @@ internal fun mapEncompassesMap(
     }
 
     return Result.fromResults(previousResults + missingFixedKeyErrors + keyErrors)
-}
-
-private fun Resolver.withAdditionalProperties(additionalProperties: Boolean): Resolver {
-    return if (!additionalProperties) this
-    else this.withUnexpectedKeyCheck(IgnoreUnexpectedKeys)
 }

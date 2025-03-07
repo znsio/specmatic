@@ -1743,26 +1743,76 @@ components:
         assertThat(value).isEqualTo(JSONObjectValue())
     }
 
-    @Test
-    fun `should return success when matching with additional keys if additionalProperties is set`() {
-        val pattern = JSONObjectPattern(mapOf("name" to StringPattern()), additionalProperties = true)
-        val value = JSONObjectValue(mapOf("name" to StringValue("John"), "extraKey" to StringValue("extraValue")))
-        val result = pattern.matches(value, Resolver().withUnexpectedKeyCheck(ValidateUnexpectedKeys))
+    @Nested
+    inner class AdditionalPropertiesTests {
+        @Test
+        fun `should return success when matching with additional keys if additionalProperties is FreeForm`() {
+            val pattern = JSONObjectPattern(mapOf("name" to StringPattern()), additionalProperties = AdditionalProperties.FreeForm)
+            val value = JSONObjectValue(mapOf("name" to StringValue("John"), "extraKey" to StringValue("extraValue")))
+            val result = pattern.matches(value, Resolver().withUnexpectedKeyCheck(ValidateUnexpectedKeys))
 
-        assertThat(result).isInstanceOf(Result.Success::class.java)
-    }
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
 
-    @Test
-    fun `should complain if mandatory keys are missing even when additionalProperties is set`() {
-        val pattern = JSONObjectPattern(mapOf("name" to StringPattern()), additionalProperties = true)
-        val value = JSONObjectValue(mapOf("extraKey" to StringValue("extraValue")))
-        val result = pattern.matches(value, Resolver().withUnexpectedKeyCheck(ValidateUnexpectedKeys))
+        @Test
+        fun `should complain if keys are missing or extra when additionalProperties is NoAdditionalProperties`() {
+            val pattern = JSONObjectPattern(mapOf("name" to StringPattern()), additionalProperties = AdditionalProperties.NoAdditionalProperties)
+            val value = JSONObjectValue(mapOf("extraKey" to StringValue("extraValue")))
+            val result = pattern.matches(value, Resolver().withUnexpectedKeyCheck(ValidateUnexpectedKeys))
 
-        assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
-        >> name
-        Expected key named "name" was missing
-        """.trimIndent())
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+            assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+            >> name
+            Expected key named "name" was missing
+            >> extraKey
+            Key named "extraKey" was unexpected
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should validate against pattern when additionalProperties is PatternConstrained with scalar`() {
+            val additionalProperties = AdditionalProperties.PatternConstrained(StringPattern())
+            val pattern = JSONObjectPattern(mapOf("name" to StringPattern()), additionalProperties = additionalProperties)
+            val value = JSONObjectValue(mapOf("name" to StringValue("John"), "extraKey" to NumberValue(999)))
+            val result = pattern.matches(value, Resolver().withUnexpectedKeyCheck(ValidateUnexpectedKeys))
+
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+            assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+            >> extraKey
+            Expected string, actual was 999 (number)
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should validate against pattern when additionalProperties is PatternConstrained with complex`() {
+            val additionalProperties = AdditionalProperties.PatternConstrained(
+                AnyPattern(pattern = listOf(
+                    JSONObjectPattern(mapOf("values" to StringPattern())),
+                    ListPattern(StringPattern())
+                ))
+            )
+            val pattern = JSONObjectPattern(mapOf("name" to StringPattern()), additionalProperties = additionalProperties)
+            val validValues = listOf(
+                parsedJSONObject("""
+                {
+                    "name": "John",
+                    "extra": {
+                        "values": "value"
+                    }
+                }
+                """.trimIndent()),
+                parsedJSONObject("""
+                {
+                    "name": "John",
+                    "extra": [ "value1", "value2" ]
+                }
+                """.trimIndent())
+            )
+
+            assertThat(validValues).allSatisfy {
+                assertThat(pattern.matches(it, Resolver())).isInstanceOf(Result.Success::class.java)
+            }
+        }
     }
 
     @Nested
@@ -2144,8 +2194,11 @@ components:
         }
 
         @Test
-        fun `should not remove extra keys when additionalProperties is set`() {
-            val pattern = JSONObjectPattern(mapOf("name" to StringPattern(), "age" to NumberPattern()), additionalProperties = true)
+        fun `should not remove extra keys when additionalProperties is FreeForm`() {
+            val pattern = JSONObjectPattern(
+                mapOf("name" to StringPattern(), "age" to NumberPattern()),
+                additionalProperties = AdditionalProperties.FreeForm
+            )
             val value = JSONObjectValue(mapOf(
                 "name" to StringValue("John"),
                 "age" to StringValue("10"),
@@ -2160,6 +2213,64 @@ components:
                 "age" to NumberValue(999),
                 "extraKey" to StringValue("extraValue")
             ))
+        }
+
+        @Test
+        fun `should fix invalid values of extra keys when additionalProperties is patternConstrained with scalar`() {
+            val pattern = JSONObjectPattern(
+                mapOf("name" to StringPattern(), "age" to NumberPattern()),
+                additionalProperties = AdditionalProperties.PatternConstrained(NumberPattern())
+            )
+            val value = JSONObjectValue(mapOf(
+                "name" to StringValue("John"),
+                "age" to StringValue("10"),
+                "extraKey" to StringValue("extraValue")
+            ))
+            val fixedValue = pattern.fixValue(value, Resolver(dictionary = mapOf("(number)" to NumberValue(999))))
+
+            assertThat(fixedValue).isInstanceOf(JSONObjectValue::class.java)
+            fixedValue as JSONObjectValue
+            assertThat(fixedValue.jsonObject).isEqualTo(mapOf(
+                "name" to StringValue("John"),
+                "age" to NumberValue(999),
+                "extraKey" to NumberValue(999)
+            ))
+        }
+
+        @Test
+        fun `should fix invalid values of extra keys when additionalProperties is patternConstrained with complex`() {
+            val additionalProperties = AdditionalProperties.PatternConstrained(
+                AnyPattern(pattern = listOf(
+                    JSONObjectPattern(mapOf("values" to NumberPattern())),
+                    ListPattern(NumberPattern())
+                ))
+            )
+            val pattern = JSONObjectPattern(
+                mapOf("name" to StringPattern(), "age" to NumberPattern()),
+                additionalProperties = additionalProperties
+            )
+            val value = JSONObjectValue(mapOf(
+                "name" to StringValue("John"),
+                "age" to StringValue("10"),
+                "extraKey" to StringValue("extraValue")
+            ))
+            val fixedValue = pattern.fixValue(value, Resolver(dictionary = mapOf("(number)" to NumberValue(999))))
+            println(fixedValue.toStringLiteral())
+
+            assertThat(fixedValue).isInstanceOf(JSONObjectValue::class.java)
+            fixedValue as JSONObjectValue
+            assertThat(fixedValue.jsonObject["name"]).isEqualTo(StringValue("John"))
+            assertThat(fixedValue.jsonObject["age"]).isEqualTo(NumberValue(999))
+            assertThat(fixedValue.jsonObject["extraKey"]).satisfiesAnyOf(
+                {
+                    assertThat(it).isInstanceOf(JSONObjectValue::class.java); it as JSONObjectValue
+                    assertThat(it.jsonObject).isEqualTo(mapOf("values" to NumberValue(999)))
+                },
+                {
+                    assertThat(it).isInstanceOf(JSONArrayValue::class.java); it as JSONArrayValue
+                    assertThat(it.list).containsOnly(NumberValue(999))
+                }
+            )
         }
     }
 }

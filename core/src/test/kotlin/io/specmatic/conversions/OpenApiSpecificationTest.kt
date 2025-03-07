@@ -34,12 +34,8 @@ import io.swagger.v3.oas.models.OpenAPI
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledOnOs
 import org.junit.jupiter.api.condition.OS
 import org.junit.jupiter.api.io.CleanupMode
@@ -9941,7 +9937,7 @@ paths:
     }
 
     @Test
-    fun `object schema with defined properties and additionalProperties set to true should convert to JsonObject pattern`() {
+    fun `object schema with additional properties set to true should be converted to freeForm object pattern`() {
         val specContent = """
         openapi: '3.0.3'
         info:
@@ -9949,19 +9945,18 @@ paths:
           version: '1.0'
         paths:
           /test:
-            post:
+            get:
               summary: A simple test
-              requestBody:
-                content:
-                  application/json:
-                    schema:
-                      ${"$"}ref: '#/components/schemas/Example'
               responses:
                 '200':
                   description: OK
+                  content:
+                    application/json:
+                      schema:
+                        ${'$'}ref: '#/components/schemas/FreeFormObject'
         components:
           schemas:
-            Example:
+            FreeFormObject:
               type: object
               properties:
                 name:
@@ -9975,14 +9970,180 @@ paths:
         val specification = OpenApiSpecification.fromYAML(specContent, "")
         val feature = specification.toFeature()
         val scenario =  feature.scenarios.first()
-        val requestBodyPattern = resolvedHop(scenario.httpRequestPattern.body, scenario.resolver)
+        val responseBodyPattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
 
-        assertThat(requestBodyPattern).isInstanceOf(JSONObjectPattern::class.java)
-        requestBodyPattern as JSONObjectPattern
-        assertThat(requestBodyPattern.typeAlias).isEqualTo("(Example)")
-        assertThat(requestBodyPattern.additionalProperties).isTrue()
-        assertThat(requestBodyPattern.pattern).isEqualTo(mapOf(
+        assertThat(responseBodyPattern).isInstanceOf(JSONObjectPattern::class.java)
+        responseBodyPattern as JSONObjectPattern
+        assertThat(responseBodyPattern.typeAlias).isEqualTo("(FreeFormObject)")
+        assertThat(responseBodyPattern.pattern).isEqualTo(mapOf(
             "name" to StringPattern(), "address?" to StringPattern()
+        ))
+
+        assertThat(responseBodyPattern.additionalProperties).isEqualTo(AdditionalProperties.FreeForm)
+    }
+
+    @Test
+    fun `object schema with empty object additionalProperties should be converted to to freeForm object pattern`() {
+        val specContent = """
+        openapi: '3.0.3'
+        info:
+          title: Simple API
+          version: '1.0'
+        paths:
+          /test:
+            get:
+              summary: A simple test
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        ${'$'}ref: '#/components/schemas/FreeFormObject'
+        components:
+          schemas:
+            FreeFormObject:
+              type: object
+              properties:
+                name:
+                  type: string
+                address:
+                  type: string
+              required:
+                - name
+              additionalProperties: {}
+        """.trimIndent()
+        val specification = OpenApiSpecification.fromYAML(specContent, "")
+        val feature = specification.toFeature()
+        val scenario =  feature.scenarios.first()
+        val responseBodyPattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
+
+        assertThat(responseBodyPattern).isInstanceOf(JSONObjectPattern::class.java)
+        responseBodyPattern as JSONObjectPattern
+        assertThat(responseBodyPattern.typeAlias).isEqualTo("(FreeFormObject)")
+        assertThat(responseBodyPattern.pattern).isEqualTo(mapOf(
+            "name" to StringPattern(), "address?" to StringPattern()
+        ))
+
+        assertThat(responseBodyPattern.additionalProperties).isEqualTo(AdditionalProperties.FreeForm)
+    }
+
+    @Test
+    fun `object schema with primitive schema as additional properties should be converted to patternConstrained object pattern`() {
+        val specContent = """
+        openapi: '3.0.3'
+        info:
+          title: Simple API
+          version: '1.0'
+        paths:
+          /test:
+            get:
+              summary: A simple test
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        ${'$'}ref: '#/components/schemas/ValueConstrained'
+        components:
+          schemas:
+            ValueConstrained:
+              type: object
+              properties:
+                name:
+                  type: string
+                address:
+                  type: string
+              required:
+                - name
+              additionalProperties:
+                type: string
+                minLength: 1
+                maxLength: 3
+        """.trimIndent()
+        val specification = OpenApiSpecification.fromYAML(specContent, "")
+        val feature = specification.toFeature()
+        val scenario =  feature.scenarios.first()
+        val responseBodyPattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
+
+        assertThat(responseBodyPattern).isInstanceOf(JSONObjectPattern::class.java)
+        responseBodyPattern as JSONObjectPattern
+        assertThat(responseBodyPattern.typeAlias).isEqualTo("(ValueConstrained)")
+        assertThat(responseBodyPattern.pattern).isEqualTo(mapOf(
+            "name" to StringPattern(), "address?" to StringPattern()
+        ))
+
+        val additionalProperties = responseBodyPattern.additionalProperties
+        assertThat(additionalProperties).isInstanceOf(AdditionalProperties.PatternConstrained::class.java)
+        additionalProperties as AdditionalProperties.PatternConstrained
+        assertThat(additionalProperties.pattern).isEqualTo(
+            StringPattern(maxLength = 3, minLength = 1)
+        )
+    }
+
+    @Test
+    fun `object schema with complex schema as additional properties should be converted to patternConstrained object pattern`() {
+        val specContent = """
+        openapi: '3.0.3'
+        info:
+          title: Simple API
+          version: '1.0'
+        paths:
+          /test:
+            get:
+              summary: A simple test
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        ${'$'}ref: '#/components/schemas/ValueConstrained'
+        components:
+          schemas:
+            ValueConstrained:
+              type: object
+              properties:
+                name:
+                  type: string
+                address:
+                  type: string
+              required:
+                - name
+              additionalProperties:
+                ${'$'}ref: '#/components/schemas/ComplexSchema'
+            ComplexSchema:
+              oneOf:
+                - type: object
+                  properties:
+                    property1:
+                      type: string
+                - type: object
+                  properties:
+                    property2:
+                      type: string
+        """.trimIndent()
+        val specification = OpenApiSpecification.fromYAML(specContent, "")
+        val feature = specification.toFeature()
+        val scenario = feature.scenarios.first()
+        val responseBodyPattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
+
+        assertThat(responseBodyPattern).isInstanceOf(JSONObjectPattern::class.java)
+        responseBodyPattern as JSONObjectPattern
+        assertThat(responseBodyPattern.typeAlias).isEqualTo("(ValueConstrained)")
+        assertThat(responseBodyPattern.pattern).isEqualTo(mapOf(
+            "name" to StringPattern(), "address?" to StringPattern()
+        ))
+
+        val additionalProperties = responseBodyPattern.additionalProperties
+        assertThat(additionalProperties).isInstanceOf(AdditionalProperties.PatternConstrained::class.java)
+        additionalProperties as AdditionalProperties.PatternConstrained
+        assertThat(resolvedHop(additionalProperties.pattern, scenario.resolver)).isEqualTo(AnyPattern(
+            pattern = listOf(
+                parsedPattern("{ \"property1?\": \"(string)\" }"),
+                parsedPattern("{ \"property2?\": \"(string)\" }")
+            ), typeAlias = "(ComplexSchema)"
         ))
     }
 
@@ -9994,4 +10155,3 @@ paths:
         }
     }
 }
-

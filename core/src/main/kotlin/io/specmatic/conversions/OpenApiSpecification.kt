@@ -1759,17 +1759,20 @@ class OpenApiSpecification(
     private fun additionalPropertiesFrom(
         schema: Schema<*>, patternName: String, typeStack: List<String>
     ): AdditionalProperties {
-        val schemaProps = schema.additionalProperties ?: return when(schema.properties) {
-            null -> AdditionalProperties.FreeForm
+        val schemaProperties = schema.properties.orEmpty()
+
+        val additionalProperties = schema.additionalProperties ?: return when {
+            schemaProperties.isEmpty() -> AdditionalProperties.FreeForm
             else -> AdditionalProperties.NoAdditionalProperties
         }
 
-        return when (schemaProps) {
-            is Boolean -> if (schemaProps) AdditionalProperties.FreeForm else AdditionalProperties.NoAdditionalProperties
-            is Schema<*> -> processAdditionalPropertiesSchema(schemaProps, patternName, typeStack)
+        return when (additionalProperties) {
+            true -> AdditionalProperties.FreeForm
+            false -> AdditionalProperties.NoAdditionalProperties
+            is Schema<*> -> processAdditionalPropertiesSchema(additionalProperties, patternName, typeStack)
             else -> throw ContractException(
                 breadCrumb = "$patternName.additionalProperties",
-                errorMessage = "Invalid type for additionalProperties: expected a boolean or schema"
+                errorMessage = "Unrecognized type for additionalProperties: expected a boolean or a schema"
             )
         }
     }

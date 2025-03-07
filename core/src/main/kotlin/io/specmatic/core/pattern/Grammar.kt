@@ -305,7 +305,7 @@ fun stringInErrorMessage(value: String): String {
 }
 
 fun parsedJSONObject(content: String, mismatchMessages: MismatchMessages = DefaultMismatchMessages): JSONObjectValue {
-    return content.trim().let {
+    return content.trim().removePrefix("\uFEFF").let {
         when {
             it.startsWith("{") -> try {
                 JSONObjectValue(jsonStringToValueMap(it))
@@ -327,7 +327,7 @@ fun parsedJSONObject(content: String, mismatchMessages: MismatchMessages = Defau
 }
 
 fun parsedJSONArray(content: String, mismatchMessages: MismatchMessages = DefaultMismatchMessages): JSONArrayValue {
-    return content.trim().let {
+    return content.trim().removePrefix("\uFEFF").let {
         when {
             it.startsWith("[") -> try {
                 JSONArrayValue(jsonStringToValueArray(it))
@@ -349,7 +349,7 @@ fun parsedJSONArray(content: String, mismatchMessages: MismatchMessages = Defaul
 }
 
 fun parsedValue(content: String?): Value {
-    return content?.trim()?.let {
+    return content?.trim()?.removePrefix("\uFEFF")?.let {
         try {
             when {
                 it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
@@ -364,7 +364,7 @@ fun parsedValue(content: String?): Value {
 }
 
 fun parsedScalarValue(content: String?): Value {
-    val trimmed = content?.trim() ?: return NullValue
+    val trimmed = content?.trim()?.removePrefix("\uFEFF") ?: return NullValue
     return when {
         trimmed.toIntOrNull() != null -> NumberValue(trimmed.toInt())
         trimmed.toLongOrNull() != null -> NumberValue(trimmed.toLong())

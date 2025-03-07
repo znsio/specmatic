@@ -28,7 +28,7 @@ fun valueArrayToJsonString(value: List<Value>): String {
 fun toMap(value: Value?) = jsonStringToValueMap(value.toString())
 
 fun stringToPatternMap(stringContent: String): Map<String, Pattern>  {
-    val data = lenientJson.parseToJsonElement(stringContent).jsonObject.toMap()
+    val data = lenientJson.parseToJsonElement(stringContent.removePrefix("\uFEFF")).jsonObject.toMap()
     try {
         return convertToMapPattern(data)
     }
@@ -40,7 +40,7 @@ fun stringToPatternMap(stringContent: String): Map<String, Pattern>  {
 }
 
 fun jsonStringToValueMap(stringContent: String): Map<String, Value>  {
-    val data = lenientJson.parseToJsonElement(stringContent).jsonObject.toMap()
+    val data = lenientJson.parseToJsonElement(stringContent.removePrefix("\uFEFF")).jsonObject.toMap()
     return convertToMapValue(data)
 }
 
@@ -132,11 +132,11 @@ fun valueListToElements(values: List<Value>): JsonArray {
 }
 
 fun jsonStringToValueArray(value: String): List<Value> {
-    val data = lenientJson.parseToJsonElement(value).jsonArray.toList()
+    val data = lenientJson.parseToJsonElement(value.removePrefix("\uFEFF")).jsonArray.toList()
     return convertToArrayValue(data)
 }
 
 fun stringTooPatternArray(value: String): List<Pattern> {
-    val data = lenientJson.parseToJsonElement(value).jsonArray.toList()
+    val data = lenientJson.parseToJsonElement(value.removePrefix("\uFEFF")).jsonArray.toList()
     return convertToArrayPattern(data)
 }

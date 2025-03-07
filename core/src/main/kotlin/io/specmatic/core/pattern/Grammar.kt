@@ -8,6 +8,7 @@ import io.specmatic.core.value.*
 
 const val XML_ATTR_OPTIONAL_SUFFIX = ".opt"
 const val DEFAULT_OPTIONAL_SUFFIX = "?"
+const val UTF_BYTE_ORDER_MARK = "\uFEFF"
 
 fun withoutOptionality(key: String): String {
     return when {
@@ -175,7 +176,7 @@ fun stringToPattern(patternValue: String, key: String?): Pattern =
     }
 
 fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = null): Pattern {
-    return rawContent.trim().let {
+    return rawContent.trim().removePrefix(UTF_BYTE_ORDER_MARK).let {
         when {
             isPatternToken(it) && it.contains("/") -> {
                 val (container, type) = withoutPatternDelimiters(it).split("/")
@@ -268,7 +269,7 @@ fun isLookupRowPattern(token: String): Boolean {
 }
 
 fun parsedJSON(content: String, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Value {
-    return content.trim().let {
+    return content.removePrefix(UTF_BYTE_ORDER_MARK).trim().let {
         when {
             it.startsWith("{") -> try {
                 JSONObjectValue(jsonStringToValueMap(it))
@@ -305,7 +306,7 @@ fun stringInErrorMessage(value: String): String {
 }
 
 fun parsedJSONObject(content: String, mismatchMessages: MismatchMessages = DefaultMismatchMessages): JSONObjectValue {
-    return content.trim().removePrefix("\uFEFF").let {
+    return content.trim().removePrefix(UTF_BYTE_ORDER_MARK).let {
         when {
             it.startsWith("{") -> try {
                 JSONObjectValue(jsonStringToValueMap(it))
@@ -327,7 +328,7 @@ fun parsedJSONObject(content: String, mismatchMessages: MismatchMessages = Defau
 }
 
 fun parsedJSONArray(content: String, mismatchMessages: MismatchMessages = DefaultMismatchMessages): JSONArrayValue {
-    return content.trim().removePrefix("\uFEFF").let {
+    return content.trim().removePrefix(UTF_BYTE_ORDER_MARK).let {
         when {
             it.startsWith("[") -> try {
                 JSONArrayValue(jsonStringToValueArray(it))
@@ -349,7 +350,7 @@ fun parsedJSONArray(content: String, mismatchMessages: MismatchMessages = Defaul
 }
 
 fun parsedValue(content: String?): Value {
-    return content?.trim()?.removePrefix("\uFEFF")?.let {
+    return content?.trim()?.removePrefix(UTF_BYTE_ORDER_MARK)?.let {
         try {
             when {
                 it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
@@ -364,7 +365,7 @@ fun parsedValue(content: String?): Value {
 }
 
 fun parsedScalarValue(content: String?): Value {
-    val trimmed = content?.trim()?.removePrefix("\uFEFF") ?: return NullValue
+    val trimmed = content?.trim()?.removePrefix(UTF_BYTE_ORDER_MARK) ?: return NullValue
     return when {
         trimmed.toIntOrNull() != null -> NumberValue(trimmed.toInt())
         trimmed.toLongOrNull() != null -> NumberValue(trimmed.toLong())

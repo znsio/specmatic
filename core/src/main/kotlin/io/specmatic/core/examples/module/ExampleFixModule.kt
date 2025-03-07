@@ -33,14 +33,28 @@ class ExampleFixModule(
         val exampleReturnValue = ExampleFromFile.fromFile(exampleFile)
 
         if(exampleReturnValue is HasFailure<ExampleFromFile>) {
-            if(exampleValidationModule.validateSchemaExample(feature, exampleFile) is Result.Success) {
-                return FixExampleResult(status = FixExampleStatus.SKIPPED, exampleFileName = exampleFile.name)
-            }
-            fixSchemaExampleAndWriteTo(exampleFile, feature)
-            return FixExampleResult(status = FixExampleStatus.SUCCEDED, exampleFileName = exampleFile.name)
+            return fixSchemaExample(feature, exampleFile)
         }
 
-        val example = exampleReturnValue.value
+        return fixExampleIn(exampleFile, feature, exampleReturnValue.value)
+    }
+
+    private fun fixSchemaExample(
+        feature: Feature,
+        exampleFile: File
+    ): FixExampleResult {
+        if (exampleValidationModule.validateSchemaExample(feature, exampleFile) is Result.Success) {
+            return FixExampleResult(status = FixExampleStatus.SKIPPED, exampleFileName = exampleFile.name)
+        }
+        fixSchemaExampleAndWriteTo(exampleFile, feature)
+        return FixExampleResult(status = FixExampleStatus.SUCCEDED, exampleFileName = exampleFile.name)
+    }
+
+    private fun fixExampleIn(
+        exampleFile: File,
+        feature: Feature,
+        example: ExampleFromFile
+    ): FixExampleResult {
         val matchingHttpPathPattern = feature.matchingHttpPathPatternFor(
             example.requestPath.orEmpty()
         ) ?: throw Exception("No scenario found for request path in '${exampleFile.name}'.")
@@ -52,7 +66,7 @@ class ExampleFixModule(
             contentType = example.requestContentType
         ) ?: throw Exception("No scenario found for example '${exampleFile.name}'.")
 
-        if(exampleValidationModule.validateExample(feature, exampleFile) is Result.Success) {
+        if (exampleValidationModule.validateExample(feature, exampleFile) is Result.Success) {
             return FixExampleResult(status = FixExampleStatus.SKIPPED, exampleFileName = exampleFile.name)
         }
 

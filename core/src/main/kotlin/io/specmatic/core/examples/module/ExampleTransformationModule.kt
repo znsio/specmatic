@@ -5,7 +5,6 @@ import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.NoBodyValue
 import io.specmatic.core.Scenario
-import io.specmatic.core.examples.server.ExampleModule
 import io.specmatic.core.examples.server.InteractiveExamplesMismatchMessages
 import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.parseContractFileToFeature

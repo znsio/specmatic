@@ -3,6 +3,7 @@ package io.specmatic.core.pattern
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.toXMLNode
 import org.apache.commons.io.ByteOrderMark
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -92,6 +93,16 @@ internal class GrammarKtTest {
         assertDoesNotThrow { parsedValue(inputString) as JSONArrayValue }
         assertDoesNotThrow { parsedJSON(inputString) as JSONArrayValue }
         assertDoesNotThrow { parsedJSONArray(inputString) }
+    }
+
+    @ParameterizedTest
+    @MethodSource("bomProvider")
+    fun `should be able to parse xml data with BOM`(bom: ByteOrderMark) {
+        val charSet = Charset.forName(bom.charsetName)
+        val inputBytes = bom.bytes + "<DATA />".toByteArray(charSet)
+        val inputString = String(inputBytes, charset = charSet)
+
+        assertDoesNotThrow { toXMLNode(inputString) }
     }
 
     @Nested

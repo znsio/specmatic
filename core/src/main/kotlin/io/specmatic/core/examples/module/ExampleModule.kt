@@ -1,4 +1,4 @@
-package io.specmatic.core.examples.server
+package io.specmatic.core.examples.module
 
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.EXAMPLES_DIR_SUFFIX
@@ -7,6 +7,8 @@ import io.specmatic.core.METHOD_BREAD_CRUMB
 import io.specmatic.core.PATH_BREAD_CRUMB
 import io.specmatic.core.Result
 import io.specmatic.core.Scenario
+import io.specmatic.core.examples.server.InteractiveExamplesMismatchMessages
+import io.specmatic.core.examples.server.SchemaExample
 import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.NullValue

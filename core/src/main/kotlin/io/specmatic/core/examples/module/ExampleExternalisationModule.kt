@@ -1,6 +1,5 @@
 package io.specmatic.core.examples.module
 
-import io.specmatic.core.examples.server.ExampleModule
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.utilities.uniqueNameForApiOperation

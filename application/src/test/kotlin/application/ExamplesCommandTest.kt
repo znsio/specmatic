@@ -3,7 +3,7 @@ package application
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
-import io.specmatic.core.examples.server.ExampleModule
+import io.specmatic.core.examples.module.ExampleModule
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.AnyPattern
 import io.specmatic.core.pattern.parsedJSONObject
@@ -12,7 +12,6 @@ import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.mock.ScenarioStub
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir

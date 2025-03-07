@@ -3,6 +3,7 @@ package io.specmatic.core.examples.server
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
+import io.specmatic.core.examples.module.ExampleModule
 import io.specmatic.core.pattern.*
 import org.thymeleaf.TemplateEngine
 import org.thymeleaf.context.Context

@@ -1,5 +1,8 @@
 package io.specmatic.core.pattern
 
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import io.specmatic.GENERATION
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
@@ -17,11 +20,14 @@ import io.specmatic.stub.captureStandardOutput
 import io.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.checkerframework.common.value.qual.StringVal
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.MethodSource
 import java.util.function.Consumer
+import java.util.stream.Stream
 
 internal class JSONObjectPatternTest {
     @Test
@@ -1743,6 +1749,125 @@ components:
     }
 
     @Nested
+    inner class AdditionalPropertiesTests {
+        @Test
+        fun `should return success when matching with additional keys if additionalProperties is FreeForm`() {
+            val pattern = JSONObjectPattern(mapOf("name" to StringPattern()), additionalProperties = AdditionalProperties.FreeForm)
+            val value = JSONObjectValue(mapOf("name" to StringValue("John"), "extraKey" to StringValue("extraValue")))
+            val result = pattern.matches(value, Resolver().withUnexpectedKeyCheck(ValidateUnexpectedKeys))
+
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `should complain if keys are missing or extra when additionalProperties is NoAdditionalProperties`() {
+            val pattern = JSONObjectPattern(mapOf("name" to StringPattern()), additionalProperties = AdditionalProperties.NoAdditionalProperties)
+            val value = JSONObjectValue(mapOf("extraKey" to StringValue("extraValue")))
+            val result = pattern.matches(value, Resolver().withUnexpectedKeyCheck(ValidateUnexpectedKeys))
+
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+            assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+            >> name
+            Expected key named "name" was missing
+            >> extraKey
+            Key named "extraKey" was unexpected
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should validate against pattern when additionalProperties is PatternConstrained with scalar`() {
+            val additionalProperties = AdditionalProperties.PatternConstrained(StringPattern())
+            val pattern = JSONObjectPattern(mapOf("name" to StringPattern()), additionalProperties = additionalProperties)
+            val value = JSONObjectValue(mapOf("name" to StringValue("John"), "extraKey" to NumberValue(999)))
+            val result = pattern.matches(value, Resolver().withUnexpectedKeyCheck(ValidateUnexpectedKeys))
+
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+            assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+            >> extraKey
+            Expected string, actual was 999 (number)
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should validate against pattern when additionalProperties is PatternConstrained with complex`() {
+            val additionalProperties = AdditionalProperties.PatternConstrained(
+                AnyPattern(pattern = listOf(
+                    JSONObjectPattern(mapOf("values" to StringPattern())),
+                    ListPattern(StringPattern())
+                ))
+            )
+            val pattern = JSONObjectPattern(mapOf("name" to StringPattern()), additionalProperties = additionalProperties)
+            val validValues = listOf(
+                parsedJSONObject("""
+                {
+                    "name": "John",
+                    "extra": {
+                        "values": "value"
+                    }
+                }
+                """.trimIndent()),
+                parsedJSONObject("""
+                {
+                    "name": "John",
+                    "extra": [ "value1", "value2" ]
+                }
+                """.trimIndent())
+            )
+
+            assertThat(validValues).allSatisfy {
+                assertThat(pattern.matches(it, Resolver())).isInstanceOf(Result.Success::class.java)
+            }
+        }
+
+        @ParameterizedTest
+        @MethodSource("io.specmatic.core.pattern.JSONObjectPatternTest#additionalPropertiesProvider")
+        fun `should encompasses itself`(additionalProperties: AdditionalProperties) {
+            val result = additionalProperties.encompasses(additionalProperties, Resolver(), Resolver(), emptySet())
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+
+        @ParameterizedTest
+        @MethodSource("io.specmatic.core.pattern.JSONObjectPatternTest#additionalPropertiesProvider")
+        fun `free form additional properties should encompass all other additional properties`(other: AdditionalProperties) {
+            val result = AdditionalProperties.FreeForm.encompasses(other, Resolver(), Resolver(), emptySet())
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+
+        @ParameterizedTest
+        @MethodSource("io.specmatic.core.pattern.JSONObjectPatternTest#additionalPropertiesProvider")
+        fun `no additional properties should only encompass itself`(other: AdditionalProperties) {
+            val result = AdditionalProperties.NoAdditionalProperties.encompasses(other, Resolver(), Resolver(), emptySet())
+            if (other != AdditionalProperties.NoAdditionalProperties) {
+                assertThat(result).isInstanceOf(Result.Failure::class.java)
+            } else assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+
+        @ParameterizedTest
+        @MethodSource("io.specmatic.core.pattern.JSONObjectPatternTest#additionalPropertiesProvider")
+        fun `pattern constrained encompasses no additional properties but not free form`(other: AdditionalProperties) {
+            val result = AdditionalProperties.PatternConstrained(StringPattern()).encompasses(other, Resolver(), Resolver(), emptySet())
+            when (other) {
+                is AdditionalProperties.FreeForm -> assertThat(result).isInstanceOf(Result.Failure::class.java)
+                else -> assertThat(result).isInstanceOf(Result.Success::class.java)
+            }
+        }
+
+        @Test
+        fun `pattern constrained encompasses should delegate check to pattern`() {
+            val pattern = mockk<Pattern> {
+                every { encompasses(any<Pattern>(), any(), any(), any()) } returns Result.Failure()
+            }
+
+            val additionalProperties = AdditionalProperties.PatternConstrained(pattern)
+            val other = AdditionalProperties.PatternConstrained(pattern)
+            val result = additionalProperties.encompasses(other, Resolver(), Resolver(), emptySet())
+
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+            verify(exactly = 1) { pattern.encompasses(any<Pattern>(), any(), any(), any()) }
+        }
+    }
+
+    @Nested
     inner class FixValueTests {
         @Test
         fun `should generate if the value does not match the type expected json-object`() {
@@ -2118,6 +2243,97 @@ components:
                     "number" to NumberValue(999), "string" to StringValue("TODO"))
                 ))
             }
+        }
+
+        @Test
+        fun `should not remove extra keys when additionalProperties is FreeForm`() {
+            val pattern = JSONObjectPattern(
+                mapOf("name" to StringPattern(), "age" to NumberPattern()),
+                additionalProperties = AdditionalProperties.FreeForm
+            )
+            val value = JSONObjectValue(mapOf(
+                "name" to StringValue("John"),
+                "age" to StringValue("10"),
+                "extraKey" to StringValue("extraValue")
+            ))
+            val fixedValue = pattern.fixValue(value, Resolver(dictionary = mapOf("(number)" to NumberValue(999))))
+
+            assertThat(fixedValue).isInstanceOf(JSONObjectValue::class.java)
+            fixedValue as JSONObjectValue
+            assertThat(fixedValue.jsonObject).isEqualTo(mapOf(
+                "name" to StringValue("John"),
+                "age" to NumberValue(999),
+                "extraKey" to StringValue("extraValue")
+            ))
+        }
+
+        @Test
+        fun `should fix invalid values of extra keys when additionalProperties is patternConstrained with scalar`() {
+            val pattern = JSONObjectPattern(
+                mapOf("name" to StringPattern(), "age" to NumberPattern()),
+                additionalProperties = AdditionalProperties.PatternConstrained(NumberPattern())
+            )
+            val value = JSONObjectValue(mapOf(
+                "name" to StringValue("John"),
+                "age" to StringValue("10"),
+                "extraKey" to StringValue("extraValue")
+            ))
+            val fixedValue = pattern.fixValue(value, Resolver(dictionary = mapOf("(number)" to NumberValue(999))))
+
+            assertThat(fixedValue).isInstanceOf(JSONObjectValue::class.java)
+            fixedValue as JSONObjectValue
+            assertThat(fixedValue.jsonObject).isEqualTo(mapOf(
+                "name" to StringValue("John"),
+                "age" to NumberValue(999),
+                "extraKey" to NumberValue(999)
+            ))
+        }
+
+        @Test
+        fun `should fix invalid values of extra keys when additionalProperties is patternConstrained with complex`() {
+            val additionalProperties = AdditionalProperties.PatternConstrained(
+                AnyPattern(pattern = listOf(
+                    JSONObjectPattern(mapOf("values" to NumberPattern())),
+                    ListPattern(NumberPattern())
+                ))
+            )
+            val pattern = JSONObjectPattern(
+                mapOf("name" to StringPattern(), "age" to NumberPattern()),
+                additionalProperties = additionalProperties
+            )
+            val value = JSONObjectValue(mapOf(
+                "name" to StringValue("John"),
+                "age" to StringValue("10"),
+                "extraKey" to StringValue("extraValue")
+            ))
+            val fixedValue = pattern.fixValue(value, Resolver(dictionary = mapOf("(number)" to NumberValue(999))))
+            println(fixedValue.toStringLiteral())
+
+            assertThat(fixedValue).isInstanceOf(JSONObjectValue::class.java)
+            fixedValue as JSONObjectValue
+            assertThat(fixedValue.jsonObject["name"]).isEqualTo(StringValue("John"))
+            assertThat(fixedValue.jsonObject["age"]).isEqualTo(NumberValue(999))
+            assertThat(fixedValue.jsonObject["extraKey"]).satisfiesAnyOf(
+                {
+                    assertThat(it).isInstanceOf(JSONObjectValue::class.java); it as JSONObjectValue
+                    assertThat(it.jsonObject).isEqualTo(mapOf("values" to NumberValue(999)))
+                },
+                {
+                    assertThat(it).isInstanceOf(JSONArrayValue::class.java); it as JSONArrayValue
+                    assertThat(it.list).containsOnly(NumberValue(999))
+                }
+            )
+        }
+    }
+
+    companion object {
+        @JvmStatic
+        fun additionalPropertiesProvider(): Stream<AdditionalProperties> {
+            return Stream.of(
+                AdditionalProperties.FreeForm,
+                AdditionalProperties.PatternConstrained(StringPattern()),
+                AdditionalProperties.NoAdditionalProperties
+            )
         }
     }
 }

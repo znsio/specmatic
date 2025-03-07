@@ -20,21 +20,79 @@ fun toJSONObjectPattern(map: Map<String, Pattern>, typeAlias: String? = null): J
     return JSONObjectPattern(map.minus("..."), missingKeyStrategy, typeAlias)
 }
 
+sealed interface AdditionalProperties {
+    fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern>
+    fun encompasses(other: AdditionalProperties, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result
+    val description: String
+
+    data object NoAdditionalProperties : AdditionalProperties {
+        override fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern> {
+            return patternMap
+        }
+
+        override fun encompasses(other: AdditionalProperties, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+            return if (other is NoAdditionalProperties) Result.Success()
+            else Result.Failure("Expected $description, but updated schema allowed ${other.description}")
+        }
+
+        override val description: String
+            get() = "no additional properties"
+    }
+
+    data object FreeForm : AdditionalProperties {
+        override fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern> {
+            val extraKeys = valueMap.excludingPatternKeys(patternMap)
+            return patternMap + extraKeys.associateWith { AnyValuePattern }
+        }
+
+        override fun encompasses(other: AdditionalProperties, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+            return Result.Success()
+        }
+
+        override val description: String
+            get() = "a free form object"
+    }
+
+    data class PatternConstrained(val pattern: Pattern): AdditionalProperties {
+        override fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern> {
+            val extraKeys = valueMap.excludingPatternKeys(patternMap)
+            return patternMap + extraKeys.associateWith { pattern }
+        }
+
+        override fun encompasses(other: AdditionalProperties, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+            return when(other) {
+                is NoAdditionalProperties -> Result.Success()
+                is FreeForm -> Result.Failure("value constrained additional properties does not encompass free form")
+                is PatternConstrained -> this.pattern.encompasses(other.pattern, thisResolver, otherResolver, typeStack)
+            }
+        }
+
+        override val description: String
+            get() = "additional properties constrained by ${pattern.typeAlias?.let { withoutPatternDelimiters(it) } ?: "a schema"}"
+    }
+
+    fun Map<String, Value>.excludingPatternKeys(pattern: Map<String, Pattern>): Set<String> {
+        val patternKeys = pattern.keys.map(::withoutOptionality).toSet()
+        return keys.minus(patternKeys)
+    }
+}
+
 data class JSONObjectPattern(
     override val pattern: Map<String, Pattern> = emptyMap(),
     private val unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys,
     override val typeAlias: String? = null,
     val minProperties: Int? = null,
-    val maxProperties: Int? = null
+    val maxProperties: Int? = null,
+    val additionalProperties: AdditionalProperties = AdditionalProperties.NoAdditionalProperties
 ) : Pattern, PossibleJsonObjectPatternContainer {
 
     override fun fixValue(value: Value, resolver: Resolver): Value {
         if (resolver.matchesPattern(null, this, value).isSuccess()) return value
+        val valueMap = (value as? JSONObjectValue)?.jsonObject.orEmpty()
+        val adjustedPattern = additionalProperties.updatePatternMap(pattern, valueMap)
+
         return JSONObjectValue(
-            fix(
-                jsonPatternMap = pattern, jsonValueMap = (value as? JSONObjectValue)?.jsonObject.orEmpty(),
-                resolver = resolver, jsonPattern = this
-            )
+            fix(jsonPatternMap = adjustedPattern, jsonValueMap = valueMap, resolver = resolver, jsonPattern = this)
         )
     }
 
@@ -51,8 +109,8 @@ data class JSONObjectPattern(
     }
 
     override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {
-        if(concretePattern !is JSONObjectPattern)
-            throw ContractException("Expected json object type but got ${concretePattern.typeName}")
+        if (additionalProperties is AdditionalProperties.FreeForm && pattern.isEmpty()) return concretePattern
+        if (concretePattern !is JSONObjectPattern) throw ContractException("Expected json object type but got ${concretePattern.typeName}")
 
         val updatedPatternMapWithTypeAliases = concretePattern.pattern.mapValues { (key, concreteChildPattern) ->
             val originalChildPattern =
@@ -201,7 +259,7 @@ data class JSONObjectPattern(
 
             is JSONObjectPattern -> {
                 val propertyLimitResults: List<Result.Failure> = olderPropertyLimitsEncompassNewer(this, otherPattern)
-                mapEncompassesMap(
+                val patternResult = mapEncompassesMap(
                     pattern,
                     otherPattern.pattern,
                     thisResolverWithNullType,
@@ -209,6 +267,14 @@ data class JSONObjectPattern(
                     typeStack,
                     propertyLimitResults
                 )
+
+                val additionalPropertiesResult = additionalProperties.encompasses(
+                    otherPattern.additionalProperties,
+                    thisResolverWithNullType,
+                    otherResolverWithNullType,
+                    typeStack
+                )
+                return Result.fromResults(listOf(patternResult, additionalPropertiesResult))
             }
 
             else -> Result.Failure("Expected json type, got ${otherPattern.typeName}")
@@ -290,7 +356,7 @@ data class JSONObjectPattern(
             if (shouldMakePropertyMandatory(it.value, resolver)) {
                 withoutOptionality(it.key)
             } else it.key
-        }
+        }.let { additionalProperties.updatePatternMap(it, sampleData.jsonObject) }
 
         val keyErrors: List<Result.Failure> = resolverWithNullType.findKeyErrorList(adjustedPattern, sampleData.jsonObject).map {
             if (pattern[it.name] != null) {
@@ -303,7 +369,7 @@ data class JSONObjectPattern(
         data class ResultWithDiscriminatorStatus(val result: Result, val isDiscriminator: Boolean)
 
         val resultsWithDiscriminator: List<ResultWithDiscriminatorStatus> =
-            mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
+            mapZip(adjustedPattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
                 val innerResolver = addPatternToSeen(patternValue, updatedResolver)
                 val result = innerResolver.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
 

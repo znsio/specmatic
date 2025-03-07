@@ -1,5 +1,8 @@
 package io.specmatic.core.pattern
 
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import io.specmatic.GENERATION
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
@@ -22,7 +25,9 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.MethodSource
 import java.util.function.Consumer
+import java.util.stream.Stream
 
 internal class JSONObjectPatternTest {
     @Test
@@ -1813,6 +1818,53 @@ components:
                 assertThat(pattern.matches(it, Resolver())).isInstanceOf(Result.Success::class.java)
             }
         }
+
+        @ParameterizedTest
+        @MethodSource("io.specmatic.core.pattern.JSONObjectPatternTest#additionalPropertiesProvider")
+        fun `should encompasses itself`(additionalProperties: AdditionalProperties) {
+            val result = additionalProperties.encompasses(additionalProperties, Resolver(), Resolver(), emptySet())
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+
+        @ParameterizedTest
+        @MethodSource("io.specmatic.core.pattern.JSONObjectPatternTest#additionalPropertiesProvider")
+        fun `free form additional properties should encompass all other additional properties`(other: AdditionalProperties) {
+            val result = AdditionalProperties.FreeForm.encompasses(other, Resolver(), Resolver(), emptySet())
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+
+        @ParameterizedTest
+        @MethodSource("io.specmatic.core.pattern.JSONObjectPatternTest#additionalPropertiesProvider")
+        fun `no additional properties should only encompass itself`(other: AdditionalProperties) {
+            val result = AdditionalProperties.NoAdditionalProperties.encompasses(other, Resolver(), Resolver(), emptySet())
+            if (other != AdditionalProperties.NoAdditionalProperties) {
+                assertThat(result).isInstanceOf(Result.Failure::class.java)
+            } else assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+
+        @ParameterizedTest
+        @MethodSource("io.specmatic.core.pattern.JSONObjectPatternTest#additionalPropertiesProvider")
+        fun `pattern constrained encompasses no additional properties but not free form`(other: AdditionalProperties) {
+            val result = AdditionalProperties.PatternConstrained(StringPattern()).encompasses(other, Resolver(), Resolver(), emptySet())
+            when (other) {
+                is AdditionalProperties.FreeForm -> assertThat(result).isInstanceOf(Result.Failure::class.java)
+                else -> assertThat(result).isInstanceOf(Result.Success::class.java)
+            }
+        }
+
+        @Test
+        fun `pattern constrained encompasses should delegate check to pattern`() {
+            val pattern = mockk<Pattern> {
+                every { encompasses(any<Pattern>(), any(), any(), any()) } returns Result.Failure()
+            }
+
+            val additionalProperties = AdditionalProperties.PatternConstrained(pattern)
+            val other = AdditionalProperties.PatternConstrained(pattern)
+            val result = additionalProperties.encompasses(other, Resolver(), Resolver(), emptySet())
+
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+            verify(exactly = 1) { pattern.encompasses(any<Pattern>(), any(), any(), any()) }
+        }
     }
 
     @Nested
@@ -2270,6 +2322,17 @@ components:
                     assertThat(it).isInstanceOf(JSONArrayValue::class.java); it as JSONArrayValue
                     assertThat(it.list).containsOnly(NumberValue(999))
                 }
+            )
+        }
+    }
+
+    companion object {
+        @JvmStatic
+        fun additionalPropertiesProvider(): Stream<AdditionalProperties> {
+            return Stream.of(
+                AdditionalProperties.FreeForm,
+                AdditionalProperties.PatternConstrained(StringPattern()),
+                AdditionalProperties.NoAdditionalProperties
             )
         }
     }

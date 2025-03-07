@@ -22,10 +22,16 @@ fun toJSONObjectPattern(map: Map<String, Pattern>, typeAlias: String? = null): J
 
 sealed interface AdditionalProperties {
     fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern>
+    fun encompasses(other: AdditionalProperties, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result
 
     data object NoAdditionalProperties : AdditionalProperties {
         override fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern> {
             return patternMap
+        }
+
+        override fun encompasses(other: AdditionalProperties, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+            return if (other is NoAdditionalProperties) Result.Success()
+            else Result.Failure("Expected no additional properties, got ${other.javaClass.simpleName}")
         }
     }
 
@@ -34,12 +40,24 @@ sealed interface AdditionalProperties {
             val extraKeys = valueMap.excludingPatternKeys(patternMap)
             return patternMap + extraKeys.associateWith { AnyValuePattern }
         }
+
+        override fun encompasses(other: AdditionalProperties, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+            return Result.Success()
+        }
     }
 
     data class PatternConstrained(val pattern: Pattern): AdditionalProperties {
         override fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern> {
             val extraKeys = valueMap.excludingPatternKeys(patternMap)
             return patternMap + extraKeys.associateWith { pattern }
+        }
+
+        override fun encompasses(other: AdditionalProperties, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+            return when(other) {
+                is NoAdditionalProperties -> Result.Success()
+                is FreeForm -> Result.Failure("value constrained additional properties does not encompass free form")
+                is PatternConstrained -> this.pattern.encompasses(other.pattern, thisResolver, otherResolver, typeStack)
+            }
         }
     }
 
@@ -231,7 +249,7 @@ data class JSONObjectPattern(
 
             is JSONObjectPattern -> {
                 val propertyLimitResults: List<Result.Failure> = olderPropertyLimitsEncompassNewer(this, otherPattern)
-                mapEncompassesMap(
+                val patternResult = mapEncompassesMap(
                     pattern,
                     otherPattern.pattern,
                     thisResolverWithNullType,
@@ -239,6 +257,14 @@ data class JSONObjectPattern(
                     typeStack,
                     propertyLimitResults
                 )
+
+                val additionalPropertiesResult = additionalProperties.encompasses(
+                    otherPattern.additionalProperties,
+                    thisResolverWithNullType,
+                    otherResolverWithNullType,
+                    typeStack
+                )
+                return Result.fromResults(listOf(patternResult, additionalPropertiesResult))
             }
 
             else -> Result.Failure("Expected json type, got ${otherPattern.typeName}")

@@ -81,8 +81,8 @@ data class JSONObjectPattern(
     }
 
     override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {
-        if(concretePattern !is JSONObjectPattern)
-            throw ContractException("Expected json object type but got ${concretePattern.typeName}")
+        if (additionalProperties is AdditionalProperties.FreeForm && pattern.isEmpty()) return concretePattern
+        if (concretePattern !is JSONObjectPattern) throw ContractException("Expected json object type but got ${concretePattern.typeName}")
 
         val updatedPatternMapWithTypeAliases = concretePattern.pattern.mapValues { (key, concreteChildPattern) ->
             val originalChildPattern =

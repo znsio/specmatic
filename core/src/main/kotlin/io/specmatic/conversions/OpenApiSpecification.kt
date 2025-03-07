@@ -1741,8 +1741,6 @@ class OpenApiSpecification(
     private val primitiveOpenAPITypes =
         mapOf("string" to "(string)", "number" to "(number)", "integer" to "(number)", "boolean" to "(boolean)")
 
-
-
     private fun toJsonObjectPattern(
         schema: Schema<*>, patternName: String, typeStack: List<String>
     ): JSONObjectPattern {

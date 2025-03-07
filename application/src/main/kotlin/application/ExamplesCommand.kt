@@ -14,7 +14,7 @@ import io.specmatic.core.examples.module.ExampleExternalisationModule
 import io.specmatic.core.examples.module.ExampleFixModule
 import io.specmatic.core.examples.module.ExampleTransformationModule
 import io.specmatic.core.examples.module.ExampleValidationModule
-import io.specmatic.core.examples.server.ExampleModule
+import io.specmatic.core.examples.module.ExampleModule
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.examples.server.FixExampleResult
 import io.specmatic.core.examples.server.FixExampleStatus

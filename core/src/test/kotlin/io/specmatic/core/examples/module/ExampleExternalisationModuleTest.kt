@@ -3,7 +3,6 @@ package io.specmatic.core.examples.module
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
-import io.specmatic.core.examples.server.ExampleModule
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue

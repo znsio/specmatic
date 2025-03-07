@@ -16,6 +16,7 @@ import io.specmatic.core.Feature
 import io.specmatic.core.Result
 import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.examples.module.ExampleFixModule
+import io.specmatic.core.examples.module.ExampleModule
 import io.specmatic.core.examples.module.ExampleValidationModule
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.examples.server.SchemaExamplesView.Companion.schemaExamplesToTableRows

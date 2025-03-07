@@ -23,6 +23,7 @@ fun toJSONObjectPattern(map: Map<String, Pattern>, typeAlias: String? = null): J
 sealed interface AdditionalProperties {
     fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern>
     fun encompasses(other: AdditionalProperties, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result
+    val description: String
 
     data object NoAdditionalProperties : AdditionalProperties {
         override fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern> {
@@ -31,8 +32,11 @@ sealed interface AdditionalProperties {
 
         override fun encompasses(other: AdditionalProperties, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
             return if (other is NoAdditionalProperties) Result.Success()
-            else Result.Failure("Expected no additional properties, got ${other.javaClass.simpleName}")
+            else Result.Failure("Expected $description, but updated schema allowed ${other.description}")
         }
+
+        override val description: String
+            get() = "no additional properties"
     }
 
     data object FreeForm : AdditionalProperties {
@@ -44,6 +48,9 @@ sealed interface AdditionalProperties {
         override fun encompasses(other: AdditionalProperties, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
             return Result.Success()
         }
+
+        override val description: String
+            get() = "a free form object"
     }
 
     data class PatternConstrained(val pattern: Pattern): AdditionalProperties {
@@ -59,6 +66,9 @@ sealed interface AdditionalProperties {
                 is PatternConstrained -> this.pattern.encompasses(other.pattern, thisResolver, otherResolver, typeStack)
             }
         }
+
+        override val description: String
+            get() = "additional properties constrained by ${pattern.typeAlias?.let { withoutPatternDelimiters(it) } ?: "a schema"}"
     }
 
     fun Map<String, Value>.excludingPatternKeys(pattern: Map<String, Pattern>): Set<String> {

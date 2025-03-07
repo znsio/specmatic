@@ -130,7 +130,8 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
             queue.addAll(referringSpecs)
         }
 
-        return visited.map { it.name }.toSet() - specFiles.map { it.name }.toSet()
+        val referencedFiles = visited.filter { it !in specFiles }
+        return referencedFiles.map { it.canonicalPath }.toSet()
     }
 
     internal fun allSpecFiles(): List<File> {

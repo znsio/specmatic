@@ -1,7 +1,8 @@
 package io.specmatic.core
 
-import io.specmatic.core.log.InfoLogger
-import io.specmatic.core.log.logFileNameSuffix
+import io.specmatic.core.log.*
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.StringValue
 import io.specmatic.stub.captureStandardOutput
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -50,5 +51,16 @@ internal class LoggingKtTest {
         }
 
         assertThat(output.trimEnd()).isEqualTo("Outer${System.lineSeparator()}  Inner${System.lineSeparator()}    Innermost${System.lineSeparator()}  Return to inner${System.lineSeparator()}Return to outer")
+    }
+
+    @Test
+    fun `log in one line`() {
+        val (output, _) = captureStandardOutput {
+            val oneLineLogger = NonVerbose(CompositePrinter(listOf(OneLinePrinter)))
+            val json = JSONObjectValue(mapOf("data" to StringValue("information")))
+            oneLineLogger.log(json.toStringLiteral())
+        }
+
+        assertThat(output).isEqualTo("""{ "data": "information" }""")
     }
 }

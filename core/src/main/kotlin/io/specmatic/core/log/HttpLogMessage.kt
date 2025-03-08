@@ -19,8 +19,7 @@ data class HttpLogMessage(
     val comment: String? = null,
     var scenario: Scenario? = null,
     var exception: Exception? = null
-) :
-    LogMessage {
+) : LogMessage {
     fun addRequest(httpRequest: HttpRequest) {
         requestTime = CurrentDate()
         this.request = httpRequest

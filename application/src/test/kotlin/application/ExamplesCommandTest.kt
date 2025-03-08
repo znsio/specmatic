@@ -116,7 +116,7 @@ paths:
         println(output)
 
         assertThat(returnValue).isNotEqualTo(0)
-        assertThat(output).contains("No matching specification found for this example")
+        assertThat(output).contains("GET /products/1 -> 200 does not match any operation in the specification")
     }
 
     @Test

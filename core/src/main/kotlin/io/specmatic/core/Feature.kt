@@ -468,19 +468,16 @@ data class Feature(
     }
 
     fun matchResultFlagBased(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages): Results {
-        val results = scenarios.map {
-            it.matches(request, response, mismatchMessages, flagsBased)
+        val results = scenarios.map { it.matches(request, response, mismatchMessages, flagsBased) }
+
+        val resultsWithMinimumFluff = Results(results).withoutFluff()
+        if (resultsWithMinimumFluff.results.isEmpty()) {
+            return Result.Failure(
+                "${request.method} ${request.path} -> ${response.status} does not match any operation in the specification"
+            ).let { Results(listOf(it)) }
         }
 
-        if(results.any { it.isSuccess() })
-            return Results(results).withoutFluff()
-
-        val deepErrors = results.filterNot { it.isFluffy(0) }
-
-        if(deepErrors.isNotEmpty())
-            return Results(deepErrors)
-
-        return Results(listOf(Result.Failure("No matching specification found for this example")))
+        return resultsWithMinimumFluff
     }
 
     fun matchResult(request: HttpRequest, response: HttpResponse): Result {
@@ -1852,17 +1849,19 @@ data class Feature(
 
                 try {
                     val example = ScenarioStub.parse(File(externalizedExamplePath).readText())
+                    val result = matchResultFlagBased(example, DefaultMismatchMessages).toResultIfAny()
 
                     val method = example.requestMethod()
                     val path = example.requestPath()
                     val responseCode = example.responseStatus()
-                    val errorMessage = "    $method $path -> $responseCode does not match any operation in the specification"
-                    if(strictMode.not()) logger.log(errorMessage)
-                    "The example $externalizedExamplePath is unused due to error: $errorMessage"
+                    val message = "$method $path -> $responseCode does not match any operation in the specification\n${result.reportString()}"
+
+                    if(strictMode.not()) logger.log(message)
+                    "The example $externalizedExamplePath is unused due to ERRORS:\n$message"
                 } catch(e: Throwable) {
                     val errorMessage = "    Could not parse the example: ${exceptionCauseMessage(e)}"
                     if(strictMode.not()) logger.log(errorMessage)
-                    "The example $externalizedExamplePath is unused due to error: $errorMessage"
+                    "The example $externalizedExamplePath is unused due to ERRORS:\n$errorMessage"
                 }
             }
             if(strictMode && errorMessages.isNotEmpty()) {

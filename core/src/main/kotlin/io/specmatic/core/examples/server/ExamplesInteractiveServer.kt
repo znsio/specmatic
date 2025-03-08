@@ -157,11 +157,12 @@ class ExamplesInteractiveServer(
                     try {
                         val contractFile = getContractFile()
                         val validationResultResponse = try {
-                            val result = validateExample(contractFile, File(request.exampleFile))
+                            val results = validateExample(contractFile, request)
+                            val result = results.toResultIfAny()
                             if (result is Result.Failure) {
                                 ValidateExampleResponse(
                                     absPath = request.exampleFile, errorMessage = result.reportString(),
-                                    errorList = ExampleValidationDetails(result.toMatchFailureDetailList()).jsonPathToErrorDescriptionMapping(),
+                                    errorList = ExampleValidationDetails(results).jsonPathToErrorDescriptionMapping(),
                                     isPartialFailure = result.isPartialFailure()
                                 )
                             } else {
@@ -500,7 +501,7 @@ class ExamplesInteractiveServer(
             val exampleReturnValue = ExampleFromFile.fromFile(exampleFile)
 
             if(exampleReturnValue is HasFailure<ExampleFromFile>) {
-                if(validateSchemaExample(feature, exampleFile) is Result.Success) {
+                if(validateSchemaExample(feature, exampleFile).toResultIfAny() is Result.Success) {
                     return FixExampleResult(status = FixExampleStatus.SKIPPED, exampleFileName = exampleFile.name)
                 }
                 fixSchemaExampleAndWriteTo(exampleFile, feature)
@@ -519,7 +520,7 @@ class ExamplesInteractiveServer(
                 contentType = example.requestContentType
             ) ?: throw Exception("No scenario found for example '${exampleFile.name}'.")
 
-            if(validateExample(feature, exampleFile) is Result.Success) {
+            if(validateExample(feature, exampleFile).toResultIfAny() is Result.Success) {
                 return FixExampleResult(status = FixExampleStatus.SKIPPED, exampleFileName = exampleFile.name)
             }
 
@@ -680,10 +681,26 @@ class ExamplesInteractiveServer(
                 exampleFile.canonicalPath to validateExample(updatedFeature, exampleFile)
             }
 
-            return results
+            return results.mapValues { it.value.toResultIfAny() }
         }
 
-        fun validateExample(contractFile: File, exampleFile: File): Result {
+        fun validateExample(contractFile: File, request: ValidateExampleRequest): Results {
+            val feature = parseContractFileToFeature(contractFile)
+            if (request.isSchemaBased) return validateSchemaExample(feature, File(request.exampleFile))
+
+            val matchingScenario = feature.scenarioAssociatedTo(
+                path = request.path, method = request.method,
+                responseStatusCode = request.responseStatusCode, contentType = request.contentType
+            ) ?: throw ContractException(errorMessage = "No matching scenario found")
+
+            val exampleFromFile = ExampleFromFile(File(request.exampleFile))
+            return matchingScenario.matches(
+                httpRequest = exampleFromFile.request, httpResponse = exampleFromFile.response,
+                mismatchMessages = InteractiveExamplesMismatchMessages, flagsBased = feature.flagsBased
+            ).let { Results(listOf(it)) }
+        }
+
+        fun validateExample(contractFile: File, exampleFile: File): Results {
             val feature = parseContractFileToFeature(contractFile)
             return validateExample(feature, exampleFile)
         }
@@ -692,8 +709,8 @@ class ExamplesInteractiveServer(
             return feature.matchResultFlagBased(scenarioStub, InteractiveExamplesMismatchMessages)
         }
 
-        private fun validateExample(feature: Feature, example: ExampleFromFile): Result {
-            return feature.matchResultFlagBased(example.request, example.response, InteractiveExamplesMismatchMessages).toResultIfAnyWithCauses()
+        private fun validateExample(feature: Feature, example: ExampleFromFile): Results {
+            return feature.matchResultFlagBased(example.request, example.response, InteractiveExamplesMismatchMessages)
         }
 
         private fun validateExample(feature: Feature, schemaExample: SchemaExample): Result {
@@ -710,20 +727,20 @@ class ExamplesInteractiveServer(
             )
         }
 
-        private fun validateExample(feature: Feature, exampleFile: File): Result {
+        private fun validateExample(feature: Feature, exampleFile: File): Results {
             return ExampleFromFile.fromFile(exampleFile).realise(
                 hasValue = { example, _ -> validateExample(feature, example) },
                 orFailure = { validateSchemaExample(feature, exampleFile) },
-                orException = { it.toHasFailure().failure }
+                orException = { it.toHasFailure().failure.let { f -> Results(listOf(f)) } }
             )
         }
 
-        private fun validateSchemaExample(feature: Feature, exampleFile: File): Result {
+        private fun validateSchemaExample(feature: Feature, exampleFile: File): Results {
             return SchemaExample.fromFile(exampleFile).realise(
                 hasValue = { example, _ -> validateExample(feature, example) },
                 orException = { it.toHasFailure().failure },
                 orFailure = { it.failure }
-            )
+            ).let { Results(listOf(it)) }
         }
 
         private fun HttpResponse.cleanup(): HttpResponse {

@@ -63,4 +63,27 @@ internal class LoggingKtTest {
 
         assertThat(output).isEqualTo("""{ "data": "information" }""")
     }
+
+    @Test
+    fun `render a boundary`() {
+        val (output, _) = captureStandardOutput {
+            InfoLogger.log("one")
+            InfoLogger.boundary()
+            InfoLogger.log("two")
+        }
+
+        assertThat(output).isEqualTo("one${System.lineSeparator()}${System.lineSeparator()}two")
+    }
+
+    @Test
+    fun `render a single boundary even though boundary is called twice`() {
+        val (output, _) = captureStandardOutput {
+            InfoLogger.log("one")
+            InfoLogger.boundary()
+            InfoLogger.boundary()
+            InfoLogger.log("two")
+        }
+
+        assertThat(output).isEqualTo("one${System.lineSeparator()}${System.lineSeparator()}two")
+    }
 }

@@ -6299,18 +6299,9 @@ paths:
                 return block()
             }
 
-            override fun currentIndentation(): String {
-                return ""
-            }
-
             override fun boundary() {
                 TODO("Not yet implemented")
             }
-
-            override fun removeBoundary(): Boolean {
-                return false
-            }
-
         }
 
         ignoreButLogException {
@@ -6405,11 +6396,6 @@ paths:
             override fun <T> withIndentation(count: Int, block: () -> T): T {
                 return block()
             }
-
-            override fun currentIndentation(): String {
-                return ""
-            }
-
         }
 
         ignoreButLogException {

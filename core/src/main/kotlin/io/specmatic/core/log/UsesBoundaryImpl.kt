@@ -1,6 +1,6 @@
 package io.specmatic.core.log
 
-class UsesBoundaryImpl : UsesBoundary {
+class UsesBoundaryImpl : UsesBoundaryWithHelpers {
     var boundary: Boolean = false
 
     override fun boundary() {

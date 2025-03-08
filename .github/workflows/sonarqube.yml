@@ -30,6 +30,7 @@ jobs:
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GRADLE_OPTS: "-Xmx2048m -Xms512m"
       run: ./gradlew --info sonarqube -x test
     - name: Upload core Gradle Log
       if: always()

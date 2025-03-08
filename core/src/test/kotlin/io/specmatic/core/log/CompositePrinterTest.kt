@@ -9,7 +9,7 @@ internal class CompositePrinterTest {
         var printed = 0
 
         val printer = CompositePrinter(listOf(object: LogPrinter {
-                override fun print(msg: LogMessage) {
+                override fun print(msg: LogMessage, indentation: String) {
                     assertThat(msg.toLogString()).isEqualTo("Hello")
                     printed += 1
                 }

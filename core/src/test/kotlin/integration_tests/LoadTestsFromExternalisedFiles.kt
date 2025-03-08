@@ -157,7 +157,7 @@ class LoadTestsFromExternalisedFiles {
         val logBuffer = object : CompositePrinter(emptyList()) {
             var buffer: MutableList<String> = mutableListOf()
 
-            override fun print(msg: LogMessage) {
+            override fun print(msg: LogMessage, indentation: String) {
                 buffer.add(msg.toLogString())
             }
         }

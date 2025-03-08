@@ -5,7 +5,7 @@ import io.specmatic.core.utilities.exceptionCauseMessage
 class NonVerbose(
     override val printer: CompositePrinter,
     override var infoLoggingEnabled: Boolean = true
-) : LogStrategy {
+) : LogStrategy, UsesIndentation by UsesIndentationImpl() {
     private val readyMessage = ReadyMessage()
 
     override fun keepReady(msg: LogMessage) {
@@ -13,8 +13,8 @@ class NonVerbose(
     }
 
     fun print(msg: LogMessage) {
-        readyMessage.printLogString(printer)
-        printer.print(msg)
+        readyMessage.printLogString(printer, currentIndentation())
+        printer.print(msg, currentIndentation())
     }
 
     override fun exceptionString(e: Throwable, msg: String?): String {

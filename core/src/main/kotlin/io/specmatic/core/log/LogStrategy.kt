@@ -1,6 +1,6 @@
 package io.specmatic.core.log
 
-interface LogStrategy {
+interface LogStrategy : UsesIndentation {
     val printer: CompositePrinter
     var infoLoggingEnabled: Boolean
 

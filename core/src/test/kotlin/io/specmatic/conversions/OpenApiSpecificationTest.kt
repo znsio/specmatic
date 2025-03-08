@@ -6295,6 +6295,14 @@ paths:
                 TODO("Not yet implemented")
             }
 
+            override fun <T> withIndentation(count: Int, block: () -> T): T {
+                return block()
+            }
+
+            override fun currentIndentation(): String {
+                return ""
+            }
+
         }
 
         ignoreButLogException {
@@ -6384,6 +6392,14 @@ paths:
 
             override fun debug(e: Throwable, msg: String?) {
                 TODO("Not yet implemented")
+            }
+
+            override fun <T> withIndentation(count: Int, block: () -> T): T {
+                return block()
+            }
+
+            override fun currentIndentation(): String {
+                return ""
             }
 
         }

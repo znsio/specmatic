@@ -10,6 +10,7 @@ import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.osAgnosticPath
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.captureStandardOutput
 import io.specmatic.stub.createStubFromContracts
@@ -83,7 +84,7 @@ class StubSubstitutionTest {
         val exampleRequest = HttpRequest("GET", "/data", headers = mapOf("X-Trace" to "(TRACE:string)"))
         val exampleResponse = HttpResponse(200, mapOf("X-Trace" to "$(TRACE)"))
 
-        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse)), DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest("GET", "/data", headers = mapOf("X-Trace" to "abc123"))
             val response = stub.client.execute(request)
 
@@ -128,7 +129,7 @@ class StubSubstitutionTest {
         val exampleRequest = HttpRequest("GET", "/data", queryParametersMap = mapOf("traceId" to "(TRACE_ID:string)"))
         val exampleResponse = HttpResponse(200, mapOf("X-Trace" to "$(TRACE_ID)"))
 
-        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse)), DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest("GET", "/data", queryParametersMap = mapOf("traceId" to "abc123"))
             val response = stub.client.execute(request)
 
@@ -183,7 +184,7 @@ class StubSubstitutionTest {
         val exampleRequest = HttpRequest("GET", "/data/(ID:string)")
         val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "$(ID)"}"""))
 
-        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse)), DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest("GET", "/data/abc123")
             val response = stub.client.execute(request)
 
@@ -229,7 +230,7 @@ class StubSubstitutionTest {
         val exampleRequest = HttpRequest("GET", "/data/(ID:string)")
         val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "$(ID)"}"""))
 
-        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse)), DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest("GET", "/data/123")
             val response = stub.client.execute(request)
 
@@ -280,7 +281,7 @@ class StubSubstitutionTest {
         val exampleRequest = HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "(ID:string)"}"""))
         val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "$(ID)"}"""))
 
-        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse)), DEFAULT_STUB_BASEURL).use { stub ->
             val response = stub.client.execute(HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "123"}""")))
 
             assertThat(response.status).isEqualTo(200)
@@ -330,7 +331,7 @@ class StubSubstitutionTest {
         val exampleRequest = HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "(ID:string)"}"""))
         val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "$(ID)"}"""))
 
-        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse)), DEFAULT_STUB_BASEURL).use { stub ->
             val response = stub.client.execute(exampleRequest)
 
             assertThat(response.status).isEqualTo(400)
@@ -378,7 +379,7 @@ class StubSubstitutionTest {
         val exampleRequest = HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "(ID:string)"}"""))
         val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "text/plain", "X-Id" to "$(ID)"), body = StringValue("success"))
 
-        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse)), DEFAULT_STUB_BASEURL).use { stub ->
             val response = stub.client.execute(exampleRequest)
 
             assertThat(response.status).isEqualTo(400)
@@ -539,7 +540,7 @@ class StubSubstitutionTest {
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val example = """
                 {
                   "http-request": {
@@ -612,7 +613,7 @@ class StubSubstitutionTest {
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val example = """
                 {
                   "data": {

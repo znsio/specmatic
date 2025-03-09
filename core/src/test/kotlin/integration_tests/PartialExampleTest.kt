@@ -10,6 +10,7 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.osAgnosticPath
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.captureStandardOutput
 import io.specmatic.stub.createStubFromContracts
@@ -202,7 +203,7 @@ class PartialExampleTest {
                                 type: string
         """.trimIndent(), "").toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val partialExample = """
                 {
                     "partial": {
@@ -283,7 +284,7 @@ class PartialExampleTest {
                                 type: string
         """.trimIndent(), "").toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val partialExample1 = """
                 {
                     "partial": {

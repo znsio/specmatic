@@ -20,6 +20,7 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.HttpStubData
 import io.specmatic.stub.captureStandardOutput
@@ -6517,7 +6518,7 @@ paths:
             HttpResponse(400, "failed")
         )
 
-        HttpStub(feature, listOf(invalidAuthStub, validAuthStub)).use { stub ->
+        HttpStub(feature, listOf(invalidAuthStub, validAuthStub), DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest(
                 "POST",
                 "/test",
@@ -6685,7 +6686,7 @@ paths:
         """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(specification).use { stub ->
+        HttpStub(specification, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val base64EncodedRequestBody = Base64.getEncoder().encodeToString("hello world".encodeToByteArray())
 
             val response = stub.client.execute(
@@ -6730,7 +6731,7 @@ paths:
         """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(specification).use { stub ->
+        HttpStub(specification, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val base64EncodedRequestBody = Base64.getEncoder().encodeToString("hello world".encodeToByteArray())
 
             val stubbedRequest = HttpRequest(
@@ -6800,7 +6801,7 @@ paths:
         """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(specification).use { stub ->
+        HttpStub(specification, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val vanillaNonBase64Request = "]"
 
             stub.client.execute(
@@ -7618,7 +7619,7 @@ paths:
             assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
         }
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val expectedRequest = HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": true}"""))
             val expectedResponse = HttpResponse.ok("succeeded!")
 
@@ -7976,7 +7977,7 @@ paths:
 
         val expectation: ScenarioStub = stringToMockScenario(StringValue(rawStub))
 
-        HttpStub(feature, listOf(expectation)).use { stub ->
+        HttpStub(feature, listOf(expectation), DEFAULT_STUB_BASEURL).use { stub ->
             val request = expectation.request
 
             val response = stub.client.execute(request)
@@ -8623,7 +8624,7 @@ paths:
 
         val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(HttpRequest("DELETE", "/items/123-to-be-deleted")).also { response ->
                 assertThat(response.status).isEqualTo(203)
                 assertThat(response.headers).doesNotContainEntry(SPECMATIC_TYPE_HEADER, "random")

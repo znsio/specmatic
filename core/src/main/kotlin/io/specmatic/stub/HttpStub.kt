@@ -7,14 +7,12 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.cors.*
-import io.ktor.server.plugins.cors.CORS
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
 import io.ktor.util.pipeline.*
 import io.specmatic.core.*
-import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.LogTail
@@ -65,12 +63,12 @@ import java.util.*
 import kotlin.text.toCharArray
 
 const val SPECMATIC_RESPONSE_CODE_HEADER = "Specmatic-Response-Code"
+const val DEFAULT_STUB_BASEURL = "localhost:9000"
 
 class HttpStub(
     private val features: List<Feature>,
     rawHttpStubs: List<HttpStubData> = emptyList(),
-    val host: String = "127.0.0.1",
-    private val port: Int = 9000,
+    val baseURL: String,
     private val log: (event: LogMessage) -> Unit = dontPrintToConsole,
     private val strictMode: Boolean = false,
     val keyData: KeyData? = null,
@@ -80,23 +78,21 @@ class HttpStub(
     val specmaticConfigPath: String? = null,
     private val timeoutMillis: Long = 0,
     private val specToStubBaseUrlMap: Map<String, String?> = features.associate {
-        it.path to endPointFromHostAndPort(resolved(host), port, keyData)
+        it.path to endPointFromBaseURL(baseURL, keyData)
     }
 ) : ContractStub {
     constructor(
         feature: Feature,
         scenarioStubs: List<ScenarioStub> = emptyList(),
-        host: String = "localhost",
-        port: Int = 9000,
+        baseURL: String,
         log: (event: LogMessage) -> Unit = dontPrintToConsole,
         specToStubBaseUrlMap: Map<String, String> = mapOf(
-            feature.path to endPointFromHostAndPort(resolved(host), port, null)
+            feature.path to endPointFromBaseURL(baseURL, null)
         )
     ) : this(
         listOf(feature),
         contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))),
-        host,
-        port,
+        baseURL,
         log,
         specToStubBaseUrlMap = specToStubBaseUrlMap
     )
@@ -104,17 +100,15 @@ class HttpStub(
     constructor(
         gherkinData: String,
         scenarioStubs: List<ScenarioStub> = emptyList(),
-        host: String = "localhost",
-        port: Int = 9000,
+        baseURL: String,
         log: (event: LogMessage) -> Unit = dontPrintToConsole
     ) : this(
         parseGherkinStringToFeature(gherkinData),
         scenarioStubs,
-        host,
-        port,
+        baseURL,
         log,
         specToStubBaseUrlMap = mapOf(
-            parseGherkinStringToFeature(gherkinData).path to endPointFromHostAndPort(resolved(host), port, null)
+            parseGherkinStringToFeature(gherkinData).path to endPointFromBaseURL(baseURL, null)
         )
     )
 
@@ -159,7 +153,7 @@ class HttpStub(
             SpecmaticConfig()
 
     private val specToBaseUrlMap = specToStubBaseUrlMap.mapValues { (_, value) ->
-        value ?: endPointFromHostAndPort(resolved(host), port, keyData)
+        value ?: endPointFromBaseURL(baseURL, keyData)
     }
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(
@@ -239,7 +233,7 @@ class HttpStub(
             return threadSafeHttpStubQueue.size
         }
 
-    val endPoint = endPointFromHostAndPort(host, port, keyData)
+    val endPoint = endPointFromBaseURL(baseURL, keyData)
 
     override val client = HttpClient(this.endPoint)
 
@@ -292,7 +286,7 @@ class HttpStub(
                         else -> serveStubResponse(
                             httpRequest,
                             baseUrl = "${call.request.local.scheme}://${call.request.local.serverHost}:${call.request.local.serverPort}",
-                            defaultBaseUrl = endPointFromHostAndPort(resolved(host), port, keyData)
+                            defaultBaseUrl = endPointFromBaseURL(baseURL, keyData)
                         )
                     }
 
@@ -373,10 +367,10 @@ class HttpStub(
 
     private fun ApplicationEngineEnvironmentBuilder.configureHostPorts() {
         val hostPortList = specmaticConfig.stubBaseUrls(
-            endPointFromHostAndPort(this@HttpStub.host, this@HttpStub.port, null)
+            endPointFromBaseURL(this@HttpStub.baseURL, null)
         ).map { stubBaseUrl ->
-            val host = extractHost(stubBaseUrl)?.let { normalizeHost(it) } ?: this@HttpStub.host
-            val port = extractPort(stubBaseUrl) ?: this@HttpStub.port
+            val host = extractHost(stubBaseUrl)?.let { normalizeHost(it) } ?: extractHost(this@HttpStub.baseURL)!!
+            val port = extractPort(stubBaseUrl) ?: extractPort(this@HttpStub.baseURL)!!
             Pair(host, port)
         }.distinct()
 
@@ -384,6 +378,7 @@ class HttpStub(
             null -> connectors.addAll(
                 hostPortList.map { (host, port) ->
                     EngineConnectorBuilder().also {
+
                         it.host = host
                         it.port = port
                     }
@@ -1238,18 +1233,13 @@ internal fun httpResponseLog(response: HttpResponse): String =
 internal fun httpRequestLog(httpRequest: HttpRequest): String =
     ">> Request Start At ${Date()}\n${httpRequest.toLogString("-> ")}"
 
-fun endPointFromHostAndPort(host: String, port: Int?, keyData: KeyData?): String {
+fun endPointFromBaseURL(baseURL: String, keyData: KeyData?): String {
     val protocol = when (keyData) {
         null -> "http"
         else -> "https"
     }
-
-    val computedPortString = when (port) {
-        80, null -> ""
-        else -> ":$port"
-    }
-
-    return "$protocol://$host$computedPortString"
+    val uri = URI(baseURL)
+    return uri.toString().replaceFirst(uri.scheme + "://", "$protocol://")
 }
 
 fun resolved(host: String): String {

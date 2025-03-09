@@ -9,15 +9,14 @@ import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpClientFactory
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.contractInfoToHttpExpectations
-import io.specmatic.stub.endPointFromHostAndPort
+import io.specmatic.stub.endPointFromBaseURL
 import org.springframework.stereotype.Component
 
 @Component
 class HTTPStubEngine {
     fun runHTTPStub(
         stubs: List<Pair<Feature, List<ScenarioStub>>>,
-        host: String,
-        port: Int,
+        baseURL: String,
         certInfo: CertInfo,
         strictMode: Boolean,
         passThroughTargetBase: String = "",
@@ -32,8 +31,7 @@ class HTTPStubEngine {
         return HttpStub(
             features = stubs.map { it.first },
             rawHttpStubs = contractInfoToHttpExpectations(stubs),
-            host = host,
-            port = port,
+            baseURL = baseURL,
             log = ::consoleLog,
             strictMode = strictMode,
             keyData = keyData,
@@ -49,7 +47,7 @@ class HTTPStubEngine {
                 StringLog(
                     serverStartupMessage(
                         specToBaseUrlMap,
-                        endPointFromHostAndPort(host, port, keyData)
+                        endPointFromBaseURL(baseURL, keyData)
                     )
                 )
             )

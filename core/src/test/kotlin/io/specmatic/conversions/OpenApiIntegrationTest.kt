@@ -7,6 +7,7 @@ import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.createStubFromContracts
 import io.specmatic.test.TestExecutor
@@ -686,7 +687,7 @@ Background:
         fun `stub matches basic auth header`() {
             val feature = feature()
 
-            HttpStub(feature).use { stub ->
+            HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                 val response = stub.client.execute(HttpRequest("GET", "/hello", headers = mapOf("Authorization" to "Basic $base64EncodedCredentials")))
                 assertThat(response.status).isEqualTo(200)
             }
@@ -696,7 +697,7 @@ Background:
         fun `can set expectations with basic auth header`() {
             val feature = feature()
 
-            HttpStub(feature).use { stub ->
+            HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                 val expectedRequest = HttpRequest("GET", "/hello", headers = mapOf("Authorization" to "Basic $base64EncodedCredentials"), body = NoBodyValue)
 
                 stub.setExpectation(ScenarioStub(expectedRequest, HttpResponse.ok("success")))

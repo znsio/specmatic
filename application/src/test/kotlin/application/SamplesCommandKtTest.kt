@@ -1,18 +1,22 @@
 package application
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
 import io.specmatic.core.CONTRACT_EXTENSION
 import io.specmatic.core.Contract
-import io.specmatic.core.log.*
+import io.specmatic.core.log.CompositePrinter
+import io.specmatic.core.log.JSONConsoleLogPrinter
+import io.specmatic.core.log.NonVerbose
+import io.specmatic.core.log.logger
+import io.specmatic.core.log.resetLogger
 import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.stub.HttpStub
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
@@ -44,7 +48,7 @@ internal class SamplesCommandKtTest {
 
         val (data, _) = captureStandardOutput {
             val gherkin = specFile.readText().trim()
-            HttpStub(gherkin, emptyList(), "localhost", 56789).use { fake ->
+            HttpStub(gherkin, emptyList(), "localhost:56789").use { fake ->
                 Contract.fromGherkin(gherkin).samples(fake)
             }
         }
@@ -62,7 +66,7 @@ internal class SamplesCommandKtTest {
             command.contractFile = specFile
 
             val gherkin = specFile.readText().trim()
-            HttpStub(gherkin, emptyList(), "localhost", 56789).use { fake ->
+            HttpStub(gherkin, emptyList(), "localhost:56789").use { fake ->
                 Contract.fromGherkin(gherkin).samples(fake)
             }
         }

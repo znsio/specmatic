@@ -272,7 +272,7 @@ For example, to filter by HTTP methods:
             }
 
             try {
-                validateExample(contractFile, exampleFile).throwOnFailure()
+                validateExample(contractFile, exampleFile).toResultIfAny().throwOnFailure()
                 logger.log("The provided example ${exampleFile.name} is valid.")
                 return SUCCESS_EXIT_CODE
             } catch (e: ContractException) {

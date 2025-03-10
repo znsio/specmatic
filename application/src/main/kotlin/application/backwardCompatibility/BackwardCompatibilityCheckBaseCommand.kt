@@ -110,33 +110,37 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         }
     }
 
-    open fun getSpecsReferringTo(
-        schemaFiles: Set<String>,
-        visitedSpecs: Set<String> = setOf()
-    ): Set<String> {
-        if (schemaFiles.isEmpty()) return emptySet()
+    open fun getSpecsReferringTo(specFilePaths: Set<String>): Set<String> {
+        if (specFilePaths.isEmpty()) return emptySet()
+        val specFiles = specFilePaths.map { File(it) }
+        val allSpecFileContent = allSpecFiles().associateWith { it.readText() }
 
-        val inputFileNames = schemaFiles.map { File(it).name }
-        val result = allSpecFiles().filter {
-            it.readText().trim().let { specContent ->
-                inputFileNames.any { inputFileName ->
-                    val pattern = Pattern.compile("\\b${regexForMatchingReferred(inputFileName)}\\b")
-                    val matcher = pattern.matcher(specContent)
-                    matcher.find()
-                }
+        val referringSpecsSoFar = mutableSetOf<File>()
+        val queue = ArrayDeque(specFiles)
+
+        while (queue.isNotEmpty()) {
+            val combinedPattern = Pattern.compile(queue.toSet().joinToString(prefix = "\\b(?:", separator = "|", postfix = ")\\b") { specFile ->
+                regexForMatchingReferred(specFile.name).let { Regex.escape(it) }
+            })
+
+            queue.clear()
+
+            val referringSpecs = allSpecFileContent.entries.filter { (specFile, content) ->
+                specFile !in referringSpecsSoFar && combinedPattern.matcher(content).find()
+            }.map {
+                it.key
+            }.filter { referringSpecFile ->
+                referringSpecsSoFar.add(referringSpecFile)
             }
-        }.map { it.path }.toSet()
 
-        val updatedVisitedSpecs = result.fold(visitedSpecs) { acc, spec ->
-            if (spec in visitedSpecs)
-                return@fold acc
-
-            val updatedVisitedSpecs = acc + spec
-            updatedVisitedSpecs + getSpecsReferringTo(setOf(spec), updatedVisitedSpecs)
-
+            queue.addAll(referringSpecs)
         }
 
-        return (updatedVisitedSpecs - schemaFiles)
+        return referringSpecsSoFar.filter {
+            it !in specFiles
+        }.map {
+            it.canonicalPath
+        }.toSet()
     }
 
     internal fun allSpecFiles(): List<File> {

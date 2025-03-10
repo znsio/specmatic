@@ -5,7 +5,7 @@ import io.specmatic.core.utilities.exceptionCauseMessage
 class Verbose(
     override val printer: CompositePrinter = CompositePrinter(),
     override var infoLoggingEnabled: Boolean = true
-) : LogStrategy {
+) : LogStrategy, UsesIndentationWithHelpers by UsesIndentationImpl(), UsesBoundaryWithHelpers by UsesBoundaryImpl() {
     private val readyMessage = ReadyMessage()
 
     override fun keepReady(msg: LogMessage) {
@@ -14,7 +14,7 @@ class Verbose(
 
     fun print(msg: LogMessage) {
         readyMessage.printLogString(printer)
-        printer.print(msg)
+        printer.print(msg, currentIndentation())
     }
 
     override fun exceptionString(e: Throwable, msg: String?): String {

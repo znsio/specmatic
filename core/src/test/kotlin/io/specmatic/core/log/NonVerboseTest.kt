@@ -7,7 +7,7 @@ internal class NonVerboseTest {
     private val printer = object: LogPrinter {
         val logged: MutableList<LogMessage> = mutableListOf()
 
-        override fun print(msg: LogMessage) {
+        override fun print(msg: LogMessage, indentation: String) {
             logged.add(msg)
         }
     }

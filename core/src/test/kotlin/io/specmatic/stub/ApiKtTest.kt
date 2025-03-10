@@ -574,7 +574,7 @@ Feature: Math API
     }
 }
 
-fun <ReturnType> captureStandardOutput(fn: () -> ReturnType): Pair<String, ReturnType> {
+fun <ReturnType> captureStandardOutput(trim: Boolean = true, fn: () -> ReturnType): Pair<String, ReturnType> {
     val originalOut = System.out
 
     val byteArrayOutputStream = ByteArrayOutputStream()
@@ -584,8 +584,10 @@ fun <ReturnType> captureStandardOutput(fn: () -> ReturnType): Pair<String, Retur
     val result = fn()
 
     System.out.flush()
-    System.setOut(originalOut) // So you can print again
-    return Pair(String(byteArrayOutputStream.toByteArray()).trim(), result)
+    System.setOut(originalOut)
+    val string = String(byteArrayOutputStream.toByteArray())
+    val trimmed = if(trim) string.trim() else string
+    return Pair(trimmed, result)
 }
 
 fun contractInfoToExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): StubDataItems {

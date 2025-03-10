@@ -1,7 +1,7 @@
 package io.specmatic.core.log
 
 object ConsolePrinter: LogPrinter {
-    override fun print(msg: LogMessage) {
-        println(msg.toLogString())
+    override fun print(msg: LogMessage, indentation: String) {
+        println(msg.toLogString().prependIndent(indentation))
     }
 }

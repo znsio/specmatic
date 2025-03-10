@@ -6295,6 +6295,13 @@ paths:
                 TODO("Not yet implemented")
             }
 
+            override fun <T> withIndentation(count: Int, block: () -> T): T {
+                return block()
+            }
+
+            override fun boundary() {
+                TODO("Not yet implemented")
+            }
         }
 
         ignoreButLogException {
@@ -6386,6 +6393,9 @@ paths:
                 TODO("Not yet implemented")
             }
 
+            override fun <T> withIndentation(count: Int, block: () -> T): T {
+                return block()
+            }
         }
 
         ignoreButLogException {

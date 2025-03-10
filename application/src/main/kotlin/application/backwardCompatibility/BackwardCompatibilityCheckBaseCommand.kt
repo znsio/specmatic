@@ -57,7 +57,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     final override fun call() {
         gitCommand = SystemGit(workingDirectory = Paths.get(repoDir).absolutePathString())
         addShutdownHook()
-        val filteredSpecs = getChangedSpecs(logSpecs = true)
+        val filteredSpecs = getChangedSpecs()
         val result = try {
             runBackwardCompatibilityCheckFor(
                 files = filteredSpecs,
@@ -74,7 +74,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         exitProcess(result.exitCode)
     }
 
-    fun getChangedSpecs(logSpecs: Boolean = false): Set<String> {
+    private fun getChangedSpecs(): Set<String> {
         val filesChangedInCurrentBranch = getChangedSpecsInCurrentBranch().filter {
             it.contains(targetPath)
         }.toSet()
@@ -84,17 +84,17 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         val specificationsOfChangedExternalisedExamples =
             getSpecsOfChangedExternalisedExamples(filesChangedInCurrentBranch)
 
-        if(logSpecs) {
-            logFilesToBeCheckedForBackwardCompatibility(
-                filesChangedInCurrentBranch,
-                filesReferringToChangedSchemaFiles,
-                specificationsOfChangedExternalisedExamples
-            )
-        }
+        logFilesToBeCheckedForBackwardCompatibility(
+            filesChangedInCurrentBranch,
+            filesReferringToChangedSchemaFiles,
+            specificationsOfChangedExternalisedExamples
+        )
 
-        return filesChangedInCurrentBranch +
+        val collectedFiles = filesChangedInCurrentBranch +
                 filesReferringToChangedSchemaFiles +
                 specificationsOfChangedExternalisedExamples
+
+        return collectedFiles.map { path -> File(path).canonicalPath }.toSet()
     }
 
     private fun getChangedSpecsInCurrentBranch(): Set<String> {

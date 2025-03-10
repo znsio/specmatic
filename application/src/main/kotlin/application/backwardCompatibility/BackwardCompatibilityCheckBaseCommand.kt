@@ -113,25 +113,34 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     open fun getSpecsReferringTo(specFilePaths: Set<String>): Set<String> {
         if (specFilePaths.isEmpty()) return emptySet()
         val specFiles = specFilePaths.map { File(it) }
-        val allSpecFiles = allSpecFiles().associateWith { it.readText() }
+        val allSpecFileContent = allSpecFiles().associateWith { it.readText() }
 
-        val visited = mutableSetOf<File>()
+        val referringSpecsSoFar = mutableSetOf<File>()
         val queue = ArrayDeque(specFiles)
 
         while (queue.isNotEmpty()) {
             val combinedPattern = Pattern.compile(queue.toSet().joinToString(prefix = "\\b(?:", separator = "|", postfix = ")\\b") { specFile ->
                 regexForMatchingReferred(specFile.name).let { Regex.escape(it) }
-            }).also { queue.clear() }
+            })
 
-            val referringSpecs = allSpecFiles.entries.filter { (specFile, content) ->
-                specFile !in visited && combinedPattern.matcher(content).find()
-            }.map { it.key }.filter { visited.add(it) }
+            queue.clear()
+
+            val referringSpecs = allSpecFileContent.entries.filter { (specFile, content) ->
+                specFile !in referringSpecsSoFar && combinedPattern.matcher(content).find()
+            }.map {
+                it.key
+            }.filter { referringSpecFile ->
+                referringSpecsSoFar.add(referringSpecFile)
+            }
 
             queue.addAll(referringSpecs)
         }
 
-        val referencedFiles = visited.filter { it !in specFiles }
-        return referencedFiles.map { it.canonicalPath }.toSet()
+        return referringSpecsSoFar.filter {
+            it !in specFiles
+        }.map {
+            it.canonicalPath
+        }.toSet()
     }
 
     internal fun allSpecFiles(): List<File> {

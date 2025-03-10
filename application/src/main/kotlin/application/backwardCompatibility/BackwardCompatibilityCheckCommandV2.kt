@@ -1,14 +1,10 @@
 package application.backwardCompatibility
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.CONTRACT_EXTENSION
-import io.specmatic.core.CONTRACT_EXTENSIONS
-import io.specmatic.core.Feature
-import io.specmatic.core.IFeature
-import io.specmatic.core.Results
-import io.specmatic.core.WSDL
+import io.specmatic.core.*
 import io.specmatic.core.log.logger
-import io.specmatic.core.testBackwardCompatibility
 import io.specmatic.stub.isOpenAPI
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
@@ -31,9 +27,48 @@ class BackwardCompatibilityCheckCommandV2: BackwardCompatibilityCheckBaseCommand
         return testBackwardCompatibility(oldFeature as Feature, newFeature as Feature)
     }
 
-    override fun File.isValidSpec(): Boolean {
+    private fun isYAML(string: String): Boolean {
+        return try {
+            ObjectMapper(YAMLFactory()).readValue(string, Map::class.java)
+            true
+        } catch(e: Throwable) {
+            false
+        }
+    }
+
+    private fun isJSON(string: String): Boolean {
+        return try {
+            ObjectMapper().readValue(string, Map::class.java)
+            true
+        } catch(e: Throwable) {
+            false
+        }
+    }
+
+    override fun File.isValidFileFormat(): Boolean {
         if (this.extension !in CONTRACT_EXTENSIONS) return false
-        return OpenApiSpecification.isParsable(this.path)
+
+        val content = this.readText()
+
+        return when(this.extension.lowercase()) {
+            "yaml", "yml" -> isYAML(content)
+            "json" -> isJSON(content)
+            "spec" -> isGherkin(content)
+            else -> true
+        }
+    }
+
+    override fun File.isValidSpec(): Boolean {
+        return isValidSpec(this)
+    }
+
+    private fun isGherkin(content: String): Boolean {
+        return try {
+            parseGherkinStringToFeature(content)
+            true
+        } catch(e: Throwable) {
+            false
+        }
     }
 
     override fun getFeatureFromSpecPath(path: String): Feature {
@@ -113,4 +148,9 @@ class BackwardCompatibilityCheckCommandV2: BackwardCompatibilityCheckBaseCommand
         return extensions.map { path.resolveSibling(path.fileName.toString() + it) }
             .filter { Files.exists(it) && (isOpenAPI(it.pathString) || it.extension in listOf(WSDL, CONTRACT_EXTENSION)) }
     }
+}
+
+internal fun isValidSpec(file: File): Boolean {
+    if (file.extension !in CONTRACT_EXTENSIONS) return false
+    return OpenApiSpecification.isParsable(file.path)
 }

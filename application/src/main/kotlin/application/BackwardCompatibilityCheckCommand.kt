@@ -2,15 +2,13 @@ package application
 
 import application.BackwardCompatibilityCheckCommand.CompatibilityResult.FAILED
 import application.BackwardCompatibilityCheckCommand.CompatibilityResult.PASSED
+import application.backwardCompatibility.BackwardCompatibilityCheckBaseCommand.Companion.ONE_INDENT
+import application.backwardCompatibility.isValidSpec
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.CONTRACT_EXTENSION
-import io.specmatic.core.CONTRACT_EXTENSIONS
-import io.specmatic.core.Feature
-import io.specmatic.core.WSDL
+import io.specmatic.core.*
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.logger
-import io.specmatic.core.testBackwardCompatibility
 import io.specmatic.stub.isOpenAPI
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
@@ -156,6 +154,13 @@ class BackwardCompatibilityCheckCommand(
                 try {
                     println("${index.inc()}. Running the check for $specFilePath:")
 
+                    if (with(File(specFilePath)) {
+                            exists() && isValidSpec(this).not()
+                        }) {
+                        logger.log("${ONE_INDENT}Skipping $specFilePath as it is not a valid spec file.$newLine")
+                        return@mapIndexed null
+                    }
+
                     // newer => the file with changes on the branch
                     val (newer, unusedExamples) = OpenApiSpecification.fromFile(specFilePath).toFeature().loadExternalisedExamplesAndListUnloadableExamples()
 
@@ -234,7 +239,7 @@ class BackwardCompatibilityCheckCommand(
                 }
             }
 
-            return CompatibilityReport(results)
+            return CompatibilityReport(results.filterNotNull())
         } finally {
             gitCommand.checkout(treeishWithChanges)
         }

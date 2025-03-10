@@ -43,6 +43,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     var repoDir: String = "."
 
     abstract fun checkBackwardCompatibility(oldFeature: IFeature, newFeature: IFeature): Results
+    abstract fun File.isValidFileFormat(): Boolean
     abstract fun File.isValidSpec(): Boolean
     abstract fun getFeatureFromSpecPath(path: String): IFeature
 
@@ -101,7 +102,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         return gitCommand.getFilesChangedInCurrentBranch(
             baseBranch()
         ).filter {
-            File(it).exists() && File(it).isValidSpec()
+            File(it).exists() && File(it).isValidFileFormat()
         }.toSet().also {
             if (it.isEmpty()) {
                 logger.log("$newLine No specs were changed, skipping the check.$newLine")
@@ -146,7 +147,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     internal fun allSpecFiles(): List<File> {
         return File(repoDir).walk().toList().filterNot {
             ".git" in it.path
-        }.filter { it.isFile && it.isValidSpec() }
+        }.filter { it.isFile && it.isValidFileFormat() }
     }
 
     private fun logFilesToBeCheckedForBackwardCompatibility(
@@ -186,6 +187,13 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
                 try {
                     logger.log("${index.inc()}. Running the check for $specFilePath:")
 
+                    if (with(File(specFilePath)) {
+                            exists() && isValidSpec().not()
+                        }) {
+                        logger.log("${ONE_INDENT}Skipping $specFilePath as it is not a valid spec file.$newLine")
+                        return@mapIndexed null
+                    }
+
                     // newer => the file with changes on the branch
                     val newer = getFeatureFromSpecPath(specFilePath)
                     val unusedExamples = getUnusedExamples(newer)
@@ -222,7 +230,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
                 }
             }
 
-            return CompatibilityReport(results)
+            return CompatibilityReport(results.filterNotNull())
         } finally {
             gitCommand.checkout(treeishWithChanges)
         }
@@ -307,7 +315,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     companion object {
         private const val HEAD = "HEAD"
         private const val MARGIN_SPACE = "  "
-        private const val ONE_INDENT = "  "
+        internal const val ONE_INDENT = "  "
         private const val TWO_INDENTS = "${ONE_INDENT}${ONE_INDENT}"
     }
 }

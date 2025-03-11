@@ -15,16 +15,12 @@ import io.specmatic.core.examples.module.ExampleFixModule
 import io.specmatic.core.examples.module.ExampleTransformationModule
 import io.specmatic.core.examples.module.ExampleValidationModule
 import io.specmatic.core.examples.module.ExampleModule
-import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.examples.server.FixExampleResult
 import io.specmatic.core.examples.server.FixExampleStatus
 import io.specmatic.core.examples.server.ScenarioFilter
-import io.specmatic.core.examples.server.defaultExternalExampleDirFrom
-import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.CompositePrinter
 import io.specmatic.core.log.ConsolePrinter
 import io.specmatic.core.log.NonVerbose
-import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
@@ -42,7 +38,6 @@ import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.pattern.resolvedHop
 import io.specmatic.core.pattern.withoutPatternDelimiters
 import io.specmatic.core.utilities.capitalizeFirstChar
-import io.specmatic.core.utilities.consolePrintableURL
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.core.value.JSONArrayValue
@@ -51,7 +46,6 @@ import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
 import picocli.CommandLine.*
 import java.io.File
-import java.lang.Thread.sleep
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
@@ -64,7 +58,6 @@ private const val FAILURE_EXIT_CODE = 1
     description = ["Generate externalised JSON example files with API requests and responses"],
     subcommands = [
         ExamplesCommand.Validate::class,
-        ExamplesCommand.Interactive::class,
         ExamplesCommand.Transform::class,
         ExamplesCommand.Export::class,
         ExamplesCommand.ExampleToDictionary::class,
@@ -231,7 +224,7 @@ For example, to filter by HTTP methods:
 
         private fun validateExamplesDir(contractFile: File, examplesDir: File): Pair<Int, Map<String, Result>> {
             val feature = parseContractFileToFeature(contractFile)
-            val (externalExampleDir, externalExamples) = loadExternalExamples(examplesDir = examplesDir)
+            val (externalExampleDir, externalExamples) = ExampleModule().loadExternalExamples(examplesDir = examplesDir)
             if (!externalExampleDir.exists()) {
                 logger.log("$externalExampleDir does not exist, did not find any files to validate")
                 return FAILURE_EXIT_CODE to emptyMap()
@@ -288,7 +281,7 @@ For example, to filter by HTTP methods:
             val externalExampleValidationResults = if (!validateExternal) emptyMap()
             else {
                 val (exitCode, validationResults)
-                        = validateExamplesDir(contractFile, defaultExternalExampleDirFrom(contractFile))
+                        = validateExamplesDir(contractFile, ExampleModule().defaultExternalExampleDirFrom(contractFile))
                 if(exitCode == 1) exitProcess(1)
                 validationResults
             }
@@ -371,118 +364,6 @@ For example, to filter by HTTP methods:
             return this.any { it.value is Result.Failure }
         }
 
-    }
-
-    @Command(
-        name = "interactive",
-        mixinStandardHelpOptions = true,
-        description = ["Run the example generation interactively"]
-    )
-    class Interactive : Callable<Unit> {
-        @Option(
-            names= ["--filter"],
-            description = [
-                """
-Filter tests matching the specified filtering criteria
-
-You can filter tests based on the following keys:
-- `METHOD`: HTTP methods (e.g., GET, POST)
-- `PATH`: Request paths (e.g., /users, /product)
-- `STATUS`: HTTP response status codes (e.g., 200, 400)
-- `HEADERS`: Request headers (e.g., Accept, X-Request-ID)
-- `QUERY-PARAM`: Query parameters (e.g., status, productId)
-- `EXAMPLE-NAME`: Example name (e.g., create-product, active-status)
-
-To specify multiple values for the same filter, separate them with commas. 
-For example, to filter by HTTP methods: 
---filter="METHOD='GET,POST'"
-           """
-            ],
-            required = false
-        )
-        var filter: String = ""
-
-        @Option(names = ["--contract-file"], description = ["Contract file path"], required = false)
-        var contractFile: File? = null
-
-        @Option(
-            names = ["--filter-name"],
-            description = ["Use only APIs with this value in their name"],
-            defaultValue = "\${env:SPECMATIC_FILTER_NAME}",
-            hidden = true
-        )
-        var filterName: String = ""
-
-        @Option(
-            names = ["--filter-not-name"],
-            description = ["Use only APIs which do not have this value in their name"],
-            defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}",
-            hidden = true
-        )
-        var filterNotName: String = ""
-
-        @Option(names = ["--debug"], description = ["Debug logs"])
-        var verbose = false
-
-        @Option(names = ["--dictionary"], description = ["External Dictionary File Path"])
-        var dictFile: File? = null
-
-        @Option(names = ["--testBaseURL"], description = ["The baseURL of system to test"], required = false)
-        var testBaseURL: String? = null
-
-        @Option(
-            names = ["--allow-only-mandatory-keys-in-payload"],
-            description = ["Generate examples with only mandatory keys in the json request and response payloads"],
-            required = false
-        )
-        var allowOnlyMandatoryKeysInJSONObject: Boolean = false
-
-
-        var server: ExamplesInteractiveServer? = null
-
-        override fun call() {
-            configureLogger(verbose)
-
-            try {
-                if (contractFile != null && !contractFile!!.exists())
-                    exitWithMessage("Could not find file ${contractFile!!.path}")
-
-                val host = "0.0.0.0"
-                val port = 9001
-                server = ExamplesInteractiveServer(
-                    host,
-                    port,
-                    testBaseURL,
-                    contractFile,
-                    filterName,
-                    filterNotName,
-                    filter,
-                    dictFile
-                )
-                addShutdownHook()
-
-                consoleLog(StringLog("Examples Interactive server is running on ${consolePrintableURL(host, port)}/_specmatic/examples. Ctrl + C to stop."))
-                while (true) sleep(10000)
-            } catch (e: Exception) {
-                logger.log(exceptionCauseMessage(e))
-                exitWithMessage(e.message.orEmpty())
-            }
-        }
-
-        private fun addShutdownHook() {
-            Runtime.getRuntime().addShutdownHook(object : Thread() {
-                override fun run() {
-                    try {
-                        println("Shutting down examples interactive server...")
-                        server?.close()
-                    } catch (e: InterruptedException) {
-                        currentThread().interrupt()
-                    } catch (e: Throwable) {
-                        logger.log(e)
-                    }
-                }
-            })
-        }
     }
 
     @Command(
@@ -722,7 +603,7 @@ For example, to filter by HTTP methods:
             exitIfSpecFileDoesNotExist()
 
             val feature = parseContractFileToFeature(specFile)
-            val examplesDir = examplesDirPath ?: defaultExternalExampleDirFrom(specFile)
+            val examplesDir = examplesDirPath ?: ExampleModule().defaultExternalExampleDirFrom(specFile)
             logger.log("Fixing examples in the directory '${examplesDir.name}'...")
 
             val results = examplesDir.walk().filter { it.isFile && it.extension == "json" }.map { exampleFile ->

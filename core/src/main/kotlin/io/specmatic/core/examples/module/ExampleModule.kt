@@ -10,9 +10,11 @@ import io.specmatic.core.Scenario
 import io.specmatic.core.examples.server.InteractiveExamplesMismatchMessages
 import io.specmatic.core.examples.server.SchemaExample
 import io.specmatic.core.log.consoleDebug
+import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.NullValue
 import java.io.File
+import kotlin.system.exitProcess
 
 class ExampleModule {
 
@@ -66,7 +68,25 @@ class ExampleModule {
         }
     }
 
-    private fun getSchemaExamples(dir: File): List<SchemaExample> {
+
+    fun loadExternalExamples(
+        examplesDir: File
+    ): Pair<File, List<File>> {
+        if (!examplesDir.isDirectory) {
+            logger.log("$examplesDir does not exist, did not find any files to validate")
+            exitProcess(1)
+        }
+
+        return examplesDir to examplesDir.walk().mapNotNull {
+            it.takeIf { it.isFile && it.extension == "json" }
+        }.toList()
+    }
+
+    fun defaultExternalExampleDirFrom(contractFile: File): File {
+        return contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
+    }
+
+    fun getSchemaExamples(dir: File): List<SchemaExample> {
         return dir.listFiles().orEmpty().filter { it.extension == "json" }.mapNotNull {
             SchemaExample.fromFile(it).realise(
                 hasValue = { example, _ -> example },

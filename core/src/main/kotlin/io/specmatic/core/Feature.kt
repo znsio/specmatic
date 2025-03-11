@@ -467,18 +467,42 @@ data class Feature(
         return matchResultFlagBased(scenarioStub.request, scenarioStub.response, mismatchMessages)
     }
 
+    fun negativeScenariosFor(originalScenario: Scenario): Sequence<Scenario> {
+        return negativeScenarioFor(originalScenario).newBasedOn(
+            originalScenario.exampleRow ?: Row(),
+            flagsBased
+        ).map { it.value }.filterNot { scenario ->
+            originalScenario.httpRequestPattern.matches(
+                scenario.generateHttpRequest(flagsBased),
+                scenario.resolver
+            ).isSuccess()
+        }
+    }
+
     fun matchResultFlagBased(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages): Results {
-        val results = scenarios.map {
+        val scenarios = if(response.status == 400) {
+            scenarios.flatMap { negativeScenariosFor(it) }
+        } else this.scenarios
+
+        val results = scenarios.filter {
+            if(response.status == 0) return@filter true
+            it.httpResponsePattern.status == response.status
+        }.map {
             it.matches(request, response, mismatchMessages, flagsBased)
         }
 
         if(results.any { it.isSuccess() })
             return Results(results).withoutFluff()
 
-        val deepErrors = results.filterNot { it.isFluffy(0) }
+        val deepErrors = results.filterIsInstance<Result.Failure>().filterNot {
+            it.isFluffy(0)
+        }.map {
+            if (response.status != 400) it
+            else it.withResponseRelatedCauses()
+        }
 
         if(deepErrors.isNotEmpty())
-            return Results(deepErrors)
+            return Results(deepErrors).distinct()
 
         return Results(listOf(Result.Failure("No matching specification found for this example")))
     }

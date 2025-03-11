@@ -138,6 +138,17 @@ sealed class Result {
                 .plus("$prefix$breadCrumb")
         }
 
+        fun withResponseRelatedCauses(): Failure {
+            val responseRelatedCause = if (this.cause?.breadCrumb?.contains("RESPONSE") == true) {
+                this.cause
+            } else null
+
+            return this.copy(
+                causes = listOfNotNull(responseRelatedCause?.toFailureCause()) + this.causes.mapNotNull {
+                    it.cause?.withResponseRelatedCauses()?.toFailureCause()
+                }
+            )
+        }
 
         override fun ifSuccess(function: () -> Result) = this
         override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {

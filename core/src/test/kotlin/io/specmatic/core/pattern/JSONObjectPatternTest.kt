@@ -20,7 +20,6 @@ import io.specmatic.stub.captureStandardOutput
 import io.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.checkerframework.common.value.qual.StringVal
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.params.ParameterizedTest
@@ -2324,6 +2323,19 @@ components:
                 }
             )
         }
+    }
+
+    @Test
+    fun `should be able to resolve substitutions for an object with no properties`() {
+        val pattern = JSONObjectPattern(emptyMap())
+        val request = HttpRequest("GET", "/")
+        val substitution = Substitution(request, request, buildHttpPathPattern("/"), HttpHeadersPattern(), pattern, Resolver(), JSONObjectValue(emptyMap()))
+
+        val originalJson = parsedJSONObject("""{"Hello": "world"}""")
+        val jsonAfterSubstitutions = pattern.resolveSubstitutions(substitution, originalJson, Resolver()).value
+
+        assertThat(jsonAfterSubstitutions).isEqualTo(originalJson)
+
     }
 
     companion object {

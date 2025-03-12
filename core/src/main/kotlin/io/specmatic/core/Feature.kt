@@ -182,7 +182,8 @@ data class Feature(
                         request = request,
                         response = response,
                         requestDiscriminator = requestDiscriminator,
-                        responseDiscriminator = responseDiscriminator
+                        responseDiscriminator = responseDiscriminator,
+                        scenario = scenario
                     )
                 }
             } else {
@@ -194,7 +195,8 @@ data class Feature(
                         request = request,
                         response = response,
                         requestDiscriminator = requestDiscriminator,
-                        responseDiscriminator = responseDiscriminator
+                        responseDiscriminator = responseDiscriminator,
+                        scenario = scenario
                     )
                 }
             }
@@ -2518,5 +2520,6 @@ data class DiscriminatorBasedRequestResponse(
     val request: HttpRequest,
     val response: HttpResponse,
     val requestDiscriminator: DiscriminatorMetadata,
-    val responseDiscriminator: DiscriminatorMetadata
+    val responseDiscriminator: DiscriminatorMetadata,
+    val scenario: Scenario
 )

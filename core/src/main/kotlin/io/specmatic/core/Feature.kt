@@ -160,9 +160,10 @@ data class Feature(
     }
 
     fun generateDiscriminatorBasedRequestResponseList(
-        scenario: Scenario,
+        scenarioValue: HasValue<Scenario>,
         allowOnlyMandatoryKeysInJSONObject: Boolean = false
     ): List<DiscriminatorBasedRequestResponse> {
+        val scenario = scenarioValue.value
         try {
             val requests = scenario.generateHttpRequestV2(
                 allowOnlyMandatoryKeysInJSONObject = allowOnlyMandatoryKeysInJSONObject
@@ -183,7 +184,7 @@ data class Feature(
                         response = response,
                         requestDiscriminator = requestDiscriminator,
                         responseDiscriminator = responseDiscriminator,
-                        scenario = scenario
+                        scenarioValue = scenarioValue
                     )
                 }
             } else {
@@ -196,7 +197,7 @@ data class Feature(
                         response = response,
                         requestDiscriminator = requestDiscriminator,
                         responseDiscriminator = responseDiscriminator,
-                        scenario = scenario
+                        scenarioValue = scenarioValue
                     )
                 }
             }
@@ -469,11 +470,12 @@ data class Feature(
         return matchResultFlagBased(scenarioStub.request, scenarioStub.response, mismatchMessages)
     }
 
-    fun negativeScenariosFor(originalScenario: Scenario): Sequence<Scenario> {
+    fun negativeScenariosFor(originalScenario: Scenario): Sequence<ReturnValue<Scenario>> {
         return negativeScenarioFor(originalScenario).newBasedOn(
             originalScenario.exampleRow ?: Row(),
             flagsBased
-        ).map { it.value }.filterNot { scenario ->
+        ).filterNot {
+            val scenario = it.value
             originalScenario.httpRequestPattern.matches(
                 scenario.generateHttpRequest(flagsBased),
                 scenario.resolver
@@ -483,7 +485,7 @@ data class Feature(
 
     fun matchResultFlagBased(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages): Results {
         val scenarios = if(response.status == 400) {
-            scenarios.flatMap { negativeScenariosFor(it) }
+            scenarios.flatMap { negativeScenariosFor(it).map { scenarioValue -> scenarioValue.value } }
         } else this.scenarios
 
         val results = scenarios.filter {
@@ -2521,5 +2523,5 @@ data class DiscriminatorBasedRequestResponse(
     val response: HttpResponse,
     val requestDiscriminator: DiscriminatorMetadata,
     val responseDiscriminator: DiscriminatorMetadata,
-    val scenario: Scenario
+    val scenarioValue: HasValue<Scenario>
 )

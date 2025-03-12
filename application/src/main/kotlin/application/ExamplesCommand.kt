@@ -11,12 +11,9 @@ import io.specmatic.core.Results
 import io.specmatic.core.Scenario
 import io.specmatic.core.actualMatch
 import io.specmatic.core.examples.module.ExampleExternalisationModule
-import io.specmatic.core.examples.module.ExampleFixModule
 import io.specmatic.core.examples.module.ExampleTransformationModule
 import io.specmatic.core.examples.module.ExampleValidationModule
 import io.specmatic.core.examples.module.ExampleModule
-import io.specmatic.core.examples.server.FixExampleResult
-import io.specmatic.core.examples.server.FixExampleStatus
 import io.specmatic.core.examples.server.ScenarioFilter
 import io.specmatic.core.log.CompositePrinter
 import io.specmatic.core.log.ConsolePrinter
@@ -60,8 +57,7 @@ private const val FAILURE_EXIT_CODE = 1
         ExamplesCommand.Validate::class,
         ExamplesCommand.Transform::class,
         ExamplesCommand.Export::class,
-        ExamplesCommand.ExampleToDictionary::class,
-        ExamplesCommand.Fix::class
+        ExamplesCommand.ExampleToDictionary::class
     ]
 )
 class ExamplesCommand : Callable<Int> {
@@ -581,88 +577,6 @@ For example, to filter by HTTP methods:
             if (this is ListPattern) return this.pattern.isDeferred(resolver)
             val resolved = resolvedHop(this, resolver)
             return this is DeferredPattern && resolved !is ScalarType
-        }
-    }
-
-    @Command(
-        name = "fix",
-        mixinStandardHelpOptions = true,
-        description = ["Fix the invalid external examples"]
-    )
-    class Fix: Callable<Int> {
-
-        @Option(names = ["--spec-file"], description = ["Specification file path"], required = true)
-        lateinit var specFile: File
-
-        @Option(names = ["--examples"], description = ["Examples directory path"], required = false)
-        var examplesDirPath: File? = null
-
-        private val exampleFixModule = ExampleFixModule(ExampleValidationModule())
-
-        override fun call(): Int {
-            exitIfSpecFileDoesNotExist()
-
-            val feature = parseContractFileToFeature(specFile)
-            val examplesDir = examplesDirPath ?: ExampleModule().defaultExternalExampleDirFrom(specFile)
-            logger.log("Fixing examples in the directory '${examplesDir.name}'...")
-
-            val results = examplesDir.walk().filter { it.isFile && it.extension == "json" }.map { exampleFile ->
-                try {
-                    exampleFixModule.fixExample(feature, exampleFile)
-                } catch (e: Exception) {
-                    FixExampleResult(
-                        status = FixExampleStatus.FAILED,
-                        exampleFileName = exampleFile.name,
-                        error = e
-                    )
-                }
-            }.toList()
-
-            return printFixExamplesOperationResultsAndReturnExitCode(results)
-        }
-
-        private fun exitIfSpecFileDoesNotExist() {
-            if(specFile.exists().not()) {
-                exitWithMessage("Provided specification file ${specFile.name} does not exist.")
-            }
-        }
-
-        private fun List<FixExampleResult>.with(status: FixExampleStatus): List<FixExampleResult> {
-            return this.filter {  it.status == status }
-        }
-
-        private fun printFixExamplesOperationResultsAndReturnExitCode(results: List<FixExampleResult>): Int {
-            val skippedResults = results.with(status = FixExampleStatus.SKIPPED)
-            val successResults = results.with(status = FixExampleStatus.SUCCEDED)
-            val failureResults = results.with(status = FixExampleStatus.FAILED)
-
-            if (successResults.isNotEmpty()) {
-                logger.log("${System.lineSeparator()}Examples fixed successfully: ")
-                successResults.forEachIndexed { index, it ->
-                    logger.log("\t${index.inc()}. The example '${it.exampleFileName}' is fixed.")
-                }
-            }
-            if(skippedResults.isNotEmpty()) {
-                logger.log("${System.lineSeparator()}Skipped examples: ")
-                skippedResults.forEachIndexed { index, it ->
-                    logger.log("\t${index.inc()}. Skipping the example '${it.exampleFileName}' as it is already valid.")
-                }
-            }
-            if (failureResults.isNotEmpty()) {
-                logger.log("${System.lineSeparator()}Examples for which the fix operation failed: ")
-                failureResults.forEachIndexed { index, it ->
-                    val errorMessage = exceptionCauseMessage(it.error ?: Exception("Unknown error"))
-                    logger.log("\t${index.inc()}. An error occurred while fixing '${it.exampleFileName}': $errorMessage")
-                }
-            }
-
-            logger.log(System.lineSeparator())
-            logger.log("Examples fixed: ${successResults.size}")
-            logger.log("Examples skipped: ${skippedResults.size}")
-            logger.log("Examples failed to be fixed: ${failureResults.size}")
-
-            if (failureResults.isEmpty()) return SUCCESS_EXIT_CODE
-            return FAILURE_EXIT_CODE
         }
     }
 }

@@ -1,6 +1,8 @@
 package io.specmatic.core.examples.server
 
 import io.specmatic.core.MatchFailureDetails
+import io.specmatic.core.Result
+import io.specmatic.core.Results
 
 private const val BREADCRUMB_RESPONSE = "RESPONSE"
 private const val BREADCRUMB_REQUEST = "REQUEST"
@@ -19,6 +21,8 @@ private const val BREADCRUMB_REGEX_TILDLE = "^\\(~~~"
 private const val BREADCRUMB_WHEN_OBJ = "(when "
 
 data class ExampleValidationDetails(val matchFailureDetailsList: List<MatchFailureDetails>) {
+    constructor(results: Results): this((results.toResultIfAnyWithCauses() as? Result.Failure)?.toMatchFailureDetailList().orEmpty())
+
     fun jsonPathToErrorDescriptionMapping(): List<ExampleValidationResult> {
         val sortedMatchFailureDetailsList = matchFailureDetailsList.sortedBy { it.isPartial }
 

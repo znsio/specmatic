@@ -20,7 +20,12 @@ class ExampleModule {
 
     fun getExistingExampleFiles(feature: Feature, scenario: Scenario, examples: List<ExampleFromFile>): List<Pair<ExampleFromFile, Result>> {
         return examples.mapNotNull { example ->
-            when (val matchResult = scenario.matches(example.request, example.response, InteractiveExamplesMismatchMessages, feature.flagsBased)) {
+            val matchResult = when (example.responseStatus) {
+                400 -> scenario.copy(httpRequestPattern = scenario.httpRequestPattern.withWildcardPathPattern())
+                else -> scenario
+            }.matches(example.request, example.response, InteractiveExamplesMismatchMessages, feature.flagsBased)
+
+            when (matchResult) {
                 is Result.Success -> example to matchResult
                 is Result.Failure -> {
                     val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs("").none { breadCrumb ->

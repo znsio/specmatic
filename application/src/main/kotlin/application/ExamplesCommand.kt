@@ -1,45 +1,21 @@
 package application
 
-import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.CONTRACT_EXTENSIONS
-import io.specmatic.core.DefaultKeyCheck
-import io.specmatic.core.FailureReason
 import io.specmatic.core.Feature
-import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.Results
-import io.specmatic.core.Scenario
-import io.specmatic.core.actualMatch
-import io.specmatic.core.examples.module.ExampleExternalisationModule
-import io.specmatic.core.examples.module.ExampleTransformationModule
-import io.specmatic.core.examples.module.ExampleValidationModule
 import io.specmatic.core.examples.module.ExampleModule
+import io.specmatic.core.examples.module.ExampleValidationModule
 import io.specmatic.core.examples.server.ScenarioFilter
 import io.specmatic.core.log.CompositePrinter
 import io.specmatic.core.log.ConsolePrinter
 import io.specmatic.core.log.NonVerbose
 import io.specmatic.core.log.Verbose
-import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
-import io.specmatic.core.noPatternKeyCheck
 import io.specmatic.core.parseContractFileToFeature
-import io.specmatic.core.pattern.AnyPattern
 import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.DeferredPattern
-import io.specmatic.core.pattern.IgnoreUnexpectedKeys
-import io.specmatic.core.pattern.JSONObjectPattern
-import io.specmatic.core.pattern.ListPattern
-import io.specmatic.core.pattern.Pattern
-import io.specmatic.core.pattern.ScalarType
-import io.specmatic.core.pattern.parsedJSONObject
-import io.specmatic.core.pattern.resolvedHop
-import io.specmatic.core.pattern.withoutPatternDelimiters
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.utilities.exitWithMessage
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
 import picocli.CommandLine.*
 import java.io.File
@@ -52,13 +28,8 @@ private const val FAILURE_EXIT_CODE = 1
 @Command(
     name = "examples",
     mixinStandardHelpOptions = true,
-    description = ["Generate externalised JSON example files with API requests and responses"],
-    subcommands = [
-        ExamplesCommand.Validate::class,
-        ExamplesCommand.Transform::class,
-        ExamplesCommand.Export::class,
-        ExamplesCommand.ExampleToDictionary::class
-    ]
+    description = ["Validate inline and externalised examples"],
+    subcommands = [ExamplesCommand.Validate::class]
 )
 class ExamplesCommand : Callable<Int> {
 
@@ -362,223 +333,6 @@ For example, to filter by HTTP methods:
 
     }
 
-    @Command(
-        name = "transform",
-        mixinStandardHelpOptions = true,
-        description = ["Transform existing examples"]
-    )
-    class Transform: Callable<Unit> {
-        @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
-        lateinit var contractFile: File
-
-        @Option(names = ["--overlay-file"], description = ["Overlay file path"], required = false)
-        val overlayFile: File? = null
-
-        @Option(names = ["--examples-dir"], description = ["Directory where existing examples reside"], required = true)
-        lateinit var examplesDir: File
-
-        @Option(names = ["--only-mandatory-keys-in-payload"], description = ["Transform existing examples so that they contain only mandatory keys in payload"], required = false)
-        var allowOnlyMandatoryKeysInPayload: Boolean = false
-
-        @Option(names = ["--debug"], description = ["Debug Logs"])
-        var verbose: Boolean = false
-
-        private val exampleTransformationModule = ExampleTransformationModule(ExampleModule())
-
-        override fun call() {
-            configureLogger(verbose)
-
-            if(allowOnlyMandatoryKeysInPayload) {
-                exampleTransformationModule.transformExistingExamples(
-                    contractFile,
-                    overlayFile,
-                    examplesDir
-                )
-            } else {
-                logger.log("Please choose one of the transformations from the available command-line parameters.")
-            }
-        }
-    }
-
-    @Command(
-        name = "export",
-        mixinStandardHelpOptions = true,
-        description = ["Export the inline examples from the contract file"]
-    )
-    class Export: Callable<Unit> {
-        @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
-        lateinit var contractFile: File
-
-        private val exampleExternalisationModule = ExampleExternalisationModule(ExampleModule())
-
-        override fun call() {
-            try {
-                val examplesDir = exampleExternalisationModule.externaliseInlineExamples(contractFile)
-                consoleLog("${System.lineSeparator()}The inline examples were successfully exported to $examplesDir")
-                exitProcess(0)
-            } catch(e: Exception) {
-                exitWithMessage("Failed while exporting the inline examples from ${contractFile.nameWithoutExtension}:\n${e.message}")
-            }
-        }
-    }
-
-    @Command(
-        name = "dictionary",
-        mixinStandardHelpOptions = true,
-        description = ["Generate Dictionary from external example files"]
-    )
-    class ExampleToDictionary: Callable<Unit> {
-        @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
-        lateinit var contractFile: File
-
-        @Option(names = ["--base"], description = ["Base dictionary"], required = false)
-        private var baseDictionaryFile: File? = null
-
-        @Option(names = ["--out", "--o"], description = ["Output file path, defaults to contractfile_dictionary.json"], required = false)
-        private var outputFilePath: File? = null
-
-        private val exampleModule = ExampleModule()
-
-        override fun call() {
-            val baseDictionary = getBaseDictionary()
-            val feature = parseContractFileToFeature(contractFile)
-            val examples = exampleModule.getExamplesFromDir(
-                dir = exampleModule.getExamplesDirPath(contractFile)
-            )
-            var examplesCount = 0
-
-            val dictionary = buildMap {
-                feature.scenarios.forEach { scenario ->
-                    val requestPattern = resolvedHop(scenario.httpRequestPattern.body, scenario.resolver)
-                    val responsePattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
-                    val ignoreResolver = scenario.resolver.ignoreAll()
-
-                    val matchingExamples = exampleModule.getExistingExampleFiles(feature, scenario, examples)
-                    examplesCount += matchingExamples.size
-                    matchingExamples.forEach { (example, _) ->
-                        example.toDictionary(requestPattern, responsePattern, ignoreResolver, target = this)
-                    }
-                }
-            }
-
-            if (dictionary.isEmpty()) {
-                consoleLog("\nNo Values created in dictionary, Processed $examplesCount examples")
-            }
-
-            val dictionaryFile = outputFilePath ?: File(contractFile.parentFile, "${contractFile.nameWithoutExtension}_dictionary.json")
-            val combinedDictionary = baseDictionary.plus(dictionary)
-            dictionaryFile.writeText(JSONObjectValue(combinedDictionary).toStringLiteral())
-            consoleLog("\nDictionary written to ${dictionaryFile.canonicalPath}")
-        }
-
-        private fun Resolver.ignoreAll(): Resolver {
-            return this.copy(
-                findKeyErrorCheck = findKeyErrorCheck.copy(
-                    unexpectedKeyCheck = IgnoreUnexpectedKeys, patternKeyCheck = noPatternKeyCheck
-                )
-            )
-        }
-
-        private fun Resolver.validateAll(): Resolver {
-            return this.copy(patternMatchStrategy = actualMatch, findKeyErrorCheck = DefaultKeyCheck)
-        }
-
-        private fun getBaseDictionary(): Map<String, Value> {
-            return baseDictionaryFile?.let {
-                parsedJSONObject(it.readText()).jsonObject
-            } ?: emptyMap()
-        }
-
-        fun exampleToDictionary(examples: ExampleFromFile, scenario: Scenario): Map<String, Value> {
-            val requestPattern = resolvedHop(scenario.httpRequestPattern.body, scenario.resolver)
-            val responsePattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
-            val ignoreResolver = scenario.resolver.ignoreAll()
-            return buildMap {
-                examples.toDictionary(requestPattern, responsePattern, ignoreResolver, target = this)
-            }
-        }
-
-        private fun ExampleFromFile.toDictionary(requestPattern: Pattern, responsePattern: Pattern, resolver: Resolver, target: MutableMap<String, Value>) {
-            requestPattern.toDictionary(request.body, resolver, target)
-            responsePattern.toDictionary(response.body, resolver, target)
-        }
-
-        private fun Pattern.getWithTypeAlias(): Pattern? {
-            return when(this) {
-                is ListPattern -> this.copy(typeAlias = this.typeAlias ?: this.pattern.typeAlias)
-                else -> this
-            }.takeIf { it.typeAlias != null }
-        }
-
-        private fun Pattern.toDictionary(value: Value, resolver: Resolver, target: MutableMap<String, Value>) {
-            val patternWithTypeAlias = this.getWithTypeAlias() ?: return
-            patternWithTypeAlias.traverse(
-                value = value, resolver = resolver, target = target,
-                prefix = withoutPatternDelimiters(this.typeAlias ?: ""),
-            )
-        }
-
-        private fun Pattern.toEntry(value: Value, resolver: Resolver, prefix: String): Pair<String, Value>? {
-            val resolved = resolvedHop(this, resolver)
-            if (resolved !is ScalarType) return null
-
-            val result = resolved.matches(value, resolver.validateAll())
-            return (prefix to value).takeIf { result.isSuccess() }
-        }
-
-        private fun Pattern.traverse(value: Value, resolver: Resolver, target: MutableMap<String, Value>, prefix: String = "") {
-            when(this) {
-                is JSONObjectPattern -> this.traverse(value, resolver, target, prefix)
-                is ListPattern -> this.traverse(value, resolver, target, prefix)
-                is AnyPattern -> this.traverse(value, resolver, target, prefix)
-                else -> this.toEntry(value, resolver, prefix)?.let { target[it.first] = it.second }
-            }
-        }
-
-        private fun JSONObjectPattern.traverse(value: Value, resolver: Resolver, target: MutableMap<String, Value>, prefix: String = "") {
-            if (value !is JSONObjectValue) return
-            value.jsonObject.forEach { (key, value) ->
-                val keyPattern = this.pattern[key] ?: this.pattern["$key?"] ?: return@forEach
-                val newPrefix = if (prefix.isEmpty()) key else "$prefix.$key"
-
-                if (keyPattern.isDeferred(resolver)) {
-                    resolvedHop(keyPattern, resolver).toDictionary(value, resolver, target)
-                } else keyPattern.traverse(value, resolver, target, prefix = newPrefix)
-            }
-        }
-
-        private fun ListPattern.traverse(value: Value, resolver: Resolver, target: MutableMap<String, Value>, prefix: String = "") {
-            if (value !is JSONArrayValue) return
-            value.list.forEach {
-                if (this.pattern.isDeferred(resolver)) {
-                    resolvedHop(this.pattern, resolver).toDictionary(it, resolver, target)
-                } else this.pattern.traverse(it, resolver, target, prefix = "$prefix[*]")
-            }
-        }
-
-        private fun AnyPattern.traverse(value: Value, resolver: Resolver, target: MutableMap<String, Value>, prefix: String = "") {
-            if (this.isScalarBasedPattern()) {
-                val pattern = getUpdatedPattern(resolver).firstOrNull { it is ScalarType } ?: return
-                pattern.toEntry(value, resolver, prefix = prefix)?.let { target[it.first] = it.second }
-                return
-            }
-
-            val updatedPatterns = this.getUpdatedPattern(resolver)
-            val fallBackIfNoneMatch = if (updatedPatterns.size == 1) listOf(updatedPatterns.first()) else emptyList()
-
-            updatedPatterns.filter {
-                val result = it.matches(value, resolver)
-                val failureReason = (result as? Result.Failure)?.failureReason
-                result.isSuccess() || failureReason == FailureReason.FailedButDiscriminatorMatched
-            }.ifEmpty { fallBackIfNoneMatch }.forEach { it.toDictionary(value, resolver, target) }
-        }
-
-        private fun Pattern.isDeferred(resolver: Resolver): Boolean {
-            if (this is ListPattern) return this.pattern.isDeferred(resolver)
-            val resolved = resolvedHop(this, resolver)
-            return this is DeferredPattern && resolved !is ScalarType
-        }
-    }
 }
 
 private fun configureLogger(verbose: Boolean) {

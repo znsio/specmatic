@@ -891,6 +891,12 @@ data class HttpRequestPattern(
             body = body.fixValue(request.body, resolver)
         )
     }
+
+    fun withWildcardPathPattern(): HttpRequestPattern {
+        return this.copy(
+            httpPathPattern = this.httpPathPattern?.withWildcardPathSegments()
+        )
+    }
 }
 
 fun missingParam(missingValue: String): ContractException {

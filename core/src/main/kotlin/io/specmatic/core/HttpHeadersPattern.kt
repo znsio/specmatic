@@ -250,7 +250,10 @@ data class HttpHeadersPattern(
             val generatedContentType = headers.getValue(CONTENT_TYPE)
             val regeneratedContentType = contentTypePattern.generate(resolver).toStringLiteral()
 
-            if(generatedContentType == regeneratedContentType) return headers
+            if (generatedContentType == regeneratedContentType) {
+                if (generatedContentType != contentType) logContentTypeAndPatternMismatchWarning()
+                return headers
+            }
         }
         if (contentType.isNullOrBlank()) return headers
 

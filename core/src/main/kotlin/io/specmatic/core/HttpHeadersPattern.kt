@@ -245,10 +245,20 @@ data class HttpHeadersPattern(
             }
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
 
-        if (headers.containsKey(CONTENT_TYPE)) return headers
+        val contentTypePattern = contentTypeInPattern()
+        if (headers.containsKey(CONTENT_TYPE) && contentTypePattern != null) {
+            val generatedContentType = headers.getValue(CONTENT_TYPE)
+            val regeneratedContentType = contentTypePattern.generate(resolver).toStringLiteral()
+
+            if(generatedContentType == regeneratedContentType) return headers
+        }
         if (contentType.isNullOrBlank()) return headers
 
         return headers.plus(CONTENT_TYPE to contentType)
+    }
+
+    private fun contentTypeInPattern(): Pattern? {
+        return pattern[CONTENT_TYPE] ?: pattern["${CONTENT_TYPE}?"]
     }
 
     private fun toStringLiteral(headerValue: Value) = when (headerValue) {

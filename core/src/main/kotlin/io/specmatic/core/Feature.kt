@@ -484,21 +484,26 @@ data class Feature(
     }
 
     fun matchResultFlagBased(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages): Results {
-        val scenarios = if(response.status == 400) {
+        val isBadRequest = (response.status == 400)
+
+        val scenarios = if(isBadRequest) {
             scenarios.asSequence().filter {
                 it.isA4xxScenario() && it.httpRequestPattern.matchesPathAndMethod(request, it.resolver).isSuccess()
             }
         } else this.scenarios.asSequence()
 
         val results = scenarios.map {
-            if(response.status == 400) it.matchesResponse(request, response, mismatchMessages)
+            if(isBadRequest) it.matchesResponse(request, response, mismatchMessages)
             else it.matches(request, response, mismatchMessages, flagsBased)
         }.toList()
 
         if(results.any { it.isSuccess() })
             return Results(results).withoutFluff()
 
-        val deepErrors = results.filterNot { it.isFluffy(0) }
+        val deepErrors = results.filterNot {
+            val acceptedFluffLevel = if(isBadRequest) 1 else 0
+            it.isFluffy(acceptedFluffLevel)
+        }
 
         if(deepErrors.isNotEmpty())
             return Results(deepErrors).distinct()

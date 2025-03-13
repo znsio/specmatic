@@ -1,10 +1,36 @@
 package io.specmatic.core
 
-import io.specmatic.core.pattern.*
+import io.ktor.http.*
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.ExactValuePattern
+import io.specmatic.core.pattern.HasException
+import io.specmatic.core.pattern.HasFailure
+import io.specmatic.core.pattern.HasValue
+import io.specmatic.core.pattern.IgnoreUnexpectedKeys
+import io.specmatic.core.pattern.JSONObjectPattern
+import io.specmatic.core.pattern.NegativeNonStringlyPatterns
+import io.specmatic.core.pattern.Pattern
+import io.specmatic.core.pattern.ReturnValue
+import io.specmatic.core.pattern.Row
+import io.specmatic.core.pattern.allOrNothingCombinationIn
+import io.specmatic.core.pattern.attempt
+import io.specmatic.core.pattern.breadCrumb
+import io.specmatic.core.pattern.exception
+import io.specmatic.core.pattern.fix
+import io.specmatic.core.pattern.forEachKeyCombinationGivenRowIn
+import io.specmatic.core.pattern.isOptional
+import io.specmatic.core.pattern.isPatternToken
+import io.specmatic.core.pattern.mapFold
+import io.specmatic.core.pattern.newBasedOn
+import io.specmatic.core.pattern.newMapBasedOn
+import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.pattern.resolvedHop
+import io.specmatic.core.pattern.returnValue
+import io.specmatic.core.pattern.returnValues
+import io.specmatic.core.pattern.withoutOptionality
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
-import io.ktor.http.*
 
 const val HEADERS_BREADCRUMB = "HEADERS"
 
@@ -38,24 +64,69 @@ data class HttpHeadersPattern(
         }
     }
 
-    private fun matchEach(parameters: Pair<Map<String, String>, Resolver>): MatchingResult<Pair<Map<String, String>, Resolver>> {
+    private fun isContentTypeAsPerPattern(
+        contentTypePattern: Pattern?,
+        resolver: Resolver
+    ): Boolean {
+        return when(contentTypePattern) {
+            null -> true
+            else -> {
+                contentTypePattern.matches(parsedValue(contentType), resolver).isSuccess()
+            }
+        }
+    }
+
+    private fun matchContentType(parameters: Pair<Map<String, String>, Resolver>):  MatchingResult<Pair<Map<String, String>, Resolver>> {
+
         val (headers, resolver) = parameters
 
-        val contentTypeHeaderValue = headers["Content-Type"]
+        val contentTypeHeaderValueFromRequest = headers[CONTENT_TYPE]
+        val contentTypePattern = pattern[CONTENT_TYPE] ?: pattern["$CONTENT_TYPE?"]
 
-        if(contentType != null && contentTypeHeaderValue != null) {
-            val parsedContentType = simplifiedContentType(contentType.lowercase())
-            val parsedContentTypeHeaderValue  = simplifiedContentType(contentTypeHeaderValue.lowercase())
+        val isContentTypeAsPerPattern = isContentTypeAsPerPattern(contentTypePattern, resolver)
 
-            if(parsedContentType != parsedContentTypeHeaderValue)
+        if (contentTypePattern != null && isContentTypeAsPerPattern.not()) {
+            if (
+                contentTypePattern.matches(
+                    parsedValue(contentTypeHeaderValueFromRequest),
+                    resolver
+                ).isSuccess().not()
+            ) {
                 return MatchFailure(
                     Result.Failure(
-                        resolver.mismatchMessages.mismatchMessage(contentType, contentTypeHeaderValue),
+                        resolver.mismatchMessages.mismatchMessage(
+                            contentTypePattern.generate(resolver).toStringLiteral(),
+                            contentTypeHeaderValueFromRequest.orEmpty()
+                        ),
                         breadCrumb = "Content-Type",
                         failureReason = FailureReason.ContentTypeMismatch
                     )
                 )
+            }
+        } else if (contentType != null && contentTypeHeaderValueFromRequest != null) {
+            val parsedContentType = simplifiedContentType(contentType.lowercase())
+            val parsedContentTypeHeaderValue = simplifiedContentType(contentTypeHeaderValueFromRequest.lowercase())
+
+            if (parsedContentType != parsedContentTypeHeaderValue) {
+                return MatchFailure(
+                    Result.Failure(
+                        resolver.mismatchMessages.mismatchMessage(contentType, contentTypeHeaderValueFromRequest),
+                        breadCrumb = "Content-Type",
+                        failureReason = FailureReason.ContentTypeMismatch
+                    )
+                )
+            }
         }
+
+        return MatchSuccess(parameters)
+    }
+
+
+    private fun matchEach(parameters: Pair<Map<String, String>, Resolver>): MatchingResult<Pair<Map<String, String>, Resolver>> {
+        val (headers, resolver) = parameters
+
+        val contentTypeMatchResult = matchContentType(parameters)
+        if (contentTypeMatchResult is MatchFailure) return contentTypeMatchResult
 
         val headersWithRelevantKeys = when {
             ancestorHeaders != null -> withoutIgnorableHeaders(headers, ancestorHeaders)

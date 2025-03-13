@@ -172,7 +172,7 @@ sealed class Result {
             return TestResult.Failed
         }
 
-        override fun withFailureReason(failureReason: FailureReason): Result {
+        override fun withFailureReason(failureReason: FailureReason): Failure {
             return copy(failureReason = failureReason)
         }
 

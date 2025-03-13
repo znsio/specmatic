@@ -84,26 +84,22 @@ data class HttpHeadersPattern(
         val contentTypeHeaderValueFromRequest = headers[CONTENT_TYPE]
         val contentTypePattern = pattern[CONTENT_TYPE] ?: pattern["$CONTENT_TYPE?"]
 
-        val isContentTypeAsPerPattern = isContentTypeAsPerPattern(contentTypePattern, resolver)
+        val isContentTypeNotAsPerPattern = isContentTypeAsPerPattern(contentTypePattern, resolver).not()
 
-        if (contentTypePattern != null && isContentTypeAsPerPattern.not()) {
+        if (contentTypePattern != null && isContentTypeNotAsPerPattern) {
             if(contentType != null) logContentTypeAndPatternMismatchWarning()
-            if (
-                contentTypePattern.matches(
-                    parsedValue(contentTypeHeaderValueFromRequest),
-                    resolver
-                ).isSuccess().not()
-            ) {
-                return MatchFailure(
-                    Result.Failure(
-                        resolver.mismatchMessages.mismatchMessage(
-                            contentTypePattern.generate(resolver).toStringLiteral(),
-                            contentTypeHeaderValueFromRequest.orEmpty()
-                        ),
-                        breadCrumb = "Content-Type",
-                        failureReason = FailureReason.ContentTypeMismatch
-                    )
-                )
+            val contentTypeMatchResult = contentTypePattern.matches(
+                parsedValue(contentTypeHeaderValueFromRequest),
+                resolver
+            )
+
+            if (contentTypeMatchResult is Result.Failure) {
+                val matchFailure: Result.Failure =
+                    contentTypeMatchResult
+                        .withFailureReason(FailureReason.ContentTypeMismatch)
+                        .breadCrumb(CONTENT_TYPE)
+
+                return MatchFailure(matchFailure)
             }
         } else if (contentType != null && contentTypeHeaderValueFromRequest != null) {
             val parsedContentType = simplifiedContentType(contentType.lowercase())
@@ -237,15 +233,31 @@ data class HttpHeadersPattern(
     }
 
     fun generate(resolver: Resolver): Map<String, String> {
-        val headers = pattern.mapValues { (key, pattern) ->
+        val generatedHeaders = pattern.mapValues { (key, pattern) ->
             attempt(breadCrumb = "HEADERS.$key") {
                 toStringLiteral(resolver.withCyclePrevention(pattern) {
                     it.generate("HEADERS", key, pattern)
                 })
             }
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
-        if (contentType.isNullOrBlank()) return headers
-        return headers.plus(CONTENT_TYPE to contentType)
+
+        val contentTypePattern = contentTypeInPattern()
+        if (generatedHeaders.containsKey(CONTENT_TYPE) && contentTypePattern != null) {
+            val generatedContentType = generatedHeaders.getValue(CONTENT_TYPE)
+            val regeneratedContentType = contentTypePattern.generate(resolver).toStringLiteral()
+
+            if (generatedContentType == regeneratedContentType) {
+                if (generatedContentType != contentType) logContentTypeAndPatternMismatchWarning()
+                return generatedHeaders
+            }
+        }
+        if (contentType.isNullOrBlank()) return generatedHeaders
+
+        return generatedHeaders.plus(CONTENT_TYPE to contentType)
+    }
+
+    private fun contentTypeInPattern(): Pattern? {
+        return pattern[CONTENT_TYPE] ?: pattern["${CONTENT_TYPE}?"]
     }
 
     private fun toStringLiteral(headerValue: Value) = when (headerValue) {

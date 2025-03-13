@@ -1,6 +1,7 @@
 package io.specmatic.core
 
 import io.ktor.http.*
+import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.ExactValuePattern
 import io.specmatic.core.pattern.HasException
@@ -86,6 +87,7 @@ data class HttpHeadersPattern(
         val isContentTypeAsPerPattern = isContentTypeAsPerPattern(contentTypePattern, resolver)
 
         if (contentTypePattern != null && isContentTypeAsPerPattern.not()) {
+            if(contentType != null) logContentTypeAndPatternMismatchWarning()
             if (
                 contentTypePattern.matches(
                     parsedValue(contentTypeHeaderValueFromRequest),
@@ -474,6 +476,10 @@ data class HttpHeadersPattern(
         )
 
         return fixedHeaders.mapValues { it.value.toStringLiteral() }
+    }
+
+    private fun logContentTypeAndPatternMismatchWarning() {
+        logger.log("WARNING: The content type schema specified in the specification does not match the media type $contentType")
     }
 }
 

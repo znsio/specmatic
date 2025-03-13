@@ -84,9 +84,9 @@ data class HttpHeadersPattern(
         val contentTypeHeaderValueFromRequest = headers[CONTENT_TYPE]
         val contentTypePattern = pattern[CONTENT_TYPE] ?: pattern["$CONTENT_TYPE?"]
 
-        val isContentTypeAsPerPattern = isContentTypeAsPerPattern(contentTypePattern, resolver)
+        val isContentTypeNotAsPerPattern = isContentTypeAsPerPattern(contentTypePattern, resolver).not()
 
-        if (contentTypePattern != null && isContentTypeAsPerPattern.not()) {
+        if (contentTypePattern != null && isContentTypeNotAsPerPattern) {
             if(contentType != null) logContentTypeAndPatternMismatchWarning()
             if (
                 contentTypePattern.matches(

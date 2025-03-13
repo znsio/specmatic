@@ -244,7 +244,10 @@ data class HttpHeadersPattern(
                 })
             }
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
+
+        if (headers.containsKey(CONTENT_TYPE)) return headers
         if (contentType.isNullOrBlank()) return headers
+
         return headers.plus(CONTENT_TYPE to contentType)
     }
 

@@ -88,22 +88,18 @@ data class HttpHeadersPattern(
 
         if (contentTypePattern != null && isContentTypeNotAsPerPattern) {
             if(contentType != null) logContentTypeAndPatternMismatchWarning()
-            if (
-                contentTypePattern.matches(
-                    parsedValue(contentTypeHeaderValueFromRequest),
-                    resolver
-                ).isSuccess().not()
-            ) {
-                return MatchFailure(
-                    Result.Failure(
-                        resolver.mismatchMessages.mismatchMessage(
-                            contentTypePattern.generate(resolver).toStringLiteral(),
-                            contentTypeHeaderValueFromRequest.orEmpty()
-                        ),
-                        breadCrumb = "Content-Type",
-                        failureReason = FailureReason.ContentTypeMismatch
-                    )
-                )
+            val contentTypeMatchResult = contentTypePattern.matches(
+                parsedValue(contentTypeHeaderValueFromRequest),
+                resolver
+            )
+
+            if (contentTypeMatchResult is Result.Failure) {
+                val matchFailure: Result.Failure =
+                    contentTypeMatchResult
+                        .withFailureReason(FailureReason.ContentTypeMismatch)
+                        .breadCrumb(CONTENT_TYPE)
+
+                return MatchFailure(matchFailure)
             }
         } else if (contentType != null && contentTypeHeaderValueFromRequest != null) {
             val parsedContentType = simplifiedContentType(contentType.lowercase())

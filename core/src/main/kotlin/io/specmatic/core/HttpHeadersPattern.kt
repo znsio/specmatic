@@ -237,7 +237,7 @@ data class HttpHeadersPattern(
     }
 
     fun generate(resolver: Resolver): Map<String, String> {
-        val headers = pattern.mapValues { (key, pattern) ->
+        val generatedHeaders = pattern.mapValues { (key, pattern) ->
             attempt(breadCrumb = "HEADERS.$key") {
                 toStringLiteral(resolver.withCyclePrevention(pattern) {
                     it.generate("HEADERS", key, pattern)
@@ -246,18 +246,18 @@ data class HttpHeadersPattern(
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
 
         val contentTypePattern = contentTypeInPattern()
-        if (headers.containsKey(CONTENT_TYPE) && contentTypePattern != null) {
-            val generatedContentType = headers.getValue(CONTENT_TYPE)
+        if (generatedHeaders.containsKey(CONTENT_TYPE) && contentTypePattern != null) {
+            val generatedContentType = generatedHeaders.getValue(CONTENT_TYPE)
             val regeneratedContentType = contentTypePattern.generate(resolver).toStringLiteral()
 
             if (generatedContentType == regeneratedContentType) {
                 if (generatedContentType != contentType) logContentTypeAndPatternMismatchWarning()
-                return headers
+                return generatedHeaders
             }
         }
-        if (contentType.isNullOrBlank()) return headers
+        if (contentType.isNullOrBlank()) return generatedHeaders
 
-        return headers.plus(CONTENT_TYPE to contentType)
+        return generatedHeaders.plus(CONTENT_TYPE to contentType)
     }
 
     private fun contentTypeInPattern(): Pattern? {

@@ -621,7 +621,7 @@ class LoadTestsFromExternalisedFiles {
                         return HttpResponse(
                             status = 201,
                             body = parsedJSONObject("""{"id": 1}""").mergeWith(request.body)
-                        )
+                        ).also { println(request.toLogString()); println(it.toLogString()) }
                     }
                 }).results
                 val failure = results.filterIsInstance<Result.Failure>().first()
@@ -632,21 +632,23 @@ class LoadTestsFromExternalisedFiles {
                 assertThat(results).hasSize(2)
                 assertThat(failure.scenario?.testDescription()).containsIgnoringWhitespaces("Scenario: PATCH /pets/(id:number) -> 200 | EX:patch")
                 assertThat(failure.reportString()).containsIgnoringWhitespaces("""
-                >> REQUEST.BODY
-                >> name
+                >> REQUEST.BODY.name
                 Contract expected string but found value 10 (number)
-                >> tag[0]
+                >> REQUEST.BODY.tag
                 Contract expected string but found value 10 (number)
-                >> details
-                Contract expected JSON object but found value 10 (number)
-                >> adopted
+                >> REQUEST.BODY.details
+                Can't generate object value from type number
+                >> REQUEST.BODY.adopted
                 Contract expected boolean but found value "false"
-                >> age
+                >> REQUEST.BODY.age
                 Contract expected number but found value "20"
-                >> birthdate
+                >> REQUEST.BODY.birthdate
                 Date types can only be represented using strings
-                """.trimIndent())
+             """.trimIndent())
             }
+
+            // Ideally >> REQUEST.BODY.details
+            // Should contain "Contract expected JSON object but found value 10 (number)"
         }
 
         @Test

@@ -14,7 +14,7 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
     }
 
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
+        val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from type ${value.displayableType()}")
 
         val returnValue = jsonObject.jsonObject.mapValues { (key, value) ->
             val matchResult = valuePattern.matches(value, resolver)

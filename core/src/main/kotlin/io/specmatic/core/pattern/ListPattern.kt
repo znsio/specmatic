@@ -48,8 +48,12 @@ data class ListPattern(
     }
 
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        val listValue = value as? JSONArrayValue ?: return HasFailure("Cannot generate a list from partial of type ${value.displayableType()}")
-        val newList = listValue.list.map { pattern.fillInTheBlanks(it, resolver.plusDictionaryLookupDetails(null, "[*]")) }.listFold()
+        val listValue = value as? JSONArrayValue
+            ?: return HasFailure("Cannot generate a list from type ${value.displayableType()}")
+
+        val newList = listValue.list.map {
+            pattern.fillInTheBlanks(it, resolver.plusDictionaryLookupDetails(null, "[*]"))
+        }.listFold()
 
         return newList.ifValue { listValue.copy(list = it) }
     }

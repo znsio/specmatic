@@ -41,7 +41,7 @@ fun <K, ValueType> Map<K, ReturnValue<out ValueType>>.mapFold(): ReturnValue<Map
     val initial: ReturnValue<Map<K, ValueType>> = HasValue(emptyMap())
 
     return this.entries.fold(initial) { accR, (key, valueR) ->
-        accR.assimilate(valueR) { acc, value ->
+        accR.combine(valueR) { acc, value ->
             acc.plus(key to value)
         }
     }

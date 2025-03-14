@@ -127,7 +127,8 @@ data class JSONObjectPattern(
     }
 
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
+        val jsonObject = value as? JSONObjectValue
+            ?: return HasFailure("Can't generate object value from type ${value.displayableType()}")
 
         return fillInTheBlanks(
             jsonPatternMap = pattern, jsonValueMap = jsonObject.jsonObject,

@@ -241,20 +241,35 @@ data class HttpHeadersPattern(
             }
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
 
-        val contentTypePattern = contentTypeInPattern()
-        if (generatedHeaders.containsKey(CONTENT_TYPE) && contentTypePattern != null) {
-            val generatedContentType = generatedHeaders.getValue(CONTENT_TYPE)
-            val regeneratedContentType = contentTypePattern.generate(resolver).toStringLiteral()
+        val contentTypePattern = contentTypeInPattern() ?: return addContentTypeIfExists(generatedHeaders)
+        val generatedContentType = generatedHeaders[CONTENT_TYPE] ?: return addContentTypeIfExists(generatedHeaders)
 
-            if (generatedContentType == regeneratedContentType) {
-                if (generatedContentType != contentType && contentType != null) {
-                    logContentTypeAndPatternMismatchWarning()
-                }
-                return generatedHeaders
-            }
+        if (!contentTypeInPatternIsConst(contentTypePattern, generatedContentType, resolver))
+            return addContentTypeIfExists(generatedHeaders)
+
+        if(contentType == null)
+            return generatedHeaders
+
+        if (generatedContentType != contentType) {
+            logContentTypeAndPatternMismatchWarning()
         }
-        if (contentType.isNullOrBlank()) return generatedHeaders
 
+        return generatedHeaders
+    }
+
+    private fun contentTypeInPatternIsConst(
+        contentTypePattern: Pattern,
+        generatedContentType: String,
+        resolver: Resolver,
+    ): Boolean {
+        val regeneratedContentType = contentTypePattern.generate(resolver).toStringLiteral()
+        return generatedContentType == regeneratedContentType
+    }
+
+    private fun addContentTypeIfExists(
+        generatedHeaders: Map<String, String>,
+    ): Map<String, String> {
+        if (contentType.isNullOrBlank()) return generatedHeaders
         return generatedHeaders.plus(CONTENT_TYPE to contentType)
     }
 

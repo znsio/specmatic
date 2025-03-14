@@ -23,7 +23,6 @@ data class HasException<T>(val t: Throwable, val message: String = "", val bread
 
     override fun <U> ifValue(fn: (T) -> U): ReturnValue<U> {
         return cast()
-
     }
 
     override fun update(fn: (T) -> T): ReturnValue<T> {

@@ -160,4 +160,18 @@ data class Row(
             withoutColumn.copy(requestBodyJSONExample = updatedJSONExample)
         } ?: withoutColumn
     }
+    
+    fun updateRequestIfExists(request: HttpRequest): Row {
+        val updatedColumnsNames = columnNames.toSet() + "(REQUEST-BODY)"
+        val updatedValues = values.mapIndexed { index, it ->
+            if (columnNames[index] != "(REQUEST-BODY)") return@mapIndexed it
+            request.body.toStringLiteral()
+        }
+
+        return this.copy(
+            requestExample = request,
+            columnNames = updatedColumnsNames.toList(),
+            values = updatedValues
+        )
+    }
 }

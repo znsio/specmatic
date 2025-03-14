@@ -89,7 +89,7 @@ class ThreadSafeListOfStubs(
             if (result !is Result.Success) return@map Pair(result, stubData)
 
             val response = if (stubData.partial == null) stubData.response
-            else stubData.responsePattern.generateResponse(stubData.partial.response, stubData.resolver)
+            else stubData.responsePattern.fillInTheBlanks(stubData.partial.response, stubData.resolver)
 
             val stubResponse = HttpStubResponse(
                 response,

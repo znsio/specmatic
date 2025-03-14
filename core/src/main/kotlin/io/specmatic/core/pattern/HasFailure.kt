@@ -10,7 +10,7 @@ data class HasFailure<T>(val failure: Result.Failure, val message: String = "") 
     }
 
     override fun <U> ifValue(fn: (T) -> U): ReturnValue<U> {
-        return HasFailure(failure)
+        return cast()
     }
 
     override fun update(fn: (T) -> T): ReturnValue<T> {

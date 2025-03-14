@@ -621,7 +621,7 @@ data class Feature(
                     scenarioAsTest(concreteTestScenario, comment, workflow, originalScenario, originalScenarios)
                 },
                 orFailure = {
-                    ScenarioTestGenerationFailure(originalScenario, it.failure)
+                    ScenarioTestGenerationFailure(originalScenario, it.failure, it.message)
                 },
                 orException = {
                     ScenarioTestGenerationException(originalScenario, it.t, it.message, it.breadCrumb)

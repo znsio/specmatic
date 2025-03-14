@@ -37,10 +37,10 @@ fun <ReturnType> returnValue(errorMessage: String = "", breadCrumb: String = "",
     }
 }
 
-fun <K, ValueType> Map<K, ReturnValue<ValueType>>.mapFold(): ReturnValue<Map<K, ValueType>> {
+fun <K, ValueType> Map<K, ReturnValue<out ValueType>>.mapFold(): ReturnValue<Map<K, ValueType>> {
     val initial: ReturnValue<Map<K, ValueType>> = HasValue(emptyMap())
 
-    return this.entries.fold(initial) { accR: ReturnValue<Map<K, ValueType>>, (key: K, valueR: ReturnValue<ValueType>) ->
+    return this.entries.fold(initial) { accR, (key, valueR) ->
         accR.assimilate(valueR) { acc, value ->
             acc.plus(key to value)
         }

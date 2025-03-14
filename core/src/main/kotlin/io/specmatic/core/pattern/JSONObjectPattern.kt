@@ -129,54 +129,13 @@ data class JSONObjectPattern(
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
         val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
 
-        val mapWithKeysInPartial = jsonObject.jsonObject.mapValues { (name, value) ->
-            val valuePattern = pattern[name] ?: pattern["$name?"] ?: return@mapValues HasFailure<Value>(
-                Result.Failure(
-                    resolver.mismatchMessages.unexpectedKey("header", name)
-                )
-            ).breadCrumb(name)
-
-            val returnValue = if (value is StringValue && isPatternToken(value.string)) {
-                try {
-                    val generatedValue = resolver.generate(typeAlias, name, resolver.getPattern(value.string))
-                    val matchResult = valuePattern.matches(generatedValue, resolver)
-
-                    if (matchResult is Result.Failure)
-                        HasFailure(matchResult, "Could not generate value for key $name")
-                    else
-                        HasValue(generatedValue)
-                } catch(e: Throwable) {
-                    HasException(e)
-                }
-            } else if (value is ScalarValue) {
-                val matchResult = valuePattern.matches(value, resolver)
-
-                val returnValue: ReturnValue<Value> = if (matchResult is Result.Failure)
-                    HasFailure(matchResult)
-                else
-                    HasValue(value)
-
-                returnValue
-            } else {
-                valuePattern.fillInTheBlanks(value, resolver.plusDictionaryLookupDetails(typeAlias, name))
-            }
-
-            returnValue.breadCrumb(name)
-        }.mapFold()
-
-        val mapWithMissingKeysGenerated = pattern.filterKeys {
-            !it.endsWith("?") && it !in jsonObject.jsonObject
-        }.mapValues { (name, valuePattern) ->
-            try {
-                HasValue(resolver.generate(typeAlias, name, valuePattern))
-            } catch(e: Throwable) {
-                HasException(e)
-            }.breadCrumb(name)
-        }.mapFold()
-
-        return mapWithKeysInPartial.combine(mapWithMissingKeysGenerated) { entriesInPartial, missingEntries ->
-            jsonObject.copy(jsonObject = entriesInPartial + missingEntries)
-        }
+        return fillInTheBlanks(
+            jsonPatternMap = pattern, jsonValueMap = jsonObject.jsonObject,
+            typeAlias = this.typeAlias.orEmpty(), resolver = resolver
+        ).realise(
+            hasValue = { valuesMap, _ -> HasValue(JSONObjectValue(valuesMap)) },
+            orException = { e -> e.cast() }, orFailure = { f -> f.cast() }
+        )
     }
 
     override fun removeKeysNotPresentIn(keys: Set<String>, resolver: Resolver): Pattern {
@@ -592,6 +551,30 @@ fun fix(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, 
     }
     .filterValues { it.isPresent }
     .mapValues { (_, opt) -> opt.get() }
+}
+
+fun fillInTheBlanks(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, resolver: Resolver, typeAlias: String): ReturnValue<Map<String, Value>> {
+    val resolvedValuesMap = jsonValueMap.mapValues { (key, value) ->
+        val pattern = jsonPatternMap[key] ?: jsonPatternMap["$key?"] ?: return@mapValues when(resolver.findKeyErrorCheck.unexpectedKeyCheck) {
+            IgnoreUnexpectedKeys -> HasValue(value)
+            else -> HasFailure<Value>(
+                Result.Failure(resolver.mismatchMessages.unexpectedKey("key", key))
+            ).breadCrumb(key)
+        }
+        val updatedResolver = resolver.plusDictionaryLookupDetails(typeAlias, key)
+        pattern.fillInTheBlanks(value, updatedResolver).breadCrumb(key)
+    }.mapFold()
+
+    val missingKeysToPattern = jsonPatternMap.filterKeys { !isOptional(it) && it !in jsonValueMap }
+    val generatedValuesMap = missingKeysToPattern.mapValues { (key, pattern) ->
+        runCatching {
+            resolver.generate(typeAlias, key, pattern)
+        }.map(::HasValue).getOrElse(::HasException).breadCrumb(key)
+    }.mapFold()
+
+    return resolvedValuesMap.combine(generatedValuesMap) { resolvedEntries, partialEntries ->
+        resolvedEntries + partialEntries
+    }
 }
 
 private fun adjustedPattern(jsonPatternMap: Map<String, Pattern>, resolver: Resolver): Map<String, Pattern> {

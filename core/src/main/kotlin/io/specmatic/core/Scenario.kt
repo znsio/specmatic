@@ -199,7 +199,7 @@ data class Scenario(
         scenarioBreadCrumb(this) {
             val facts = combineFacts(expectedFacts, actualFacts, resolver)
 
-            httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
+            httpResponsePattern.fillInTheBlanks(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
         }
 
     fun generateHttpResponseV2(
@@ -419,25 +419,27 @@ data class Scenario(
 
     fun newBasedOn(row: Row, flagsBased: FlagsBased): Sequence<ReturnValue<Scenario>> {
         val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
-        val resolver =
-            Resolver(expectedFacts, false, patterns)
-            .copy(
-                mismatchMessages = ContractAndRowValueMismatch
-            ).let { flagsBased.update(it) }
+
+        val resolver = resolver.copy(
+            factStore = CheckFacts(expectedFacts), mockMode = false, mismatchMessages = ContractAndRowValueMismatch
+        ).let { flagsBased.update(it) }
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
 
         return scenarioBreadCrumb(this) {
             attempt {
-                val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withResponseExampleValue(row, resolver)
-
-                val resolvedRow = try { ExampleProcessor.resolve(row, ExampleProcessor::defaultIfNotExits) } catch (e: Throwable) {
-                    return@attempt sequenceOf(HasException<Scenario>(e, message = row.name, breadCrumb = ""))
+                val updatedResolver = resolver.copy(isNegative = isNegative)
+                val rowValue =  when(val resolvedRow = resolveRow(row, updatedResolver)) {
+                    is HasValue -> resolvedRow.value
+                    is HasException -> return@attempt sequenceOf(resolvedRow.cast())
+                    is HasFailure -> return@attempt sequenceOf(resolvedRow.cast())
                 }
 
+                val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withResponseExampleValue(rowValue, resolver)
+
                 val (newRequestPatterns: Sequence<ReturnValue<HttpRequestPattern>>, generativePrefix: String) = when (isNegative) {
-                    false -> Pair(httpRequestPattern.newBasedOn(resolvedRow, resolver, httpResponsePattern.status), flagsBased.positivePrefix)
-                    else -> Pair(httpRequestPattern.negativeBasedOn(resolvedRow, resolver.copy(isNegative = true)), flagsBased.negativePrefix)
+                    false -> Pair(httpRequestPattern.newBasedOn(rowValue, updatedResolver, httpResponsePattern.status), flagsBased.positivePrefix)
+                    else -> Pair(httpRequestPattern.negativeBasedOn(rowValue, updatedResolver), flagsBased.negativePrefix)
                 }
 
                 newRequestPatterns.map { newHttpRequestPattern ->
@@ -459,6 +461,22 @@ data class Scenario(
                         orFailure = { f -> f.addDetails(message = row.name, breadCrumb = "").cast() }
                     )
                 }
+            }
+        }
+    }
+
+    private fun resolveRow(row: Row, resolver: Resolver): ReturnValue<Row> {
+        return runCatching {
+            ExampleProcessor.resolve(row, ExampleProcessor::defaultIfNotExits)
+        }.mapCatching { resolved ->
+            if (resolved.requestExample == null) return@mapCatching resolved
+            val updatedResolver = resolver.copy(isNegative = resolver.isNegative || httpResponsePattern.status in invalidRequestStatuses)
+            val resolvedRequest = httpRequestPattern.fillInTheBlanks(resolved.requestExample, updatedResolver)
+            resolved.updateRequestIfExists(resolvedRequest)
+        }.map(::HasValue).getOrElse { e ->
+            when(e) {
+                is ContractException -> HasFailure(e.failure(), message = row.name)
+                else -> HasException(e, message = row.name, breadCrumb = "")
             }
         }
     }
@@ -531,6 +549,7 @@ data class Scenario(
                 return "The $keyLabel $keyName in the specification was missing in example ${row.name}"
             }
         },
+        findKeyErrorCheck = if (row.isPartial) PARTIAL_KEYCHECK else updatedResolver.findKeyErrorCheck,
         mockMode = true
     )
 
@@ -697,7 +716,7 @@ data class Scenario(
     fun resolverAndResponseForExpectation(response: HttpResponse): Pair<Resolver, HttpResponse> =
         scenarioBreadCrumb(this) {
             attempt(breadCrumb = "RESPONSE") {
-                Pair(this.resolver, httpResponsePattern.fromResponseExpectation(response, resolver).generateResponse(this.resolver))
+                Pair(this.resolver, httpResponsePattern.fromResponseExpectation(response, resolver).fillInTheBlanks(this.resolver))
             }
         }
 

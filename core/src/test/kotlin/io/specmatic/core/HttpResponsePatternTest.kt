@@ -67,7 +67,7 @@ internal class HttpResponsePatternTest {
             status = 203,
             body = NoBodyPattern
         )
-        val response = httpResponsePattern.generateResponse(Resolver())
+        val response = httpResponsePattern.fillInTheBlanks(Resolver())
 
         assertThat(response.status).isEqualTo(203)
         assertThat(response.headers["Content-Type"]).isNull()

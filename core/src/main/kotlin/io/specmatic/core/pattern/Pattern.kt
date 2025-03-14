@@ -79,9 +79,17 @@ interface Pattern {
     }
 
     fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        exception { parse(value.toStringLiteral(), resolver) }?.let { return HasException(it) }
+        val resolvedValue = if (value is StringValue && value.isPatternToken()) {
+            runCatching {
+                val patternToGenerate = resolver.getPattern(value.string).takeUnless { it is AnyValuePattern } ?: this
+                resolver.generate(patternToGenerate)
+            }.getOrElse { e -> return HasException(e) }
+        } else value
 
-        return HasValue(value)
+        val result = matches(resolvedValue, resolver)
+        return if (result is Result.Failure && !resolver.isNegative) {
+            HasFailure(result)
+        } else HasValue(resolvedValue)
     }
 
     fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String? = null): Pattern {

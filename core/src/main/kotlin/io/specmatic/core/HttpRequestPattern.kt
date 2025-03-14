@@ -20,7 +20,7 @@ const val METHOD_BREAD_CRUMB = "METHOD"
 private const val FORM_FIELDS_BREADCRUMB = "FORM-FIELDS"
 const val CONTENT_TYPE = "Content-Type"
 
-private val invalidRequestStatuses = listOf(400, 422)
+val invalidRequestStatuses = listOf(400, 422)
 
 data class HeaderMatchParams(val request: HttpRequest, val headersResolver: Resolver?, val defaultResolver: Resolver, val failures: List<Failure>)
 
@@ -896,6 +896,28 @@ data class HttpRequestPattern(
         return this.copy(
             httpPathPattern = this.httpPathPattern?.withWildcardPathSegments()
         )
+    }
+
+    fun fillInTheBlanks(request: HttpRequest, resolver: Resolver): HttpRequest {
+        val sanitizedRequest = withoutSecuritySchemes(request)
+        val path = httpPathPattern?.fillInTheBlanks(sanitizedRequest.path, resolver)?.breadCrumb("PATH-PARAMS") ?: HasValue(null)
+        val queryParams = httpQueryParamPattern.fillInTheBlanks(sanitizedRequest.queryParams, resolver).breadCrumb("QUERY-PARAMS")
+        val headers = headersPattern.fillInTheBlanks(sanitizedRequest.headers, resolver).breadCrumb("HEADERS")
+        val body = body.fillInTheBlanks(sanitizedRequest.body, resolver).breadCrumb("BODY")
+
+        return HasValue(request)
+            .combine(path) { req, it -> req.copy(path = it) }
+            .combine(queryParams) { req, it -> req.copy(queryParams = it) }
+            .combine(headers) { req, it -> req.copy(headers = it) }
+            .combine(body) { req, it -> req.copy(body = it) }
+            .breadCrumb("REQUEST")
+            .value
+    }
+
+    private fun withoutSecuritySchemes(request: HttpRequest): HttpRequest {
+        return securitySchemes.fold(request) { req, securityScheme ->
+            securityScheme.removeParam(req)
+        }
     }
 }
 

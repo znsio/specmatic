@@ -19,7 +19,7 @@ data class HttpResponsePattern(
 ) {
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body.exactMatchElseType())
 
-    fun generateResponse(resolver: Resolver): HttpResponse {
+    fun fillInTheBlanks(resolver: Resolver): HttpResponse {
         return generateResponseWith(
             value = resolver.withCyclePrevention(body, body::generate),
             resolver = resolver
@@ -201,7 +201,7 @@ data class HttpResponsePattern(
         )
     }
 
-    fun generateResponse(partial: HttpResponse, resolver: Resolver): HttpResponse {
+    fun fillInTheBlanks(partial: HttpResponse, resolver: Resolver): HttpResponse {
         val headers = headersPattern.fillInTheBlanks(partial.headers, resolver).breadCrumb("HEADERS")
         val body: ReturnValue<Value> = body.fillInTheBlanks(partial.body, resolver).breadCrumb("BODY")
 

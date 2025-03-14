@@ -7,6 +7,7 @@ import io.specmatic.core.value.StringValue
 import io.ktor.util.reflect.*
 import io.specmatic.conversions.convertPathParameterStyle
 import java.net.URI
+import kotlin.collections.joinToString
 
 val OMIT = listOf("(OMIT)", "(omit)")
 
@@ -276,6 +277,29 @@ data class HttpPathPattern(
             val updatedResolver = resolver.updateLookupPath(PATH_BREAD_CRUMB, urlPathPattern.key.orEmpty())
             urlPathPattern.fixValue(urlPathPattern.tryParse(token, updatedResolver), updatedResolver)
         }.joinToString("/", prefix = "/".takeIf { pathHadPrefix }.orEmpty() )
+    }
+
+    fun fillInTheBlanks(path: String?, resolver: Resolver): ReturnValue<String> {
+        if (path == null) return HasFailure("Path cannot be null")
+
+        val pathSegments = path.split("/").filter { it.isNotEmpty() }
+        if (pathSegmentPatterns.size != pathSegments.size) {
+            return HasFailure("Expected ${pathSegmentPatterns.size} path segments but got ${pathSegments.size}")
+        }
+
+        val pathHadPrefix = path.startsWith("/")
+        val generatedSegments = pathSegmentPatterns.zip(pathSegments).map { (urlPathPattern, token) ->
+            val updatedResolver = resolver.updateLookupPath(PATH_BREAD_CRUMB, urlPathPattern.key.orEmpty())
+            urlPathPattern.fillInTheBlanks(urlPathPattern.tryParse(token, updatedResolver), updatedResolver)
+        }
+
+        val failures = generatedSegments.filterIsInstance<ReturnFailure>()
+            .fold(emptyList<Failure>()) { acc, failure -> acc + failure.toFailure() }
+
+        return if (failures.isNotEmpty()) return HasFailure(Failure.fromFailures(failures))
+        else HasValue(generatedSegments.joinToString(separator = "/", prefix = "/".takeIf { pathHadPrefix }.orEmpty()) {
+            it.value.toStringLiteral()
+        })
     }
 }
 

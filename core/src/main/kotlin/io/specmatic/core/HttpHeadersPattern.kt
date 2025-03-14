@@ -433,41 +433,24 @@ data class HttpHeadersPattern(
     }
 
     fun fillInTheBlanks(headers: Map<String, String>, resolver: Resolver): ReturnValue<Map<String, String>> {
-        val headersToConsider = ancestorHeaders?.let {
-            headers.filterKeys { key -> key in it || "$key?" in it }
-        } ?: headers
+        val headersWithContentType = if (contentType != null) {
+            headers.plus(CONTENT_TYPE to contentType)
+        } else headers
 
-        val map: Map<String, ReturnValue<String>> = headersToConsider.mapValues { (headerName, headerValue) ->
-            val headerPattern = pattern[headerName] ?: pattern["$headerName?"] ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
-
-            if(isPatternToken(headerValue)) {
-                val generatedValue = resolver.generate("HEADERS", headerName, resolver.getPattern(headerValue))
-                val matchResult = headerPattern.matches(generatedValue, resolver)
-
-                val returnValue: ReturnValue<String> = if(matchResult is Result.Failure)
-                    HasFailure(matchResult, "Could not generate value for key $headerName")
-                else
-                    HasValue(generatedValue.toStringLiteral())
-
-                returnValue
-            } else {
-                exception { headerPattern.parse(headerValue, resolver) }?.let { return@mapValues HasException(it) }
-
-                HasValue(headerValue)
-            }.breadCrumb(headerName)
+        if (headersWithContentType.isEmpty() && pattern.isEmpty()) return HasValue(emptyMap())
+        val headersValue = headersWithContentType.mapValues { (key, value) ->
+            val pattern = pattern[key] ?: pattern["$key?"] ?: return@mapValues StringValue(value)
+            runCatching { pattern.parse(value, resolver) }.getOrDefault(StringValue(value))
         }
 
-        val headersInPartialR = map.mapFold()
-
-        val missingHeadersR = pattern.filterKeys { !it.endsWith("?") && it !in headers }.mapValues { (headerName, headerPattern) ->
-            val generatedValue = HasValue(resolver.generate("HEADERS", headerName, headerPattern).toStringLiteral())
-
-            generatedValue.breadCrumb(headerName)
-        }.mapFold()
-
-        return headersInPartialR.combine(missingHeadersR) { headersInPartial, missingHeaders ->
-            headersInPartial + missingHeaders
-        }
+        return fillInTheBlanks(
+            jsonPatternMap = pattern, jsonValueMap = headersValue,
+            resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys),
+            typeAlias = "($HEADERS_BREADCRUMB)"
+        ).realise(
+            hasValue = { valuesMap, _ -> HasValue(valuesMap.mapValues { it.value.toStringLiteral() }) },
+            orException = { e -> e.cast() }, orFailure = { f -> f.cast() }
+        )
     }
 
     fun fixValue(headers: Map<String, String>, resolver: Resolver): Map<String, String> {

@@ -1,0 +1,99 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Simple API
+paths:
+  /pets:
+    post:
+      parameters:
+        - name: CREATOR-ID
+          in: header
+          schema:
+            type: string
+          required: true
+      description: Creates a new pet in the store. Duplicates are allowed
+      requestBody:
+        description: Pet to add to the store
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewPet'
+      responses:
+        '201':
+          description: pet response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+    get:
+      description: Returns all pets from the system that the user has access to
+      parameters:
+        - name: tag
+          in: query
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: A list of pets of type
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pet'
+  /pets/{id}:
+    patch:
+      description: Updates a pet in the store with form data
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: CREATOR-ID
+          in: header
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewPet'
+      responses:
+        '200':
+          description: pet response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        name:
+          type: string
+        tag:
+          type: string
+        color:
+          type: string
+        id:
+          type: integer
+    NewPet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        tag:
+          type: string
+        color:
+          type: string

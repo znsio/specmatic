@@ -683,4 +683,105 @@ class LoadTestsFromExternalisedFiles {
             }
         }
     }
+
+    @Nested
+    inner class FillInTheBlankTests {
+        private val feature = OpenApiSpecification.fromFile(
+            "src/test/resources/openapi/simple_partial_non_partial_examples_with_dictionary/simple_pets.yaml"
+        ).toFeature().loadExternalisedExamples()
+
+        @Test
+        fun `should fill the blanks in partial POST request using values from the dictionary`() {
+            val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "POST" })
+
+            val results = filteredFeature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.toLogString())
+
+                    assertThat(request.headers["CREATOR-ID"]).isEqualTo("John")
+                    assertThat(request.body).isEqualTo(parsedJSONObject("""
+                    {
+                        "name": "Tom",
+                        "color": "black",
+                        "tag": "cat"
+                    }
+                    """.trimIndent()))
+
+                    return HttpResponse(
+                        status = 201, body = parsedJSONObject("""
+                        {
+                            "id": 1,
+                            "name": "Tom",
+                            "tag": "cat",
+                            "color": "black"
+                        }
+                        """.trimIndent())
+                    )
+                }
+            }).results
+
+            println(results.joinToString("\n\n") { it.reportString() })
+            assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(1)
+        }
+
+        @Test
+        fun `should be able to substitute values into query-params`() {
+            val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "GET" })
+
+            val results = filteredFeature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.toLogString())
+                    assertThat(request.queryParams.asValueMap()).isEqualTo(mapOf("tag" to StringValue("cat")))
+
+                    return HttpResponse(
+                        status = 200, body = JSONArrayValue(List(2) {
+                            parsedJSONObject("""
+                            {
+                                "id": 1,
+                                "name": "Tom",
+                                "tag": "cat"
+                            }
+                            """.trimIndent())
+                        })
+                    )
+                }
+            }).results
+
+            println(results.joinToString("\n\n") { it.reportString() })
+            assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(1)
+        }
+
+        @Test
+        fun `should only substitute pattern tokens and missing mandatory fields`() {
+            val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "PATCH" })
+
+            val results = filteredFeature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.toLogString())
+
+                    assertThat(request.path).isEqualTo("/pets/1")
+                    assertThat(request.headers["CREATOR-ID"]).isEqualTo("John")
+                    assertThat(request.body).isEqualTo(parsedJSONObject("""
+                    {
+                        "name": "Tom",
+                        "tag": "cat"
+                    }
+                    """.trimIndent()))
+
+                    return HttpResponse(
+                        status = 200, body = parsedJSONObject("""
+                        {
+                            "id": 1,
+                            "name": "Tom",
+                            "tag": "cat"
+                        }
+                        """.trimIndent())
+                    )
+                }
+            }).results
+
+            println(results.joinToString("\n\n") { it.reportString() })
+            assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(1)
+        }
+    }
 }

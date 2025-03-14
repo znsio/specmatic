@@ -1,0 +1,25 @@
+{
+  "partial": {
+    "http-request": {
+      "path": "/pets",
+      "method": "GET",
+      "query": {
+        "tag": "(string)"
+      }
+    },
+    "http-response": {
+      "status": 200,
+      "body": [
+        {
+          "id": "(number)",
+          "name": "(string)",
+          "tag": "(string)"
+        }
+      ],
+      "status-text": "OK",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    }
+  }
+}

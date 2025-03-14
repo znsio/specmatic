@@ -4,6 +4,7 @@ import io.specmatic.core.*
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONComposite
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.StringValue
 
 const val DEREFERENCE_PREFIX = "$"
 const val FILENAME_PREFIX = "@"
@@ -160,18 +161,17 @@ data class Row(
             withoutColumn.copy(requestBodyJSONExample = updatedJSONExample)
         } ?: withoutColumn
     }
-    
-    fun updateRequestIfExists(request: HttpRequest): Row {
-        val updatedColumnsNames = columnNames.toSet() + "(REQUEST-BODY)"
-        val updatedValues = values.mapIndexed { index, it ->
-            if (columnNames[index] != "(REQUEST-BODY)") return@mapIndexed it
-            request.body.toStringLiteral()
-        }
 
-        return this.copy(
+    fun updateRequest(request: HttpRequest): Row {
+        val headers = request.headers.mapValues { StringValue(it.value) }
+        val queryParams = request.queryParams.asValueMap()
+        val bodyEntry = mapOf("(REQUEST-BODY)" to request.body)
+
+        val cells = headers + queryParams + bodyEntry
+        return copy(
             requestExample = request,
-            columnNames = updatedColumnsNames.toList(),
-            values = updatedValues
+            columnNames = cells.keys.toList(),
+            values = cells.values.map { it.toStringLiteral() }
         )
     }
 }

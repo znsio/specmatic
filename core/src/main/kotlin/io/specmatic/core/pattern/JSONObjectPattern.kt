@@ -130,9 +130,9 @@ data class JSONObjectPattern(
         val jsonObject = value as? JSONObjectValue
             ?: return HasFailure("Can't generate object value from type ${value.displayableType()}")
 
-        return fillInTheBlanks(
+        return fill(
             jsonPatternMap = pattern, jsonValueMap = jsonObject.jsonObject,
-            typeAlias = this.typeAlias.orEmpty(), resolver = resolver
+            typeAlias = typeAlias.orEmpty(), resolver = resolver
         ).realise(
             hasValue = { valuesMap, _ -> HasValue(JSONObjectValue(valuesMap)) },
             orException = { e -> e.cast() }, orFailure = { f -> f.cast() }
@@ -554,7 +554,7 @@ fun fix(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, 
     .mapValues { (_, opt) -> opt.get() }
 }
 
-fun fillInTheBlanks(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, resolver: Resolver, typeAlias: String): ReturnValue<Map<String, Value>> {
+fun fill(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, resolver: Resolver, typeAlias: String): ReturnValue<Map<String, Value>> {
     val resolvedValuesMap = jsonValueMap.mapValues { (key, value) ->
         val pattern = jsonPatternMap[key] ?: jsonPatternMap["$key?"] ?: return@mapValues when(resolver.findKeyErrorCheck.unexpectedKeyCheck) {
             IgnoreUnexpectedKeys -> HasValue(value)

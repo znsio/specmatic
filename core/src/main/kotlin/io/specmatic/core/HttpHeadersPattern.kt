@@ -2,33 +2,8 @@ package io.specmatic.core
 
 import io.ktor.http.*
 import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.ExactValuePattern
-import io.specmatic.core.pattern.HasException
-import io.specmatic.core.pattern.HasFailure
-import io.specmatic.core.pattern.HasValue
-import io.specmatic.core.pattern.IgnoreUnexpectedKeys
-import io.specmatic.core.pattern.JSONObjectPattern
-import io.specmatic.core.pattern.NegativeNonStringlyPatterns
-import io.specmatic.core.pattern.Pattern
-import io.specmatic.core.pattern.ReturnValue
-import io.specmatic.core.pattern.Row
-import io.specmatic.core.pattern.allOrNothingCombinationIn
-import io.specmatic.core.pattern.attempt
-import io.specmatic.core.pattern.breadCrumb
-import io.specmatic.core.pattern.exception
-import io.specmatic.core.pattern.fix
-import io.specmatic.core.pattern.forEachKeyCombinationGivenRowIn
+import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.isOptional
-import io.specmatic.core.pattern.isPatternToken
-import io.specmatic.core.pattern.mapFold
-import io.specmatic.core.pattern.newBasedOn
-import io.specmatic.core.pattern.newMapBasedOn
-import io.specmatic.core.pattern.parsedValue
-import io.specmatic.core.pattern.resolvedHop
-import io.specmatic.core.pattern.returnValue
-import io.specmatic.core.pattern.returnValues
-import io.specmatic.core.pattern.withoutOptionality
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
@@ -443,7 +418,7 @@ data class HttpHeadersPattern(
             runCatching { pattern.parse(value, resolver) }.getOrDefault(StringValue(value))
         }
 
-        return fillInTheBlanks(
+        return fill(
             jsonPatternMap = pattern, jsonValueMap = headersValue,
             resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys),
             typeAlias = "($HEADERS_BREADCRUMB)"

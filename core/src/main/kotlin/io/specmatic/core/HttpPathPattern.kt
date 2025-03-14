@@ -291,15 +291,13 @@ data class HttpPathPattern(
         val generatedSegments = pathSegmentPatterns.zip(pathSegments).map { (urlPathPattern, token) ->
             val updatedResolver = resolver.updateLookupPath(PATH_BREAD_CRUMB, urlPathPattern.key.orEmpty())
             urlPathPattern.fillInTheBlanks(urlPathPattern.tryParse(token, updatedResolver), updatedResolver)
+        }.listFold()
+
+        return generatedSegments.ifValue { value ->
+            value.joinToString(separator = "/", prefix = "/".takeIf { pathHadPrefix }.orEmpty()) {
+                it.toStringLiteral()
+            }
         }
-
-        val failures = generatedSegments.filterIsInstance<ReturnFailure>()
-            .fold(emptyList<Failure>()) { acc, failure -> acc + failure.toFailure() }
-
-        return if (failures.isNotEmpty()) return HasFailure(Failure.fromFailures(failures))
-        else HasValue(generatedSegments.joinToString(separator = "/", prefix = "/".takeIf { pathHadPrefix }.orEmpty()) {
-            it.value.toStringLiteral()
-        })
     }
 }
 

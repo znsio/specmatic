@@ -51,7 +51,7 @@ fun <ValueType> List<ReturnValue<ValueType>>.listFold(): ReturnValue<List<ValueT
     val initial: ReturnValue<List<ValueType>> = HasValue(emptyList())
 
     return this.fold(initial) { accR: ReturnValue<List<ValueType>>, valueR: ReturnValue<ValueType> ->
-        accR.assimilate(valueR) { acc, value ->
+        accR.combine(valueR) { acc, value ->
             acc.plus(value)
         }
     }

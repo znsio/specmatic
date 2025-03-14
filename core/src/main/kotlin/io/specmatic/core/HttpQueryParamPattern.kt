@@ -228,7 +228,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
             runCatching { pattern.parse(value.toStringLiteral(), resolver) }.getOrDefault(value)
         }
 
-        return fillInTheBlanks(
+        return fill(
             jsonPatternMap = queryPatterns, jsonValueMap = parsedQueryParams,
             resolver = updatedResolver, typeAlias = "($QUERY_PARAMS_BREADCRUMB)"
         ).realise(

@@ -566,6 +566,8 @@ fun fill(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>,
         pattern.fillInTheBlanks(value, updatedResolver).breadCrumb(key)
     }.mapFold()
 
+    if (resolver.isNegative) return resolvedValuesMap
+
     val missingKeysToPattern = jsonPatternMap.filterKeys { !isOptional(it) && it !in jsonValueMap }
     val generatedValuesMap = missingKeysToPattern.mapValues { (key, pattern) ->
         runCatching {

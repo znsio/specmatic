@@ -12,6 +12,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.assertThrows
 import java.util.function.Consumer
 import kotlin.collections.HashMap
 
@@ -712,5 +713,60 @@ internal class HttpHeadersPatternTest {
             assertThat(fixedValue).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
         }
     }
-}
 
+    @Nested
+    inner class FillInTheBlanksTests {
+        @Test
+        fun `should generate values for missing mandatory keys and pattern tokens`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val headers = mapOf("number" to "(number)")
+            val dictionary = mapOf(
+                "HEADERS.number" to NumberValue(999), "HEADERS.boolean" to BooleanValue(true)
+            )
+            val filledHeaders = httpHeaders.fillInTheBlanks(headers, Resolver(dictionary = dictionary)).value
+
+            assertThat(filledHeaders).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
+        }
+
+        @Test
+        fun `should not generate missing optional keys`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean?" to BooleanPattern()))
+            val headers = mapOf("number" to "999")
+            val dictionary = mapOf(
+                "HEADERS.number" to NumberValue(999), "HEADERS.boolean" to BooleanValue(true)
+            )
+            val filledHeaders = httpHeaders.fillInTheBlanks(headers, Resolver(dictionary = dictionary)).value
+
+            assertThat(filledHeaders).isEqualTo(mapOf("number" to "999"))
+        }
+
+        @Test
+        fun `should handle any-value pattern token as a special case`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val headers = mapOf("number" to "(anyvalue)")
+            val dictionary = mapOf(
+                "HEADERS.number" to NumberValue(999), "HEADERS.boolean" to BooleanValue(true)
+            )
+            val filledHeaders = httpHeaders.fillInTheBlanks(headers, Resolver(dictionary = dictionary)).value
+
+            assertThat(filledHeaders).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
+        }
+
+        @Test
+        fun `should complain when pattern-token does not match the underlying pattern`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val headers = mapOf("number" to "(string)")
+            val dictionary = mapOf(
+                "HEADERS.number" to NumberValue(999), "HEADERS.boolean" to BooleanValue(true)
+            )
+            val exception = assertThrows<ContractException> {
+                httpHeaders.fillInTheBlanks(headers, Resolver(dictionary = dictionary)).value
+            }
+
+            assertThat(exception.failure().reportString()).isEqualToNormalizingWhitespace("""
+            >> number
+            Expected number, actual was string
+            """.trimIndent())
+        }
+    }
+}

@@ -79,12 +79,10 @@ interface Pattern {
     }
 
     fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        val resolvedValue = if (value is StringValue && value.isPatternToken()) {
-            runCatching {
-                val patternToGenerate = resolver.getPattern(value.string).takeUnless { it is AnyValuePattern } ?: this
-                resolver.generate(patternToGenerate)
-            }.getOrElse { e -> return HasException(e) }
-        } else value
+        val resolvedValue = when(val tokenValue = generateIfPatternToken(value, resolver)) {
+            is ReturnFailure -> return tokenValue.cast()
+            else -> tokenValue.value
+        }
 
         val result = matches(resolvedValue, resolver)
         return if (result is Result.Failure && !resolver.isNegative) {
@@ -102,6 +100,21 @@ interface Pattern {
 
     fun fixValue(value: Value, resolver: Resolver): Value {
         return value.takeIf { resolver.matchesPattern(null, this, value).isSuccess() } ?: resolver.generate(this)
+    }
+
+    private fun generateIfPatternToken(tokenValue: Value, resolver: Resolver): ReturnValue<Value> {
+        if (tokenValue !is StringValue || !tokenValue.isPatternToken()) return HasValue(tokenValue)
+
+        val effectivePattern = runCatching {
+            val pattern = resolver.getPattern(tokenValue.string)
+            if (pattern is AnyValuePattern) return@runCatching HasValue(this)
+            encompasses(pattern, resolver, resolver).toReturnValue(pattern)
+        }.getOrElse(::HasException)
+
+        return effectivePattern.realise(
+            hasValue = { pattern, _ -> HasValue(resolver.generate(pattern)) },
+            orFailure = { f -> f.cast() }, orException = { e -> e.cast() }
+        )
     }
 
     val typeAlias: String?

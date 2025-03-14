@@ -162,16 +162,14 @@ data class Row(
         } ?: withoutColumn
     }
 
-    fun updateRequest(request: HttpRequest): Row {
-        val headers = request.headers.mapValues { StringValue(it.value) }
-        val queryParams = request.queryParams.asValueMap()
-        val bodyEntry = mapOf("(REQUEST-BODY)" to request.body)
+    fun updateRequest(request: HttpRequest, requestPattern: HttpRequestPattern, resolver: Resolver): Row {
+        val path = requestPattern.httpPathPattern?.extractPathParams(request.path.orEmpty(), resolver).orEmpty()
+        val headers = request.headers
+        val queryParams = request.queryParams.asValueMap().mapValues { it.value.toStringLiteral() }
+        val bodyEntry = if (request.body !is NoBodyValue) {
+            mapOf("(REQUEST-BODY)" to request.body.toStringLiteral())
+        } else emptyMap()
 
-        val cells = headers + queryParams + bodyEntry
-        return copy(
-            requestExample = request,
-            columnNames = cells.keys.toList(),
-            values = cells.values.map { it.toStringLiteral() }
-        )
+        return this.addFields(path + headers + queryParams + bodyEntry).copy(requestExample = request)
     }
 }

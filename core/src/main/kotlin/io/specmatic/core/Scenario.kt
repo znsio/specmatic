@@ -472,7 +472,7 @@ data class Scenario(
             if (resolved.requestExample == null) return@mapCatching resolved
             val updatedResolver = resolver.copy(isNegative = resolver.isNegative || httpResponsePattern.status in invalidRequestStatuses)
             val resolvedRequest = httpRequestPattern.fillInTheBlanks(resolved.requestExample, updatedResolver)
-            resolved.updateRequest(resolvedRequest)
+            resolved.updateRequest(resolvedRequest, httpRequestPattern, resolver)
         }.map(::HasValue).getOrElse { e ->
             when(e) {
                 is ContractException -> HasFailure(e.failure(), message = row.name)

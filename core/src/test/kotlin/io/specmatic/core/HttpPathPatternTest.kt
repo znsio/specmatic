@@ -8,9 +8,11 @@ import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import io.specmatic.core.pattern.*
+import io.specmatic.core.value.BooleanValue
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.assertThrows
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
@@ -316,7 +318,7 @@ internal class HttpPathPatternTest {
             val urlPattern = buildHttpPathPattern("/pets/(id:number)")
             val invalidPath = "/pets/abc"
 
-            val dictionary = mapOf("PATH.id" to NumberValue(999))
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999))
             val fixedPath = urlPattern.fixValue(invalidPath, Resolver(dictionary = dictionary))
             println(fixedPath)
 
@@ -326,7 +328,7 @@ internal class HttpPathPatternTest {
         @Test
         fun `should only add the prefix if the path already had it`() {
             val urlPattern = buildHttpPathPattern("/pets/(id:number)")
-            val dictionary = mapOf("PATH.id" to NumberValue(999))
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999))
             val resolver = Resolver(dictionary = dictionary)
 
             val prefixedPath = "/pets/abc"
@@ -343,7 +345,7 @@ internal class HttpPathPatternTest {
         @Test
         fun `should retain pattern token if it matches when resolver is in mock mode`() {
             val urlPattern = buildHttpPathPattern("/pets/(id:number)")
-            val dictionary = mapOf("PATH.id" to NumberValue(999))
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999))
             val resolver = Resolver(dictionary = dictionary, mockMode = true)
             val validValue = "/pets/(number)"
 
@@ -355,7 +357,7 @@ internal class HttpPathPatternTest {
         @Test
         fun `should generate value when pattern token does not match when resolver is in mock mode`() {
             val urlPattern = buildHttpPathPattern("/pets/(id:number)")
-            val dictionary = mapOf("PATH.id" to NumberValue(999))
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999))
             val resolver = Resolver(dictionary = dictionary, mockMode = true)
             val validValue = "/pets/(string)"
 
@@ -367,13 +369,81 @@ internal class HttpPathPatternTest {
         @Test
         fun `should generate values even if pattern token matches but resolver is not in mock mode`() {
             val urlPattern = buildHttpPathPattern("/pets/(id:number)")
-            val dictionary = mapOf("PATH.id" to NumberValue(999))
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999))
             val resolver = Resolver(dictionary = dictionary)
             val validValue = "/pets/(number)"
 
             val fixedPath = urlPattern.fixValue(validValue, resolver)
             println(fixedPath)
             assertThat(fixedPath).isEqualTo("/pets/999")
+        }
+
+        @Test
+        fun `should work when pattern-token contains key`() {
+            val urlPattern = buildHttpPathPattern("/pets/(id:number)")
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999))
+            val resolver = Resolver(dictionary = dictionary)
+            val validValue = "/pets/(id:number)"
+
+            val fixedPath = urlPattern.fixValue(validValue, resolver)
+            println(fixedPath)
+            assertThat(fixedPath).isEqualTo("/pets/999")
+        }
+    }
+
+    @Nested
+    inner class FillInTheBlanksTests {
+        @Test
+        fun `should generate values for missing mandatory keys and pattern tokens`() {
+            val pathPattern = buildHttpPathPattern("/pets/(id:number)/owners/(flag:boolean)")
+            val path = "/pets/(number)/owners/(boolean)"
+            val dictionary = mapOf(
+                "PATH-PARAMS.id" to NumberValue(999), "PATH-PARAMS.flag" to BooleanValue(true)
+            )
+            val filledPath = pathPattern.fillInTheBlanks(path, Resolver(dictionary = dictionary)).value
+
+            assertThat(filledPath).isEqualTo("/pets/999/owners/true")
+        }
+
+        @Test
+        fun `should handle any-value pattern token as a special case`() {
+            val pathPattern = buildHttpPathPattern("/pets/(id:number)/owners/(flag:boolean)")
+            val path = "/pets/(anyvalue)/owners/(boolean)"
+            val dictionary = mapOf(
+                "PATH-PARAMS.id" to NumberValue(999), "PATH-PARAMS.flag" to BooleanValue(true)
+            )
+            val filledPath = pathPattern.fillInTheBlanks(path, Resolver(dictionary = dictionary)).value
+
+            assertThat(filledPath).isEqualTo("/pets/999/owners/true")
+        }
+
+        @Test
+        fun `should complain when pattern-token does not match the underlying pattern`() {
+            val pathPattern = buildHttpPathPattern("/pets/(id:number)/owners/(flag:boolean)")
+            val path = "/pets/(string)/owners/(boolean)"
+            val dictionary = mapOf(
+                "PATH-PARAMS.id" to NumberValue(999), "PATH-PARAMS.flag" to BooleanValue(true)
+            )
+            val exception = assertThrows<ContractException> {
+                pathPattern.fillInTheBlanks(path, Resolver(dictionary = dictionary)).value
+            }
+
+            assertThat(exception.failure().reportString()).isEqualToNormalizingWhitespace("""
+            >> id
+            Expected number, actual was string
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should work when pattern-token contains key`() {
+            val pathPattern = buildHttpPathPattern("/pets/(id:number)/owners/(flag:boolean)")
+            val path = "/pets/(id:number)/owners/(flag:boolean)"
+            val dictionary = mapOf(
+                "PATH-PARAMS.id" to NumberValue(999), "PATH-PARAMS.flag" to BooleanValue(true)
+            )
+            val filledPath = pathPattern.fillInTheBlanks(path, Resolver(dictionary = dictionary)).value
+
+            assertThat(filledPath).isEqualTo("/pets/999/owners/true")
         }
     }
 }

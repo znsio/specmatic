@@ -269,12 +269,12 @@ data class HttpPathPattern(
     fun fixValue(path: String?, resolver: Resolver): String {
         if (path == null) return this.generate(resolver)
 
-        val pathSegments = path.split("/".toRegex()).filter { it.isNotEmpty() }.toTypedArray()
+        val pathSegments = path.split("/".toRegex()).filter { it.isNotEmpty() }.map(::removeKeyFromParameterToken)
         if (pathSegmentPatterns.size != pathSegments.size) return this.generate(resolver)
 
         val pathHadPrefix = path.startsWith("/")
         return pathSegmentPatterns.zip(pathSegments).map { (urlPathPattern, token) ->
-            val updatedResolver = resolver.updateLookupPath(PATH_BREAD_CRUMB, urlPathPattern.key.orEmpty())
+            val updatedResolver = resolver.updateLookupPath("PATH-PARAMS", urlPathPattern.key.orEmpty())
             urlPathPattern.fixValue(urlPathPattern.tryParse(token, updatedResolver), updatedResolver)
         }.joinToString("/", prefix = "/".takeIf { pathHadPrefix }.orEmpty() )
     }
@@ -282,15 +282,15 @@ data class HttpPathPattern(
     fun fillInTheBlanks(path: String?, resolver: Resolver): ReturnValue<String> {
         if (path == null) return HasFailure("Path cannot be null")
 
-        val pathSegments = path.split("/").filter { it.isNotEmpty() }
+        val pathSegments = path.split("/").filter { it.isNotEmpty() }.map(::removeKeyFromParameterToken)
         if (pathSegmentPatterns.size != pathSegments.size) {
             return HasFailure("Expected ${pathSegmentPatterns.size} path segments but got ${pathSegments.size}")
         }
 
         val pathHadPrefix = path.startsWith("/")
         val generatedSegments = pathSegmentPatterns.zip(pathSegments).map { (urlPathPattern, token) ->
-            val updatedResolver = resolver.updateLookupPath(PATH_BREAD_CRUMB, urlPathPattern.key.orEmpty())
-            urlPathPattern.fillInTheBlanks(urlPathPattern.tryParse(token, updatedResolver), updatedResolver)
+            val updatedResolver = resolver.updateLookupPath("PATH-PARAMS", urlPathPattern.key.orEmpty())
+            urlPathPattern.fillInTheBlanks(urlPathPattern.tryParse(token, updatedResolver), updatedResolver).breadCrumb(urlPathPattern.key)
         }.listFold()
 
         return generatedSegments.ifValue { value ->
@@ -298,6 +298,12 @@ data class HttpPathPattern(
                 it.toStringLiteral()
             }
         }
+    }
+
+    private fun removeKeyFromParameterToken(token: String): String {
+        if (!isPatternToken(token) || !token.contains(":")) return token
+        val patternType = withoutPatternDelimiters(token).split(":").last()
+        return withPatternDelimiters(patternType)
     }
 }
 

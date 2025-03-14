@@ -18,3 +18,5 @@ perfiz/*_data
 **/*.hprof
 .scannerwork
 .java-version
+gen-kt
+gen-resources

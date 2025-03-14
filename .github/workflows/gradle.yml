@@ -1,10 +1,10 @@
-name: CI Build
+name: Java Build with Gradle
 
 on:
   push:
-    branches: [ main, spring-issues ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -12,69 +12,19 @@ jobs:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
-
+    permissions:
+      contents: write # This is required so that the dependency check can push dependency graph to the github repository
     steps:
-    - uses: actions/checkout@v4
+      - uses: znsio/specmatic-github-workflows/action-build-gradle@main
+        with:
+          gradle-extra-args: -Pgithub.actor=${{ secrets.SPECMATIC_GITHUB_USER }} -Pgithub.token=${{ secrets.SPECMATIC_GITHUB_TOKEN }}
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-
-    # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
-    # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@94baf225fe0a508e581a564467443d0e2379123b # v4.3.0
-
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-
-    - name: Build with Gradle
-      run: |
-        ./gradlew clean
-        git clean -fd
-        ./gradlew build
-
-    - name: Fail if slf4j is found in the log
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        set +e
-        java -jar application/build/libs/specmatic.jar --version 2>&1 | grep -i slf4j
-        
-        if [ $? -eq 0 ]
-        then
-          exit 1
-        fi
-
-    - name: Upload build artifacts
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: Build artifacts ${{ matrix.os }}
-        path: |
-          */build/libs/*
-          */build/distributions/*.zip
-          !*/build/libs/*javadoc*
-          !*/build/libs/*sources*
-
-    - name: Upload core Gradle Log
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: Gradle core build Log on ${{ matrix.os }}
-        path: core/build/reports/
-
-    - name: Upload junit5-support Gradle Log
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: Gradle junit5-support build Log on ${{ matrix.os }}
-        path: junit5-support/build/reports/
-
-    - name: Upload application Gradle Log
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: Gradle application build Log on ${{ matrix.os }}
-        path: application/build/reports/
+      - name: Fail if slf4j is found in the log
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          java -jar application/build/libs/application-*-all-unobfuscated.jar --version 2>&1 | grep -i slf4j
+          
+          if [ $? -eq 0 ]
+          then
+            exit 1
+          fi

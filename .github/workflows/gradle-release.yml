@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release version (from gradle.properties, without -SNAPSHOT)'
+        required: true
+      next_version:
+        description: 'Next version (Ensure to add -SNAPSHOT)'
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create secrets file
+        run: |
+          echo "" > ~/.specmatic-secrets
+          echo "export ORG_GRADLE_PROJECT_signingInMemoryKey='${{ secrets.SPECMATIC_GPG_PRIVATE_KEY }}'" >> ~/.specmatic-secrets
+          echo "export ORG_GRADLE_PROJECT_signingInMemoryKeyId='${{ secrets.SPECMATIC_GPG_KEY_ID }}'" >> ~/.specmatic-secrets
+          echo "export ORG_GRADLE_PROJECT_signingInMemoryKeyPassword='${{ secrets.SPECMATIC_GPG_PRIVATE_KEY_PASSPHRASE }}'" >> ~/.specmatic-secrets
+          echo "export ORG_GRADLE_PROJECT_specmaticPrivateUsername='${{ secrets.SPECMATIC_GITHUB_USER }}'" >> ~/.specmatic-secrets
+          echo "export ORG_GRADLE_PROJECT_specmaticPrivatePassword='${{ secrets.SPECMATIC_GITHUB_TOKEN }}'" >> ~/.specmatic-secrets
+
+      - name: Docker Login
+        run: echo ${{ secrets.SPECMATIC_DOCKER_HUB_TOKEN }} | docker login -u ${{ secrets.SPECMATIC_DOCKER_HUB_USERNAME }} --password-stdin
+
+      - uses: znsio/specmatic-github-workflows/action-gradle-post-build@main
+        with:
+          gradle-extra-env-file: ~/.specmatic-secrets
+          download-artifact-github-token: ${{ secrets.GITHUB_TOKEN }}
+          gradle-extra-args: >
+            release
+            -Prelease.useAutomaticVersion=true
+            -Prelease.releaseVersion=${{ github.event.inputs.release_version }}
+            -Prelease.newVersion=${{ github.event.inputs.next_version }}
+            -Pgithub.actor=${{ secrets.SPECMATIC_GITHUB_USER }} 
+            -Pgithub.token=${{ secrets.SPECMATIC_GITHUB_TOKEN }}
+            -PspecmaticPrivateUsername=${{ secrets.SPECMATIC_GITHUB_USER }}
+            -PspecmaticPrivatePassword=${{ secrets.SPECMATIC_GITHUB_TOKEN }}
+          pre-gradle-command:  |
+            git config --local user.email "github-service-account@specmatic.io"
+            git config --local user.name "Specmatic GitHub Service Account"
+            git clean -fd

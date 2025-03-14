@@ -47,7 +47,7 @@ To build the docker image, run the following command to create fat jar.
 
 ```./gradlew clean build```
 
-Create docker image with appropriate tag. Please keep version consistent with the version.properties file.
+Create docker image with appropriate tag. Please keep version consistent with the gradle.properties file.
 
 ```docker build --no-cache -t znsio/specmatic:<version> .```
 
@@ -75,4 +75,3 @@ This is an optional section and required for advanced scenarios to debug memory 
 2.  To monitor the above metrics in Grafana setup [Perfiz](https://github.com/znsio/perfiz#detailed-tutorial) (Steps 1 and 2)
 3.  Run ```$PERFIZ_HOME/perfiz.sh start``` and navigate to localhost:3000 to view Grafana Dashboard
 4.  Run ```$PERFIZ_HOME/perfiz.sh stop``` to stop Grafana and other Docker Containers
-

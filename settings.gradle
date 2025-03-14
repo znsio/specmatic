@@ -1,5 +1,0 @@
-rootProject.name = 'specmatic'
-
-include 'application'
-include 'core'
-include 'junit5-support'

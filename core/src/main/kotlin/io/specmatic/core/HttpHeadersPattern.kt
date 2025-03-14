@@ -247,7 +247,9 @@ data class HttpHeadersPattern(
             val regeneratedContentType = contentTypePattern.generate(resolver).toStringLiteral()
 
             if (generatedContentType == regeneratedContentType) {
-                if (generatedContentType != contentType) logContentTypeAndPatternMismatchWarning()
+                if (generatedContentType != contentType && contentType != null) {
+                    logContentTypeAndPatternMismatchWarning()
+                }
                 return generatedHeaders
             }
         }

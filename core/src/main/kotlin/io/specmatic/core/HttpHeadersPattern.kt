@@ -241,40 +241,38 @@ data class HttpHeadersPattern(
             }
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
 
-        val contentTypePattern = contentTypeInPattern() ?: return addContentTypeIfExists(generatedHeaders)
-        val generatedContentType = generatedHeaders[CONTENT_TYPE] ?: return addContentTypeIfExists(generatedHeaders)
-
-        if (!contentTypeInPatternIsConst(contentTypePattern, generatedContentType, resolver))
-            return addContentTypeIfExists(generatedHeaders)
+        // use content-type as an override if it's there
+        // if it doesn't match media type warn
+        // if it's random, it may as well not be there
 
         if(contentType == null)
             return generatedHeaders
 
-        if (generatedContentType != contentType) {
+        val generatedContentTypeValue = generatedHeaders[CONTENT_TYPE] ?: return generatedHeaders.withMediaType()
+
+        if (!contentTypeHeaderIsConst(generatedContentTypeValue, resolver))
+            return generatedHeaders.withMediaType()
+
+        if (generatedContentTypeValue != contentType) {
             logContentTypeAndPatternMismatchWarning()
         }
 
         return generatedHeaders
     }
 
-    private fun contentTypeInPatternIsConst(
-        contentTypePattern: Pattern,
+    private fun contentTypeHeaderIsConst(
         generatedContentType: String,
         resolver: Resolver,
     ): Boolean {
+        val contentTypePattern: Pattern = pattern[CONTENT_TYPE] ?: pattern["${CONTENT_TYPE}?"] ?: return false
         val regeneratedContentType = contentTypePattern.generate(resolver).toStringLiteral()
         return generatedContentType == regeneratedContentType
     }
 
-    private fun addContentTypeIfExists(
-        generatedHeaders: Map<String, String>,
+    private fun Map<String, String>.withMediaType(
     ): Map<String, String> {
-        if (contentType.isNullOrBlank()) return generatedHeaders
-        return generatedHeaders.plus(CONTENT_TYPE to contentType)
-    }
-
-    private fun contentTypeInPattern(): Pattern? {
-        return pattern[CONTENT_TYPE] ?: pattern["${CONTENT_TYPE}?"]
+        if (contentType.isNullOrBlank()) return this
+        return this.plus(CONTENT_TYPE to contentType)
     }
 
     private fun toStringLiteral(headerValue: Value) = when (headerValue) {

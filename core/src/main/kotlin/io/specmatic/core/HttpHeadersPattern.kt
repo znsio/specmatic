@@ -87,7 +87,6 @@ data class HttpHeadersPattern(
         val isContentTypeNotAsPerPattern = isContentTypeAsPerPattern(contentTypePattern, resolver).not()
 
         if (contentTypePattern != null && isContentTypeNotAsPerPattern) {
-            if(contentType != null) logContentTypeAndPatternMismatchWarning()
             val contentTypeMatchResult = contentTypePattern.matches(
                 parsedValue(contentTypeHeaderValueFromRequest),
                 resolver
@@ -248,10 +247,6 @@ data class HttpHeadersPattern(
 
         if (!contentTypeHeaderIsConst(generatedContentTypeValue, resolver))
             return generatedHeaders.withMediaType()
-
-        if (generatedContentTypeValue != contentType) {
-            logContentTypeAndPatternMismatchWarning()
-        }
 
         return generatedHeaders
     }
@@ -501,9 +496,10 @@ data class HttpHeadersPattern(
         return fixedHeaders.mapValues { it.value.toStringLiteral() }
     }
 
-    private fun logContentTypeAndPatternMismatchWarning() {
-        logger.log("WARNING: The content type schema specified in the specification does not match the media type $contentType")
-    }
+}
+
+internal fun logContentTypeAndPatternMismatchWarning(contentType: String) {
+    logger.log("WARNING: The content type schema specified in the specification does not match the media type $contentType")
 }
 
 private fun parseOrString(pattern: Pattern, sampleValue: String, resolver: Resolver) =

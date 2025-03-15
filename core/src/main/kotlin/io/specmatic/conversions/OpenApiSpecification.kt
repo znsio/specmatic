@@ -966,6 +966,8 @@ class OpenApiSpecification(
             toSpecmaticParamName(it.required != true, it.name) to toSpecmaticPattern(it.schema, emptyList())
         }
 
+        val contentTypeHeaderPattern = headersMap.entries.find { it.key.lowercase() in listOf("content-type", "content-type?") }?.value
+
         val headersPattern = HttpHeadersPattern(headersMap)
         val requestPattern = HttpRequestPattern(
             httpPathPattern = httpPathPattern,
@@ -1053,6 +1055,25 @@ class OpenApiSpecification(
                 )
 
                 else -> {
+                    if(contentTypeHeaderPattern != null) {
+                        val concretePattern = when(contentTypeHeaderPattern) {
+                            is DeferredPattern -> { contentTypeHeaderPattern }
+                            else -> contentTypeHeaderPattern
+                        }
+
+                        try {
+                            val generated1 = concretePattern.generate(Resolver()).toStringLiteral()
+                            val generated2 = concretePattern.generate(Resolver()).toStringLiteral()
+
+                            if (generated1 == generated2 && generated1 != contentType) {
+                                val requestDescriptor = "${httpMethod} ${httpPathPattern.path}"
+                                logger.log("WARNING: The content type header schema does not match the media type $contentType in $requestDescriptor")
+                            }
+                        } catch(e: ContractException) {
+                            // if an exception was thrown, we probably can't do the validation
+                        }
+                    }
+
                     val examplesFromMediaType = mediaType.examples ?: emptyMap()
 
                     val exampleBodies: Map<String, String?> = examplesFromMediaType.mapValues {

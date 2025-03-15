@@ -82,10 +82,11 @@ data class HttpPathPattern(
 
         val finalMatchResult = Result.fromResults(failures)
 
-        return if(failures.any { it.failureReason == FailureReason.URLPathMisMatch })
-            finalMatchResult.withFailureReason(FailureReason.URLPathMisMatch)
-        else
-            finalMatchResult
+        val failureReason = if (structureMatches(path, resolver)) {
+            FailureReason.URLPathMismatchButSameStructure
+        } else FailureReason.URLPathMisMatch
+
+        return finalMatchResult.withFailureReason(failureReason)
     }
 
     fun generate(resolver: Resolver): String {
@@ -304,6 +305,20 @@ data class HttpPathPattern(
         if (!isPatternToken(token) || !token.contains(":")) return token
         val patternType = withoutPatternDelimiters(token).split(":").last()
         return withPatternDelimiters(patternType)
+    }
+
+    private fun structureMatches(path: String, resolver: Resolver): Boolean {
+        val pathSegments = path.split("/").filter(String::isNotEmpty)
+        if (pathSegments.size != pathSegmentPatterns.size) return false
+
+        pathSegmentPatterns.zip(pathSegments).forEach { (pattern, segment) ->
+            if (pattern.pattern !is ExactValuePattern && pattern.key != null) return@forEach
+            val parsedSegment = pattern.tryParse(segment, resolver)
+            val result = pattern.matches(parsedSegment, resolver)
+            if (result is Failure) return false
+        }
+
+        return true
     }
 }
 

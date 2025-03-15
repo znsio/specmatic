@@ -13,11 +13,47 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
 
 internal class HttpPathPatternTest {
+
+    @ParameterizedTest
+    @CsvSource(
+        "/pets/(id:number), /pets/abc",
+        "/customers/(customerId:number)/profile, /customers/abc/profile",
+        "/(apiVersion:number), /abc",
+        "/(apiVersion:number)/api, /abc/api",
+        "/(apiVersion:number)/api/(id:number), /abc/api/abc",
+    )
+    fun `failure reason should contain structure match when structure matches`(pathPattern: String, path: String) {
+        val pattern = buildHttpPathPattern(pathPattern)
+        val result = pattern.matches(URI(path), Resolver())
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat((result as Result.Failure).failureReason).isEqualTo(FailureReason.URLPathMismatchButSameStructure)
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "/pets/(id:number), /pets/123/123",
+        "/customers/(customerId:number)/profile, /123/customers/123/profile",
+        "/(apiVersion:number), /123/abc",
+        "/(apiVersion:number)/api, /api",
+        "/(apiVersion:number)/api/(id:number), /123/api",
+        "/user/profile/(id:number), /user/profile/",
+    )
+    fun `failure reason should not contain structure match when structure does not match`(pathPattern: String, path: String) {
+        val pattern = buildHttpPathPattern(pathPattern)
+        val result = pattern.matches(URI(path), Resolver())
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat((result as Result.Failure).failureReason).isEqualTo(FailureReason.URLPathMisMatch)
+    }
+
     @Test
     @Throws(URISyntaxException::class, UnsupportedEncodingException::class)
     fun `should not match url when number of path parts do not match`() {
@@ -230,7 +266,7 @@ internal class HttpPathPatternTest {
         val pattern = buildHttpPathPattern("/pets/(petid:number)/file/(fileid:number)")
         val mismatchResult = pattern.matches(URI("/pets/abc/file/def")) as Result.Failure
 
-        assertThat(mismatchResult.failureReason).isNotEqualTo(FailureReason.URLPathMisMatch)
+        assertThat(mismatchResult.failureReason).isEqualTo(FailureReason.URLPathMismatchButSameStructure)
         assertThat(mismatchResult.reportString())
             .contains("PATH.petid")
             .contains("PATH.fileid")

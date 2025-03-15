@@ -241,10 +241,6 @@ data class HttpHeadersPattern(
             }
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
 
-        // use content-type as an override if it's there
-        // if it doesn't match media type warn
-        // if it's random, it may as well not be there
-
         if(contentType == null)
             return generatedHeaders
 

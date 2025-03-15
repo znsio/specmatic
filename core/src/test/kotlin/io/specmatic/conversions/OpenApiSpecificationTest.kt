@@ -10234,6 +10234,79 @@ paths:
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 
+    @Test
+    fun `should detect content type headers that conflict with media type at parse time`() {
+        val spec = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Add a new product
+                  parameters:
+                    - in: header
+                      name: Content-Type
+                      schema:
+                        type: string
+                        enum:
+                        - application/json; charset=utf-8
+                      required: true
+                      description: Unneeded content type
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ProductDetails'
+                  responses:
+                    '201':
+                      description: Product created successfully
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Product'
+            components:
+              schemas:
+                ProductId:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: integer
+                ProductDetails:
+                  type: object
+                  required:
+                    - name
+                    - price
+                    - category
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    category:
+                      type: string
+                      enum:
+                        - Electronics
+                        - Clothing
+                        - Books
+                Product:
+                  allOf:
+                    - ${"$"}ref: '#/components/schemas/ProductId'
+                    - ${"$"}ref: '#/components/schemas/ProductDetails'
+
+        """.trimIndent()
+
+        val (output, _) = captureStandardOutput {
+            OpenApiSpecification.fromYAML(spec, "").toFeature()
+        }
+
+        assertThat(output).contains("WARNING: The content type header schema does not match the media type application/json in POST /products")
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

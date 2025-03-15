@@ -433,7 +433,7 @@ class OpenApiSpecification(
                     val httpRequestPatterns: List<RequestPatternsData> =
                         attempt("In $httpMethod $openApiPath request") {
                             toHttpRequestPatterns(
-                                specmaticPathParam, specmaticQueryParam, httpMethod, operation
+                                specmaticPathParam, specmaticQueryParam, httpMethod, operation, parsedOpenApi.components?.schemas.orEmpty()
                             )
                         }
 
@@ -938,7 +938,8 @@ class OpenApiSpecification(
         httpPathPattern: HttpPathPattern,
         httpQueryParamPattern: HttpQueryParamPattern,
         httpMethod: String,
-        operation: Operation
+        operation: Operation,
+        schemas: Map<String, Schema<Any>>
     ): List<RequestPatternsData> {
         logger.debug("Processing requests for $httpMethod")
 
@@ -1056,22 +1057,7 @@ class OpenApiSpecification(
 
                 else -> {
                     if(contentTypeHeaderPattern != null) {
-                        val concretePattern = when(contentTypeHeaderPattern) {
-                            is DeferredPattern -> { contentTypeHeaderPattern }
-                            else -> contentTypeHeaderPattern
-                        }
-
-                        try {
-                            val generated1 = concretePattern.generate(Resolver()).toStringLiteral()
-                            val generated2 = concretePattern.generate(Resolver()).toStringLiteral()
-
-                            if (generated1 == generated2 && generated1 != contentType) {
-                                val requestDescriptor = "${httpMethod} ${httpPathPattern.path}"
-                                logger.log("WARNING: The content type header schema does not match the media type $contentType in $requestDescriptor")
-                            }
-                        } catch(e: ContractException) {
-                            // if an exception was thrown, we probably can't do the validation
-                        }
+                        validateContentTypeHeader(contentTypeHeaderPattern, contentType, httpMethod, httpPathPattern, schemas)
                     }
 
                     val examplesFromMediaType = mediaType.examples ?: emptyMap()
@@ -1103,6 +1089,37 @@ class OpenApiSpecification(
                     )
                 }
             }.let { RequestPatternsData(it.first, it.second, Pair(contentType, mediaType)) }
+        }
+    }
+
+    private fun validateContentTypeHeader(
+        contentTypeHeaderPattern: Pattern,
+        contentType: String?,
+        httpMethod: String,
+        httpPathPattern: HttpPathPattern,
+        schemas: Map<String, Schema<Any>>,
+    ) {
+        val concretePattern = when (contentTypeHeaderPattern) {
+            is DeferredPattern -> {
+                val schemaPath = withoutPatternDelimiters(contentTypeHeaderPattern.pattern)
+                val componentName = schemaPath.split("/").lastOrNull() ?: return
+                val schema = schemas[componentName] ?: return
+                val pattern = toSpecmaticPattern(schema, listOf(componentName), componentName, false)
+                return validateContentTypeHeader(pattern, contentType, httpMethod, httpPathPattern, schemas)
+            }
+            else -> contentTypeHeaderPattern
+        }
+
+        try {
+            val generated1 = concretePattern.generate(Resolver()).toStringLiteral()
+            val generated2 = concretePattern.generate(Resolver()).toStringLiteral()
+
+            if (generated1 == generated2 && generated1 != contentType) {
+                val requestDescriptor = "${httpMethod} ${httpPathPattern.path}"
+                logger.log("WARNING: The content type header schema does not match the media type $contentType in $requestDescriptor")
+            }
+        } catch (e: ContractException) {
+            // if an exception was thrown, we probably can't do the validation
         }
     }
 

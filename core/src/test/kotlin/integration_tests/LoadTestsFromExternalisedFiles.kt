@@ -636,7 +636,7 @@ class LoadTestsFromExternalisedFiles {
                 assertThat(failure.reportString()).containsIgnoringWhitespaces("""
                 >> REQUEST.BODY.name
                 Contract expected string but found value 10 (number)
-                >> REQUEST.BODY.tag
+                >> REQUEST.BODY.tag[0]
                 Contract expected string but found value 10 (number)
                 >> REQUEST.BODY.details
                 Can't generate object value from type number

@@ -559,4 +559,81 @@ Feature: Recursive test
             }
         }
     }
+
+    @Nested
+    inner class FillInTheBlanksTests {
+
+        @Test
+        fun `should fill in missing mandatory elements using dictionary`() {
+            val listPattern = ListPattern(StringPattern())
+            val jsonArray = JSONArrayValue(listOf(StringValue("(string)")))
+            val resolver = Resolver(dictionary = mapOf("(string)" to StringValue("Value")))
+
+            val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
+            assertThat(filledJsonArray.list).isEqualTo(listOf(StringValue("Value")))
+        }
+
+        @Test
+        fun `should complain if pattern token does not match the underlying pattern`() {
+            val listPattern = ListPattern(NumberPattern())
+            val jsonArray = JSONArrayValue(listOf(StringValue("(string)")))
+            val resolver = Resolver()
+
+            val result = listPattern.fillInTheBlanks(jsonArray, resolver)
+            assertThat(result).isInstanceOf(HasFailure::class.java); result as HasFailure
+            assertThat(result.failure.reportString()).isEqualToNormalizingWhitespace("""
+            >> [0]
+            Expected number, actual was string
+            """.trimIndent()
+            )
+        }
+
+        @Test
+        fun `should handle any-value pattern token as a special case`() {
+            val listPattern = ListPattern(StringPattern())
+            val jsonArray = JSONArrayValue(listOf(StringValue("(anyvalue)")))
+            val dictionary = mapOf("(string)" to StringValue("Value"))
+            val resolver = Resolver(dictionary = dictionary)
+
+            val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
+            assertThat(filledJsonArray.list).isEqualTo(listOf(StringValue("Value")))
+        }
+
+        @Test
+        fun `should generate a new value if supplied value is pattern token`() {
+            val listPattern = ListPattern(NumberPattern(), typeAlias = "(Test)")
+            val jsonArray = StringValue("(Test)")
+
+            val dictionary = mapOf("(number)" to NumberValue(999))
+            val resolver = Resolver(dictionary = dictionary, newPatterns = mapOf("(Test)" to listPattern))
+            val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
+
+            assertThat(filledJsonArray.list).allSatisfy {
+                assertThat(it).isEqualTo(NumberValue(999))
+            }
+        }
+
+        @Test
+        fun `should result in failure when pattern token does not match pattern itself`() {
+            val listPattern = ListPattern(StringPattern())
+            val invalidPatterns = listOf(
+                JSONObjectPattern(mapOf("key" to StringPattern())),
+                ListPattern(BooleanPattern()),
+                NumberPattern()
+            )
+
+            assertThat(invalidPatterns).allSatisfy {
+                val resolver = Resolver(newPatterns = mapOf("(Test)" to it))
+                val value = StringValue("(Test)")
+                val result = listPattern.fillInTheBlanks(value, resolver)
+
+                assertThat(result).isInstanceOf(HasFailure::class.java); result as HasFailure
+                assertThat(result.failure.reportString()).satisfiesAnyOf(
+                    { report -> assertThat(report).containsIgnoringWhitespaces("Expected array or list type") },
+                    { report -> assertThat(report).containsIgnoringWhitespaces("Expected string, actual was boolean") },
+                )
+            }
+        }
+    }
+
 }

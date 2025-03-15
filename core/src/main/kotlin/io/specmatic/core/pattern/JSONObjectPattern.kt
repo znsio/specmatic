@@ -127,11 +127,19 @@ data class JSONObjectPattern(
     }
 
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        val jsonObject = value as? JSONObjectValue
-            ?: return HasFailure("Can't generate object value from type ${value.displayableType()}")
+        val patternToConsider = when (val resolvedPattern = getPatternFromTokenElseSelf(value, resolver)) {
+            is ReturnFailure -> return resolvedPattern.cast()
+            else -> resolvedPattern.value as? JSONObjectPattern ?: return HasFailure("Pattern is not a json object pattern")
+        }
+
+        val valueToConsider = when (value) {
+            is JSONObjectValue -> value.jsonObject
+            is StringValue -> emptyMap<String, Value>().takeIf { value.isPatternToken() }
+            else -> if (resolver.isNegative) return HasValue(value) else null
+        } ?: return HasFailure("Can't generate object value from type ${value.displayableType()}")
 
         return fill(
-            jsonPatternMap = pattern, jsonValueMap = jsonObject.jsonObject,
+            jsonPatternMap = patternToConsider.pattern, jsonValueMap = valueToConsider,
             typeAlias = typeAlias.orEmpty(), resolver = resolver
         ).realise(
             hasValue = { valuesMap, _ -> HasValue(JSONObjectValue(valuesMap)) },

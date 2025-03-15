@@ -2,10 +2,7 @@ package io.specmatic.core.pattern
 
 import io.specmatic.core.*
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.ListValue
-import io.specmatic.core.value.NullValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 
 data class ListPattern(
     override val pattern: Pattern,
@@ -48,14 +45,32 @@ data class ListPattern(
     }
 
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        val listValue = value as? JSONArrayValue
-            ?: return HasFailure("Cannot generate a list from type ${value.displayableType()}")
+        val patternToConsider = when (val resolvedPattern = getPatternFromTokenElseSelf(value, resolver)) {
+            is ReturnFailure -> return resolvedPattern.cast()
+            else -> resolvedPattern.value as? ListPattern ?: return HasFailure("Pattern is not a list pattern")
+        }.pattern
 
-        val newList = listValue.list.map {
-            pattern.fillInTheBlanks(it, resolver.plusDictionaryLookupDetails(null, "[*]"))
+        if (value !is JSONArrayValue && isPatternToken(value)) {
+            val anyValuePatternToken = StringValue("(anyvalue)")
+            return List(randomNumber(3)) { index ->
+                runCatching {
+                    patternToConsider.fillInTheBlanks(anyValuePatternToken, resolver).breadCrumb("[$index]")
+                }.getOrElse(::HasException)
+            }.listFold().ifValue(::JSONArrayValue)
+        }
+
+        val valueToConsider = when(value) {
+            is JSONArrayValue -> value
+            else -> if (resolver.isNegative) return HasValue(value) else null
+        } ?: return HasFailure("Cannot generate a list from type ${value.displayableType()}")
+
+        val newList = valueToConsider.list.mapIndexed { index, it ->
+            patternToConsider.fillInTheBlanks(
+                it, resolver.plusDictionaryLookupDetails(null, "[*]")
+            ).breadCrumb("[$index]")
         }.listFold()
 
-        return newList.ifValue { listValue.copy(list = it) }
+        return newList.ifValue(::JSONArrayValue)
     }
 
     override fun resolveSubstitutions(

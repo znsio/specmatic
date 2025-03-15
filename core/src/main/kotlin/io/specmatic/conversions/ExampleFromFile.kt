@@ -130,7 +130,11 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         json.findByPath("http-request.method")?.toStringLiteral()
     }
 
-    val requestContentType: String? = json.findByPath("http-request.headers.Content-Type")?.toStringLiteral()
+    val requestContentType: String?
+        get() {
+            val rawContentType = headers.filter { it.key.lowercase() == "content-type" }.values.firstOrNull()
+            return rawContentType?.split(";")?.firstOrNull()
+        }
 
     private val rawPath: String? =
         json.findByPath("http-request.path")?.toStringLiteral()
@@ -174,4 +178,11 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
     val requestBody: Value? = attempt("Error reading request body in file ${file.canonicalPath}") {
         json.findByPath("http-request.body")
     }
+
+    val responseContentType: String?
+        get() {
+            return responseHeaders?.let {
+                it.jsonObject.filter { entry -> entry.key.lowercase() == "content-type" }.values.firstOrNull()?.toStringLiteral()
+            }
+        }
 }

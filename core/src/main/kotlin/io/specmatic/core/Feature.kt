@@ -1823,11 +1823,11 @@ data class Feature(
             try {
                 with(exampleFromFile) {
                     OpenApiSpecification.OperationIdentifier(
-                        requestMethod.orEmpty(),
-                        requestPath.orEmpty(),
-                        responseStatus ?: 0,
-                        exampleFromFile.headers.filter { it.key.lowercase() == "content-type" }.values.firstOrNull(),
-                        exampleFromFile.responseHeaders?.let { it.jsonObject.filter { it.key.lowercase() == "content-type" }.values.firstOrNull()?.toStringLiteral() }
+                        requestMethod = requestMethod.orEmpty(),
+                        requestPath = requestPath.orEmpty(),
+                        responseStatus = responseStatus ?: 0,
+                        requestContentType = exampleFromFile.requestContentType,
+                        responseContentType = exampleFromFile.responseContentType
                     ) to exampleFromFile.toRow(specmaticConfig)
                 }
             } catch (e: Throwable) {

@@ -466,13 +466,15 @@ data class Scenario(
     }
 
     private fun resolveRow(row: Row, resolver: Resolver): ReturnValue<Row> {
+        if (row.requestExample == null) return HasValue(row)
+
         return runCatching {
-            ExampleProcessor.resolve(row, ExampleProcessor::defaultIfNotExits)
+            ExampleProcessor.resolve(row.requestExample, ExampleProcessor::defaultIfNotExits)
         }.mapCatching { resolved ->
-            if (resolved.requestExample == null) return@mapCatching resolved
             val updatedResolver = resolver.copy(isNegative = resolver.isNegative || httpResponsePattern.status in invalidRequestStatuses)
-            val resolvedRequest = httpRequestPattern.fillInTheBlanks(resolved.requestExample, updatedResolver)
-            resolved.updateRequest(resolvedRequest, httpRequestPattern, resolver)
+            httpRequestPattern.fillInTheBlanks(resolved, updatedResolver)
+        }.mapCatching { resolved ->
+            row.updateRequest(resolved, httpRequestPattern, resolver)
         }.map(::HasValue).getOrElse { e ->
             when(e) {
                 is ContractException -> HasFailure(e.failure(), message = row.name)

@@ -92,13 +92,13 @@ class ExampleValidationModuleTest {
 
         val result = exampleValidationModule.validateExample(Feature(listOf(scenario), name= ""), example)
         assertThat(result.report()).isEqualToNormalizingWhitespace("""
-            In scenario ""
-            API: POST /add -> 200      
-            >> REQUEST.BODY.first
-            Specification expected number but example contained "(string)"        
-            >> RESPONSE.BODY.result
-            Specification expected number but example contained "(uuid)"
-            """.trimIndent())
+        In scenario ""
+        API: POST /add -> 200
+        >> REQUEST.BODY.first
+        Specification expected number but example contained string
+        >> RESPONSE.BODY.result
+        Specification expected number but example contained uuid
+        """.trimIndent())
     }
 
     @Test
@@ -124,8 +124,8 @@ class ExampleValidationModuleTest {
         val result = feature.matchResultSchemaFlagBased(null, "Test", example, DefaultMismatchMessages)
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
-            >> first
-            Expected number, actual was "(string)"
-            """.trimIndent())
+        >> first
+        Expected number, actual was string
+        """.trimIndent())
     }
 }

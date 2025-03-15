@@ -1,0 +1,34 @@
+{
+  "partial": {
+    "http-request": {
+      "path": "/creators/abc/pets/(string)",
+      "method": "PATCH",
+      "headers": {
+        "Content-Type": "application/json",
+        "CREATOR-ID": "abc",
+        "PET-ID": "(string)"
+      },
+      "query": {
+        "creatorId": "abc",
+        "petId": "(string)"
+      },
+      "body": {
+        "creatorId": "123",
+        "petId": "(string)"
+      }
+    },
+    "http-response": {
+      "status": 201,
+      "body": {
+        "id": "(string)",
+        "traceId": "(number)",
+        "creatorId": "123",
+        "petId": "(number)"
+      },
+      "status-text": "Created",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    }
+  }
+}

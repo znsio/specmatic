@@ -7,6 +7,7 @@ import io.mockk.unmockkAll
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.log.*
+import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.Flags
@@ -17,6 +18,7 @@ import io.specmatic.test.ExampleProcessor
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
+import java.io.File
 
 class LoadTestsFromExternalisedFiles {
 
@@ -782,6 +784,76 @@ class LoadTestsFromExternalisedFiles {
 
             println(results.joinToString("\n\n") { it.reportString() })
             assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(1)
+        }
+    }
+
+    @Nested
+    inner class PartialExampleTests {
+        private val specFile = File("src/test/resources/openapi/partial_example_tests/simple.yaml")
+        private val validExamplesDir = specFile.parentFile.resolve("valid_partial")
+        private val invalidExamplesDir = specFile.parentFile.resolve("invalid_partial")
+        private val validWithoutMandatoryExamplesDir = specFile.parentFile.resolve("valid_without_mandatory")
+
+        @Test
+        fun `should complain when invalid partial example is provided`() {
+            val feature = parseContractFileToFeature(specFile).copy(strictMode = true)
+            val exception = assertThrows<ContractException> {
+                Flags.using(EXAMPLE_DIRECTORIES to invalidExamplesDir.canonicalPath) {
+                    feature.loadExternalisedExamples().validateExamplesOrException()
+                }
+            }
+
+            println(exception.report())
+            assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+            Error loading example for PATCH /creators/(creatorId:number)/pets/(petId:number) -> 201 from ${invalidExamplesDir.resolve("pets_post.json").canonicalPath}
+
+            >> REQUEST.PATH.creatorId  
+            Expected number as per the specification, but the example pets_post had "abc".
+            >> REQUEST.PATH.petId  
+            Expected number as per the specification, but the example pets_post had string.
+            
+            >> REQUEST.QUERY-PARAMS.creatorId
+            Expected number as per the specification, but the example pets_post had "abc".
+            >> REQUEST.QUERY-PARAMS.petId
+            Expected number as per the specification, but the example pets_post had string.
+
+            >> REQUEST.HEADERS.CREATOR-ID
+            Expected number as per the specification, but the example pets_post had "abc".
+            >> REQUEST.HEADERS.PET-ID  
+            Expected number as per the specification, but the example pets_post had string.
+
+            >> REQUEST.BODY.creatorId  
+            Expected number as per the specification, but the example pets_post had "123".  
+            >> REQUEST.BODY.petId  
+            Expected number as per the specification, but the example pets_post had string.
+
+            >> RESPONSE.BODY.id  
+            Expected number as per the specification, but the example pets_post had string.
+            >> RESPONSE.BODY.traceId  
+            Expected string as per the specification, but the example pets_post had number.
+            >> RESPONSE.BODY.creatorId  
+            Expected number as per the specification, but the example pets_post had "123".  
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should load when valid partial example is provided`() {
+            val feature = parseContractFileToFeature(specFile).copy(strictMode = true)
+            Flags.using(EXAMPLE_DIRECTORIES to validExamplesDir.canonicalPath) {
+                assertDoesNotThrow {
+                    feature.loadExternalisedExamples().validateExamplesOrException()
+                }
+            }
+        }
+
+        @Test
+        fun `should load when valid partial example is provided without mandatory fields`() {
+            val feature = parseContractFileToFeature(specFile).copy(strictMode = true)
+            Flags.using(EXAMPLE_DIRECTORIES to validWithoutMandatoryExamplesDir.canonicalPath) {
+                assertDoesNotThrow {
+                    feature.loadExternalisedExamples().validateExamplesOrException()
+                }
+            }
         }
     }
 }

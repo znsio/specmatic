@@ -441,7 +441,7 @@ class HttpQueryParamPatternTest {
             assertThat(result.reportString().trimmedLinesList()).isEqualTo("""
                 >> QUERY-PARAMS.product_id
 
-                   Expected number, actual was "abc"
+                   Expected 1 (number), actual was "abc"
             """.trimIndent().trimmedLinesList())
         }
 

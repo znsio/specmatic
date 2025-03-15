@@ -794,7 +794,9 @@ data class Scenario(
         return externalisedJSONExamples.filter { (operationId, rows) ->
             operationId.requestMethod.equals(method, ignoreCase = true)
                     && operationId.responseStatus == status
-                    && httpRequestPattern.matchesPath(operationId.requestPath, patternMatchingResolver).isSuccess()
+                    && httpRequestPattern.matchesPath(operationId.requestPath, patternMatchingResolver).let {
+                        (it as? Result.Failure)?.failureReason == FailureReason.URLPathMismatchButSameStructure || it.isSuccess()
+                    }
                     && matchesRequestContentType(operationId)
                     && matchesResponseContentType(operationId)
         }

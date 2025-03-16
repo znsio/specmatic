@@ -45,32 +45,24 @@ data class ListPattern(
     }
 
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
+        if (resolver.isNegative && value !is JSONArrayValue && !isPatternToken(value)) return HasValue(value)
+
         val patternToConsider = when (val resolvedPattern = getPatternFromTokenElseSelf(value, resolver)) {
             is ReturnFailure -> return resolvedPattern.cast()
             else -> resolvedPattern.value as? ListPattern ?: return HasFailure("Pattern is not a list pattern")
         }.pattern
 
-        if (value !is JSONArrayValue && isPatternToken(value)) {
-            val anyValuePatternToken = StringValue("(anyvalue)")
-            return List(randomNumber(3)) { index ->
-                runCatching {
-                    patternToConsider.fillInTheBlanks(anyValuePatternToken, resolver).breadCrumb("[$index]")
-                }.getOrElse(::HasException)
-            }.listFold().ifValue(::JSONArrayValue)
-        }
-
-        val valueToConsider = when(value) {
-            is JSONArrayValue -> value
-            else -> if (resolver.isNegative) return HasValue(value) else null
+        val fallbackAnyValueList = List(randomNumber(3)) { StringValue("(anyvalue)") }
+        val valueToConsider = when {
+            resolver.allPatternsAreMandatory && value is JSONArrayValue -> value.list.takeUnless { it.isEmpty() } ?: fallbackAnyValueList
+            isPatternToken(value) -> fallbackAnyValueList
+            value is JSONArrayValue -> value.list
+            else -> null
         } ?: return HasFailure("Cannot generate a list from type ${value.displayableType()}")
 
-        val newList = valueToConsider.list.mapIndexed { index, it ->
-            patternToConsider.fillInTheBlanks(
-                it, resolver.plusDictionaryLookupDetails(null, "[*]")
-            ).breadCrumb("[$index]")
-        }.listFold()
-
-        return newList.ifValue(::JSONArrayValue)
+        return valueToConsider.mapIndexed { index, item ->
+            patternToConsider.fillInTheBlanks(item, resolver.plusDictionaryLookupDetails(null, "[*]")).breadCrumb("[$index]")
+        }.listFold().ifValue(::JSONArrayValue)
     }
 
     override fun resolveSubstitutions(

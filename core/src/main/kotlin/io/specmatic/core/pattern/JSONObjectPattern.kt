@@ -132,11 +132,14 @@ data class JSONObjectPattern(
             else -> resolvedPattern.value as? JSONObjectPattern ?: return HasFailure("Pattern is not a json object pattern")
         }
 
-        val valueToConsider = when (value) {
-            is JSONObjectValue -> value.jsonObject
-            is StringValue -> emptyMap<String, Value>().takeIf { value.isPatternToken() }
-            else -> if (resolver.isNegative) return HasValue(value) else null
-        } ?: return HasFailure("Can't generate object value from type ${value.displayableType()}")
+        val valueToConsider = when {
+            value is JSONObjectValue -> value.jsonObject
+            value is StringValue && value.isPatternToken() -> {
+                patternToConsider.pattern.filterNot { isOptional(it.key) }.mapValues { StringValue("(anyvalue)") }
+            }
+            resolver.isNegative -> return HasValue(value)
+            else -> return HasFailure("Can't generate object value from type ${value.displayableType()}")
+        }
 
         return fill(
             jsonPatternMap = patternToConsider.pattern, jsonValueMap = valueToConsider,
@@ -574,17 +577,19 @@ fun fill(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>,
         pattern.fillInTheBlanks(value, updatedResolver).breadCrumb(key)
     }.mapFold()
 
-    if (resolver.isNegative) return resolvedValuesMap
-
-    val missingKeysToPattern = jsonPatternMap.filterKeys { !isOptional(it) && it !in jsonValueMap }
-    val generatedValuesMap = missingKeysToPattern.mapValues { (key, pattern) ->
+    val remainingKeysToPattern = when {
+        resolver.isNegative -> emptyMap()
+        resolver.allPatternsAreMandatory -> jsonPatternMap.mapKeys { withoutOptionality(it.key) }.filterKeys { it !in jsonValueMap }
+        else -> jsonPatternMap.filterKeys { !isOptional(it) && it !in jsonValueMap }
+    }
+    val generatedValuesMap = remainingKeysToPattern.mapValues { (key, pattern) ->
         runCatching {
             resolver.generate(typeAlias, key, pattern)
         }.map(::HasValue).getOrElse(::HasException).breadCrumb(key)
     }.mapFold()
 
-    return resolvedValuesMap.combine(generatedValuesMap) { resolvedEntries, partialEntries ->
-        resolvedEntries + partialEntries
+    return resolvedValuesMap.combine(generatedValuesMap) { resolvedEntries, generatedEntries ->
+        resolvedEntries + generatedEntries
     }
 }
 

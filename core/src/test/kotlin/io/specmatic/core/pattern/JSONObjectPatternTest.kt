@@ -2413,6 +2413,51 @@ components:
                 )
             }
         }
+
+        @Test
+        fun `should generate missing optional keys when allPatternsMandatory is set`() {
+            val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "name?" to StringPattern()), typeAlias="Test")
+            val jsonObject = JSONObjectValue(mapOf("id" to NumberValue(123)))
+            val resolver = Resolver(dictionary = mapOf("Test.name" to StringValue("John Doe"))).withAllPatternsAsMandatory()
+
+            val filledJsonObject = jsonObjectPattern.fillInTheBlanks(jsonObject, resolver).value as JSONObjectValue
+            assertThat(filledJsonObject.jsonObject).isEqualTo(
+                mapOf("id" to NumberValue(123), "name" to StringValue("John Doe"))
+            )
+        }
+
+        @Test
+        fun `should not generate missing mandatory keys when resolver is set to negative`() {
+            val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "name?" to StringPattern()), typeAlias="Test")
+            val jsonObject = JSONObjectValue(mapOf("name" to StringValue("John Doe")))
+            val resolver = Resolver(isNegative = true)
+
+            val filledJsonObject = jsonObjectPattern.fillInTheBlanks(jsonObject, resolver).value as JSONObjectValue
+            assertThat(filledJsonObject.jsonObject).isEqualTo(mapOf("name" to StringValue("John Doe")))
+        }
+
+        @Test
+        fun `should fill in the blanks if value is any-value of json-object when resolver is negative`() {
+            val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern()), typeAlias="Test")
+            val dictionary = mapOf("Test.id" to NumberValue(123), "Test.name" to StringValue("John Doe"))
+            val resolver = Resolver(dictionary = dictionary, newPatterns = mapOf("(Test)" to jsonObjectPattern), isNegative = true)
+            val values = listOf(
+                StringValue("(anyvalue)"),
+                StringValue("(Test)"),
+                JSONObjectValue(mapOf("id" to StringValue("(number)"))),
+                JSONObjectValue(mapOf("name" to StringValue("(anyvalue)"))),
+            )
+
+            assertThat(values).allSatisfy {
+                val filledJsonObject = jsonObjectPattern.fillInTheBlanks(it, resolver).value as JSONObjectValue
+                assertThat(filledJsonObject.jsonObject).satisfiesAnyOf(
+                    { jsonObject -> assertThat(jsonObject).isEqualTo(mapOf("id" to NumberValue(123), "name" to StringValue("John Doe"))) },
+                    { jsonObject -> assertThat(jsonObject).isEqualTo(mapOf("id" to NumberValue(123))) },
+                    { jsonObject -> assertThat(jsonObject).isEqualTo(mapOf("name" to StringValue("John Doe"))) },
+                )
+            }
+        }
+
     }
 
     companion object {

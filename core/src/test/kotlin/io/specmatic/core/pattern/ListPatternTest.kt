@@ -634,6 +634,57 @@ Feature: Recursive test
                 )
             }
         }
-    }
 
+        @Test
+        fun `should not generate if list is empty`() {
+            val listPattern = ListPattern(StringPattern())
+            val jsonArray = JSONArrayValue(emptyList())
+            val resolver = Resolver()
+
+            val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
+            assertThat(filledJsonArray.list).isEmpty()
+        }
+
+        @Test
+        fun `should generate if list is empty when allPatternsMandatory is set`() {
+            val listPattern = ListPattern(StringPattern())
+            val jsonArray = JSONArrayValue(emptyList())
+            val resolver = Resolver(dictionary = mapOf("(string)" to StringValue("Value"))).withAllPatternsAsMandatory()
+
+            val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
+            assertThat(filledJsonArray.list).allSatisfy {
+                assertThat(it).isEqualTo(StringValue("Value"))
+            }
+        }
+
+        @Test
+        fun `should return value as is if not json-array or empty when resolver is negative`() {
+            val listPattern = ListPattern(StringPattern())
+            val resolver = Resolver(isNegative = true)
+            val values = listOf(
+                NullValue,
+                StringValue("Value"),
+                JSONArrayValue(emptyList())
+            )
+
+            assertThat(values).allSatisfy {
+                val result = listPattern.fillInTheBlanks(it, resolver)
+                assertThat(result).isEqualTo(HasValue(it))
+            }
+        }
+
+        @Test
+        fun `should generate if value is patternToken even when resolver is negative`() {
+            val listPattern = ListPattern(NumberPattern(), typeAlias = "(Test)")
+            val jsonArray = StringValue("(Test)")
+
+            val dictionary = mapOf("(number)" to NumberValue(999))
+            val resolver = Resolver(dictionary = dictionary, newPatterns = mapOf("(Test)" to listPattern), isNegative = true)
+            val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
+
+            assertThat(filledJsonArray.list).allSatisfy {
+                assertThat(it).isEqualTo(NumberValue(999))
+            }
+        }
+    }
 }

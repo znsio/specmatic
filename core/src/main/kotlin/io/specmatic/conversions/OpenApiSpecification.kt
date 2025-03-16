@@ -417,7 +417,7 @@ class OpenApiSpecification(
 
                     val httpResponsePatterns: List<ResponsePatternData> =
                         attempt(breadCrumb = "$httpMethod $openApiPath -> RESPONSE") {
-                            toHttpResponsePatterns(operation.responses)
+                            toHttpResponsePatterns(operation.responses, httpMethod, openApiPath, parsedOpenApi.components?.schemas.orEmpty())
                         }
 
                     val first2xxResponseStatus =
@@ -825,7 +825,12 @@ class OpenApiSpecification(
         return value.toIntOrNull() != null
     }
 
-    private fun toHttpResponsePatterns(responses: ApiResponses?): List<ResponsePatternData> {
+    private fun toHttpResponsePatterns(
+        responses: ApiResponses?,
+        method: String,
+        path: String,
+        schemas: Map<String, Schema<Any>>
+    ): List<ResponsePatternData> {
         return responses.orEmpty().map { (status, response) ->
             logger.debug("Processing response payload with status $status")
 
@@ -833,7 +838,9 @@ class OpenApiSpecification(
             if(!isNumber(status) && status != "default")
                 throw ContractException("Response status codes are expected to be numbers, but \"$status\" was found")
 
-            attempt(breadCrumb = status) { openAPIResponseToSpecmatic(response, status, headersMap) }
+            attempt(breadCrumb = status) {
+                openAPIResponseToSpecmatic(response, status, headersMap, method, path, schemas)
+            }
         }.flatten()
     }
 
@@ -878,7 +885,10 @@ class OpenApiSpecification(
     private fun openAPIResponseToSpecmatic(
         response: ApiResponse,
         status: String,
-        headersMap: Map<String, Pattern>
+        headersMap: Map<String, Pattern>,
+        method: String,
+        path: String,
+        schemas: Map<String, Schema<Any>>
     ): List<ResponsePatternData> {
         if (response.content == null || response.content.isEmpty()) {
             val responsePattern = HttpResponsePattern(
@@ -898,8 +908,15 @@ class OpenApiSpecification(
                     extractParameterExamples(header.examples, headerName, acc)
                 }
 
+        val contentTypeHeaderPattern = headersMap.entries.find { it.key.lowercase() in listOf("content-type", "content-type?") }?.value
+
         return response.content.map { (contentType, mediaType) ->
             logger.debug("Processing response with content type $contentType")
+
+            if(contentTypeHeaderPattern != null) {
+                val descriptor = "response of $method $path"
+                validateContentTypeHeader(contentTypeHeaderPattern, contentType, descriptor, schemas)
+            }
 
             val responsePattern = HttpResponsePattern(
                 headersPattern = HttpHeadersPattern(headersMap, contentType = contentType),
@@ -1057,7 +1074,8 @@ class OpenApiSpecification(
 
                 else -> {
                     if(contentTypeHeaderPattern != null) {
-                        validateContentTypeHeader(contentTypeHeaderPattern, contentType, httpMethod, httpPathPattern, schemas)
+                        val descriptor = "request of $httpMethod ${httpPathPattern.path}"
+                        validateContentTypeHeader(contentTypeHeaderPattern, contentType, descriptor, schemas)
                     }
 
                     val examplesFromMediaType = mediaType.examples ?: emptyMap()
@@ -1095,8 +1113,7 @@ class OpenApiSpecification(
     private fun validateContentTypeHeader(
         contentTypeHeaderPattern: Pattern,
         contentType: String?,
-        httpMethod: String,
-        httpPathPattern: HttpPathPattern,
+        descriptor: String,
         schemas: Map<String, Schema<Any>>,
     ) {
         val concretePattern = when (contentTypeHeaderPattern) {
@@ -1105,7 +1122,7 @@ class OpenApiSpecification(
                 val componentName = schemaPath.split("/").lastOrNull() ?: return
                 val schema = schemas[componentName] ?: return
                 val pattern = toSpecmaticPattern(schema, listOf(componentName), componentName, false)
-                return validateContentTypeHeader(pattern, contentType, httpMethod, httpPathPattern, schemas)
+                return validateContentTypeHeader(pattern, contentType, descriptor, schemas)
             }
             else -> contentTypeHeaderPattern
         }
@@ -1115,8 +1132,7 @@ class OpenApiSpecification(
             val generated2 = concretePattern.generate(Resolver()).toStringLiteral()
 
             if (generated1 == generated2 && generated1 != contentType) {
-                val requestDescriptor = "${httpMethod} ${httpPathPattern.path}"
-                logger.log("WARNING: The content type header schema does not match the media type $contentType in $requestDescriptor")
+                logger.log("WARNING: The content type header schema does not match the media type $contentType in $descriptor")
             }
         } catch (e: ContractException) {
             // if an exception was thrown, we probably can't do the validation

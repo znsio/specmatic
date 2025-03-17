@@ -2,15 +2,14 @@ package io.specmatic.core.filters
 
 import com.ezylang.evalex.Expression
 import com.ezylang.evalex.config.ExpressionConfiguration
-import io.specmatic.test.TestResultRecord
 
 data class ScenarioMetadataFilter(
     val expression: Expression? = null
 ) {
-    fun isSatisfiedBy(filterableExpression: FilterableExpression): Boolean {
+    fun isSatisfiedBy(scenarioMetaData: ScenarioMetadata): Boolean {
         val expression = expression ?: return true
 
-        val expressionWithVariables = filterableExpression.populateExpressionData(expression)
+        val expressionWithVariables = scenarioMetaData.populateExpressionData(expression)
 
         return try {
             expressionWithVariables.evaluate().booleanValue ?: false
@@ -45,13 +44,12 @@ data class ScenarioMetadataFilter(
             }
         }
 
-        fun <T> filterUsing(
+        fun <T : HasScenarioMetadata> filterUsing(
             items: Sequence<T>,
-            scenarioMetadataFilter: ScenarioMetadataFilter,
-            toFilterableMetadata: (T) -> FilterableExpression
+            scenarioMetadataFilter: ScenarioMetadataFilter
         ): Sequence<T> {
-            val filteredItems = items.filter {
-                scenarioMetadataFilter.isSatisfiedBy(toFilterableMetadata(it))
+            val filteredItems = items.filter { item ->
+                scenarioMetadataFilter.isSatisfiedBy(item.toScenarioMetadata())
             }
             return filteredItems
         }

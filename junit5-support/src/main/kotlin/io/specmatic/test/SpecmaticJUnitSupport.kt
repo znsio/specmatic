@@ -307,9 +307,7 @@ open class SpecmaticJUnitSupport {
                 filterNotName
             ) { it.testDescription() }
 
-            filterUsing(filteredTestsBasedOnName, testFilter) {
-                it.toScenarioMetadata()
-            }
+            filterUsing(filteredTestsBasedOnName, testFilter)
         } catch (e: ContractException) {
             return loadExceptionAsTestError(e)
         } catch (e: Throwable) {
@@ -514,9 +512,7 @@ open class SpecmaticJUnitSupport {
         val filteredScenarios = filterUsing(
             filteredScenariosBasedOnName,
             testFilter
-        ) {
-            it.toScenarioMetadata()
-        }
+        )
 
         val filteredScenarioPaths = filteredScenarios.map { convertPathParameterStyle(it.path) }
 

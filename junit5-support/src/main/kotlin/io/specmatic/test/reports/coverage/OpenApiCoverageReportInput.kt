@@ -159,7 +159,7 @@ class OpenApiCoverageReportInput(
                     )
                 }
             }
-            val filteredItems = filterUsing(testReportRecordsIncludingMissingAPIs.asSequence(), filter) { it.toScenarioMetadata() }
+            val filteredItems = filterUsing(testReportRecordsIncludingMissingAPIs.asSequence(), filter)
             testReportRecordsIncludingMissingAPIs = filteredItems.toMutableList()
         }
         return testReportRecordsIncludingMissingAPIs

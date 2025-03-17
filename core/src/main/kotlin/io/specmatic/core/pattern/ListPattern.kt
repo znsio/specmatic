@@ -45,23 +45,25 @@ data class ListPattern(
     }
 
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        if (resolver.isNegative && value !is JSONArrayValue && !isPatternToken(value)) return HasValue(value)
-
-        val patternToConsider = when (val resolvedPattern = getPatternFromTokenElseSelf(value, resolver)) {
+        val patternToConsider = when (val resolvedPattern = resolveToPattern(value, resolver)) {
             is ReturnFailure -> return resolvedPattern.cast()
-            else -> resolvedPattern.value as? ListPattern ?: return HasFailure("Pattern is not a list pattern")
+            else -> (resolvedPattern.value as? ListPattern) ?: return when(resolver.isNegative) {
+                true -> fillInIfPatternToken(value, resolvedPattern.value, resolver)
+                else -> HasFailure("Pattern is not a list pattern")
+            }
         }.pattern
 
         val fallbackAnyValueList = List(randomNumber(3)) { StringValue("(anyvalue)") }
         val valueToConsider = when {
-            resolver.allPatternsAreMandatory && value is JSONArrayValue -> value.list.takeUnless { it.isEmpty() } ?: fallbackAnyValueList
+            value is JSONArrayValue -> value.list.takeUnless { it.isEmpty() && resolver.allPatternsAreMandatory } ?: fallbackAnyValueList
             isPatternToken(value) -> fallbackAnyValueList
-            value is JSONArrayValue -> value.list
-            else -> null
-        } ?: return HasFailure("Cannot generate a list from type ${value.displayableType()}")
+            resolver.isNegative -> return HasValue(value)
+            else -> return HasFailure("Cannot generate a list from type ${value.displayableType()}")
+        }
 
+        val updatedResolver = resolver.plusDictionaryLookupDetails(null, "[*]")
         return valueToConsider.mapIndexed { index, item ->
-            patternToConsider.fillInTheBlanks(item, resolver.plusDictionaryLookupDetails(null, "[*]")).breadCrumb("[$index]")
+            patternToConsider.fillInTheBlanks(item, updatedResolver).breadCrumb("[$index]")
         }.listFold().ifValue(::JSONArrayValue)
     }
 

@@ -735,5 +735,49 @@ class HttpQueryParamPatternTest {
 
             assertThat(filledParams.asMap()).isEqualTo(mapOf("boolean" to "true"))
         }
+
+        @Test
+        fun `should allow extra keys when extensible-query-params or resolver is negative`() {
+            val queryParamsPattern = HttpQueryParamPattern(mapOf("number" to NumberPattern()))
+            val queryParameters = mapOf("number" to "(number)", "extraKey" to "(string)")
+            val dictionary = mapOf(
+                "QUERY-PARAMS.number" to NumberValue(999),
+                "QUERY-PARAMS.extraKey" to StringValue("ExtraValue")
+            )
+
+            val negativeResolver = Resolver(dictionary = dictionary, isNegative = true)
+            val negativeFilledParams = queryParamsPattern.fillInTheBlanks(QueryParameters(queryParameters), negativeResolver).value
+            assertThat(negativeFilledParams.asMap()).isEqualTo(
+                mapOf("number" to "999", "extraKey" to "ExtraValue")
+            )
+            
+            Flags.using(EXTENSIBLE_QUERY_PARAMS to "true") {
+                val resolver = Resolver(dictionary = dictionary)
+                val filledParams = queryParamsPattern.fillInTheBlanks(QueryParameters(queryParameters), resolver).value
+                assertThat(filledParams.asMap()).isEqualTo(
+                    mapOf("number" to "999", "extraKey" to "ExtraValue")
+                )
+            }
+        }
+
+        @Test
+        fun `should allow invalid pattern tokens when resolver is negative`() {
+            val queryParamsPattern = HttpQueryParamPattern(mapOf("test" to StringPattern()))
+            val invalidPatterns = listOf(
+                ListPattern(StringPattern()),
+                BooleanPattern(),
+                NullPattern,
+            )
+
+
+            assertThat(invalidPatterns).allSatisfy {
+                val resolver = Resolver(newPatterns = mapOf("(Test)" to it), isNegative = true)
+                val value = QueryParameters(mapOf("test" to "(Test)"))
+                val result = queryParamsPattern.fillInTheBlanks(value, resolver)
+
+                assertThat(result).isInstanceOf(HasValue::class.java); result as HasValue
+                println(result.value)
+            }
+        }
     }
 }

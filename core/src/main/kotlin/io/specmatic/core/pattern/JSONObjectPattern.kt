@@ -127,9 +127,12 @@ data class JSONObjectPattern(
     }
 
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        val patternToConsider = when (val resolvedPattern = getPatternFromTokenElseSelf(value, resolver)) {
+        val patternToConsider = when (val resolvedPattern = resolveToPattern(value, resolver)) {
             is ReturnFailure -> return resolvedPattern.cast()
-            else -> resolvedPattern.value as? JSONObjectPattern ?: return HasFailure("Pattern is not a json object pattern")
+            else -> (resolvedPattern.value as? JSONObjectPattern) ?: return when(resolver.isNegative) {
+                true -> fillInIfPatternToken(value, resolvedPattern.value, resolver)
+                else -> HasFailure("Pattern is not a json object pattern")
+            }
         }
 
         val valueToConsider = when {
@@ -143,7 +146,7 @@ data class JSONObjectPattern(
 
         return fill(
             jsonPatternMap = patternToConsider.pattern, jsonValueMap = valueToConsider,
-            typeAlias = typeAlias.orEmpty(), resolver = resolver
+            typeAlias = patternToConsider.typeAlias.orEmpty(), resolver = resolver
         ).realise(
             hasValue = { valuesMap, _ -> HasValue(JSONObjectValue(valuesMap)) },
             orException = { e -> e.cast() }, orFailure = { f -> f.cast() }
@@ -567,13 +570,12 @@ fun fix(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, 
 
 fun fill(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, resolver: Resolver, typeAlias: String): ReturnValue<Map<String, Value>> {
     val resolvedValuesMap = jsonValueMap.mapValues { (key, value) ->
-        val pattern = jsonPatternMap[key] ?: jsonPatternMap["$key?"] ?: return@mapValues when(resolver.findKeyErrorCheck.unexpectedKeyCheck) {
-            IgnoreUnexpectedKeys -> HasValue(value)
-            else -> HasFailure<Value>(
-                Result.Failure(resolver.mismatchMessages.unexpectedKey("key", key))
-            ).breadCrumb(key)
-        }
-        val updatedResolver = resolver.plusDictionaryLookupDetails(typeAlias, key)
+        val updatedResolver = resolver.updateLookupPath(typeAlias, key)
+        val pattern = jsonPatternMap[key] ?: jsonPatternMap["$key?"] ?: return@mapValues when {
+            resolver.findKeyErrorCheck.unexpectedKeyCheck is IgnoreUnexpectedKeys -> generateIfPatternToken(value, updatedResolver)
+            resolver.isNegative -> generateIfPatternToken(value, updatedResolver)
+            else -> HasFailure<Value>(Result.Failure(resolver.mismatchMessages.unexpectedKey("key", key)))
+        }.breadCrumb(key)
         pattern.fillInTheBlanks(value, updatedResolver).breadCrumb(key)
     }.mapFold()
 
@@ -582,15 +584,24 @@ fun fill(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>,
         resolver.allPatternsAreMandatory -> jsonPatternMap.mapKeys { withoutOptionality(it.key) }.filterKeys { it !in jsonValueMap }
         else -> jsonPatternMap.filterKeys { !isOptional(it) && it !in jsonValueMap }
     }
+
     val generatedValuesMap = remainingKeysToPattern.mapValues { (key, pattern) ->
-        runCatching {
-            resolver.generate(typeAlias, key, pattern)
-        }.map(::HasValue).getOrElse(::HasException).breadCrumb(key)
+        // TODO: call fillInTheBlanks so nested patterns don't generate optional keys, Need to figure cyclePrevention for that to work
+        runCatching { resolver.generate(typeAlias, key, pattern) }.map(::HasValue).getOrElse(::HasException).breadCrumb(key)
     }.mapFold()
 
     return resolvedValuesMap.combine(generatedValuesMap) { resolvedEntries, generatedEntries ->
         resolvedEntries + generatedEntries
     }
+}
+
+private fun generateIfPatternToken(value: Value, resolver: Resolver): ReturnValue<Value> {
+    if (value !is StringValue || !value.isPatternToken()) return HasValue(value)
+    return runCatching {
+        val pattern = resolver.getPattern(value.string)
+        if (pattern is AnyValuePattern) return@runCatching resolver.generate(StringPattern())
+        resolver.generate(pattern)
+    }.map(::HasValue).getOrElse(::HasException)
 }
 
 private fun adjustedPattern(jsonPatternMap: Map<String, Pattern>, resolver: Resolver): Map<String, Pattern> {

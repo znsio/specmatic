@@ -784,5 +784,43 @@ internal class HttpHeadersPatternTest {
 
             assertThat(filledHeaders).isEqualTo(mapOf("boolean" to "true"))
         }
+
+        @Test
+        fun `should allow extra keys when extensible-schema or resolver is negative`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern()))
+            val headers = mapOf("number" to "(number)", "extraKey" to "(string)")
+            val dictionary = mapOf("HEADERS.number" to NumberValue(999), "(string)" to StringValue("ExtraValue"))
+            val resolvers = listOf(
+                Resolver(dictionary = dictionary, isNegative = true),
+                Resolver(dictionary = dictionary).withUnexpectedKeyCheck(IgnoreUnexpectedKeys)
+            )
+
+            assertThat(resolvers).allSatisfy {
+                val filledJsonObject = httpHeaders.fillInTheBlanks(headers, it).value
+                assertThat(filledJsonObject).isEqualTo(
+                    mapOf("number" to "999", "extraKey" to "ExtraValue")
+                )
+            }
+        }
+
+        @Test
+        fun `should allow invalid pattern tokens when resolver is negative`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("test" to StringPattern()))
+            val invalidPatterns = listOf(
+                ListPattern(StringPattern()),
+                BooleanPattern(),
+                NullPattern,
+            )
+
+
+            assertThat(invalidPatterns).allSatisfy {
+                val resolver = Resolver(newPatterns = mapOf("(Test)" to it), isNegative = true)
+                val value = mapOf("test" to "(Test)")
+                val result = httpHeaders.fillInTheBlanks(value, resolver)
+
+                assertThat(result).isInstanceOf(HasValue::class.java); result as HasValue
+                println(result.value)
+            }
+        }
     }
 }

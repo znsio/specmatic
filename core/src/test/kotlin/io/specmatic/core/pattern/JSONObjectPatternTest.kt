@@ -2458,6 +2458,43 @@ components:
             }
         }
 
+        @Test
+        fun `should allow extra keys when extensible-schema or resolver is negative`() {
+            val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern()), typeAlias="Test")
+            val dictionary = mapOf("Test.id" to NumberValue(123), "(string)" to StringValue("ExtraValue"))
+
+            val jsonObject = JSONObjectValue(mapOf("id" to StringValue("(number)"), "extraKey" to StringValue("(string)")))
+            val resolvers = listOf(
+                Resolver(dictionary = dictionary, isNegative = true),
+                Resolver(dictionary = dictionary).withUnexpectedKeyCheck(IgnoreUnexpectedKeys)
+            )
+
+            assertThat(resolvers).allSatisfy {
+                val filledJsonObject = jsonObjectPattern.fillInTheBlanks(jsonObject, it).value as JSONObjectValue
+                assertThat(filledJsonObject.jsonObject).isEqualTo(
+                    mapOf("id" to NumberValue(123), "extraKey" to StringValue("ExtraValue"))
+                )
+            }
+        }
+
+        @Test
+        fun `should allow invalid pattern tokens when resolver is negative`() {
+            val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern()), typeAlias="Test")
+            val invalidPatterns = listOf(
+                ListPattern(StringPattern(), typeAlias = "(Test)"),
+                JSONObjectPattern(mapOf("id" to NumberPattern()), typeAlias = "(Test)"),
+                StringPattern()
+            )
+
+            assertThat(invalidPatterns).allSatisfy {
+                val resolver = Resolver(newPatterns = mapOf("(Test)" to it), isNegative = true)
+                val value = StringValue("(Test)")
+                val result = jsonObjectPattern.fillInTheBlanks(value, resolver)
+
+                assertThat(result).isInstanceOf(HasValue::class.java); result as HasValue
+                println(result.value)
+            }
+        }
     }
 
     companion object {

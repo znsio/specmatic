@@ -79,15 +79,16 @@ interface Pattern {
     }
 
     fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        val resolvedValue = when(val patternFromToken = getPatternFromTokenElseSelf(value, resolver)) {
-            is ReturnFailure -> return patternFromToken.cast()
-            else -> if (isPatternToken(value)) resolver.generate(patternFromToken.value) else value
+        val resolvedPattern = when (val resolvedPattern = resolveToPattern(value, resolver)) {
+            is ReturnFailure -> return resolvedPattern.cast()
+            else -> resolvedPattern.value
         }
 
-        val result = matches(resolvedValue, resolver)
-        return if (result is Result.Failure && !resolver.isNegative) {
-            HasFailure(result)
-        } else HasValue(resolvedValue)
+        return when {
+            isPatternToken(value) -> runCatching { resolver.generate(resolvedPattern) }.map(::HasValue).getOrElse(::HasException)
+            resolver.isNegative -> HasValue(value)
+            else -> resolvedPattern.matches(value, resolver).toReturnValue(value)
+        }
     }
 
     fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String? = null): Pattern {
@@ -102,12 +103,13 @@ interface Pattern {
         return value.takeIf { resolver.matchesPattern(null, this, value).isSuccess() } ?: resolver.generate(this)
     }
 
-    fun getPatternFromTokenElseSelf(value: Value, resolver: Resolver): ReturnValue<Pattern> {
+    fun resolveToPattern(value: Value, resolver: Resolver): ReturnValue<Pattern> {
         if (value !is StringValue || !value.isPatternToken()) return HasValue(this)
 
         return runCatching {
             val pattern = resolver.getPattern(value.string)
             if (pattern is AnyValuePattern) return@runCatching HasValue(this)
+            if (resolver.isNegative) return@runCatching HasValue(pattern)
             encompasses(pattern, resolver, resolver).toReturnValue(pattern)
         }.getOrElse(::HasException)
     }
@@ -119,4 +121,9 @@ interface Pattern {
 
 fun Pattern.isDiscriminator(): Boolean {
     return this is ExactValuePattern && this.discriminator
+}
+
+fun fillInIfPatternToken(value: Value, pattern: Pattern, resolver: Resolver): ReturnValue<Value> {
+    if (value !is StringValue || !value.isPatternToken()) return HasValue(value)
+    return runCatching { pattern.fillInTheBlanks(StringValue("(anyvalue)"), resolver) }.getOrElse(::HasException)
 }

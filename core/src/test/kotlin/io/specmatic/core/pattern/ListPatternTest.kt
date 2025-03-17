@@ -686,5 +686,24 @@ Feature: Recursive test
                 assertThat(it).isEqualTo(NumberValue(999))
             }
         }
+
+        @Test
+        fun `should allow invalid pattern tokens when resolver is negative`() {
+            val listPattern = ListPattern(StringPattern())
+            val invalidPatterns = listOf(
+                JSONObjectPattern(mapOf("key" to StringPattern())),
+                ListPattern(BooleanPattern()),
+                NumberPattern()
+            )
+
+            assertThat(invalidPatterns).allSatisfy {
+                val resolver = Resolver(newPatterns = mapOf("(Test)" to it), isNegative = true)
+                val value = StringValue("(Test)")
+                val result = listPattern.fillInTheBlanks(value, resolver)
+
+                assertThat(result).isInstanceOf(HasValue::class.java); result as HasValue
+                println(result.value)
+            }
+        }
     }
 }

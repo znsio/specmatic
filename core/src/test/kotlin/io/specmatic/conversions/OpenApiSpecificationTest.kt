@@ -10304,7 +10304,7 @@ paths:
             OpenApiSpecification.fromYAML(spec, "").toFeature()
         }
 
-        assertThat(output).contains("WARNING: The content type header schema does not match the media type application/json in POST /products")
+        assertThat(output).contains("WARNING: The content type header schema does not match the media type application/json in request of POST /products")
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

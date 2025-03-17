@@ -5,6 +5,7 @@ import io.specmatic.core.Result
 import io.specmatic.core.TestResult
 import io.specmatic.core.filters.FilterableExpression
 import io.specmatic.core.filters.ScenarioFilterTags
+import io.specmatic.core.filters.ScenarioMetadata
 
 data class TestResultRecord(
     val path: String,
@@ -27,7 +28,18 @@ data class TestResultRecord(
     val isCovered = result !in setOf(TestResult.MissingInSpec, TestResult.NotCovered)
 
     fun isConnectionRefused() = actualResponseStatus == 0
+
+    fun toScenarioMetadata(): ScenarioMetadata {
+        return ScenarioMetadata(method, path, responseStatus, emptySet(), emptySet(), "")
+    }
+
     override fun populateExpressionData(expression: Expression): Expression {
-        return expression.with(ScenarioFilterTags.PATH.key, path)
+        return expression
+            .with(ScenarioFilterTags.METHOD.key, method)
+            .with(ScenarioFilterTags.PATH.key, path)
+            .with(ScenarioFilterTags.STATUS_CODE.key, "")
+            .with(ScenarioFilterTags.HEADER.key, "")
+            .with(ScenarioFilterTags.QUERY.name, "")
+            .with(ScenarioFilterTags.EXAMPLE_NAME.name, "")
     }
 }

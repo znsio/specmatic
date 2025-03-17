@@ -913,10 +913,10 @@ class OpenApiSpecification(
         return response.content.map { (contentType, mediaType) ->
             logger.debug("Processing response with content type $contentType")
 
-            if(contentTypeHeaderPattern != null) {
+            val actualContentType = if(contentTypeHeaderPattern != null) {
                 val descriptor = "response of $method $path"
-                validateContentTypeHeader(contentTypeHeaderPattern, contentType, descriptor, schemas)
-            }
+                getAndLogActualContentTypeHeader(contentTypeHeaderPattern, contentType, descriptor, schemas) ?: contentType
+            } else contentType
 
             val responsePattern = HttpResponsePattern(
                 headersPattern = HttpHeadersPattern(headersMap, contentType = contentType),
@@ -939,10 +939,17 @@ class OpenApiSpecification(
                 when (status.toIntOrNull()) {
                     0, null -> emptyMap()
                     else -> exampleBodies.map {
+                        val mappedHeaderExamples = headerExamples[it.key]?.let { headerExample ->
+                            if(headerExample.entries.find { it.key.lowercase() == "content-type" } == null)
+                                headerExample.plus(CONTENT_TYPE to actualContentType)
+                            else
+                                headerExample
+                        } ?: mapOf(CONTENT_TYPE to actualContentType)
+
                         it.key to HttpResponse(
                             status.toInt(),
                             body = it.value ?: "",
-                            headers = headerExamples[it.key] ?: emptyMap()
+                            headers = mappedHeaderExamples
                         )
                     }.toMap()
                 }
@@ -1073,10 +1080,10 @@ class OpenApiSpecification(
                 )
 
                 else -> {
-                    if(contentTypeHeaderPattern != null) {
+                    val actualContentType = if(contentTypeHeaderPattern != null) {
                         val descriptor = "request of $httpMethod ${httpPathPattern.path}"
-                        validateContentTypeHeader(contentTypeHeaderPattern, contentType, descriptor, schemas)
-                    }
+                        getAndLogActualContentTypeHeader(contentTypeHeaderPattern, contentType, descriptor, schemas) ?: contentType
+                    } else contentType
 
                     val examplesFromMediaType = mediaType.examples ?: emptyMap()
 
@@ -1088,7 +1095,7 @@ class OpenApiSpecification(
                         if (specmaticConfig.getIgnoreInlineExamples() || getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
                             emptyMap()
                         else
-                            exampleRequestBuilder.examplesWithRequestBodies(exampleBodies, contentType)
+                            exampleRequestBuilder.examplesWithRequestBodies(exampleBodies, actualContentType)
 
                     val bodyIsRequired: Boolean = requestBody.required ?: true
 
@@ -1110,19 +1117,19 @@ class OpenApiSpecification(
         }
     }
 
-    private fun validateContentTypeHeader(
+    private fun getAndLogActualContentTypeHeader(
         contentTypeHeaderPattern: Pattern,
         contentType: String?,
         descriptor: String,
         schemas: Map<String, Schema<Any>>,
-    ) {
+    ): String? {
         val concretePattern = when (contentTypeHeaderPattern) {
             is DeferredPattern -> {
                 val schemaPath = withoutPatternDelimiters(contentTypeHeaderPattern.pattern)
-                val componentName = schemaPath.split("/").lastOrNull() ?: return
-                val schema = schemas[componentName] ?: return
+                val componentName = schemaPath.split("/").lastOrNull() ?: return contentType
+                val schema = schemas[componentName] ?: return contentType
                 val pattern = toSpecmaticPattern(schema, listOf(componentName), componentName, false)
-                return validateContentTypeHeader(pattern, contentType, descriptor, schemas)
+                return getAndLogActualContentTypeHeader(pattern, contentType, descriptor, schemas)
             }
             else -> contentTypeHeaderPattern
         }
@@ -1133,10 +1140,13 @@ class OpenApiSpecification(
 
             if (generated1 == generated2 && generated1 != contentType) {
                 logger.log("WARNING: The content type header schema does not match the media type $contentType in $descriptor")
+                return generated1
             }
         } catch (e: ContractException) {
             // if an exception was thrown, we probably can't do the validation
         }
+
+        return contentType
     }
 
     private fun headersPatternWithContentType(

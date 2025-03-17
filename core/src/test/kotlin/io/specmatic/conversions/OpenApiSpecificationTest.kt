@@ -10307,6 +10307,565 @@ paths:
         assertThat(output).contains("WARNING: The content type header schema does not match the media type application/json in request of POST /products")
     }
 
+    @Test
+    fun `inline examples should use the overridden request content type`() {
+        val spec = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Add a new product
+                  parameters:
+                    - in: header
+                      name: Content-Type
+                      schema:
+                        type: string
+                        enum:
+                        - application/json; charset=utf-8
+                      examples:
+                        SUCCESS:
+                          value: application/json; charset=utf-8
+                      required: true
+                      description: Unneeded content type
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ProductDetails'
+                        examples:
+                          SUCCESS:
+                            value:
+                              name: Phone
+                              price: 1000
+                              category: Electronics
+                  responses:
+                    '201':
+                      description: Product created successfully
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Product'
+                          examples:
+                            SUCCESS:
+                              value:
+                                id: 1
+                                name: Phone
+                                price: 1000
+                                category: Electronics
+            components:
+              schemas:
+                ProductId:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: integer
+                ProductDetails:
+                  type: object
+                  required:
+                    - name
+                    - price
+                    - category
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    category:
+                      type: string
+                      enum:
+                        - Electronics
+                        - Clothing
+                        - Books
+                Product:
+                  allOf:
+                    - ${"$"}ref: '#/components/schemas/ProductId'
+                    - ${"$"}ref: '#/components/schemas/ProductDetails'
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.headers["Content-Type"]).isEqualTo("application/json; charset=utf-8")
+                return HttpResponse(201, body = parsedJSONObject("""{"id": 10, "name": "Phone", "price": 1000, "category": "Electronics"}"""))
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `inline examples should use the overridden request content type when no example is given`() {
+        val spec = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Add a new product
+                  parameters:
+                    - in: header
+                      name: Content-Type
+                      schema:
+                        type: string
+                        enum:
+                        - application/json; charset=utf-8
+                      required: true
+                      description: Unneeded content type
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ProductDetails'
+                        examples:
+                          SUCCESS:
+                            value:
+                              name: Phone
+                              price: 1000
+                              category: Electronics
+                  responses:
+                    '201':
+                      description: Product created successfully
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Product'
+                          examples:
+                            SUCCESS:
+                              value:
+                                id: 1
+                                name: Phone
+                                price: 1000
+                                category: Electronics
+            components:
+              schemas:
+                ProductId:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: integer
+                ProductDetails:
+                  type: object
+                  required:
+                    - name
+                    - price
+                    - category
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    category:
+                      type: string
+                      enum:
+                        - Electronics
+                        - Clothing
+                        - Books
+                Product:
+                  allOf:
+                    - ${"$"}ref: '#/components/schemas/ProductId'
+                    - ${"$"}ref: '#/components/schemas/ProductDetails'
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.headers["Content-Type"]).isEqualTo("application/json; charset=utf-8")
+                return HttpResponse(201, body = parsedJSONObject("""{"id": 10, "name": "Phone", "price": 1000, "category": "Electronics"}"""))
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `if inline of overridden request Content Type header is wrong then parse should error out`() {
+        val spec = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Add a new product
+                  parameters:
+                    - in: header
+                      name: Content-Type
+                      schema:
+                        type: string
+                        enum:
+                        - application/json; charset=utf-8
+                      examples:
+                        SUCCESS:
+                          value: application/json
+                      required: true
+                      description: Unneeded content type
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ProductDetails'
+                        examples:
+                          SUCCESS:
+                            value:
+                              name: Phone
+                              price: 1000
+                              category: Electronics
+                  responses:
+                    '201':
+                      description: Product created successfully
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Product'
+                          examples:
+                            SUCCESS:
+                              value:
+                                id: 1
+                                name: Phone
+                                price: 1000
+                                category: Electronics
+            components:
+              schemas:
+                ProductId:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: integer
+                ProductDetails:
+                  type: object
+                  required:
+                    - name
+                    - price
+                    - category
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    category:
+                      type: string
+                      enum:
+                        - Electronics
+                        - Clothing
+                        - Books
+                Product:
+                  allOf:
+                    - ${"$"}ref: '#/components/schemas/ProductId'
+                    - ${"$"}ref: '#/components/schemas/ProductDetails'
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.headers["Content-Type"]).isEqualTo("application/json; charset=utf-8")
+                return HttpResponse(201, body = parsedJSONObject("""{"id": 10, "name": "Phone", "price": 1000, "category": "Electronics"}"""))
+            }
+        })
+
+        assertThat(results.report()).contains("""expected "application/json; charset=utf-8" but found value "application/json"""")
+    }
+
+    @Test
+    fun `inline examples should use the overridden response content type`() {
+        val spec = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Add a new product
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ProductDetails'
+                        examples:
+                          SUCCESS:
+                            value:
+                              name: Phone
+                              price: 1000
+                              category: Electronics
+                  responses:
+                    '201':
+                      description: Product created successfully
+                      headers:
+                        Content-Type:
+                          schema:
+                            type: string
+                            enum:
+                            - application/json; charset=utf-8
+                          examples:
+                            SUCCESS:
+                              value: application/json; charset=utf-8
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Product'
+                          examples:
+                            SUCCESS:
+                              value:
+                                id: 1
+                                name: Phone
+                                price: 1000
+                                category: Electronics
+            components:
+              schemas:
+                ProductId:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: integer
+                ProductDetails:
+                  type: object
+                  required:
+                    - name
+                    - price
+                    - category
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    category:
+                      type: string
+                      enum:
+                        - Electronics
+                        - Clothing
+                        - Books
+                Product:
+                  allOf:
+                    - ${"$"}ref: '#/components/schemas/ProductId'
+                    - ${"$"}ref: '#/components/schemas/ProductDetails'
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        HttpStub(feature).use { stub ->
+            val response = stub.client.execute(HttpRequest("POST", "/products", headers = mapOf("Content-Type" to "application/json; charset=utf-8"), body = parsedJSONObject("""{"name": "Phone", "price": 1000, "category": "Electronics"}""")))
+            assertThat(response.headers["Content-Type"]).isEqualTo("application/json; charset=utf-8")
+        }
+    }
+
+    @Test
+    fun `inline examples should use the overridden response content type when no header example is given`() {
+        val spec = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Add a new product
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ProductDetails'
+                        examples:
+                          SUCCESS:
+                            value:
+                              name: Phone
+                              price: 1000
+                              category: Electronics
+                  responses:
+                    '201':
+                      description: Product created successfully
+                      headers:
+                        Content-Type:
+                          schema:
+                            type: string
+                            enum:
+                            - application/json; charset=utf-8
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Product'
+                          examples:
+                            SUCCESS:
+                              value:
+                                id: 1
+                                name: Phone
+                                price: 1000
+                                category: Electronics
+            components:
+              schemas:
+                ProductId:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: integer
+                ProductDetails:
+                  type: object
+                  required:
+                    - name
+                    - price
+                    - category
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    category:
+                      type: string
+                      enum:
+                        - Electronics
+                        - Clothing
+                        - Books
+                Product:
+                  allOf:
+                    - ${"$"}ref: '#/components/schemas/ProductId'
+                    - ${"$"}ref: '#/components/schemas/ProductDetails'
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val (output, _) = captureStandardOutput {
+            HttpStub(feature).use { stub ->
+                val response = stub.client.execute(
+                    HttpRequest(
+                        "POST",
+                        "/products",
+                        headers = mapOf("Content-Type" to "application/json; charset=utf-8"),
+                        body = parsedJSONObject("""{"name": "Phone", "price": 1000, "category": "Electronics"}""")
+                    )
+                )
+                assertThat(response.headers["Content-Type"]).isEqualTo("application/json; charset=utf-8")
+            }
+        }
+
+        assertThat(output).doesNotContain("does not match \"application/json; charset=utf-8\" in the spec")
+    }
+
+    @Test
+    fun `if inline of overridden response Content Type header is wrong then parse should error out`() {
+        val spec = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Add a new product
+                  parameters:
+                    - in: header
+                      name: Content-Type
+                      schema:
+                        type: string
+                        enum:
+                        - application/json; charset=utf-8
+                      examples:
+                        SUCCESS:
+                          value: application/json
+                      required: true
+                      description: Unneeded content type
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ProductDetails'
+                        examples:
+                          SUCCESS:
+                            value:
+                              name: Phone
+                              price: 1000
+                              category: Electronics
+                  responses:
+                    '201':
+                      description: Product created successfully
+                      headers:
+                        Content-Type:
+                          schema:
+                            type: string
+                            enum:
+                            - application/json; charset=utf-8
+                          examples:
+                            SUCCESS:
+                              value: application/json
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Product'
+                          examples:
+                            SUCCESS:
+                              value:
+                                id: 1
+                                name: Phone
+                                price: 1000
+                                category: Electronics
+            components:
+              schemas:
+                ProductId:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: integer
+                ProductDetails:
+                  type: object
+                  required:
+                    - name
+                    - price
+                    - category
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    category:
+                      type: string
+                      enum:
+                        - Electronics
+                        - Clothing
+                        - Books
+                Product:
+                  allOf:
+                    - ${"$"}ref: '#/components/schemas/ProductId'
+                    - ${"$"}ref: '#/components/schemas/ProductDetails'
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.headers["Content-Type"]).isEqualTo("application/json; charset=utf-8")
+                return HttpResponse(201, body = parsedJSONObject("""{"id": 10, "name": "Phone", "price": 1000, "category": "Electronics"}"""))
+            }
+        })
+
+        println(results.report())
+        assertThat(results.report()).contains("""expected "application/json; charset=utf-8" but found value "application/json"""")
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

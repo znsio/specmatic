@@ -84,7 +84,7 @@ paths:
         ).toFeature()
         feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                return HttpResponse(200, headers = mapOf("Header1" to "Header 1 value"), body = "Product added successfully")
+                return HttpResponse(200, headers = mapOf("Header1" to "Header 1 value", "Content-Type" to "text/plain"), body = "Product added successfully")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {

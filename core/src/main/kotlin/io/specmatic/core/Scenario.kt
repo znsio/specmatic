@@ -471,7 +471,7 @@ data class Scenario(
         return runCatching {
             ExampleProcessor.resolve(row.requestExample, ExampleProcessor::defaultIfNotExits)
         }.mapCatching { resolved ->
-            val updatedResolver = resolver.copy(isNegative = resolver.isNegative || httpResponsePattern.status in invalidRequestStatuses)
+            val updatedResolver = resolver.copy(isNegative = httpResponsePattern.status in invalidRequestStatuses)
             httpRequestPattern.fillInTheBlanks(resolved, updatedResolver)
         }.mapCatching { resolved ->
             row.updateRequest(resolved, httpRequestPattern, resolver)
@@ -797,7 +797,7 @@ data class Scenario(
             operationId.requestMethod.equals(method, ignoreCase = true)
                     && operationId.responseStatus == status
                     && httpRequestPattern.matchesPath(operationId.requestPath, patternMatchingResolver).let {
-                        (it as? Result.Failure)?.failureReason == FailureReason.URLPathMismatchButSameStructure || it.isSuccess()
+                        it.isSuccess() || (it as? Result.Failure)?.failureReason == FailureReason.URLPathMismatchButSameStructure
                     }
                     && matchesRequestContentType(operationId)
                     && matchesResponseContentType(operationId)

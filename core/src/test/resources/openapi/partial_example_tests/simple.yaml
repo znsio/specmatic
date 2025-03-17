@@ -35,6 +35,7 @@ paths:
           in: header
           schema:
             type: number
+          required: true
       description: Creates a new pet in the store. Duplicates are allowed
       requestBody:
         description: Pet to add to the store

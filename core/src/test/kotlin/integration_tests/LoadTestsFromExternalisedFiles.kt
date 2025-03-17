@@ -858,15 +858,24 @@ class LoadTestsFromExternalisedFiles {
 
         @Test
         fun `should be able to run full suite tests using valid examples`() {
-            Flags.using(EXAMPLE_DIRECTORIES to validExamplesDir.canonicalPath) {
+            Flags.using(EXAMPLE_DIRECTORIES to validWithoutMandatoryExamplesDir.canonicalPath) {
                 val feature = parseContractFileToFeature(specFile).copy(strictMode = true).loadExternalisedExamples()
                 feature.validateExamplesOrException()
+
+                val expectedGoodRequest = HttpRequest(
+                    path = "/creators/123/pets/999",
+                    method = "PATCH",
+                    queryParams = QueryParameters(mapOf("creatorId" to "123", "petId" to "999")),
+                    headers = mapOf("Content-Type" to "application/json", "CREATOR-ID" to "123", "PET-ID" to "999", "Specmatic-Response-Code" to "201"),
+                    body = JSONObjectValue(mapOf("creatorId" to NumberValue(123), "petId" to NumberValue(999))),
+                )
 
                 val results = feature.enableGenerativeTesting().executeTests(object: TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         return if (request.headers["Specmatic-Response-Code"] == "400") {
                             HttpResponse(status = 400)
                         } else {
+                            assertThat(request).isEqualTo(expectedGoodRequest)
                             val responseBody = (request.body as JSONObjectValue).jsonObject + mapOf(
                                 "id" to NumberValue(999), "traceId" to StringValue("123"),
                             )

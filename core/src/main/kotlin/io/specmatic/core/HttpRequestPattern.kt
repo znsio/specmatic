@@ -910,8 +910,15 @@ data class HttpRequestPattern(
             .combine(queryParams) { req, it -> req.copy(queryParams = it) }
             .combine(headers) { req, it -> req.copy(headers = it) }
             .combine(body) { req, it -> req.copy(body = it) }
+            .ifValue { copySecuritySchemes(request, it) }
             .breadCrumb("REQUEST")
             .value
+    }
+
+    private fun copySecuritySchemes(originalRequest: HttpRequest, request: HttpRequest): HttpRequest {
+        return securitySchemes.fold(request) { req, securityScheme ->
+            securityScheme.copyFromTo(originalRequest, req)
+        }
     }
 
     private fun withoutSecuritySchemes(request: HttpRequest): HttpRequest {

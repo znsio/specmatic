@@ -28,9 +28,7 @@ class ScenarioFilter(filterName: String = "", filterNotName: String = "", filter
 
         val scenarioFilter = ScenarioMetadataFilter.from(filter)
 
-        val filteredScenarios = filterUsing(scenariosFilteredByOlderSyntax.asSequence(), scenarioFilter) {
-            it.toScenarioMetadata()
-        }.toList()
+        val filteredScenarios = filterUsing(scenariosFilteredByOlderSyntax.asSequence(), scenarioFilter).toList()
 
 
         return feature.copy(scenarios = filteredScenarios)

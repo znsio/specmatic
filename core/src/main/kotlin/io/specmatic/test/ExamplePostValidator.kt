@@ -9,6 +9,7 @@ import io.specmatic.test.asserts.parsedAssert
 object ExamplePostValidator: ResponseValidator {
 
     override fun postValidate(scenario: Scenario, httpRequest: HttpRequest, httpResponse: HttpResponse): Result? {
+        if (scenario.isNegative) return null
         val asserts  = scenario.exampleRow?.toAsserts()?.takeIf { it.isNotEmpty() } ?: return null
 
         val actualFactStore = httpRequest.toFactStore() + ExampleProcessor.getFactStore()

@@ -855,5 +855,31 @@ class LoadTestsFromExternalisedFiles {
                 }
             }
         }
+
+        @Test
+        fun `should be able to run full suite tests using valid examples`() {
+            Flags.using(EXAMPLE_DIRECTORIES to validExamplesDir.canonicalPath) {
+                val feature = parseContractFileToFeature(specFile).copy(strictMode = true).loadExternalisedExamples()
+                feature.validateExamplesOrException()
+
+                val results = feature.enableGenerativeTesting().executeTests(object: TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        return if (request.headers["Specmatic-Response-Code"] == "400") {
+                            HttpResponse(status = 400)
+                        } else {
+                            val responseBody = (request.body as JSONObjectValue).jsonObject + mapOf(
+                                "id" to NumberValue(999), "traceId" to StringValue("123"),
+                            )
+                            HttpResponse(status = 201, body = JSONObjectValue(responseBody))
+                        }.also {
+                            println(listOf(request.toLogString(), it.toLogString()).joinToString(separator = "\n\n"))
+                        }
+                    }
+                }).results
+
+                println(results.joinToString("\n\n") { it.reportString() })
+                assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(23)
+            }
+        }
     }
 }

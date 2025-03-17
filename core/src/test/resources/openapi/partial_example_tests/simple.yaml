@@ -50,6 +50,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Pet'
+        '400':
+          description: bad request
 components:
   schemas:
     Pet:

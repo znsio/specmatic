@@ -31,6 +31,10 @@ class NoSecurityScheme : OpenAPISecurityScheme {
         return requestPattern
     }
 
+    override fun copyFromTo(originalRequest: HttpRequest, newHttpRequest: HttpRequest): HttpRequest {
+        return newHttpRequest
+    }
+
     override fun isInRow(row: Row): Boolean {
         return false
     }

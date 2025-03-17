@@ -54,6 +54,11 @@ data class BasicAuthSecurityScheme(private val token: String? = null) : OpenAPIS
         return addToHeaderType(AUTHORIZATION, row, requestPattern)
     }
 
+    override fun copyFromTo(originalRequest: HttpRequest, newHttpRequest: HttpRequest): HttpRequest {
+        if (!originalRequest.headers.containsKey(AUTHORIZATION)) return newHttpRequest
+        return newHttpRequest.addSecurityHeader(AUTHORIZATION, originalRequest.headers.getValue(AUTHORIZATION))
+    }
+
     override fun isInRow(row: Row): Boolean = row.containsField(AUTHORIZATION)
     private fun getAuthorizationHeaderValue(resolver: Resolver): String {
         val validToken = when {

@@ -1,0 +1,19 @@
+{
+  "partial": {
+    "http-request": {
+      "path": "/creators/abc/pets/(petId:string)",
+      "method": "PATCH",
+      "body": {
+        "creatorId": "JohnDoe",
+        "petId": "(number)"
+      }
+    },
+    "http-response": {
+      "status": 400,
+      "body": {
+        "code": 400,
+        "message": "Bad Request"
+      }
+    }
+  }
+}

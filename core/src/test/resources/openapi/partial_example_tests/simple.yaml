@@ -53,6 +53,10 @@ paths:
                 $ref: '#/components/schemas/Pet'
         '400':
           description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   schemas:
     Pet:
@@ -81,3 +85,13 @@ components:
           type: number
         petId:
           type: number
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: number
+        message:
+          type: string

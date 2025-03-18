@@ -793,6 +793,7 @@ class LoadTestsFromExternalisedFiles {
         private val validExamplesDir = specFile.parentFile.resolve("valid_partial")
         private val invalidExamplesDir = specFile.parentFile.resolve("invalid_partial")
         private val validWithoutMandatoryExamplesDir = specFile.parentFile.resolve("valid_without_mandatory")
+        private val badRequestExamplesDir = specFile.parentFile.resolve("bad_request_valid_example")
 
         @Test
         fun `should complain when invalid partial example is provided`() {
@@ -873,7 +874,7 @@ class LoadTestsFromExternalisedFiles {
                 val results = feature.enableGenerativeTesting().executeTests(object: TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         return if (request.headers["Specmatic-Response-Code"] == "400") {
-                            HttpResponse(status = 400)
+                            HttpResponse(status = 400, body = parsedJSONObject("""{"code": 400, "message": "BadRequest"}"""))
                         } else {
                             assertThat(request).isEqualTo(expectedGoodRequest)
                             val responseBody = (request.body as JSONObjectValue).jsonObject + mapOf(
@@ -888,6 +889,44 @@ class LoadTestsFromExternalisedFiles {
 
                 println(results.joinToString("\n\n") { it.reportString() })
                 assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(23)
+            }
+        }
+
+        @Test
+        fun `should be able to make bad request using example`() {
+            Flags.using(EXAMPLE_DIRECTORIES to badRequestExamplesDir.canonicalPath) {
+                val feature = parseContractFileToFeature(specFile).copy(strictMode = true).loadExternalisedExamples()
+                feature.validateExamplesOrException()
+
+                val expectedGoodRequest = HttpRequest(
+                    path = "/creators/123/pets/999",
+                    method = "PATCH",
+                    queryParams = QueryParameters(mapOf("creatorId" to "123", "petId" to "999")),
+                    headers = mapOf("Content-Type" to "application/json", "CREATOR-ID" to "123", "PET-ID" to "999", "Specmatic-Response-Code" to "201"),
+                    body = JSONObjectValue(mapOf("creatorId" to NumberValue(123), "petId" to NumberValue(999))),
+                )
+
+                val results = feature.executeTests(object: TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        return if (request.headers["Specmatic-Response-Code"] == "400") {
+                            assertThat(request.body).isEqualTo(
+                                JSONObjectValue(mapOf("creatorId" to StringValue("JohnDoe"), "petId" to NumberValue(999)))
+                            )
+                            HttpResponse(status = 400, body = parsedJSONObject("""{"code": 400, "message": "BadRequest"}"""))
+                        } else {
+                            assertThat(request).isEqualTo(expectedGoodRequest)
+                            val responseBody = (request.body as JSONObjectValue).jsonObject + mapOf(
+                                "id" to NumberValue(999), "traceId" to StringValue("123"),
+                            )
+                            HttpResponse(status = 201, body = JSONObjectValue(responseBody))
+                        }.also {
+                            println(listOf(request.toLogString(), it.toLogString()).joinToString(separator = "\n\n"))
+                        }
+                    }
+                }).results
+
+                println(results.joinToString("\n\n") { it.reportString() })
+                assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(2)
             }
         }
     }

@@ -562,7 +562,9 @@ data class HttpRequestPattern(
 
         return returnValue(breadCrumb = "REQUEST") {
             val newHttpPathPatterns: Sequence<ReturnValue<HttpPathPattern?>> = httpPathPattern?.let { httpPathPattern ->
-                val newURLPathSegmentPatternsList = httpPathPattern.newBasedOn(row, resolver)
+                val newURLPathSegmentPatternsList = if (status.toString().startsWith("2")) {
+                    httpPathPattern.newBasedOn(row, resolver)
+                } else httpPathPattern.readFrom(row, resolver)
                 newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }.map { HasValue(it) }
             } ?: sequenceOf(HasValue(null))
 

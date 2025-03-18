@@ -158,6 +158,32 @@ data class HttpPathPattern(
         return generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }
     }
 
+    fun readFrom(row: Row, resolver: Resolver): Sequence<List<URLPathSegmentPattern>> {
+        val generatedPatterns = newListBasedOn(pathSegmentPatterns.map { urlPathParamPattern ->
+            val key = urlPathParamPattern.key
+            if (key === null || !row.containsField(key)) return@map urlPathParamPattern
+
+            attempt(breadCrumb = "$PATH_BREAD_CRUMB.${withoutOptionality(key)}") {
+                val rowValue = row.getField(key)
+                when {
+                    isPatternToken(rowValue) ->  {
+                        val parts = withoutPatternDelimiters(rowValue).split(':')
+                        val tokenBody = parts.getOrNull(1) ?: parts.getOrNull(0) ?: throw ContractException("Invalid pattern token $rowValue in example")
+                        val pattern = resolver.getPattern(withPatternDelimiters(tokenBody))
+                        resolvedHop(pattern, resolver)
+                    }
+                    else ->  {
+                        val exactValue = parsedScalarValue(rowValue)
+                        URLPathSegmentPattern(ExactValuePattern(exactValue))
+                    }
+                }
+            }
+        }, row, resolver).map { it.value }
+
+        //TODO: replace this with Generics
+        return generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }
+    }
+
     fun newBasedOn(resolver: Resolver): Sequence<List<URLPathSegmentPattern>> {
         val generatedPatterns = newBasedOn(pathSegmentPatterns.mapIndexed { index, urlPathPattern ->
             attempt(breadCrumb = "[$index]") {

@@ -76,7 +76,7 @@ data class EnumPattern(
             else -> resolvedPattern.value
         }
 
-        return if (isPatternToken(value) && patternToConsider == this) HasValue(generate(resolver))
+        return if (isPatternToken(value) && patternToConsider == this) HasValue(resolver.generate(this))
         else pattern.fillInTheBlanks(value, resolver)
     }
 

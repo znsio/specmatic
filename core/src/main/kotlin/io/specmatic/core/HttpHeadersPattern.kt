@@ -62,7 +62,6 @@ data class HttpHeadersPattern(
         val isContentTypeNotAsPerPattern = isContentTypeAsPerPattern(contentTypePattern, resolver).not()
 
         if (contentTypePattern != null && isContentTypeNotAsPerPattern) {
-            if(contentType != null) logContentTypeAndPatternMismatchWarning()
             val contentTypeMatchResult = contentTypePattern.matches(
                 parsedValue(contentTypeHeaderValueFromRequest),
                 resolver
@@ -216,23 +215,30 @@ data class HttpHeadersPattern(
             }
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
 
-        val contentTypePattern = contentTypeInPattern()
-        if (generatedHeaders.containsKey(CONTENT_TYPE) && contentTypePattern != null) {
-            val generatedContentType = generatedHeaders.getValue(CONTENT_TYPE)
-            val regeneratedContentType = contentTypePattern.generate(resolver).toStringLiteral()
+        if(contentType == null)
+            return generatedHeaders
 
-            if (generatedContentType == regeneratedContentType) {
-                if (generatedContentType != contentType) logContentTypeAndPatternMismatchWarning()
-                return generatedHeaders
-            }
-        }
-        if (contentType.isNullOrBlank()) return generatedHeaders
+        val generatedContentTypeValue = generatedHeaders[CONTENT_TYPE] ?: return generatedHeaders.withMediaType()
 
-        return generatedHeaders.plus(CONTENT_TYPE to contentType)
+        if (!contentTypeHeaderIsConst(generatedContentTypeValue, resolver))
+            return generatedHeaders.withMediaType()
+
+        return generatedHeaders
     }
 
-    private fun contentTypeInPattern(): Pattern? {
-        return pattern[CONTENT_TYPE] ?: pattern["${CONTENT_TYPE}?"]
+    private fun contentTypeHeaderIsConst(
+        generatedContentType: String,
+        resolver: Resolver,
+    ): Boolean {
+        val contentTypePattern: Pattern = pattern[CONTENT_TYPE] ?: pattern["${CONTENT_TYPE}?"] ?: return false
+        val regeneratedContentType = contentTypePattern.generate(resolver).toStringLiteral()
+        return generatedContentType == regeneratedContentType
+    }
+
+    private fun Map<String, String>.withMediaType(
+    ): Map<String, String> {
+        if (contentType.isNullOrBlank()) return this
+        return this.plus(CONTENT_TYPE to contentType)
     }
 
     private fun toStringLiteral(headerValue: Value) = when (headerValue) {
@@ -448,9 +454,10 @@ data class HttpHeadersPattern(
         return fixedHeaders.mapValues { it.value.toStringLiteral() }
     }
 
-    private fun logContentTypeAndPatternMismatchWarning() {
-        logger.log("WARNING: The content type schema specified in the specification does not match the media type $contentType")
-    }
+}
+
+internal fun logContentTypeAndPatternMismatchWarning(contentType: String) {
+    logger.log("WARNING: The content type schema specified in the specification does not match the media type $contentType")
 }
 
 private fun parseOrString(pattern: Pattern, sampleValue: String, resolver: Resolver) =

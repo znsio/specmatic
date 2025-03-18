@@ -2,6 +2,7 @@ package io.specmatic.core
 
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
+import io.specmatic.core.filters.HasScenarioMetadata
 import io.specmatic.core.filters.ScenarioMetadata
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
@@ -84,7 +85,7 @@ data class Scenario(
     val dictionary: Map<String, Value> = emptyMap(),
     val attributeSelectionPattern: AttributeSelectionPatternDetails = AttributeSelectionPatternDetails.default,
     val exampleRow: Row? = null
-): ScenarioDetailsForResult {
+): ScenarioDetailsForResult, HasScenarioMetadata {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
         scenarioInfo.httpRequestPattern,
@@ -858,7 +859,7 @@ data class Scenario(
         }
     }
 
-    fun toScenarioMetadata(): ScenarioMetadata {
+    override fun toScenarioMetadata(): ScenarioMetadata {
         return ScenarioMetadata(
             method = this.method,
             path = this.path,

@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.util.function.Consumer
 import kotlin.collections.HashMap
 
@@ -711,6 +713,59 @@ internal class HttpHeadersPatternTest {
 
             println(fixedValue)
             assertThat(fixedValue).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "Content-Type Header, Generated Content Type",
+        "application/json, application/json",
+        "application/json; charset=utf-8, application/json; charset=utf-8",
+        "none, application/json",
+        "present, application/json",
+        useHeadersInDisplayName = true,
+    )
+    fun `content type header with specific value should override media type when generating headers`(contentTypeHeader: String, expectedContentType: String) {
+        val mediaType = "application/json"
+
+        val headersPattern = when(contentTypeHeader) {
+            "none" -> HttpHeadersPattern(emptyMap(), contentType = mediaType)
+            "present" -> HttpHeadersPattern(mapOf("Content-Type" to StringPattern()), contentType = mediaType)
+            else -> HttpHeadersPattern(mapOf("Content-Type" to StringPattern(regex = contentTypeHeader)), contentType = mediaType)
+        }
+
+        val headers = headersPattern.generate(Resolver())
+
+        assertThat(headers).containsEntry("Content-Type", expectedContentType)
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "Content-Type Header In Spec, Actual Content Type, Matches",
+        "application/json, application/json, true",
+        "application/json; charset=utf-8, application/json; charset=utf-8, true",
+        "none, application/json, true",
+        "present, application/json, true",
+        "application/json; charset=utf-8, application/json, false",
+        useHeadersInDisplayName = true,
+    )
+    fun `content type header with specific value should override media type when matching headers`(contentTypeHeaderInSpec: String, actualContentType: String, matches: String) {
+        val mediaType = "application/json"
+
+        val headersPattern = when(contentTypeHeaderInSpec) {
+            "none" -> HttpHeadersPattern(emptyMap(), contentType = mediaType)
+            "present" -> HttpHeadersPattern(mapOf("Content-Type" to StringPattern()), contentType = mediaType)
+            else -> HttpHeadersPattern(mapOf("Content-Type" to StringPattern(regex = contentTypeHeaderInSpec)), contentType = mediaType)
+        }
+
+        val actualHeaders = mapOf("Content-Type" to actualContentType)
+
+        val matchResult = headersPattern.matches(actualHeaders, Resolver())
+
+        if(matches == "true") {
+            assertThat(matchResult).isInstanceOf(Result.Success::class.java)
+        } else {
+            assertThat(matchResult).isInstanceOf(Result.Failure::class.java)
         }
     }
 

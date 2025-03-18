@@ -143,26 +143,27 @@ class OpenApiCoverageReportInput(
     }
 
     private fun addTestResultsForMissingEndpoints(testResults: List<TestResultRecord>): List<TestResultRecord> {
-        var testReportRecordsIncludingMissingAPIs = testResults.toMutableList()
+        if(!endpointsAPISet)
+            return testResults
+
         val filter = ScenarioMetadataFilter.from(filterExpression)
-        if(endpointsAPISet) {
-            applicationAPIs.forEach { api ->
-                if (allEndpoints.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it == api.path }) {
-                    testReportRecordsIncludingMissingAPIs.add(
-                        TestResultRecord(
-                            api.path,
-                            api.method,
-                            0,
-                            TestResult.MissingInSpec,
-                            serviceType = SERVICE_TYPE_HTTP
-                        )
-                    )
-                }
-            }
-            val filteredItems = filterUsing(testReportRecordsIncludingMissingAPIs.asSequence(), filter) { it }
-            testReportRecordsIncludingMissingAPIs = filteredItems.toMutableList()
+
+        val testResultsForMissingAPIs = applicationAPIs.filter { api ->
+            val noTestResultFoundForThisAPI = allEndpoints.none { it.path == api.path && it.method == api.method }
+            val isNotExcluded = api.path !in excludedAPIs
+
+            noTestResultFoundForThisAPI && isNotExcluded
+        }.map { api ->
+            TestResultRecord(
+                api.path,
+                api.method,
+                0,
+                TestResult.MissingInSpec,
+                serviceType = SERVICE_TYPE_HTTP
+            )
         }
-        return testReportRecordsIncludingMissingAPIs
+
+        return filterUsing((testResults + testResultsForMissingAPIs).asSequence(), filter).toList()
     }
 
     private fun calculateTotalCoveragePercentage(methodMap: Map<String, Map<String?, Map<String, List<TestResultRecord>>>>): Int {

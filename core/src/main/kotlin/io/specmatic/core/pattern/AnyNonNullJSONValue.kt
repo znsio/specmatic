@@ -25,6 +25,10 @@ data class AnyNonNullJSONValue(override val pattern: Pattern = AnythingPattern):
         }
     }
 
+    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
+        return fillInTheBlanksWithPattern(value, resolver, this)
+    }
+
     override fun fixValue(value: Value, resolver: Resolver): Value {
         return value.takeIf { this.matches(it, resolver).isSuccess() } ?: resolver.generate(pattern)
     }

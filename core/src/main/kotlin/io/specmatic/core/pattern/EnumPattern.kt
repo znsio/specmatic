@@ -71,13 +71,13 @@ data class EnumPattern(
     }
 
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        val patternToConsider = when (val resolvedPattern = resolveToPattern(value, resolver)) {
+        val patternToConsider = when (val resolvedPattern = resolveToPattern(value, resolver, this)) {
             is ReturnFailure -> return resolvedPattern.cast()
             else -> resolvedPattern.value
         }
 
         return if (isPatternToken(value) && patternToConsider == this) HasValue(generate(resolver))
-        else super.fillInTheBlanks(value, resolver)
+        else pattern.fillInTheBlanks(value, resolver)
     }
 
     override fun equals(other: Any?): Boolean = other is EnumPattern && other.pattern == this.pattern

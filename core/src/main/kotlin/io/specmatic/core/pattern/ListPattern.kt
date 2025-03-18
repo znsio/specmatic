@@ -45,7 +45,7 @@ data class ListPattern(
     }
 
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        val patternToConsider = when (val resolvedPattern = resolveToPattern(value, resolver)) {
+        val patternToConsider = when (val resolvedPattern = resolveToPattern(value, resolver, this)) {
             is ReturnFailure -> return resolvedPattern.cast()
             else -> (resolvedPattern.value as? ListPattern) ?: return when(resolver.isNegative) {
                 true -> fillInIfPatternToken(value, resolvedPattern.value, resolver)

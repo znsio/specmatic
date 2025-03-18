@@ -34,7 +34,7 @@ internal class HttpPathPatternTest {
         val result = pattern.matches(URI(path), Resolver())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat((result as Result.Failure).failureReason).isEqualTo(FailureReason.URLPathMismatchButSameStructure)
+        assertThat((result as Result.Failure).failureReason).isEqualTo(FailureReason.URLPathParamMismatchButSameStructure)
     }
 
     @ParameterizedTest
@@ -266,7 +266,7 @@ internal class HttpPathPatternTest {
         val pattern = buildHttpPathPattern("/pets/(petid:number)/file/(fileid:number)")
         val mismatchResult = pattern.matches(URI("/pets/abc/file/def")) as Result.Failure
 
-        assertThat(mismatchResult.failureReason).isEqualTo(FailureReason.URLPathMismatchButSameStructure)
+        assertThat(mismatchResult.failureReason).isEqualTo(FailureReason.URLPathParamMismatchButSameStructure)
         assertThat(mismatchResult.reportString())
             .contains("PATH.petid")
             .contains("PATH.fileid")

@@ -686,7 +686,7 @@ data class Scenario(
             val requestMatchResult = attempt(breadCrumb = "REQUEST") {
                 if (response.status !in invalidRequestStatuses) return@attempt httpRequestPattern.matches(request, resolver)
                 httpRequestPattern.matchesPathAndMethod(request, resolver).takeUnless {
-                    it is Result.Failure && it.hasReason(FailureReason.URLPathMismatchButSameStructure)
+                    it is Result.Failure && it.hasReason(FailureReason.URLPathParamMismatchButSameStructure)
                 } ?: Result.Success()
             }
 
@@ -799,7 +799,7 @@ data class Scenario(
             operationId.requestMethod.equals(method, ignoreCase = true)
                     && operationId.responseStatus == status
                     && httpRequestPattern.matchesPath(operationId.requestPath, patternMatchingResolver).let {
-                        it.isSuccess() || (it as? Result.Failure)?.failureReason == FailureReason.URLPathMismatchButSameStructure
+                        it.isSuccess() || (it as? Result.Failure)?.failureReason == FailureReason.URLPathParamMismatchButSameStructure
                     }
                     && matchesRequestContentType(operationId)
                     && matchesResponseContentType(operationId)
@@ -838,7 +838,7 @@ data class Scenario(
                 return@attempt httpRequestPattern.matches(template.request, updatedResolver, updatedResolver)
             }
             httpRequestPattern.matchesPathAndMethod(template.request, updatedResolver).takeUnless {
-                it is Result.Failure && it.hasReason(FailureReason.URLPathMismatchButSameStructure)
+                it is Result.Failure && it.hasReason(FailureReason.URLPathParamMismatchButSameStructure)
             } ?: Result.Success()
         }
 

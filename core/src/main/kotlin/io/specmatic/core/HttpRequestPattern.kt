@@ -83,12 +83,12 @@ data class HttpRequestPattern(
 
         val matchFailureButSameStructure = (
             incomingHttpRequest.method == method &&
-            (result as? Failure)?.hasReason(FailureReason.URLPathMismatchButSameStructure) == true
+            (result as? Failure)?.hasReason(FailureReason.URLPathParamMismatchButSameStructure) == true
         )
 
         return when (result) {
             is Failure -> result.failureReason(
-                failureReason = if (matchFailureButSameStructure) FailureReason.URLPathMismatchButSameStructure else result.failureReason
+                failureReason = if (matchFailureButSameStructure) FailureReason.URLPathParamMismatchButSameStructure else result.failureReason
             ).breadCrumb("REQUEST")
             else -> result
         }

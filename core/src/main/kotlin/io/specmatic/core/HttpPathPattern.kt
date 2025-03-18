@@ -83,7 +83,7 @@ data class HttpPathPattern(
         val finalMatchResult = Result.fromResults(failures)
 
         val failureReason = if (structureMatches(path, resolver)) {
-            FailureReason.URLPathMismatchButSameStructure
+            FailureReason.URLPathParamMismatchButSameStructure
         } else FailureReason.URLPathMisMatch
 
         return finalMatchResult.withFailureReason(failureReason)

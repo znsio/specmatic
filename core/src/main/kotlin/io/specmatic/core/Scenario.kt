@@ -428,8 +428,7 @@ data class Scenario(
 
         return scenarioBreadCrumb(this) {
             attempt {
-                val updatedResolver = resolver.copy(isNegative = isNegative)
-                val rowValue =  when(val resolvedRow = resolveRow(row, updatedResolver)) {
+                val rowValue =  when(val resolvedRow = resolveRow(row, resolver)) {
                     is HasValue -> resolvedRow.value
                     is HasException -> return@attempt sequenceOf(resolvedRow.cast())
                     is HasFailure -> return@attempt sequenceOf(resolvedRow.cast())
@@ -438,8 +437,8 @@ data class Scenario(
                 val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withResponseExampleValue(rowValue, resolver)
 
                 val (newRequestPatterns: Sequence<ReturnValue<HttpRequestPattern>>, generativePrefix: String) = when (isNegative) {
-                    false -> Pair(httpRequestPattern.newBasedOn(rowValue, updatedResolver, httpResponsePattern.status), flagsBased.positivePrefix)
-                    else -> Pair(httpRequestPattern.negativeBasedOn(rowValue, updatedResolver), flagsBased.negativePrefix)
+                    false -> Pair(httpRequestPattern.newBasedOn(rowValue, resolver, httpResponsePattern.status), flagsBased.positivePrefix)
+                    else -> Pair(httpRequestPattern.negativeBasedOn(rowValue, resolver.copy(isNegative = isNegative)), flagsBased.negativePrefix)
                 }
 
                 newRequestPatterns.map { newHttpRequestPattern ->

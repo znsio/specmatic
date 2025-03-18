@@ -78,7 +78,17 @@ data class HasValue<T>(override val value: T, val valueDetails: List<ValueDetail
 
     override fun <U, V> combine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
         if(acc is ReturnFailure) return acc.cast()
+        acc as HasValue<U>
+        return try {
+            val newValue = fn(value, acc.value)
+            HasValue(newValue, valueDetails.plus(acc.valueDetails))
+        } catch(t: Throwable) {
+            HasException(t)
+        }
+    }
 
+    override fun <U, V> exceptionElseCombine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
+        if (acc is ReturnFailure) return acc.cast()
         acc as HasValue<U>
         return try {
             val newValue = fn(value, acc.value)

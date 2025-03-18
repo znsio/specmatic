@@ -36,6 +36,14 @@ data class HasFailure<T>(val failure: Result.Failure, val message: String = "") 
     override val value: T
         get() = throw ContractException(failure.toFailureReport())
 
+    override fun <U, V> exceptionElseCombine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
+        return when (acc) {
+            is HasFailure<*> -> combine(acc).cast()
+            is HasException<*> -> acc.cast()
+            else -> cast()
+        }
+    }
+
     override fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U> {
         return cast()
     }

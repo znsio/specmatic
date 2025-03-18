@@ -50,6 +50,10 @@ data class HasException<T>(val t: Throwable, val message: String = "", val bread
     override val value: T
         get() = throw t
 
+    override fun <U, V> exceptionElseCombine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
+        return cast()
+    }
+
     override fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U> {
         return cast()
     }

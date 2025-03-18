@@ -78,7 +78,7 @@ data class ListPattern(
 
         val updatedList = value.list.mapIndexed { index, listItem ->
             pattern.resolveSubstitutions(substitution, listItem, resolver).breadCrumb("[$index]")
-        }.listFold()
+        }.listFoldException()
 
         return updatedList.ifValue { value.copy(list = it) }
     }

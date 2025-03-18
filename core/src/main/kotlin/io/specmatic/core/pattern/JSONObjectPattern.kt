@@ -188,7 +188,7 @@ data class JSONObjectPattern(
             pattern.resolveSubstitutions(substitution, value, resolver, key).breadCrumb(key)
         }
 
-        return updatedMap.mapFold().ifValue { value.copy(it) }
+        return updatedMap.mapFoldException().ifValue { value.copy(it) }
     }
 
     override fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {

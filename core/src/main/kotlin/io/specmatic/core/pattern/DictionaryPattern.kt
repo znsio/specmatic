@@ -41,7 +41,7 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
             valuePattern.resolveSubstitutions(substitution, value, resolver, key)
         }
 
-        return updatedMap.mapFold().ifValue { value.copy(it) }
+        return updatedMap.mapFoldException().ifValue { value.copy(it) }
     }
 
     override fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {

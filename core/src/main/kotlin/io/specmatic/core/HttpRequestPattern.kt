@@ -81,8 +81,15 @@ data class HttpRequestPattern(
                 ::handleError toResult
                 ::returnResult
 
+        val matchFailureButSameStructure = (
+            incomingHttpRequest.method == method &&
+            (result as? Failure)?.hasReason(FailureReason.URLPathMismatchButSameStructure) == true
+        )
+
         return when (result) {
-            is Failure -> result.breadCrumb("REQUEST")
+            is Failure -> result.failureReason(
+                failureReason = if (matchFailureButSameStructure) FailureReason.URLPathMismatchButSameStructure else result.failureReason
+            ).breadCrumb("REQUEST")
             else -> result
         }
     }
@@ -437,12 +444,7 @@ data class HttpRequestPattern(
 
     private fun encompassedType(valueString: String, key: String?, type: Pattern, resolver: Resolver): Pattern {
         return when {
-            isPatternToken(valueString) -> resolvedHop(parsedPattern(valueString, key), resolver).let { parsedType ->
-                when (val result = type.encompasses(parsedType, resolver, resolver)) {
-                    is Success -> parsedType
-                    is Failure -> throw ContractException(result.toFailureReport())
-                }
-            }
+            isPatternToken(valueString) -> resolvedHop(parsedPattern(valueString, key), resolver)
             else -> type.parseToType(valueString, resolver)
         }
     }

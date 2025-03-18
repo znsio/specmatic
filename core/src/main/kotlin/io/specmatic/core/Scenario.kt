@@ -684,8 +684,10 @@ data class Scenario(
             )
 
             val requestMatchResult = attempt(breadCrumb = "REQUEST") {
-                if(response.status == 400) httpRequestPattern.matchesPathAndMethod(request, resolver)
-                else httpRequestPattern.matches(request, resolver)
+                if (response.status !in invalidRequestStatuses) return@attempt httpRequestPattern.matches(request, resolver)
+                httpRequestPattern.matchesPathAndMethod(request, resolver).takeUnless {
+                    it is Result.Failure && it.hasReason(FailureReason.URLPathMismatchButSameStructure)
+                } ?: Result.Success()
             }
 
             if (requestMatchResult is Result.Failure)
@@ -831,9 +833,18 @@ data class Scenario(
     fun matchesPartial(template: ScenarioStub): Result {
         val updatedResolver = resolver.copy(findKeyErrorCheck = PARTIAL_KEYCHECK, mockMode = true)
 
-        val requestMatch = httpRequestPattern.matches(template.request, updatedResolver, updatedResolver)
+        val requestMatch = attempt(breadCrumb = "REQUEST") {
+            if (template.response.status !in invalidRequestStatuses) {
+                return@attempt httpRequestPattern.matches(template.request, updatedResolver, updatedResolver)
+            }
+            httpRequestPattern.matchesPathAndMethod(template.request, updatedResolver).takeUnless {
+                it is Result.Failure && it.hasReason(FailureReason.URLPathMismatchButSameStructure)
+            } ?: Result.Success()
+        }
 
-        val responseMatch = httpResponsePattern.matchesMock(template.response, updatedResolver)
+        val responseMatch = attempt(breadCrumb = "RESPONSE") {
+            httpResponsePattern.matchesMock(template.response, updatedResolver)
+        }
 
         return Result.fromResults(listOf(requestMatch, responseMatch))
     }

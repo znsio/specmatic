@@ -1,8 +1,10 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.core.FailureReason
+import io.specmatic.core.PARTIAL_KEYCHECK
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
+import io.specmatic.core.pattern.AnyPattern.AnyPatternMatch
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.test.ExampleProcessor
@@ -64,9 +66,29 @@ class Discriminator(
         return updatedPatterns
     }
 
+    private fun valueHasDiscriminator(sampleData: JSONObjectValue): Boolean {
+        return sampleData.jsonObject[property] != null
+    }
+
+    private fun _matches_partial(sampleData: JSONObjectValue, patterns: List<Pattern>, key: String?, resolver: Resolver): Result {
+        val matchResults: List<AnyPatternMatch> = patterns.map {
+            AnyPatternMatch(it, resolver.matchesPattern(key, it, sampleData))
+        }
+
+        val matchResult = matchResults.find { it.result is Result.Success }
+        if(matchResult != null) return matchResult.result
+
+        val failures = matchResults.map { it.result }.filterIsInstance<Result.Failure>()
+        return Result.Failure.fromFailures(failures)
+    }
+
     private fun _matches(sampleData: Value?, pattern: List<Pattern>, key: String?, resolver: Resolver): Result {
         if (sampleData !is JSONObjectValue)
             return jsonObjectMismatchError(resolver, sampleData)
+
+        if (!valueHasDiscriminator(sampleData) && resolver.findKeyErrorCheck == PARTIAL_KEYCHECK) {
+            return _matches_partial(sampleData, pattern, key, resolver)
+        }
 
         val discriminatorCsvClause = if(values.size ==  1)
             values.first()

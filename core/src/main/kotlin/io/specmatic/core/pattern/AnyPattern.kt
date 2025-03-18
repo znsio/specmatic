@@ -104,7 +104,8 @@ data class AnyPattern(
     }
 
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        val results = pattern.asSequence().map {
+        val updatedPatterns = getUpdatedPattern(resolver)
+        val results = updatedPatterns.asSequence().map {
             it.fillInTheBlanks(value, resolver)
         }
 
@@ -161,7 +162,7 @@ data class AnyPattern(
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        if(discriminator != null) {
+        if (discriminator != null) {
             return discriminator.matches(sampleData, pattern, key, resolver)
         }
 

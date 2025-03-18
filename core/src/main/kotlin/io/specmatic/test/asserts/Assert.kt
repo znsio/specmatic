@@ -42,7 +42,7 @@ interface Assert {
     }
 }
 
-fun parsedAssert(prefix: String, key: String, value: Value, resolver: Resolver): Assert? {
+fun parsedAssert(prefix: String, key: String, value: Value, resolver: Resolver = Resolver()): Assert? {
     return Assert.parse(prefix, key, value, resolver)
 }
 

@@ -414,7 +414,7 @@ data class HttpHeadersPattern(
     }
 
     fun fillInTheBlanks(headers: Map<String, String>, resolver: Resolver): ReturnValue<Map<String, String>> {
-        val headersWithContentType = if (contentType != null) {
+        val headersWithContentType = if (contentType != null && CONTENT_TYPE !in headers) {
             headers.plus(CONTENT_TYPE to contentType)
         } else headers
 

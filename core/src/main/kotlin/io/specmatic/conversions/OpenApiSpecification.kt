@@ -1139,7 +1139,8 @@ class OpenApiSpecification(
             val generated2 = concretePattern.generate(Resolver()).toStringLiteral()
 
             if (generated1 == generated2 && generated1 != contentType) {
-                logger.log("WARNING: The content type header schema does not match the media type $contentType in $descriptor")
+                val warning = "WARNING: Media type \"$contentType\" in $descriptor does not match the respective Content-Type header. Using the Content-Type header as an override."
+                logger.log(warning)
                 return generated1
             }
         } catch (e: ContractException) {

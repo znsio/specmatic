@@ -10304,7 +10304,7 @@ paths:
             OpenApiSpecification.fromYAML(spec, "").toFeature()
         }
 
-        assertThat(output).contains("WARNING: The content type header schema does not match the media type application/json in request of POST /products")
+        assertThat(output).contains("WARNING: Media type \"application/json\" in request of POST /products does not match the respective Content-Type header. Using the Content-Type header as an override.")
     }
 
     @Test

@@ -38,7 +38,16 @@ jobs:
           
       - name: Build Docker Image
         run: docker build --no-cache -t znsio/specmatic:${{ steps.read_version.outputs.VERSION }} .
-        
+
+      - name: Fail build on High/Criticial Vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'image'
+          scan-ref: 'znsio/specmatic:${{ steps.read_version.outputs.VERSION }}'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+
       - name: Push Docker Image
         run: docker push znsio/specmatic:${{ steps.read_version.outputs.VERSION }}
 

@@ -684,6 +684,73 @@ class LoadTestsFromExternalisedFiles {
                 """.trimIndent())
             }
         }
+
+        @Test
+        fun `should be able to load partial example with missing discriminator but has asserts`() {
+            val specFile = File("src/test/resources/openapi/partial_with_discriminator/openapi.yaml")
+            val examplesDir = specFile.parentFile.resolve("example_with_asserts")
+
+            Flags.using(EXAMPLE_DIRECTORIES to examplesDir.canonicalPath) {
+                val feature = parseContractFileToFeature(specFile).copy(strictMode = true).loadExternalisedExamples()
+                feature.validateExamplesOrException()
+
+                var entity = JSONObjectValue()
+                val results = feature.executeTests(object: TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        return when(request.method) {
+                            "GET" -> HttpResponse(status = 200, body = JSONArrayValue(listOf(entity)))
+                            "POST" -> {
+                                assertThat(request.body).isEqualTo(parsedJSONObject("""{"petType": "cat", "color": "black"}"""))
+                                val withId = JSONObjectValue((request.body as JSONObjectValue).jsonObject.plus("id" to NumberValue(1)))
+                                HttpResponse(status = 201, body = withId).also { entity = withId }
+                            }
+                            else ->  throw Exception("Unknown method ${request.method}")
+                        }.also { println(listOf(request.toLogString(), it.toLogString()).joinToString(separator = "\n\n")) }
+                    }
+                }).results
+
+                assertThat(results).isNotEmpty.hasOnlyElementsOfType(Result.Success::class.java).hasSize(2)
+            }
+        }
+
+        @Test
+        fun `should complain when response doesn't match the asserts in the example`() {
+            val specFile = File("src/test/resources/openapi/partial_with_discriminator/openapi.yaml")
+            val examplesDir = specFile.parentFile.resolve("example_with_asserts")
+
+            Flags.using(EXAMPLE_DIRECTORIES to examplesDir.canonicalPath) {
+                val feature = parseContractFileToFeature(specFile).copy(strictMode = true).loadExternalisedExamples()
+                feature.validateExamplesOrException()
+
+                val invalidEntity = parsedJSONObject("""{ "id": 1, "color": "white", "petType": "dog" }""")
+                val results = feature.executeTests(object: TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        return when(request.method) {
+                            "GET" -> HttpResponse(status = 200, body = JSONArrayValue(listOf(invalidEntity)))
+                            "POST" -> {
+                                assertThat(request.body).isEqualTo(parsedJSONObject("""{"petType": "cat", "color": "black"}"""))
+                                val withId = JSONObjectValue((request.body as JSONObjectValue).jsonObject.plus("id" to NumberValue(1)))
+                                HttpResponse(status = 201, body = withId)
+                            }
+                            else ->  throw Exception("Unknown method ${request.method}")
+                        }.also { println(listOf(request.toLogString(), it.toLogString()).joinToString(separator = "\n\n")) }
+                    }
+                }).results
+
+                assertThat(results).hasSize(2)
+                assertThat(results.filterIsInstance<Result.Failure>()).hasSize(1)
+
+                val failure = results.filterIsInstance<Result.Failure>().first()
+                assertThat(failure.reportString()).containsIgnoringWhitespaces("""
+                In scenario "List all pets. Response: A list of pets"
+                API: GET /pets -> 200
+                >> RESPONSE.BODY[0].petType
+                Expected "dog" to equal "cat"
+                >> RESPONSE.BODY[0].color
+                Expected "white" to equal "black"
+                """.trimIndent())
+            }
+        }
     }
 
     @Nested
@@ -927,6 +994,112 @@ class LoadTestsFromExternalisedFiles {
 
                 println(results.joinToString("\n\n") { it.reportString() })
                 assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(2)
+            }
+        }
+
+        @Nested
+        inner class DiscriminatorTests {
+            private val discriminatorSpecFile = File("src/test/resources/openapi/partial_with_discriminator/openapi.yaml")
+            private val exampleWithDiscriminator= discriminatorSpecFile.parentFile.resolve("example_with_disc")
+            private val exampleWithoutDisc = discriminatorSpecFile.parentFile.resolve("example_without_disc")
+            private val exampleWithPatternToken = discriminatorSpecFile.parentFile.resolve("example_with_pattern_token")
+            private val exampleWithInvalidDisc = discriminatorSpecFile.parentFile.resolve("example_with_invalid_disc")
+
+            @Test
+            fun `should be able to load example with only discriminator in request`() {
+                Flags.using(EXAMPLE_DIRECTORIES to exampleWithDiscriminator.canonicalPath) {
+                    val feature = parseContractFileToFeature(discriminatorSpecFile).copy(strictMode = true).loadExternalisedExamples()
+                    val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "POST" })
+                    filteredFeature.validateExamplesOrException()
+
+                    val expectedRequest = HttpRequest(
+                        path = "/pets", method = "POST",
+                        headers = mapOf("Content-Type" to "application/json", "Specmatic-Response-Code" to "201"),
+                        body = parsedJSONObject("""{"petType": "cat", "color": "black"}""")
+                    )
+
+                    val results = filteredFeature.executeTests(object: TestExecutor {
+                        override fun execute(request: HttpRequest): HttpResponse {
+                            assertThat(request).isEqualTo(expectedRequest)
+                            return HttpResponse(
+                                status = 201, body = parsedJSONObject("""{"id": 1, "petType": "cat", "color": "black"}""")
+                            ).also { println(listOf(request.toLogString(), it.toLogString()).joinToString(separator = "\n\n")) }
+                        }
+                    }).results
+
+                    println(results.joinToString("\n\n") { it.reportString() })
+                    assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(1)
+                }
+            }
+
+            @Test
+            fun `should be able to load example without discriminator in request but one of the discriminator fields is present`() {
+                Flags.using(EXAMPLE_DIRECTORIES to exampleWithoutDisc.canonicalPath) {
+                    val feature = parseContractFileToFeature(discriminatorSpecFile).copy(strictMode = true).loadExternalisedExamples()
+                    val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "POST" })
+                    filteredFeature.validateExamplesOrException()
+
+                    val expectedRequest = HttpRequest(
+                        path = "/pets", method = "POST",
+                        headers = mapOf("Content-Type" to "application/json", "Specmatic-Response-Code" to "201"),
+                        body = parsedJSONObject("""{"petType": "cat", "livesLeft": 9, "color": "black"}""")
+                    )
+
+                    val results = filteredFeature.executeTests(object: TestExecutor {
+                        override fun execute(request: HttpRequest): HttpResponse {
+                            assertThat(request).isEqualTo(expectedRequest)
+                            return HttpResponse(
+                                status = 201, body = parsedJSONObject("""{"id": 1, "petType": "cat", "color": "black", "livesLeft": 9}""")
+                            ).also { println(listOf(request.toLogString(), it.toLogString()).joinToString(separator = "\n\n")) }
+                        }
+                    }).results
+
+                    println(results.joinToString("\n\n") { it.reportString() })
+                    assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(1)
+                }
+            }
+
+            @Test
+            fun `should be able to load example with pattern token in request`() {
+                Flags.using(EXAMPLE_DIRECTORIES to exampleWithPatternToken.canonicalPath) {
+                    val feature = parseContractFileToFeature(discriminatorSpecFile).copy(strictMode = true).loadExternalisedExamples()
+                    val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "POST" })
+                    filteredFeature.validateExamplesOrException()
+
+                    val expectedRequest = HttpRequest(
+                        path = "/pets", method = "POST",
+                        headers = mapOf("Content-Type" to "application/json", "Specmatic-Response-Code" to "201"),
+                        body = parsedJSONObject("""{"petType": "cat", "color": "black"}""")
+                    )
+
+                    val results = filteredFeature.executeTests(object : TestExecutor {
+                        override fun execute(request: HttpRequest): HttpResponse {
+                            assertThat(request).isEqualTo(expectedRequest)
+                            return HttpResponse(
+                                status = 201,
+                                body = parsedJSONObject("""{"id": 1, "petType": "cat", "color": "black"}""")
+                            ).also { println(listOf(request.toLogString(), it.toLogString()).joinToString(separator = "\n\n")) }
+                        }
+                    }).results
+
+                    println(results.joinToString("\n\n") { it.reportString() })
+                    assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(1)
+                }
+            }
+
+            @Test
+            fun `should complain when discriminator is present but invalid`() {
+                Flags.using(EXAMPLE_DIRECTORIES to exampleWithInvalidDisc.canonicalPath) {
+                    val feature = parseContractFileToFeature(discriminatorSpecFile).copy(strictMode = true).loadExternalisedExamples()
+                    val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "POST" })
+                    val exception = assertThrows<ContractException> { filteredFeature.validateExamplesOrException() }
+
+                    assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+                    Error loading example for POST /pets -> 201 from ${exampleWithInvalidDisc.resolve("partial_example.json").canonicalPath}
+                    >> REQUEST.BODY.petType
+                    Expected the value of discriminator property to be one of dog, cat but it was UNKNOWN
+                    """.trimIndent())
+                }
             }
         }
     }

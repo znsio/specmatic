@@ -6,6 +6,8 @@ import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.ScalarValue
 import io.specmatic.core.value.Value
 
+val ASSERT_KEYS = setOf("\$if", "\$then", "\$else")
+
 interface Assert {
     fun assert(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result
 

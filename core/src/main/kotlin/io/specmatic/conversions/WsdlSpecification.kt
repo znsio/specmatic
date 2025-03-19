@@ -79,7 +79,7 @@ class WsdlSpecification(private val wsdlFile: WSDLContent) : IncludedSpecificati
         val (specmaticScenarioInfo, wsdlScenarioInfos) = parameters
 
         val matchingScenarioInfos = wsdlScenarioInfos.filter {
-            it.httpResponsePattern.matches(
+            it.httpResponsePattern.matchesResponse(
                 specmaticScenarioInfo.httpResponsePattern.fillInTheBlanks(
                     Resolver()
                 ), Resolver()

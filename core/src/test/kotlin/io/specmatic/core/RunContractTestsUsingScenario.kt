@@ -58,7 +58,7 @@ internal class RunContractTestsUsingScenario {
     @Test
     fun `should not match when there is an Exception`() {
         val httpResponsePattern = mockk<HttpResponsePattern>(relaxed = true)
-        every { httpResponsePattern.matches(any(), any()) }.throws(ContractException("message"))
+        every { httpResponsePattern.matchesResponse(any(), any()) }.throws(ContractException("message"))
         val scenario = Scenario(
             "test",
             HttpRequestPattern(),

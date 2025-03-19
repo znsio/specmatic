@@ -27,7 +27,7 @@ internal class HttpResponsePatternTest {
         val response = HttpResponse(200, emptyMap(), StringValue("not a number"))
         val pattern = HttpResponsePattern(status = 200, body = NumberPattern())
 
-        assertThat(pattern.matches(response, Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(pattern.matchesResponse(response, Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test
@@ -35,7 +35,7 @@ internal class HttpResponsePatternTest {
         val response = HttpResponse.ok(StringValue("not a number")).copy(headers = mapOf("X-Data" to "abc123"))
         val pattern = HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern())), body = NumberPattern())
 
-        val result = pattern.matches(response, Resolver())
+        val result = pattern.matchesResponse(response, Resolver())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
 

@@ -384,7 +384,7 @@ data class Scenario(
         }
 
         return try {
-            httpResponsePattern.matches(httpResponse, resolver).updateScenario(this)
+            httpResponsePattern.matchesResponse(httpResponse, resolver).updateScenario(this)
         } catch (exception: Throwable) {
             Result.Failure("Exception: ${exception.message}")
         }
@@ -569,7 +569,7 @@ data class Scenario(
 
         if (responseExample != null) {
             val responseMatchResult =
-                httpResponsePatternBasedOnAttributeSelection.matches(responseExample, updatedResolver)
+                httpResponsePatternBasedOnAttributeSelection.matchesResponse(responseExample, updatedResolver)
 
             return responseMatchResult
         }

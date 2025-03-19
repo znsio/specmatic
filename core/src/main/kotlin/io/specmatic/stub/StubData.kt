@@ -56,7 +56,7 @@ data class HttpStubData(
             HttpResponse.fromJSON(responseMap)
         }
 
-        val responseMatches = responsePattern.matches(externalCommandResponse, resolver.copy(mismatchMessages = ContractExternalResponseMismatch))
+        val responseMatches = responsePattern.matchesResponse(externalCommandResponse, resolver.copy(mismatchMessages = ContractExternalResponseMismatch))
         return when {
             !responseMatches.isSuccess() -> {
                 val errorMessage =

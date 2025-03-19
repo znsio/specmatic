@@ -56,13 +56,6 @@ data class HttpResponsePattern(
         }
     }
 
-    fun matches(response: HttpResponse, resolver: Resolver): Result {
-        return when(val result = matchesResponse(response, resolver)) {
-            is Result.Failure -> result
-            else -> result
-        }
-    }
-
     fun matchesResponse(response: HttpResponse, resolver: Resolver): Result {
         return response to resolver to
             ::matchStatus then
@@ -78,7 +71,7 @@ data class HttpResponsePattern(
         attempt(breadCrumb = "RESPONSE") {
             val responseExample: ResponseExample = row.exactResponseExample ?: return@attempt this
 
-            val responseExampleMatchResult = matches(responseExample.responseExample, resolver)
+            val responseExampleMatchResult = matchesResponse(responseExample.responseExample, resolver)
 
             if(responseExampleMatchResult is Result.Failure)
                 throw ContractException("""Error in response in example "${row.name}": ${responseExampleMatchResult.reportString()}""")
@@ -94,7 +87,7 @@ data class HttpResponsePattern(
             this.copy(responseValueAssertion = responseValueAssertion)
         }
 
-    fun matchesMock(response: HttpResponse, resolver: Resolver) = matches(response, resolver)
+    fun matchesMock(response: HttpResponse, resolver: Resolver) = matchesResponse(response, resolver)
 
     private fun matchStatus(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         if(status == DEFAULT_RESPONSE_CODE)

@@ -82,4 +82,4 @@ private fun MavenPom.commonPomContents() {
     }
 }
 tasks.getByName("beforeReleaseBuild").dependsOn("check")
-tasks.getByName("afterReleaseBuild").dependsOn("")
+tasks.getByName("afterReleaseBuild").dependsOn("dockerBuildxPublish")

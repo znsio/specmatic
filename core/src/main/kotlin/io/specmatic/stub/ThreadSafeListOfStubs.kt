@@ -3,6 +3,7 @@ package io.specmatic.stub
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.KeyCheck
 import io.specmatic.core.Result
+import io.specmatic.core.invalidRequestStatuses
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 import io.specmatic.mock.ScenarioStub
@@ -89,7 +90,7 @@ class ThreadSafeListOfStubs(
             if (result !is Result.Success) return@map Pair(result, stubData)
 
             val response = if (stubData.partial == null) stubData.response
-            else stubData.responsePattern.generateResponse(stubData.partial.response, stubData.resolver)
+            else stubData.responsePattern.fillInTheBlanks(stubData.partial.response, stubData.resolver)
 
             val stubResponse = HttpStubResponse(
                 response,
@@ -149,8 +150,9 @@ class ThreadSafeListOfStubs(
                 val partialResult = requestPattern.generate(partial.request, resolver)
                     .matches(httpRequest, partialResolver, partialResolver)
 
-                if (!partialResult.isSuccess()) partialResult to stubData
-                else Pair(stubData.matches(httpRequest), stubData)
+                if (!partialResult.isSuccess()) return@map partialResult to stubData
+                if (partial.response.status in invalidRequestStatuses) return@map partialResult to stubData
+                Pair(stubData.matches(httpRequest), stubData)
             }
     }
 

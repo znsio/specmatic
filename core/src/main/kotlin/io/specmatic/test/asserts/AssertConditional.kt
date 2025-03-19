@@ -1,6 +1,7 @@
 package io.specmatic.test.asserts
 
 import io.ktor.http.*
+import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
@@ -44,13 +45,13 @@ class AssertConditional(override val prefix: String, val conditionalAsserts: Lis
     override val key: String = ""
 
     companion object {
-        private fun toAsserts(prefix: String, jsonObjectValue: JSONObjectValue?): List<Assert> {
+        private fun toAsserts(prefix: String, jsonObjectValue: JSONObjectValue?, resolver: Resolver): List<Assert> {
             return jsonObjectValue?.jsonObject?.entries?.mapNotNull { (key, value) ->
-                parsedAssert(prefix, key, value)
+                parsedAssert(prefix, key, value, resolver)
             }.orEmpty()
         }
 
-        fun parse(prefix: String, key: String, value: Value): AssertConditional? {
+        fun parse(prefix: String, key: String, value: Value, resolver: Resolver): AssertConditional? {
             val conditions = (value as? JSONObjectValue)?.findFirstChildByPath("\$conditions") as? JSONObjectValue ?: return null
             val thenConditions = (value as? JSONObjectValue)?.findFirstChildByPath("\$then") as? JSONObjectValue
             val elseConditions = (value as? JSONObjectValue)?.findFirstChildByPath("\$else") as? JSONObjectValue
@@ -59,8 +60,9 @@ class AssertConditional(override val prefix: String, val conditionalAsserts: Lis
 
             return AssertConditional(
                 prefix = prefix,
-                conditionalAsserts = toAsserts(prefix, conditions),
-                thenAsserts = toAsserts(prefix, thenConditions), elseAsserts = toAsserts(prefix, elseConditions)
+                conditionalAsserts = toAsserts(prefix, conditions, resolver),
+                thenAsserts = toAsserts(prefix, thenConditions, resolver),
+                elseAsserts = toAsserts(prefix, elseConditions, resolver)
             )
         }
     }

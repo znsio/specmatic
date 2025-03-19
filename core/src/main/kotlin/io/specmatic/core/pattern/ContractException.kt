@@ -3,6 +3,7 @@ package io.specmatic.core.pattern
 import io.specmatic.core.FailureReport
 import io.specmatic.core.Result
 import io.specmatic.core.ScenarioDetailsForResult
+import io.specmatic.core.utilities.exceptionCauseMessage
 
 fun isCycle(throwable: Throwable?): Boolean = when(throwable) {
     is ContractException -> throwable.isCycle
@@ -19,9 +20,14 @@ data class ContractException(
     constructor(failureReport: FailureReport): this(failureReport.errorMessage(), failureReport.breadCrumbs())
 
     fun failure(): Result.Failure =
-        Result.Failure(errorMessage,
-            if (exceptionCause is ContractException) exceptionCause.failure() else null,
-            breadCrumb
+        Result.Failure(
+            message = errorMessage,
+            cause = when(exceptionCause) {
+                is ContractException -> exceptionCause.failure()
+                is Throwable -> Result.Failure(exceptionCauseMessage(exceptionCause))
+                else -> null
+            },
+            breadCrumb = breadCrumb
         ).also { result ->
             if(scenario != null) result.updateScenario(scenario)
         }

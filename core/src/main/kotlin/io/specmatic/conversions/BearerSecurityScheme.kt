@@ -47,4 +47,9 @@ data class BearerSecurityScheme(private val configuredToken: String? = null) : O
     private fun getAuthorizationHeaderValue(resolver: Resolver): String {
         return "Bearer " + (configuredToken ?: resolver.generate("HEADERS", AUTHORIZATION, StringPattern()).toStringLiteral())
     }
+
+    override fun copyFromTo(originalRequest: HttpRequest, newHttpRequest: HttpRequest): HttpRequest {
+        if (!originalRequest.headers.containsKey(AUTHORIZATION)) return newHttpRequest
+        return newHttpRequest.addSecurityHeader(AUTHORIZATION, originalRequest.headers.getValue(AUTHORIZATION))
+    }
 }

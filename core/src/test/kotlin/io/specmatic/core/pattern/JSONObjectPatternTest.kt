@@ -2338,6 +2338,165 @@ components:
 
     }
 
+    @Nested
+    inner class FillInTheBlanksTests {
+
+        @Test
+        fun `should fill in missing mandatory keys and pattern tokens using dictionary`() {
+            val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern()), typeAlias="Test")
+            val jsonObject = JSONObjectValue(mapOf("name" to StringValue("(string)")))
+            val dictionary = mapOf("Test.id" to NumberValue(123), "Test.name" to StringValue("John Doe"))
+            val resolver = Resolver(dictionary = dictionary)
+
+            val filledJsonObject = jsonObjectPattern.fillInTheBlanks(jsonObject, resolver).value as JSONObjectValue
+            assertThat(filledJsonObject.jsonObject).isEqualTo(
+                mapOf("id" to NumberValue(123), "name" to StringValue("John Doe"))
+            )
+        }
+
+        @Test
+        fun `should complain if pattern token does not match the underlying nested pattern`() {
+            val jsonObjectPattern = JSONObjectPattern(mapOf("name" to StringPattern()))
+            val jsonObject = JSONObjectValue(mapOf("name" to StringValue("(number)")))
+            val resolver = Resolver()
+
+            val result = jsonObjectPattern.fillInTheBlanks(jsonObject, resolver)
+            assertThat(result).isInstanceOf(HasFailure::class.java); result as HasFailure
+            assertThat(result.failure.reportString()).isEqualToNormalizingWhitespace("""
+            >> name
+            Expected string, actual was number
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should handle any-value pattern token as a special case`() {
+            val jsonObjectPattern = JSONObjectPattern(mapOf("name" to StringPattern()), typeAlias="Test")
+            val jsonObject = JSONObjectValue(mapOf("name" to StringValue("(anyvalue)")))
+            val dictionary = mapOf("Test.name" to StringValue("John Doe"))
+            val resolver = Resolver(dictionary = dictionary)
+
+            val filledJsonObject = jsonObjectPattern.fillInTheBlanks(jsonObject, resolver).value as JSONObjectValue
+            assertThat(filledJsonObject.jsonObject).isEqualTo(mapOf("name" to StringValue("John Doe")))
+        }
+
+        @Test
+        fun `should generate a new value if supplied value is pattern token`() {
+            val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern()), typeAlias="Test")
+            val jsonObject = StringValue("(Test)")
+            val dictionary = mapOf("Test.id" to NumberValue(123), "Test.name" to StringValue("John Doe"))
+            val resolver = Resolver(dictionary = dictionary, newPatterns = mapOf("(Test)" to jsonObjectPattern))
+
+            val filledJsonObject = jsonObjectPattern.fillInTheBlanks(jsonObject, resolver).value as JSONObjectValue
+            assertThat(filledJsonObject.jsonObject).isEqualTo(
+                mapOf("id" to NumberValue(123), "name" to StringValue("John Doe"))
+            )
+        }
+
+        @Test
+        fun `should result in failure when pattern token does not match pattern itself`() {
+            val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern()), typeAlias="Test")
+            val invalidPatterns = listOf(
+                ListPattern(StringPattern(), typeAlias = "(Test)"),
+                JSONObjectPattern(mapOf("id" to NumberPattern()), typeAlias = "(Test)"),
+                StringPattern()
+            )
+
+            assertThat(invalidPatterns).allSatisfy {
+                val resolver = Resolver(newPatterns = mapOf("(Test)" to it))
+                val value = StringValue("(Test)")
+                val result = jsonObjectPattern.fillInTheBlanks(value, resolver)
+
+                assertThat(result).isInstanceOf(HasFailure::class.java); result as HasFailure
+                assertThat(result.failure.reportString()).satisfiesAnyOf(
+                    { report -> assertThat(report).containsIgnoringWhitespaces("Expected json type") },
+                    { report -> assertThat(report).containsIgnoringWhitespaces("Expected key named \"name\" was missing") },
+                )
+            }
+        }
+
+        @Test
+        fun `should generate missing optional keys when allPatternsMandatory is set`() {
+            val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "name?" to StringPattern()), typeAlias="Test")
+            val jsonObject = JSONObjectValue(mapOf("id" to NumberValue(123)))
+            val resolver = Resolver(dictionary = mapOf("Test.name" to StringValue("John Doe"))).withAllPatternsAsMandatory()
+
+            val filledJsonObject = jsonObjectPattern.fillInTheBlanks(jsonObject, resolver).value as JSONObjectValue
+            assertThat(filledJsonObject.jsonObject).isEqualTo(
+                mapOf("id" to NumberValue(123), "name" to StringValue("John Doe"))
+            )
+        }
+
+        @Test
+        fun `should not generate missing mandatory keys when resolver is set to negative`() {
+            val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "name?" to StringPattern()), typeAlias="Test")
+            val jsonObject = JSONObjectValue(mapOf("name" to StringValue("John Doe")))
+            val resolver = Resolver(isNegative = true)
+
+            val filledJsonObject = jsonObjectPattern.fillInTheBlanks(jsonObject, resolver).value as JSONObjectValue
+            assertThat(filledJsonObject.jsonObject).isEqualTo(mapOf("name" to StringValue("John Doe")))
+        }
+
+        @Test
+        fun `should fill in the blanks if value is any-value of json-object when resolver is negative`() {
+            val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern()), typeAlias="Test")
+            val dictionary = mapOf("Test.id" to NumberValue(123), "Test.name" to StringValue("John Doe"))
+            val resolver = Resolver(dictionary = dictionary, newPatterns = mapOf("(Test)" to jsonObjectPattern), isNegative = true)
+            val values = listOf(
+                StringValue("(anyvalue)"),
+                StringValue("(Test)"),
+                JSONObjectValue(mapOf("id" to StringValue("(number)"))),
+                JSONObjectValue(mapOf("name" to StringValue("(anyvalue)"))),
+            )
+
+            assertThat(values).allSatisfy {
+                val filledJsonObject = jsonObjectPattern.fillInTheBlanks(it, resolver).value as JSONObjectValue
+                assertThat(filledJsonObject.jsonObject).satisfiesAnyOf(
+                    { jsonObject -> assertThat(jsonObject).isEqualTo(mapOf("id" to NumberValue(123), "name" to StringValue("John Doe"))) },
+                    { jsonObject -> assertThat(jsonObject).isEqualTo(mapOf("id" to NumberValue(123))) },
+                    { jsonObject -> assertThat(jsonObject).isEqualTo(mapOf("name" to StringValue("John Doe"))) },
+                )
+            }
+        }
+
+        @Test
+        fun `should allow extra keys when extensible-schema or resolver is negative`() {
+            val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern()), typeAlias="Test")
+            val dictionary = mapOf("Test.id" to NumberValue(123), "(string)" to StringValue("ExtraValue"))
+
+            val jsonObject = JSONObjectValue(mapOf("id" to StringValue("(number)"), "extraKey" to StringValue("(string)")))
+            val resolvers = listOf(
+                Resolver(dictionary = dictionary, isNegative = true),
+                Resolver(dictionary = dictionary).withUnexpectedKeyCheck(IgnoreUnexpectedKeys)
+            )
+
+            assertThat(resolvers).allSatisfy {
+                val filledJsonObject = jsonObjectPattern.fillInTheBlanks(jsonObject, it).value as JSONObjectValue
+                assertThat(filledJsonObject.jsonObject).isEqualTo(
+                    mapOf("id" to NumberValue(123), "extraKey" to StringValue("ExtraValue"))
+                )
+            }
+        }
+
+        @Test
+        fun `should allow invalid pattern tokens when resolver is negative`() {
+            val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern()), typeAlias="Test")
+            val invalidPatterns = listOf(
+                ListPattern(StringPattern(), typeAlias = "(Test)"),
+                JSONObjectPattern(mapOf("id" to NumberPattern()), typeAlias = "(Test)"),
+                StringPattern()
+            )
+
+            assertThat(invalidPatterns).allSatisfy {
+                val resolver = Resolver(newPatterns = mapOf("(Test)" to it), isNegative = true)
+                val value = StringValue("(Test)")
+                val result = jsonObjectPattern.fillInTheBlanks(value, resolver)
+
+                assertThat(result).isInstanceOf(HasValue::class.java); result as HasValue
+                println(result.value)
+            }
+        }
+    }
+
     companion object {
         @JvmStatic
         fun additionalPropertiesProvider(): Stream<AdditionalProperties> {

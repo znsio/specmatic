@@ -500,9 +500,12 @@ data class Feature(
         if(results.any { it.isSuccess() })
             return Results(results).withoutFluff()
 
-        val deepErrors = results.filterNot {
-            val acceptedFluffLevel = if(isBadRequest) 1 else 0
-            it.isFluffy(acceptedFluffLevel)
+        val deepErrors: List<Result> = results.filterNot {
+            it.isFluffy()
+        }.ifEmpty {
+            results.filter {
+                it is Result.Failure && it.hasReason(FailureReason.URLPathParamMismatchButSameStructure)
+            }
         }
 
         if(deepErrors.isNotEmpty())
@@ -621,7 +624,7 @@ data class Feature(
                     scenarioAsTest(concreteTestScenario, comment, workflow, originalScenario, originalScenarios)
                 },
                 orFailure = {
-                    ScenarioTestGenerationFailure(originalScenario, it.failure)
+                    ScenarioTestGenerationFailure(originalScenario, it.failure, it.message)
                 },
                 orException = {
                     ScenarioTestGenerationException(originalScenario, it.t, it.message, it.breadCrumb)

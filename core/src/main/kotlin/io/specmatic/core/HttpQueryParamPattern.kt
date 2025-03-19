@@ -211,6 +211,31 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
 
         return QueryParameters(fixedQueryParams.mapValues { it.value.toStringLiteral() })
     }
+
+    fun fillInTheBlanks(queryParams: QueryParameters?, resolver: Resolver): ReturnValue<QueryParameters> {
+        val adjustedQueryParams = when {
+            queryParams == null || queryParams.paramPairs.isEmpty() -> QueryParameters(emptyMap())
+            additionalProperties != null -> queryParams.withoutMatching(queryPatterns.keys, additionalProperties, resolver)
+            else -> queryParams
+        }
+
+        val updatedResolver = if (Flags.getBooleanValue(EXTENSIBLE_QUERY_PARAMS)) {
+            resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys)
+        } else resolver.withUnexpectedKeyCheck(ValidateUnexpectedKeys)
+
+        val parsedQueryParams = adjustedQueryParams.asValueMap().mapValues { (key, value) ->
+            val pattern = queryPatterns[key] ?: queryPatterns["${key}?"] ?: return@mapValues value
+            runCatching { pattern.parse(value.toStringLiteral(), resolver) }.getOrDefault(value)
+        }
+
+        return fill(
+            jsonPatternMap = queryPatterns, jsonValueMap = parsedQueryParams,
+            resolver = updatedResolver, typeAlias = "($QUERY_PARAMS_BREADCRUMB)"
+        ).realise(
+            hasValue = { valuesMap, _ -> HasValue(QueryParameters(valuesMap.mapValues { it.value.toStringLiteral() })) },
+            orException = { e -> e.cast() }, orFailure = { f -> f.cast() }
+        )
+    }
 }
 
 internal fun buildQueryPattern(

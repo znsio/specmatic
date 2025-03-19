@@ -19,12 +19,7 @@ data class QueryParameterScalarPattern(override val pattern: Pattern): Pattern b
         }
 
         return try {
-            val parsedValue = if(isPatternToken(sampleDataString)) {
-                StringValue(sampleDataString)
-            }
-            else {
-                pattern.parse(sampleDataString, resolver)
-            }
+            val parsedValue = runCatching { pattern.parse(sampleDataString, resolver) }.getOrDefault(StringValue(sampleDataString))
             resolver.matchesPattern(null, pattern, parsedValue)
         } catch (e: Throwable) {
             Result.Failure(exceptionCauseMessage(e))

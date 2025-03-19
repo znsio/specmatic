@@ -10491,7 +10491,7 @@ paths:
     }
 
     @Test
-    fun `if inline of overridden request Content Type header is wrong then parse should error out`() {
+    fun `if inline example of overridden request Content Type header is wrong then parse should error out`() {
         val spec = """
             openapi: 3.0.3
             info:
@@ -10502,17 +10502,17 @@ paths:
                 post:
                   summary: Add a new product
                   parameters:
-                    - in: header
-                      name: Content-Type
-                      schema:
-                        type: string
-                        enum:
-                        - application/json; charset=utf-8
-                      examples:
-                        SUCCESS:
-                          value: application/json
-                      required: true
-                      description: Unneeded content type
+                  - in: header
+                    name: Content-Type
+                    schema:
+                      type: string
+                      enum:
+                      - application/json; charset=utf-8
+                    examples:
+                      SUCCESS:
+                        value: application/json
+                    required: true
+                    description: Unneeded content type
                   requestBody:
                     required: true
                     content:

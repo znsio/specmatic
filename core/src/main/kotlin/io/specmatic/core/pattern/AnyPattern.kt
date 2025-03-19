@@ -113,7 +113,8 @@ data class AnyPattern(
         if(successfulGeneration != null)
             return successfulGeneration
 
-        val failures = results.toList().filterIsInstance<Failure>()
+        val resultList = results.toList()
+        val failures = resultList.filterIsInstance<ReturnFailure>().map { it.toFailure() }
 
         return HasFailure(Failure.fromFailures(failures))
     }

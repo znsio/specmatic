@@ -58,10 +58,10 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
             values,
             name = testName,
             fileSource = this.file.canonicalPath,
-            exactResponseExample = responseExample.takeUnless { this.isPartial() },
+            exactResponseExample = responseExample,
             responseExampleForAssertion = response,
             requestExample = scenarioStub.getRequestWithAdditionalParamsIfAny(specmaticConfig.getAdditionalExampleParamsFilePath()),
-            responseExample = response.takeUnless { this.isPartial() },
+            responseExample = response,
             isPartial = scenarioStub.partial != null
         ).let { ExampleProcessor.resolve(it, ExampleProcessor::ifNotExitsToLookupPattern) }
     }

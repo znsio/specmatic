@@ -26,5 +26,10 @@ data class APIKeyInHeaderSecurityScheme(val name: String, private val apiKey:Str
         return addToHeaderType(name, row, requestPattern)
     }
 
+    override fun copyFromTo(originalRequest: HttpRequest, newHttpRequest: HttpRequest): HttpRequest {
+        if (!originalRequest.headers.containsKey(name)) return newHttpRequest
+        return newHttpRequest.addSecurityHeader(name, originalRequest.headers.getValue(name))
+    }
+
     override fun isInRow(row: Row): Boolean = row.containsField(name)
 }

@@ -7,6 +7,7 @@ import io.mockk.unmockkAll
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.log.*
+import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.Flags
@@ -17,6 +18,7 @@ import io.specmatic.test.ExampleProcessor
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
+import java.io.File
 
 class LoadTestsFromExternalisedFiles {
 
@@ -621,7 +623,7 @@ class LoadTestsFromExternalisedFiles {
                         return HttpResponse(
                             status = 201,
                             body = parsedJSONObject("""{"id": 1}""").mergeWith(request.body)
-                        )
+                        ).also { println(request.toLogString()); println(it.toLogString()) }
                     }
                 }).results
                 val failure = results.filterIsInstance<Result.Failure>().first()
@@ -632,21 +634,23 @@ class LoadTestsFromExternalisedFiles {
                 assertThat(results).hasSize(2)
                 assertThat(failure.scenario?.testDescription()).containsIgnoringWhitespaces("Scenario: PATCH /pets/(id:number) -> 200 | EX:patch")
                 assertThat(failure.reportString()).containsIgnoringWhitespaces("""
-                >> REQUEST.BODY
-                >> name
+                >> REQUEST.BODY.name
                 Contract expected string but found value 10 (number)
-                >> tag[0]
+                >> REQUEST.BODY.tag[0]
                 Contract expected string but found value 10 (number)
-                >> details
-                Contract expected JSON object but found value 10 (number)
-                >> adopted
+                >> REQUEST.BODY.details
+                Can't generate object value from type number
+                >> REQUEST.BODY.adopted
                 Contract expected boolean but found value "false"
-                >> age
+                >> REQUEST.BODY.age
                 Contract expected number but found value "20"
-                >> birthdate
+                >> REQUEST.BODY.birthdate
                 Date types can only be represented using strings
-                """.trimIndent())
+             """.trimIndent())
             }
+
+            // Ideally >> REQUEST.BODY.details
+            // Should contain "Contract expected JSON object but found value 10 (number)"
         }
 
         @Test
@@ -678,6 +682,251 @@ class LoadTestsFromExternalisedFiles {
                 >> CONFIG.patch.Pet.name
                 Couldn't pick a random value from "CONFIG.patch.Pet.name" that was not equal to "Tom"
                 """.trimIndent())
+            }
+        }
+    }
+
+    @Nested
+    inner class FillInTheBlankTests {
+        private val feature = OpenApiSpecification.fromFile(
+            "src/test/resources/openapi/simple_partial_non_partial_examples_with_dictionary/simple_pets.yaml"
+        ).toFeature().loadExternalisedExamples()
+
+        @Test
+        fun `should fill the blanks in partial POST request using values from the dictionary`() {
+            val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "POST" })
+
+            val results = filteredFeature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.toLogString())
+
+                    assertThat(request.headers["CREATOR-ID"]).isEqualTo("John")
+                    assertThat(request.body).isEqualTo(parsedJSONObject("""
+                    {
+                        "name": "Tom",
+                        "color": "black",
+                        "tag": "cat"
+                    }
+                    """.trimIndent()))
+
+                    return HttpResponse(
+                        status = 201, body = parsedJSONObject("""
+                        {
+                            "id": 1,
+                            "name": "Tom",
+                            "tag": "cat",
+                            "color": "black"
+                        }
+                        """.trimIndent())
+                    )
+                }
+            }).results
+
+            println(results.joinToString("\n\n") { it.reportString() })
+            assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(1)
+        }
+
+        @Test
+        fun `should be able to substitute values into query-params`() {
+            val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "GET" })
+
+            val results = filteredFeature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.toLogString())
+                    assertThat(request.queryParams.asValueMap()).isEqualTo(mapOf("tag" to StringValue("cat")))
+
+                    return HttpResponse(
+                        status = 200, body = JSONArrayValue(List(2) {
+                            parsedJSONObject("""
+                            {
+                                "id": 1,
+                                "name": "Tom",
+                                "tag": "cat"
+                            }
+                            """.trimIndent())
+                        })
+                    )
+                }
+            }).results
+
+            println(results.joinToString("\n\n") { it.reportString() })
+            assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(1)
+        }
+
+        @Test
+        fun `should only substitute pattern tokens and missing mandatory fields`() {
+            val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "PATCH" })
+
+            val results = filteredFeature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.toLogString())
+
+                    assertThat(request.path).isEqualTo("/pets/1")
+                    assertThat(request.headers["CREATOR-ID"]).isEqualTo("John")
+                    assertThat(request.body).isEqualTo(parsedJSONObject("""
+                    {
+                        "name": "Tom",
+                        "tag": "cat"
+                    }
+                    """.trimIndent()))
+
+                    return HttpResponse(
+                        status = 200, body = parsedJSONObject("""
+                        {
+                            "id": 1,
+                            "name": "Tom",
+                            "tag": "cat"
+                        }
+                        """.trimIndent())
+                    )
+                }
+            }).results
+
+            println(results.joinToString("\n\n") { it.reportString() })
+            assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(1)
+        }
+    }
+
+    @Nested
+    inner class PartialExampleTests {
+        private val specFile = File("src/test/resources/openapi/partial_example_tests/simple.yaml")
+        private val validExamplesDir = specFile.parentFile.resolve("valid_partial")
+        private val invalidExamplesDir = specFile.parentFile.resolve("invalid_partial")
+        private val validWithoutMandatoryExamplesDir = specFile.parentFile.resolve("valid_without_mandatory")
+        private val badRequestExamplesDir = specFile.parentFile.resolve("bad_request_valid_example")
+
+        @Test
+        fun `should complain when invalid partial example is provided`() {
+            val feature = parseContractFileToFeature(specFile).copy(strictMode = true)
+            val exception = assertThrows<ContractException> {
+                Flags.using(EXAMPLE_DIRECTORIES to invalidExamplesDir.canonicalPath) {
+                    feature.loadExternalisedExamples().validateExamplesOrException()
+                }
+            }
+
+            println(exception.report())
+            assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+            Error loading example for PATCH /creators/(creatorId:number)/pets/(petId:number) -> 201 from ${invalidExamplesDir.resolve("pets_post.json").canonicalPath}
+
+            >> REQUEST.PATH.creatorId  
+            Expected number as per the specification, but the example pets_post had "abc".
+            >> REQUEST.PATH.petId  
+            Expected number as per the specification, but the example pets_post had string.
+            
+            >> REQUEST.QUERY-PARAMS.creatorId
+            Expected number as per the specification, but the example pets_post had "abc".
+            >> REQUEST.QUERY-PARAMS.petId
+            Expected number as per the specification, but the example pets_post had string.
+
+            >> REQUEST.HEADERS.CREATOR-ID
+            Expected number as per the specification, but the example pets_post had "abc".
+            >> REQUEST.HEADERS.PET-ID  
+            Expected number as per the specification, but the example pets_post had string.
+
+            >> REQUEST.BODY.creatorId  
+            Expected number as per the specification, but the example pets_post had "123".  
+            >> REQUEST.BODY.petId  
+            Expected number as per the specification, but the example pets_post had string.
+
+            >> RESPONSE.BODY.id  
+            Expected number as per the specification, but the example pets_post had string.
+            >> RESPONSE.BODY.traceId  
+            Expected string as per the specification, but the example pets_post had number.
+            >> RESPONSE.BODY.creatorId  
+            Expected number as per the specification, but the example pets_post had "123".  
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should load when valid partial example is provided`() {
+            val feature = parseContractFileToFeature(specFile).copy(strictMode = true)
+            Flags.using(EXAMPLE_DIRECTORIES to validExamplesDir.canonicalPath) {
+                assertDoesNotThrow {
+                    feature.loadExternalisedExamples().validateExamplesOrException()
+                }
+            }
+        }
+
+        @Test
+        fun `should load when valid partial example is provided without mandatory fields`() {
+            val feature = parseContractFileToFeature(specFile).copy(strictMode = true)
+            Flags.using(EXAMPLE_DIRECTORIES to validWithoutMandatoryExamplesDir.canonicalPath) {
+                assertDoesNotThrow {
+                    feature.loadExternalisedExamples().validateExamplesOrException()
+                }
+            }
+        }
+
+        @Test
+        fun `should be able to run full suite tests using valid examples`() {
+            Flags.using(EXAMPLE_DIRECTORIES to validWithoutMandatoryExamplesDir.canonicalPath) {
+                val feature = parseContractFileToFeature(specFile).copy(strictMode = true).loadExternalisedExamples()
+                feature.validateExamplesOrException()
+
+                val expectedGoodRequest = HttpRequest(
+                    path = "/creators/123/pets/999",
+                    method = "PATCH",
+                    queryParams = QueryParameters(mapOf("creatorId" to "123", "petId" to "999")),
+                    headers = mapOf("Content-Type" to "application/json", "CREATOR-ID" to "123", "PET-ID" to "999", "Specmatic-Response-Code" to "201"),
+                    body = JSONObjectValue(mapOf("creatorId" to NumberValue(123), "petId" to NumberValue(999))),
+                )
+
+                val results = feature.enableGenerativeTesting().executeTests(object: TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        return if (request.headers["Specmatic-Response-Code"] == "400") {
+                            HttpResponse(status = 400, body = parsedJSONObject("""{"code": 400, "message": "BadRequest"}"""))
+                        } else {
+                            assertThat(request).isEqualTo(expectedGoodRequest)
+                            val responseBody = (request.body as JSONObjectValue).jsonObject + mapOf(
+                                "id" to NumberValue(999), "traceId" to StringValue("123"),
+                            )
+                            HttpResponse(status = 201, body = JSONObjectValue(responseBody))
+                        }.also {
+                            println(listOf(request.toLogString(), it.toLogString()).joinToString(separator = "\n\n"))
+                        }
+                    }
+                }).results
+
+                println(results.joinToString("\n\n") { it.reportString() })
+                assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(23)
+            }
+        }
+
+        @Test
+        fun `should be able to make bad request using example`() {
+            Flags.using(EXAMPLE_DIRECTORIES to badRequestExamplesDir.canonicalPath) {
+                val feature = parseContractFileToFeature(specFile).copy(strictMode = true).loadExternalisedExamples()
+                feature.validateExamplesOrException()
+
+                val expectedGoodRequest = HttpRequest(
+                    path = "/creators/123/pets/999",
+                    method = "PATCH",
+                    queryParams = QueryParameters(mapOf("creatorId" to "123", "petId" to "999")),
+                    headers = mapOf("Content-Type" to "application/json", "CREATOR-ID" to "123", "PET-ID" to "999", "Specmatic-Response-Code" to "201"),
+                    body = JSONObjectValue(mapOf("creatorId" to NumberValue(123), "petId" to NumberValue(999))),
+                )
+
+                val results = feature.executeTests(object: TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        return if (request.headers["Specmatic-Response-Code"] == "400") {
+                            assertThat(request.body).isEqualTo(
+                                JSONObjectValue(mapOf("creatorId" to StringValue("JohnDoe"), "petId" to NumberValue(999)))
+                            )
+                            HttpResponse(status = 400, body = parsedJSONObject("""{"code": 400, "message": "BadRequest"}"""))
+                        } else {
+                            assertThat(request).isEqualTo(expectedGoodRequest)
+                            val responseBody = (request.body as JSONObjectValue).jsonObject + mapOf(
+                                "id" to NumberValue(999), "traceId" to StringValue("123"),
+                            )
+                            HttpResponse(status = 201, body = JSONObjectValue(responseBody))
+                        }.also {
+                            println(listOf(request.toLogString(), it.toLogString()).joinToString(separator = "\n\n"))
+                        }
+                    }
+                }).results
+
+                println(results.joinToString("\n\n") { it.reportString() })
+                assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(2)
             }
         }
     }

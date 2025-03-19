@@ -684,6 +684,73 @@ class LoadTestsFromExternalisedFiles {
                 """.trimIndent())
             }
         }
+
+        @Test
+        fun `should be able to load partial example with missing discriminator but has asserts`() {
+            val specFile = File("src/test/resources/openapi/partial_with_discriminator/openapi.yaml")
+            val examplesDir = specFile.parentFile.resolve("example_with_asserts")
+
+            Flags.using(EXAMPLE_DIRECTORIES to examplesDir.canonicalPath) {
+                val feature = parseContractFileToFeature(specFile).copy(strictMode = true).loadExternalisedExamples()
+                feature.validateExamplesOrException()
+
+                var entity = JSONObjectValue()
+                val results = feature.executeTests(object: TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        return when(request.method) {
+                            "GET" -> HttpResponse(status = 200, body = JSONArrayValue(listOf(entity)))
+                            "POST" -> {
+                                assertThat(request.body).isEqualTo(parsedJSONObject("""{"petType": "cat", "color": "black"}"""))
+                                val withId = JSONObjectValue((request.body as JSONObjectValue).jsonObject.plus("id" to NumberValue(1)))
+                                HttpResponse(status = 201, body = withId).also { entity = withId }
+                            }
+                            else ->  throw Exception("Unknown method ${request.method}")
+                        }.also { println(listOf(request.toLogString(), it.toLogString()).joinToString(separator = "\n\n")) }
+                    }
+                }).results
+
+                assertThat(results).isNotEmpty.hasOnlyElementsOfType(Result.Success::class.java).hasSize(2)
+            }
+        }
+
+        @Test
+        fun `should complain when response doesn't match the asserts in the example`() {
+            val specFile = File("src/test/resources/openapi/partial_with_discriminator/openapi.yaml")
+            val examplesDir = specFile.parentFile.resolve("example_with_asserts")
+
+            Flags.using(EXAMPLE_DIRECTORIES to examplesDir.canonicalPath) {
+                val feature = parseContractFileToFeature(specFile).copy(strictMode = true).loadExternalisedExamples()
+                feature.validateExamplesOrException()
+
+                val invalidEntity = parsedJSONObject("""{ "id": 1, "color": "white", "petType": "dog" }""")
+                val results = feature.executeTests(object: TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        return when(request.method) {
+                            "GET" -> HttpResponse(status = 200, body = JSONArrayValue(listOf(invalidEntity)))
+                            "POST" -> {
+                                assertThat(request.body).isEqualTo(parsedJSONObject("""{"petType": "cat", "color": "black"}"""))
+                                val withId = JSONObjectValue((request.body as JSONObjectValue).jsonObject.plus("id" to NumberValue(1)))
+                                HttpResponse(status = 201, body = withId)
+                            }
+                            else ->  throw Exception("Unknown method ${request.method}")
+                        }.also { println(listOf(request.toLogString(), it.toLogString()).joinToString(separator = "\n\n")) }
+                    }
+                }).results
+
+                assertThat(results).hasSize(2)
+                assertThat(results.filterIsInstance<Result.Failure>()).hasSize(1)
+
+                val failure = results.filterIsInstance<Result.Failure>().first()
+                assertThat(failure.reportString()).containsIgnoringWhitespaces("""
+                In scenario "List all pets. Response: A list of pets"
+                API: GET /pets -> 200
+                >> RESPONSE.BODY[0].petType
+                Expected "dog" to equal "cat"
+                >> RESPONSE.BODY[0].color
+                Expected "white" to equal "black"
+                """.trimIndent())
+            }
+        }
     }
 
     @Nested
@@ -931,7 +998,7 @@ class LoadTestsFromExternalisedFiles {
         }
 
         @Nested
-        inner class  DiscriminatorTests {
+        inner class DiscriminatorTests {
             private val discriminatorSpecFile = File("src/test/resources/openapi/partial_with_discriminator/openapi.yaml")
             private val exampleWithDiscriminator= discriminatorSpecFile.parentFile.resolve("example_with_disc")
             private val exampleWithoutDisc = discriminatorSpecFile.parentFile.resolve("example_without_disc")

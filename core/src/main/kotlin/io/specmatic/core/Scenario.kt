@@ -320,7 +320,10 @@ data class Scenario(
         )
     }
 
-    fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages, flagsBased: FlagsBased): Result {
+    fun matches(
+        httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages,
+        flagsBased: FlagsBased, isPartial: Boolean = false
+    ): Result {
         if (httpResponsePattern.status == DEFAULT_RESPONSE_CODE) {
             return Result.Failure(
                 breadCrumb = "STATUS",
@@ -328,20 +331,31 @@ data class Scenario(
             ).updateScenario(this)
         }
 
-        val updatedFlagBased = if (isRequestAttributeSelected(httpRequest)) {
-            flagsBased.copy(unexpectedKeyCheck = ValidateUnexpectedKeys)
-        } else flagsBased
+        val updatedResolver = flagsBased.update(
+            resolver.copy(
+                mockMode = true,
+                mismatchMessages = mismatchMessages,
+                findKeyErrorCheck = if (isPartial) PARTIAL_KEYCHECK else resolver.findKeyErrorCheck
+            )
+        )
 
-        val updatedResolver = updatedFlagBased.update(resolver.copy(mismatchMessages = mismatchMessages, mockMode = true))
-        val updatedScenario = newBasedOnAttributeSelectionFields(httpRequest.queryParams)
-
-        val responseMatch = updatedScenario.matches(httpResponse, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
-        if(responseMatch is Result.Failure && responseMatch.hasReason(FailureReason.StatusMismatch)) {
-            return responseMatch.updateScenario(updatedScenario)
+        val fieldsSelected = fieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams)
+        if(fieldsSelected.isNotEmpty()) {
+            val result = httpResponse.checkIfAllRootLevelKeysAreAttributeSelected(fieldsSelected, resolver)
+            if(result is Result.Failure) return result.updateScenario(this)
         }
 
-        val requestMatch = updatedScenario.matches(httpRequest, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
-        return Result.fromResults(listOf(requestMatch, responseMatch)).updateScenario(updatedScenario)
+        val responseMatch = matches(httpResponse, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
+        if (responseMatch is Result.Failure && responseMatch.hasReason(FailureReason.StatusMismatch)) {
+            return responseMatch.updateScenario(this)
+        }
+
+        val requestMatch = when(httpResponse.status in invalidRequestStatuses) {
+            false -> matches(httpRequest, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
+            else -> httpRequestPattern.withWildcardPathPattern().matchesPathAndMethod(httpRequest, updatedResolver)
+        }
+
+        return Result.fromResults(listOf(requestMatch, responseMatch)).updateScenario(this)
     }
 
     private fun isRequestAttributeSelected(httpRequest: HttpRequest): Boolean {

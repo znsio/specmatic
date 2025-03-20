@@ -1495,7 +1495,8 @@ data class Feature(
         return Pair(descriptor, commonValueType)
     }
 
-    private fun convergePatternMap(map1: Map<String, Pattern>, map2: Map<String, Pattern>): Map<String, Pattern> {
+    @Suppress("MemberVisibilityCanBePrivate")
+    fun convergePatternMap(map1: Map<String, Pattern>, map2: Map<String, Pattern>): Map<String, Pattern> {
         val common: Map<String, Pattern> = map1.filter { entry ->
             val cleanedKey = withoutOptionality(entry.key)
             cleanedKey in map2 || "${cleanedKey}?" in map2
@@ -1578,8 +1579,26 @@ data class Feature(
     private fun isJSONPayload(type: Pattern) =
         type is TabularPattern || type is JSONObjectPattern || type is JSONArrayPattern
 
-    private fun toOpenApiSchema(pattern: Pattern): Schema<Any> {
+    @Suppress("MemberVisibilityCanBePrivate")
+    fun toOpenApiSchema(pattern: Pattern, resolver: Resolver? = null): Schema<Any> {
         val schema = when {
+            pattern is EmailPattern -> EmailSchema()
+            pattern is NumberPattern -> {
+                val schema = if (pattern.isDoubleFormat) NumberSchema() else IntegerSchema()
+                schema.apply {
+                    minimum = pattern.minimum;
+                    maximum = pattern.maximum;
+                    exclusiveMinimum = pattern.exclusiveMinimum.takeIf { it };
+                    exclusiveMaximum = pattern.exclusiveMaximum.takeIf { it }
+                }
+            }
+            pattern is StringPattern -> {
+                StringSchema().apply {
+                    minLength = pattern.minLength;
+                    maxLength = pattern.maxLength;
+                    this.pattern = pattern.regex
+                }
+            }
             pattern is DictionaryPattern -> {
                 ObjectSchema().apply {
                     additionalProperties = Schema<Any>().apply {
@@ -1587,9 +1606,9 @@ data class Feature(
                     }
                 }
             }
-            pattern is LookupRowPattern -> toOpenApiSchema(pattern.pattern)
-            pattern is TabularPattern -> tabularToSchema(pattern)
-            pattern is JSONObjectPattern -> jsonObjectToSchema(pattern)
+            pattern is LookupRowPattern -> toOpenApiSchema(pattern.pattern, resolver)
+            pattern is TabularPattern -> tabularToSchema(pattern, resolver)
+            pattern is JSONObjectPattern -> jsonObjectToSchema(pattern, resolver)
             isArrayOfNullables(pattern) -> {
                 ArraySchema().apply {
                     val typeAlias =
@@ -1617,7 +1636,7 @@ data class Feature(
                     this.items =
                         getSchemaType(pattern.pattern.first { !isEmptyOrNull(it) }.let {
                             listInnerTypeDescriptor(it as ListPattern)
-                        })
+                        }, resolver)
 
                     this.nullable = true
                 }
@@ -1628,9 +1647,9 @@ data class Feature(
                 val innerPattern: Pattern = pattern.pattern.first { !isEmptyOrNull(it) }
                 innerPattern as DeferredPattern
 
-                val typeSchema = Schema<Any>().apply {
-                    this.`$ref` = withoutPatternDelimiters(innerPattern.pattern)
-                }
+                val typeSchema = if (resolver != null) {
+                    toOpenApiSchema(resolvedHop(innerPattern, resolver), resolver)
+                } else Schema<Any>().apply { this.`$ref` = withoutPatternDelimiters(innerPattern.pattern) }
 
                 nullableSchemaAsOneOf(typeSchema)
             }
@@ -1641,9 +1660,9 @@ data class Feature(
 
                 when {
                     innerPattern.pattern is String && innerPattern.pattern in builtInPatterns -> toOpenApiSchema(
-                        builtInPatterns.getValue(innerPattern.pattern as String)
+                        builtInPatterns.getValue(innerPattern.pattern as String), resolver
                     )
-                    else -> toOpenApiSchema(innerPattern)
+                    else -> toOpenApiSchema(innerPattern, resolver)
                 }.apply {
                     this.nullable = true
                 }
@@ -1651,43 +1670,45 @@ data class Feature(
             pattern is ListPattern -> {
                 if (pattern.pattern is DeferredPattern) {
                     ArraySchema().apply {
-                        this.items = getSchemaType(pattern.pattern.typeAlias)
+                        this.items = getSchemaType(pattern.pattern.typeAlias, resolver)
                     }
                 } else if (isArrayOfNullables(pattern)) {
                     ArraySchema().apply {
                         val innerPattern: Pattern = (pattern.pattern as AnyPattern).pattern.first { it !is NullPattern }
-                        this.items = nullableSchemaAsOneOf(toOpenApiSchema(innerPattern))
+                        this.items = nullableSchemaAsOneOf(toOpenApiSchema(innerPattern, resolver))
                     }
                 } else {
                     ArraySchema().apply {
-                        this.items = toOpenApiSchema(pattern.pattern)
+                        this.items = toOpenApiSchema(pattern.pattern, resolver)
                     }
                 }
             }
             pattern is NumberPattern || (pattern is DeferredPattern && pattern.pattern == "(number)") -> NumberSchema()
             pattern is BooleanPattern || (pattern is DeferredPattern && pattern.pattern == "(boolean)") -> BooleanSchema()
-            pattern is DateTimePattern || (pattern is DeferredPattern && pattern.pattern == "(datetime)") -> StringSchema()
+            pattern is DateTimePattern || (pattern is DeferredPattern && pattern.pattern == "(datetime)") -> DateTimeSchema()
+            pattern is DatePattern || (pattern is DeferredPattern && pattern.pattern == "(date)") -> DateSchema()
+            pattern is UUIDPattern || (pattern is DeferredPattern && pattern.pattern == "(uuid)") -> UUIDSchema()
             pattern is StringPattern || pattern is EmptyStringPattern || (pattern is DeferredPattern && pattern.pattern == "(string)") || (pattern is DeferredPattern && pattern.pattern == "(nothing)") -> StringSchema()
             pattern is NullPattern || (pattern is DeferredPattern && pattern.pattern == "(null)") -> Schema<Any>().apply {
                 this.nullable = true
             }
-            pattern is DeferredPattern -> Schema<Any>().apply {
-                this.`$ref` = withoutPatternDelimiters(pattern.pattern)
+            pattern is DeferredPattern -> {
+                if (resolver != null) toOpenApiSchema(resolvedHop(pattern, resolver), resolver)
+                else Schema<Any>().apply { this.`$ref` = withoutPatternDelimiters(pattern.pattern) }
             }
-            pattern is JSONArrayPattern && pattern.pattern.isEmpty() ->
-                ArraySchema().apply {
+            pattern is JSONArrayPattern && pattern.pattern.isEmpty() -> ArraySchema().apply {
                     this.items = StringSchema()
                 }
             pattern is JSONArrayPattern && pattern.pattern.isNotEmpty() -> {
                 if (pattern.pattern.all { it == pattern.pattern.first() })
                     ArraySchema().apply {
-                        this.items = toOpenApiSchema(pattern.pattern.first())
+                        this.items = toOpenApiSchema(pattern.pattern.first(), resolver)
                     }
                 else
                     throw ContractException("Conversion of raw JSON array type to OpenAPI is not supported. Change the contract spec to define a type and use (type*) instead of a JSON array.")
             }
             pattern is ExactValuePattern -> {
-                toOpenApiSchema(pattern.pattern.type()).apply {
+                toOpenApiSchema(pattern.pattern.type(), resolver).apply {
                     this.enum = listOf(pattern.pattern.toStringLiteral())
                 }
             }
@@ -1698,15 +1719,15 @@ data class Feature(
                 val specmaticType = (pattern.pattern.first() as ExactValuePattern).pattern.type()
                 val values = pattern.pattern.filterIsInstance<ExactValuePattern>().map { it.pattern }.filterIsInstance<ScalarValue>().map { it.nativeValue }
 
-                toOpenApiSchema(specmaticType).also {
+                toOpenApiSchema(specmaticType, resolver).also {
                     it.enum = values
                 }
             }
             pattern is QueryParameterScalarPattern -> {
-                toOpenApiSchema(pattern.pattern)
+                toOpenApiSchema(pattern.pattern, resolver)
             }
-            else ->
-                TODO("Not supported: ${pattern.typeAlias ?: pattern.typeName}, ${pattern.javaClass.name}")
+            pattern is EnumPattern -> toOpenApiSchema(pattern.pattern, resolver)
+            else -> TODO("Not supported: ${pattern.typeAlias ?: pattern.typeName}, ${pattern.javaClass.name}")
         }
 
         return schema as Schema<Any>
@@ -1740,14 +1761,15 @@ data class Feature(
             }
     }
 
-    private fun getSchemaType(type: String): Schema<Any> {
+    private fun getSchemaType(type: String, resolver: Resolver? = null): Schema<Any> {
         return if (builtInPatterns.contains(type)) {
-            toOpenApiSchema(builtInPatterns.getValue(type))
+            toOpenApiSchema(builtInPatterns.getValue(type), resolver)
         }
         else {
-            val cleanedUpType = withoutPatternDelimiters(type)
-
-            Schema<Any>().also { it.`$ref` = cleanedUpType }
+            if (resolver == null) {
+                val cleanedUpType = withoutPatternDelimiters(type)
+                Schema<Any>().also { it.`$ref` = cleanedUpType }
+            } else toOpenApiSchema(DeferredPattern(type), resolver)
         }
     }
 
@@ -1768,16 +1790,16 @@ data class Feature(
     private fun isNullable(pattern: Pattern) =
         pattern is AnyPattern && pattern.pattern.any { isEmptyOrNull(it) }
 
-    private fun jsonObjectToSchema(pattern: JSONObjectPattern): Schema<Any> = jsonToSchema(pattern.pattern)
-    private fun tabularToSchema(pattern: TabularPattern): Schema<Any> = jsonToSchema(pattern.pattern)
+    private fun jsonObjectToSchema(pattern: JSONObjectPattern, resolver: Resolver? = null): Schema<Any> = jsonToSchema(pattern.pattern, resolver)
+    private fun tabularToSchema(pattern: TabularPattern, resolver: Resolver? = null): Schema<Any> = jsonToSchema(pattern.pattern, resolver)
 
-    private fun jsonToSchema(pattern: Map<String, Pattern>): Schema<Any> {
+    private fun jsonToSchema(pattern: Map<String, Pattern>, resolver: Resolver? = null): Schema<Any> {
         val schema = Schema<Any>()
 
         schema.required = pattern.keys.filterNot { it.endsWith("?") }
 
         val properties: Map<String, Schema<Any>> = pattern.mapValues { (_, valueType) ->
-            toOpenApiSchema(valueType)
+            toOpenApiSchema(valueType, resolver)
         }.mapKeys { withoutOptionality(it.key) }
 
         schema.properties = properties

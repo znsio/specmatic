@@ -488,7 +488,8 @@ data class Feature(
 
         val scenarios = if(isBadRequest) {
             scenarios.asSequence().filter {
-                it.isA4xxScenario() && it.httpRequestPattern.matchesPathAndMethod(request, it.resolver).isSuccess()
+                it.isA4xxScenario()
+                        && it.httpRequestPattern.withWildcardPathPattern().matchesPathAndMethod(request, it.resolver).isSuccess()
             }
         } else this.scenarios.asSequence()
 

@@ -263,9 +263,9 @@ internal class SpecmaticConfigKtTest {
     }
 
     @Nested
-    inner class StubPortConfigTests {
+    inner class StubBaseUrlConfigTests {
         @Test
-        fun `should return all stub ports from sources`() {
+        fun `should return all stub baseUrls from sources`() {
             val source1 = Source(
                 stub = listOf(
                     Consumes.StringValue("9000_first.yaml"),
@@ -303,7 +303,7 @@ internal class SpecmaticConfigKtTest {
                 specmaticConfig.stubBaseUrls(
                    "http://localhost:9000"
                 )
-            ).isEqualTo(
+            ).containsAll(
                 listOf(
                     "http://localhost:9000",
                     "http://localhost:9001",

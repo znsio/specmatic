@@ -18,7 +18,11 @@ class ThreadSafeListOfStubs(
         }
 
     fun stubAssociatedTo(baseUrl: String, defaultBaseUrl: String): ThreadSafeListOfStubs {
-        return baseUrlToListOfStubsMap(defaultBaseUrl)[baseUrl] ?: emptyStubs()
+        val resolvedBaseUrls = resolveLocalhostIfPresent(baseUrl) + resolveLocalhostIfPresent(defaultBaseUrl)
+
+        return resolvedBaseUrls
+            .firstNotNullOfOrNull { resolvedUrl -> baseUrlToListOfStubsMap(defaultBaseUrl)[resolvedUrl] }
+            ?: emptyStubs()
     }
 
     fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {

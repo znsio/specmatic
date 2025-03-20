@@ -80,7 +80,7 @@ class HttpStub(
     val specmaticConfigPath: String? = null,
     private val timeoutMillis: Long = 0,
     private val specToStubBaseUrlMap: Map<String, String?> = features.associate {
-        it.path to endPointFromHostAndPort(resolved(host), port, keyData)
+        it.path to endPointFromHostAndPort(host, port, keyData)
     }
 ) : ContractStub {
     constructor(
@@ -90,7 +90,7 @@ class HttpStub(
         port: Int = 9000,
         log: (event: LogMessage) -> Unit = dontPrintToConsole,
         specToStubBaseUrlMap: Map<String, String> = mapOf(
-            feature.path to endPointFromHostAndPort(resolved(host), port, null)
+            feature.path to endPointFromHostAndPort(host, port, null)
         )
     ) : this(
         listOf(feature),
@@ -114,7 +114,7 @@ class HttpStub(
         port,
         log,
         specToStubBaseUrlMap = mapOf(
-            parseGherkinStringToFeature(gherkinData).path to endPointFromHostAndPort(resolved(host), port, null)
+            parseGherkinStringToFeature(gherkinData).path to endPointFromHostAndPort(host, port, null)
         )
     )
 
@@ -159,7 +159,7 @@ class HttpStub(
             SpecmaticConfig()
 
     private val specToBaseUrlMap = specToStubBaseUrlMap.mapValues { (_, value) ->
-        value ?: endPointFromHostAndPort(resolved(host), port, keyData)
+        value ?: endPointFromHostAndPort(host, port, keyData)
     }
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(
@@ -291,8 +291,8 @@ class HttpStub(
                         isFlushTransientStubsRequest(httpRequest) -> handleFlushTransientStubsRequest(httpRequest)
                         else -> serveStubResponse(
                             httpRequest,
-                            baseUrl = "${call.request.local.scheme}://${call.request.local.serverHost}:${call.request.local.serverPort}",
-                            defaultBaseUrl = endPointFromHostAndPort(resolved(host), port, keyData)
+                            baseUrl = "${call.request.local.scheme}://${call.request.local.serverHost}:${call.request.local.localPort}",
+                            defaultBaseUrl = endPointFromHostAndPort(host, port, keyData)
                         )
                     }
 
@@ -453,10 +453,12 @@ class HttpStub(
         features: List<Feature>,
         specToStubBaseUrlMap: Map<String, String>
     ): List<Feature> {
-        val specsForGivenPort = specToStubBaseUrlMap.entries.groupBy(
-            { it.value }, { it.key }
-        )[baseUrl].orEmpty().toSet()
+        val resolvedBaseUrls = resolveLocalhostIfPresent(baseUrl)
 
+        val specsForGivenPort = specToStubBaseUrlMap.entries
+            .filter { (_, stubBaseUrl) -> stubBaseUrl in resolvedBaseUrls }
+            .map { it.key }
+            .toSet()
         return features.filter { feature ->
             feature.path in specsForGivenPort
         }
@@ -1252,16 +1254,31 @@ fun endPointFromHostAndPort(host: String, port: Int?, keyData: KeyData?): String
     return "$protocol://$host$computedPortString"
 }
 
-fun resolved(host: String): String {
-    return if(host == "127.0.0.1") "localhost" else host
-}
-
 fun extractHost(url: String): String? {
     return URI(url).host
 }
 
 fun extractPort(url: String): Int? {
     return URI(url).port.takeIf { it != -1 }
+}
+
+fun resolveLocalhostIfPresent(url: String): List<String> {
+    val uri = URI(url)
+    val host = uri.host
+
+    if (host != "localhost") return listOf(url)
+
+    val port = when {
+        uri.port != -1 -> uri.port
+        uri.scheme == "https" -> 443
+        else -> 80
+    }
+
+    return InetAddress.getAllByName(host).map { inetAddress ->
+        val ip = inetAddress.hostAddress
+        val bracketedIp = if (ip.contains(":")) "[$ip]" else ip
+        "${uri.scheme}://$bracketedIp:$port"
+    }.plus(url)
 }
 
 fun normalizeHost(host: String): String {

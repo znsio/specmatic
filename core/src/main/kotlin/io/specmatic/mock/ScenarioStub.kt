@@ -40,6 +40,12 @@ data class ScenarioStub(
 
     fun responseStatus() = response.status.takeIf { it != 0 } ?: partial?.response?.status
 
+    fun request() = getHttpRequest()
+
+    fun response() = getHttpResponse()
+
+    fun isPartial() = partial != null
+
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()
         mockInteraction.putAll(data.jsonObject)
@@ -52,6 +58,10 @@ data class ScenarioStub(
 
     private fun getHttpRequest(): HttpRequest {
         return this.partial?.request ?: this.request
+    }
+
+    private fun getHttpResponse(): HttpResponse {
+        return this.partial?.response ?: this.response
     }
 
     fun getRequestWithAdditionalParamsIfAny(additionalExampleParamsFilePath: String?): HttpRequest {

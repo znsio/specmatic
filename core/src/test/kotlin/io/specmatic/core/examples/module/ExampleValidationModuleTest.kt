@@ -1,23 +1,18 @@
 package io.specmatic.core.examples.module
 
-import io.specmatic.core.DefaultMismatchMessages
-import io.specmatic.core.Feature
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpRequestPattern
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.HttpResponsePattern
-import io.specmatic.core.Result
-import io.specmatic.core.Scenario
-import io.specmatic.core.ScenarioInfo
-import io.specmatic.core.buildHttpPathPattern
+import io.specmatic.core.*
 import io.specmatic.core.pattern.JSONObjectPattern
 import io.specmatic.core.pattern.NumberPattern
+import io.specmatic.core.pattern.StringPattern
+import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.mock.ScenarioStub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
 
 class ExampleValidationModuleTest {
     private val exampleValidationModule = ExampleValidationModule()
@@ -127,5 +122,179 @@ class ExampleValidationModuleTest {
         >> first
         Expected number, actual was string
         """.trimIndent())
+    }
+
+    @Test
+    fun `should provide meaningful error message when 2xx example has path mutation`() {
+        val scenario = Scenario(
+            ScenarioInfo(
+                httpRequestPattern = HttpRequestPattern(method = "GET", httpPathPattern = buildHttpPathPattern("/test/(id:number)/name/(name:string)")),
+                httpResponsePattern = HttpResponsePattern(status = 200)
+            )
+        )
+        val feature = Feature(listOf(scenario), name = "")
+        val example = ScenarioStub(request = HttpRequest(method = "GET", path = "/test/abc/name/123"), response = HttpResponse.OK)
+        val result = exampleValidationModule.validateExample(feature, example).toResultIfAny()
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        In scenario ""
+        API: GET /test/(id:number)/name/(name:string) -> 200
+        >> REQUEST.PATH.id
+        Specification expected number but example contained "abc"
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should not complain when path mutation happens on 4xx example`() {
+        val scenario = Scenario(
+            ScenarioInfo(
+                httpRequestPattern = HttpRequestPattern(method = "GET", httpPathPattern = buildHttpPathPattern("/test/(id:number)/name/(name:string)")),
+                httpResponsePattern = HttpResponsePattern(status = 400)
+            )
+        )
+        val feature = Feature(listOf(scenario), name = "")
+        val example = ScenarioStub(request = HttpRequest(method = "GET", path = "/test/abc/name/123"), response = HttpResponse(status = 400))
+        val result = exampleValidationModule.validateExample(feature, example)
+
+        assertThat(result.toResultIfAny()).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should be able to validate partial example`(@TempDir tempDir: File) {
+        val scenario = Scenario(
+            ScenarioInfo(
+                httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    httpPathPattern = buildHttpPathPattern("/test"),
+                    body = JSONObjectPattern(mapOf("name" to StringPattern(), "age" to NumberPattern()))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    status = 201,
+                    body = JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern(), "age" to NumberPattern()))
+                )
+            )
+        )
+        val feature = Feature(listOf(scenario), name = "")
+
+        val example = ScenarioStub(
+            request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"name": "John"}""")),
+            response = HttpResponse(status = 201, body = JSONObjectValue(emptyMap()))
+        )
+        val exampleFile = example.toPartialExample(tempDir)
+        val result = exampleValidationModule.validateExample(feature, exampleFile)
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should return failure when partial example has invalid value`(@TempDir tempDir: File) {
+        val scenario = Scenario(
+            ScenarioInfo(
+                httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    httpPathPattern = buildHttpPathPattern("/test"),
+                    body = JSONObjectPattern(mapOf("name" to StringPattern(), "age" to NumberPattern()))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    status = 201,
+                    body = JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern(), "age" to NumberPattern()))
+                )
+            )
+        )
+        val feature = Feature(listOf(scenario), name = "")
+
+        val example = ScenarioStub(
+            request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"name": 123}""")),
+            response = HttpResponse(status = 201, body = parsedJSONObject("""{"id": "abc"}"""))
+        )
+        val exampleFile = example.toPartialExample(tempDir)
+        val result = exampleValidationModule.validateExample(feature, exampleFile)
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        >> REQUEST.BODY.name
+        Specification expected string but example contained 123 (number)
+        >> RESPONSE.BODY.id
+        Specification expected number but example contained "abc"
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should be able to validate partial example with pattern tokens`(@TempDir tempDir: File) {
+        val scenario = Scenario(
+            ScenarioInfo(
+                httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    httpPathPattern = buildHttpPathPattern("/test"),
+                    body = JSONObjectPattern(mapOf("name" to StringPattern(), "age" to NumberPattern()))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    status = 201,
+                    body = JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern(), "age" to NumberPattern()))
+                )
+            )
+        )
+        val feature = Feature(listOf(scenario), name = "")
+
+        val example = ScenarioStub(
+            request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"name": "(number)", "age": "(number)"}""")),
+            response = HttpResponse(status = 201, body = parsedJSONObject("""{"id": "(string)"}"""))
+        )
+        val exampleFile = example.toPartialExample(tempDir)
+        val result = exampleValidationModule.validateExample(feature, exampleFile)
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        >> REQUEST.BODY.name
+        Specification expected string but example contained number
+        >> RESPONSE.BODY.id
+        Specification expected number but example contained string
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should return failure when values are missing on non-partial example`(@TempDir tempDir: File) {
+        val scenario = Scenario(
+            ScenarioInfo(
+                httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    httpPathPattern = buildHttpPathPattern("/test"),
+                    body = JSONObjectPattern(mapOf("name" to StringPattern(), "age" to NumberPattern()))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    status = 201,
+                    body = JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern(), "age" to NumberPattern()))
+                )
+            )
+        )
+        val feature = Feature(listOf(scenario), name = "")
+
+        val example = ScenarioStub(
+            request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"name": "John"}""")),
+            response = HttpResponse(status = 201, body = JSONObjectValue(emptyMap()))
+        )
+        val exampleFile = tempDir.resolve("example.json")
+        exampleFile.writeText(example.toJSON().toStringLiteral())
+        val result = exampleValidationModule.validateExample(feature, exampleFile)
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        >> REQUEST.BODY.age
+        Key age in the specification is missing from the example
+        >> RESPONSE.BODY.id
+        Key id in the specification is missing from the example
+        >> RESPONSE.BODY.name
+        Key name in the specification is missing from the example
+        >> RESPONSE.BODY.age
+        Key age in the specification is missing from the example
+        """.trimIndent())
+    }
+
+    private fun ScenarioStub.toPartialExample(tempDir: File): File {
+        val example = JSONObjectValue(mapOf("partial" to this.toJSON()))
+        val exampleFile = tempDir.resolve("example.json")
+        exampleFile.writeText(example.toStringLiteral())
+        return exampleFile
     }
 }

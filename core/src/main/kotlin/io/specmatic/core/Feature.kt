@@ -822,7 +822,8 @@ data class Feature(
             examplePath = scenarioStub.filePath,
             scenario = matchingScenario,
             data = scenarioStub.data,
-            partial = scenarioStub.partial.copy(response = scenarioStub.partial.response)
+            partial = scenarioStub.partial.copy(response = scenarioStub.partial.response),
+            contractPath = this.path
         )
     }
 

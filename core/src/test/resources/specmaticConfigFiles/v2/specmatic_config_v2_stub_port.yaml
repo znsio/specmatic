@@ -14,7 +14,7 @@ contracts:
       - com/petstore/1.yaml
     consumes:
       - com/petstore/payment.yaml
-      - port: 9001
+      - baseUrl: http://localhost:9001
         specs:
           - com/petstore/order1.yaml
           - com/petstore/order2.yaml

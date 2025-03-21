@@ -1,0 +1,25 @@
+{
+    "http-request": {
+        "path": "/products",
+        "method": "POST",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "body": {
+            "name": "Xiaomi",
+            "category": "Mobile"
+        }
+    },
+    "http-response": {
+        "status": 201,
+        "body": {
+            "id": "300",
+            "name": "Xiaomi",
+            "category": "Mobile"
+        },
+        "status-text": "Created",
+        "headers": {
+            "Content-Type": "application/json"
+        }
+    }
+}

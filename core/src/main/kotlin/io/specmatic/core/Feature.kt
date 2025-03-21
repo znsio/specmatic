@@ -467,7 +467,7 @@ data class Feature(
     }
 
     fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {
-        return matchResultFlagBased(scenarioStub.request(), scenarioStub.response(), mismatchMessages, scenarioStub.isPartial())
+        return matchResultFlagBased(scenarioStub.requestElsePartialRequest(), scenarioStub.response(), mismatchMessages, scenarioStub.isPartial())
     }
 
     fun negativeScenariosFor(originalScenario: Scenario): Sequence<ReturnValue<Scenario>> {

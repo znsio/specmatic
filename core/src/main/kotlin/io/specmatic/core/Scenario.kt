@@ -475,7 +475,7 @@ data class Scenario(
         }
     }
 
-    private fun resolveRow(row: Row, resolver: Resolver): ReturnValue<Row> {
+    fun resolveRow(row: Row, resolver: Resolver): ReturnValue<Row> {
         if (row.requestExample == null) return HasValue(row)
 
         return runCatching {

@@ -639,24 +639,18 @@ data class Feature(
             matchResult.isSuccess() || (matchResult as Result.Failure).hasReason(FailureReason.URLPathParamMismatchButSameStructure) && isBadRequest
         } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
 
-        val apiIdentifier = OpenApiSpecification.OperationIdentifier(
-            requestMethod = example.requestMethod.orEmpty(),
-            requestPath = example.requestPath.orEmpty(),
-            responseStatus = example.responseStatus ?: 0,
-            requestContentType = example.requestContentType,
-            responseContentType = example.responseContentType
-        )
-
-        val scenario = originalScenario.useExamples(mapOf(apiIdentifier to listOf(example.toRow(specmaticConfig))))
-        return scenario.generateTestScenarios(flagsBased).firstOrNull {
-            it is HasValue && it.value.exampleName == example.testName
-        }?.realise(
-            hasValue = { concreteTestScenario, comment ->
-                HasValue(scenarioAsTest(concreteTestScenario, comment, Workflow(), originalScenario, scenarios))
-            },
-            orFailure = { f -> f.cast() },
-            orException = { e -> e.cast() }
-        ) ?: HasFailure(Result.Failure("Could not generate test from example $filePath"))
+        return originalScenario.resolveRow(example.toRow(specmaticConfig), originalScenario.resolver).ifValue { row ->
+            scenarioAsTest(
+                concreteTestScenario =  Scenario(
+                    name = originalScenario.apiIdentifier,
+                    httpRequestPattern = row.requestExample?.toPattern() ?: originalScenario.httpRequestPattern,
+                    httpResponsePattern = row.responseExample?.let { HttpResponsePattern(it) } ?: originalScenario.httpResponsePattern,
+                ),
+                comment = null,
+                workflow = Workflow(),
+                originalScenario = originalScenario
+            )
+        }
     }
 
     private fun scenarioAsTest(

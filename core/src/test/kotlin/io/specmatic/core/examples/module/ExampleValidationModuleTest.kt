@@ -1,10 +1,7 @@
 package io.specmatic.core.examples.module
 
 import io.specmatic.core.*
-import io.specmatic.core.pattern.JSONObjectPattern
-import io.specmatic.core.pattern.NumberPattern
-import io.specmatic.core.pattern.StringPattern
-import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.pattern.*
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
@@ -288,6 +285,41 @@ class ExampleValidationModuleTest {
         Key name in the specification is missing from the example
         >> RESPONSE.BODY.age
         Key age in the specification is missing from the example
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should complain when response does not adhere to attribute selection`(@TempDir tempDir: File) {
+        val scenario = Scenario(
+            ScenarioInfo(
+                httpRequestPattern = HttpRequestPattern(
+                    method = "GET",
+                    httpPathPattern = buildHttpPathPattern("/test"),
+                    httpQueryParamPattern = HttpQueryParamPattern(mapOf("columns" to StringPattern()))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    status = 201,
+                    body = ListPattern(JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern(), "age" to NumberPattern())))
+                )
+            )
+        ).copy(attributeSelectionPattern = AttributeSelectionPattern(defaultFields = listOf("id"), queryParamKey = "columns"))
+        val feature = Feature(listOf(scenario), name = "")
+
+        val example = ScenarioStub(
+            request = HttpRequest("GET", "/test", queryParams = QueryParameters(mapOf("columns" to "name"))),
+            response = HttpResponse(status = 201, body = parsedJSONArray("""[ {"age": 10} ]"""))
+        )
+        val exampleFile = example.toPartialExample(tempDir)
+        val result = exampleValidationModule.validateExample(feature, exampleFile)
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        >> RESPONSE.BODY.id
+        Expected key named "id" was missing
+        >> RESPONSE.BODY.name
+        Expected key named "name" was missing
+        >> RESPONSE.BODY.age
+        Key named "age" was unexpected
         """.trimIndent())
     }
 

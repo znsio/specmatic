@@ -295,7 +295,7 @@ class ExampleValidationModuleTest {
                 httpRequestPattern = HttpRequestPattern(
                     method = "GET",
                     httpPathPattern = buildHttpPathPattern("/test"),
-                    httpQueryParamPattern = HttpQueryParamPattern(mapOf("columns" to StringPattern()))
+                    httpQueryParamPattern = HttpQueryParamPattern(mapOf("columns" to QueryParameterScalarPattern(StringPattern())))
                 ),
                 httpResponsePattern = HttpResponsePattern(
                     status = 201,
@@ -307,24 +307,106 @@ class ExampleValidationModuleTest {
 
         val example = ScenarioStub(
             request = HttpRequest("GET", "/test", queryParams = QueryParameters(mapOf("columns" to "name"))),
-            response = HttpResponse(status = 201, body = parsedJSONArray("""[ {"age": 10} ]"""))
+            response = HttpResponse(status = 201, body = parsedJSONArray("""[ {"age": 10, "extra": "value"} ]"""))
         )
-        val exampleFile = example.toPartialExample(tempDir)
+        val exampleFile = example.toExample(tempDir)
         val result = exampleValidationModule.validateExample(feature, exampleFile)
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
-        >> RESPONSE.BODY.id
+        >> RESPONSE.BODY[0].id
         Expected key named "id" was missing
-        >> RESPONSE.BODY.name
+        >> RESPONSE.BODY[0].name
         Expected key named "name" was missing
-        >> RESPONSE.BODY.age
+        >> RESPONSE.BODY[0].age
         Key named "age" was unexpected
+        >> RESPONSE.BODY[0].extra
+        Key named "extra" was unexpected
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should not complain when mandatory keys are missing because they're not attribute selected`(@TempDir tempDir: File) {
+        val scenario = Scenario(
+            ScenarioInfo(
+                httpRequestPattern = HttpRequestPattern(
+                    method = "GET",
+                    httpPathPattern = buildHttpPathPattern("/test"),
+                    httpQueryParamPattern = HttpQueryParamPattern(mapOf("columns" to QueryParameterScalarPattern(StringPattern())))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    status = 201,
+                    body = ListPattern(JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern(), "age" to NumberPattern())))
+                )
+            )
+        ).copy(attributeSelectionPattern = AttributeSelectionPattern(defaultFields = listOf("id"), queryParamKey = "columns"))
+        val feature = Feature(listOf(scenario), name = "")
+
+        val example = ScenarioStub(
+            request = HttpRequest("GET", "/test", queryParams = QueryParameters(mapOf("columns" to "name"))),
+            response = HttpResponse(status = 201, body = parsedJSONArray("""[ {"id": 10, "name": "JohnDoe"} ]"""))
+        )
+        val exampleFile = example.toExample(tempDir)
+        val result = exampleValidationModule.validateExample(feature, exampleFile)
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `attribute selection should work with partial example`(@TempDir tempDir: File) {
+        val scenario = Scenario(
+            ScenarioInfo(
+                httpRequestPattern = HttpRequestPattern(
+                    method = "GET",
+                    httpPathPattern = buildHttpPathPattern("/test"),
+                    httpQueryParamPattern = HttpQueryParamPattern(mapOf("columns" to QueryParameterScalarPattern(StringPattern())))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    status = 201,
+                    body = ListPattern(JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern(), "age" to NumberPattern())))
+                )
+            )
+        ).copy(attributeSelectionPattern = AttributeSelectionPattern(defaultFields = listOf("id"), queryParamKey = "columns"))
+        val feature = Feature(listOf(scenario), name = "")
+
+        val invalidExample = ScenarioStub(
+            request = HttpRequest("GET", "/test", queryParams = QueryParameters(mapOf("columns" to "name"))),
+            response = HttpResponse(status = 201, body = parsedJSONArray("""[ {"age": 10, "extra": "value"} ]"""))
+        )
+        val validExample = ScenarioStub(
+            request = HttpRequest("GET", "/test", queryParams = QueryParameters(mapOf("columns" to "name"))),
+            response = HttpResponse(status = 201, body = parsedJSONArray("""[ {"id": 10, "name": "JohnDoe"} ]"""))
+        )
+
+        val partialInvalidExample = invalidExample.toPartialExample(tempDir)
+        val partialInvalidExampleResult = exampleValidationModule.validateExample(feature, partialInvalidExample)
+
+        val partialValidExample = validExample.toPartialExample(tempDir)
+        val partialValidExampleResult = exampleValidationModule.validateExample(feature, partialValidExample)
+
+        assertThat(partialValidExampleResult).isInstanceOf(Result.Success::class.java)
+        assertThat(partialInvalidExampleResult).isInstanceOf(Result.Failure::class.java)
+        assertThat(partialInvalidExampleResult.reportString()).isEqualToNormalizingWhitespace("""
+        >> RESPONSE.BODY[0].id
+        Expected key named "id" was missing
+        >> RESPONSE.BODY[0].name
+        Expected key named "name" was missing
+        >> RESPONSE.BODY[0].age
+        Key named "age" was unexpected
+        >> RESPONSE.BODY[0].extra
+        Key named "extra" was unexpected
         """.trimIndent())
     }
 
     private fun ScenarioStub.toPartialExample(tempDir: File): File {
         val example = JSONObjectValue(mapOf("partial" to this.toJSON()))
+        val exampleFile = tempDir.resolve("example.json")
+        exampleFile.writeText(example.toStringLiteral())
+        return exampleFile
+    }
+
+    private fun ScenarioStub.toExample(tempDir: File): File {
+        val example = this.toJSON()
         val exampleFile = tempDir.resolve("example.json")
         exampleFile.writeText(example.toStringLiteral())
         return exampleFile

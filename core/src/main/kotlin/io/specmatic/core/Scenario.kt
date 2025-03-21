@@ -324,7 +324,7 @@ data class Scenario(
         httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages,
         flagsBased: FlagsBased, isPartial: Boolean = false
     ): Result {
-        if (httpResponsePattern.status == DEFAULT_RESPONSE_CODE) {
+        if (httpResponsePattern.status == DEFAULT_RESPONSE_CODE || httpResponse.status != httpResponsePattern.status) {
             return Result.Failure(
                 breadCrumb = "STATUS",
                 failureReason = FailureReason.StatusMismatch
@@ -339,23 +339,20 @@ data class Scenario(
             )
         )
 
-        val fieldsSelected = fieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams)
-        if(fieldsSelected.isNotEmpty()) {
-            val result = httpResponse.checkIfAllRootLevelKeysAreAttributeSelected(fieldsSelected, resolver)
-            if(result is Result.Failure) return result.updateScenario(this)
-        }
-
-        val responseMatch = matches(httpResponse, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
-        if (responseMatch is Result.Failure && responseMatch.hasReason(FailureReason.StatusMismatch)) {
-            return responseMatch.updateScenario(this)
-        }
-
+        val updatedScenario = newBasedOnAttributeSelectionFields(httpRequest.queryParams)
         val requestMatch = when(httpResponse.status in invalidRequestStatuses) {
-            false -> matches(httpRequest, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
-            else -> httpRequestPattern.withWildcardPathPattern().matchesPathAndMethod(httpRequest, updatedResolver)
+            false -> updatedScenario.matches(httpRequest, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
+            else -> updatedScenario.httpRequestPattern.withWildcardPathPattern().matchesPathAndMethod(httpRequest, updatedResolver)
         }
 
-        return Result.fromResults(listOf(requestMatch, responseMatch)).updateScenario(this)
+        val fieldsSelected = fieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams)
+        if (fieldsSelected.isNotEmpty()) {
+            val result = httpResponse.checkIfAllRootLevelKeysAreAttributeSelected(fieldsSelected, resolver)
+            if (result is Result.Failure) return Result.fromResults(listOf(requestMatch, result)).updateScenario(updatedScenario)
+        }
+
+        val responseMatch = updatedScenario.matches(httpResponse, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
+        return Result.fromResults(listOf(requestMatch, responseMatch)).updateScenario(updatedScenario)
     }
 
     private fun isRequestAttributeSelected(httpRequest: HttpRequest): Boolean {

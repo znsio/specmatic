@@ -1,0 +1,14 @@
+version: 2
+contracts:
+  - filesystem:
+      directory: "."
+    consumes:
+      - baseUrl: http://localhost:9001/base
+        specs:
+          - imported_product/imported_product.yaml
+      - baseUrl: http://localhost:9002/random
+        specs:
+          - exported_product/exported_product.yaml
+      - baseUrl: http://localhost:9003/random/base
+        specs:
+          - another_exported_product/exported_product.yaml

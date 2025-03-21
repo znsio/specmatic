@@ -292,7 +292,8 @@ class HttpStub(
                         else -> serveStubResponse(
                             httpRequest,
                             baseUrl = "${call.request.local.scheme}://${call.request.local.serverHost}:${call.request.local.localPort}",
-                            defaultBaseUrl = endPointFromHostAndPort(host, port, keyData)
+                            defaultBaseUrl = endPointFromHostAndPort(host, port, keyData),
+                            urlPath = call.request.path()
                         )
                     }
 
@@ -429,13 +430,14 @@ class HttpStub(
     fun serveStubResponse(
         httpRequest: HttpRequest,
         baseUrl: String,
-        defaultBaseUrl: String
+        defaultBaseUrl: String,
+        urlPath: String
     ): HttpStubResponse {
         return getHttpResponse(
-            httpRequest = httpRequest,
-            features = featuresAssociatedTo(baseUrl, features, specToBaseUrlMap),
-            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(baseUrl, defaultBaseUrl),
-            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(baseUrl, defaultBaseUrl),
+            httpRequest = trimBaseUrlPathFrom(httpRequest, baseUrl, urlPath, defaultBaseUrl),
+            features = featuresAssociatedTo(baseUrl, features, specToBaseUrlMap, urlPath),
+            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(baseUrl, defaultBaseUrl, urlPath),
+            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(baseUrl, defaultBaseUrl, urlPath),
             strictMode = strictMode,
             passThroughTargetBase = passThroughTargetBase,
             httpClientFactory = httpClientFactory,
@@ -451,17 +453,38 @@ class HttpStub(
     internal fun featuresAssociatedTo(
         baseUrl: String,
         features: List<Feature>,
-        specToStubBaseUrlMap: Map<String, String>
+        specToStubBaseUrlMap: Map<String, String>,
+        urlPath: String
     ): List<Feature> {
         val resolvedBaseUrls = resolveLocalhostIfPresent(baseUrl)
 
         val specsForGivenPort = specToStubBaseUrlMap.entries
-            .filter { (_, stubBaseUrl) -> stubBaseUrl in resolvedBaseUrls }
+            .filter { (_, stubBaseUrl) ->
+                resolvedBaseUrls.map { "$it$urlPath" }.any { url ->
+                    url.startsWith(stubBaseUrl)
+                }
+            }
             .map { it.key }
             .toSet()
         return features.filter { feature ->
             feature.path in specsForGivenPort
         }
+    }
+
+    private fun trimBaseUrlPathFrom(
+        httpRequest: HttpRequest,
+        baseUrl: String,
+        urlPath: String,
+        defaultBaseUrl: String
+    ): HttpRequest {
+        val stubBaseUrlPath = specmaticConfig.stubBaseUrls(defaultBaseUrl)
+            .firstOrNull { stubBaseUrl -> "$baseUrl$urlPath".startsWith(stubBaseUrl) }
+            ?.let { URI(it).path }
+            .orEmpty()
+
+        return httpRequest.copy(
+            path = httpRequest.path?.replaceFirst(stubBaseUrlPath, "").orEmpty()
+        )
     }
 
     private fun handleFlushTransientStubsRequest(httpRequest: HttpRequest): HttpStubResponse {
@@ -1278,7 +1301,7 @@ fun resolveLocalhostIfPresent(url: String): List<String> {
         val ip = inetAddress.hostAddress
         val bracketedIp = if (ip.contains(":")) "[$ip]" else ip
         "${uri.scheme}://$bracketedIp:$port"
-    }.plus(url)
+    }.plus("${uri.scheme}://$host:$port")
 }
 
 fun normalizeHost(host: String): String {

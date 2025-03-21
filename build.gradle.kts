@@ -60,12 +60,6 @@ specmatic {
     }
 }
 
-subprojects {
-    tasks.withType(Test::class.java) {
-        maxParallelForks = 5
-    }
-}
-
 private fun MavenPom.commonPomContents() {
     url = "https://specmatic.io"
 

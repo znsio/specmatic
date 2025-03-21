@@ -26,6 +26,8 @@ interface Assert {
 
     val prefix: String
     val key: String
+    val combinedKey: String
+        get() = listOf(prefix, key).filter(String::isNotEmpty).joinToString(".")
 
     companion object {
         fun parse(prefix: String, key: String, value: Value, resolver: Resolver): Assert? {

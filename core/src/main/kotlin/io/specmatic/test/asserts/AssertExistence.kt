@@ -24,7 +24,7 @@ class AssertExistence(override val prefix: String, override val key: String, val
 
         val dynamicList = dynamicAsserts(prefixValue)
         val results = dynamicList.map { newAssert ->
-            val finalKey = "${newAssert.prefix}.${newAssert.key}"
+            val finalKey = newAssert.combinedKey
             val actualValue = currentFactStore[finalKey]
             assert(finalKey, actualValue)
         }

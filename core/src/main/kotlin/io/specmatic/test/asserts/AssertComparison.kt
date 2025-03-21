@@ -15,7 +15,7 @@ class AssertComparison(override val prefix: String, override val key: String, va
 
         val dynamicList = dynamicAsserts(prefixValue)
         val results = dynamicList.map { newAssert ->
-            val finalKey = "${newAssert.prefix}.${newAssert.key}"
+            val finalKey = newAssert.combinedKey
             val actualValue = currentFactStore[finalKey] ?: return@map Result.Failure(breadCrumb = finalKey, message = "Could not resolve ${finalKey.quote()} in current fact store")
             assert(finalKey, actualValue, expectedValue)
         }

@@ -1,0 +1,18 @@
+{
+  "partial": {
+    "http-request": {
+      "path": "/pets",
+      "method": "GET"
+    },
+    "http-response": {
+      "status": 200,
+      "body": [
+        "(PetWithId)"
+      ],
+      "status-text": "Created",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    }
+  }
+}

@@ -1004,6 +1004,7 @@ class LoadTestsFromExternalisedFiles {
             private val exampleWithoutDisc = discriminatorSpecFile.parentFile.resolve("example_without_disc")
             private val exampleWithPatternToken = discriminatorSpecFile.parentFile.resolve("example_with_pattern_token")
             private val exampleWithInvalidDisc = discriminatorSpecFile.parentFile.resolve("example_with_invalid_disc")
+            private val partialWithBodyToken = discriminatorSpecFile.parentFile.resolve("partial_with_body_token")
 
             @Test
             fun `should be able to load example with only discriminator in request`() {
@@ -1099,6 +1100,27 @@ class LoadTestsFromExternalisedFiles {
                     >> REQUEST.BODY.petType
                     Expected the value of discriminator property to be one of dog, cat but it was UNKNOWN
                     """.trimIndent())
+                }
+            }
+
+            @Test
+            fun `should be able to load and run partial example with body token`() {
+                Flags.using(EXAMPLE_DIRECTORIES to partialWithBodyToken.canonicalPath) {
+                    val feature = parseContractFileToFeature(discriminatorSpecFile).copy(strictMode = true).loadExternalisedExamples()
+
+                    val responseBody = parsedJSONObject("""{"id": 1, "petType": "cat", "color": "black"}""")
+                    val results = feature.executeTests(object : TestExecutor {
+                        override fun execute(request: HttpRequest): HttpResponse {
+                            return when(request.method) {
+                                "GET" -> HttpResponse(status = 200, body = JSONArrayValue(listOf(responseBody)))
+                                "POST" -> HttpResponse(status = 201, body = responseBody)
+                                else -> throw Exception("Unknown method ${request.method}")
+                            }.also { println(listOf(request.toLogString(), it.toLogString()).joinToString(separator = "\n\n")) }
+                        }
+                    }).results
+
+                    println(results.joinToString("\n\n") { it.reportString() })
+                    assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(2)
                 }
             }
         }

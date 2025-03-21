@@ -61,7 +61,12 @@ class ExampleValidationModule {
     }
 
     private fun validateExample(feature: Feature, example: ExampleFromFile): Result {
-        return feature.matchResultFlagBased(example.request, example.response, InteractiveExamplesMismatchMessages).toResultIfAnyWithCauses()
+        return feature.matchResultFlagBased(
+            request = example.request,
+            response = example.response,
+            mismatchMessages = InteractiveExamplesMismatchMessages,
+            isPartial = example.isPartial()
+        ).toResultIfAnyWithCauses()
     }
 
     private fun validateExample(feature: Feature, schemaExample: SchemaExample): Result {
@@ -93,5 +98,4 @@ class ExampleValidationModule {
             orFailure = { it.failure }
         )
     }
-
 }

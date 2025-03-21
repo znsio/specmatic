@@ -1,12 +1,7 @@
 package io.specmatic.core.examples.module
 
 import io.specmatic.conversions.ExampleFromFile
-import io.specmatic.core.EXAMPLES_DIR_SUFFIX
-import io.specmatic.core.Feature
-import io.specmatic.core.METHOD_BREAD_CRUMB
-import io.specmatic.core.PATH_BREAD_CRUMB
-import io.specmatic.core.Result
-import io.specmatic.core.Scenario
+import io.specmatic.core.*
 import io.specmatic.core.examples.server.InteractiveExamplesMismatchMessages
 import io.specmatic.core.examples.server.SchemaExample
 import io.specmatic.core.log.consoleDebug
@@ -20,10 +15,13 @@ class ExampleModule {
 
     fun getExistingExampleFiles(feature: Feature, scenario: Scenario, examples: List<ExampleFromFile>): List<Pair<ExampleFromFile, Result>> {
         return examples.mapNotNull { example ->
-            val matchResult = when (example.responseStatus) {
-                400 -> scenario.copy(httpRequestPattern = scenario.httpRequestPattern.withWildcardPathPattern())
-                else -> scenario
-            }.matches(example.request, example.response, InteractiveExamplesMismatchMessages, feature.flagsBased)
+            val matchResult = scenario.matches(
+                httpRequest = example.request,
+                httpResponse = example.response,
+                mismatchMessages = InteractiveExamplesMismatchMessages,
+                flagsBased = feature.flagsBased,
+                isPartial = example.isPartial()
+            )
 
             when (matchResult) {
                 is Result.Success -> example to matchResult
@@ -33,7 +31,7 @@ class ExampleModule {
                                 || breadCrumb.contains(METHOD_BREAD_CRUMB)
                                 || breadCrumb.contains("REQUEST.HEADERS.Content-Type")
                                 || breadCrumb.contains("STATUS")
-                    }
+                    } || matchResult.hasReason(FailureReason.URLPathParamMismatchButSameStructure)
                     if (isFailureRelatedToScenario) { example to matchResult } else null
                 }
             }

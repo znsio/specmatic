@@ -488,7 +488,8 @@ data class Feature(
 
         val scenarios = if(isBadRequest) {
             scenarios.asSequence().filter {
-                it.isA4xxScenario() && it.httpRequestPattern.matchesPathAndMethod(request, it.resolver).isSuccess()
+                it.isA4xxScenario()
+                        && it.httpRequestPattern.withWildcardPathPattern().matchesPathAndMethod(request, it.resolver).isSuccess()
             }
         } else this.scenarios.asSequence()
 
@@ -582,14 +583,8 @@ data class Feature(
                     is Result.Success -> Pair(
                         scenario.resolverAndResponseForExpectation(response).let { (resolver, resolvedResponse) ->
                             val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
-                            val requestTypeWithAncestors =
-                                newRequestType.copy(
-                                    headersPattern = newRequestType.headersPattern.copy(
-                                        ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern
-                                    )
-                                )
                             HttpStubData(
-                                requestType = requestTypeWithAncestors,
+                                requestType = newRequestType,
                                 response = resolvedResponse.copy(externalisedResponseCommand = response.externalisedResponseCommand),
                                 resolver = resolver,
                                 responsePattern = scenario.httpResponsePattern,

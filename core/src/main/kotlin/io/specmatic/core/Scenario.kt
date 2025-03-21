@@ -294,21 +294,17 @@ data class Scenario(
         allowOnlyMandatoryKeysInJSONObject: Boolean = false
     ): List<DiscriminatorBasedItem<HttpRequest>> =
         scenarioBreadCrumb(this) {
-            val updatedResolver = getUpdatedResolver(flagsBased, allowOnlyMandatoryKeysInJSONObject)
+            val updatedResolver = if (allowOnlyMandatoryKeysInJSONObject) {
+                flagsBased.update(
+                    resolver.copy(factStore = CheckFacts(expectedFacts), isNegative = this.isNegative)
+                ).withOnlyMandatoryKeysInJSONObject()
+            } else {
+                flagsBased.update(
+                    resolver.copy(factStore = CheckFacts(expectedFacts), isNegative = this.isNegative)
+                )
+            }
             httpRequestPattern.generateV2(updatedResolver)
         }
-
-    private fun getUpdatedResolver(flagsBased: FlagsBased, allowOnlyMandatoryKeysInJSONObject: Boolean): Resolver {
-        return if(allowOnlyMandatoryKeysInJSONObject) {
-            flagsBased.update(
-                resolver.copy(factStore = CheckFacts(expectedFacts))
-            ).withOnlyMandatoryKeysInJSONObject()
-        } else {
-            flagsBased.update(
-                resolver.copy(factStore = CheckFacts(expectedFacts))
-            )
-        }
-    }
 
     fun matchesResponse(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
         val attributeSelectedFields = fieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams)
@@ -681,7 +677,7 @@ data class Scenario(
                 IgnoreFacts(),
                 true,
                 patterns,
-                findKeyErrorCheck = keyCheck.disableOverrideUnexpectedKeycheck(),
+                findKeyErrorCheck = keyCheck,
                 mismatchMessages = updatedMismatchMessages
             )
 

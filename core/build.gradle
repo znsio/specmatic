@@ -19,7 +19,7 @@ def junit_version = "5.11.4"
 dependencies {
     // TODO Fix to eliminate vulnerabilities, remove when the enclosing library supports it
     implementation 'io.netty:netty-codec-http:4.1.118.Final' // used by ktor-server-netty-jvm 2.3.13 in core (last checked on Feb 13 2025)
-    implementation 'joda-time:joda-time:2.13.0' // used by swagger-parser 2.1.22
+    implementation 'joda-time:joda-time:2.13.1' // used by swagger-parser 2.1.22
     implementation 'net.minidev:json-smart:2.5.2' // used by json-path 2.9.0 (last checked on Feb 13 2025)
 
     implementation 'com.ezylang:EvalEx:3.4.0'

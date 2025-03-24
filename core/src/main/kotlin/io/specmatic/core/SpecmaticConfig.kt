@@ -322,6 +322,13 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
+    fun stubBaseUrlPathAssociatedTo(url: String, defaultBaseUrl: String): String {
+        return stubBaseUrls(defaultBaseUrl).firstOrNull { stubBaseUrl ->
+            url.startsWith(stubBaseUrl)
+        }?.let { URI(it).path }.orEmpty()
+    }
+
+    @JsonIgnore
     fun getStubStartTimeoutInMilliseconds(): Long {
         return stub.getStartTimeoutInMilliseconds() ?: 20_000L
     }

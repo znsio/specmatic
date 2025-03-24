@@ -18,12 +18,12 @@ class ThreadSafeListOfStubs(
         }
 
     fun stubAssociatedTo(baseUrl: String, defaultBaseUrl: String, urlPath: String): ThreadSafeListOfStubs {
-        val resolvedBaseUrls = resolveLocalhostIfPresent(baseUrl) + resolveLocalhostIfPresent(defaultBaseUrl)
+        val resolvedBaseUrls = resolveLocalhostIfPresent(baseUrl, urlPath) + resolveLocalhostIfPresent(defaultBaseUrl, urlPath)
+        val baseUrlToListOfStubsMap = baseUrlToListOfStubsMap(defaultBaseUrl)
 
         return resolvedBaseUrls
-            .map { "$it$urlPath" }
             .firstNotNullOfOrNull { resolvedUrl ->
-                baseUrlToListOfStubsMap(defaultBaseUrl).entries.firstOrNull {
+                baseUrlToListOfStubsMap.entries.firstOrNull {
                     resolvedUrl.startsWith(it.key)
                 }?.value
             }

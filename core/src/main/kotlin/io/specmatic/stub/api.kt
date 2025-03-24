@@ -4,6 +4,7 @@ package io.specmatic.stub
 import io.specmatic.core.*
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.StringLog
+import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.ContractPathData
@@ -19,6 +20,7 @@ import java.io.File
 
 private const val HTTP_STUB_SHUTDOWN_TIMEOUT = 2000L
 private const val STUB_START_TIMEOUT = 20_000L
+private const val INDENT = "  "
 
 // Used by stub client code
 fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000): ContractStub {
@@ -132,9 +134,7 @@ internal fun createStub(
         val stubs = if (dataDirPaths.isEmpty()) {
             loadContractStubsFromImplicitPaths(contractStubPaths, specmaticConfig, dataDirPaths)
         } else {
-            loadContractStubsFromFiles(contractStubPaths, dataDirPaths, specmaticConfig, strict).plus(
-                loadContractStubsFromImplicitPaths(contractStubPaths, specmaticConfig, dataDirPaths)
-            )
+            loadContractStubsFromFiles(contractStubPaths, dataDirPaths, specmaticConfig, strict, withImplicitStubs = true)
         }
         val features = stubs.map { it.first }
         val expectations = contractInfoToHttpExpectations(stubs)
@@ -222,39 +222,49 @@ internal fun createStubFromContracts(
 fun loadContractStubsFromImplicitPaths(
     contractPathDataList: List<ContractPathData>,
     specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-    externalDataDirPaths: List<String>
+    externalDataDirPaths: List<String>,
+    cachedFeatures: List<Feature> = emptyList(),
+    processedInvalidSpecs: List<String> = emptyList()
 ): List<Pair<Feature, List<ScenarioStub>>> {
-    return contractPathDataList.map { Pair(File(it.path), it) }.flatMap { (contractPath, contractSource) ->
+    return contractPathDataList.filter {
+        it.path !in processedInvalidSpecs
+    }.map { Pair(File(it.path), it) }.flatMap { (specFile, contractSource) ->
         when {
-            contractPath.isFile && contractPath.extension in CONTRACT_EXTENSIONS -> {
-                consoleLog(StringLog("Loading $contractPath"))
+            specFile.isFile && specFile.extension in CONTRACT_EXTENSIONS -> {
+                val cachedFeature = cachedFeatures.firstOrNull { it.path == specFile.path }
+                if(cachedFeature == null) {
+                    logger.newLine()
+                    consoleLog(StringLog("Loading the spec file: $specFile${System.lineSeparator()}"))
+                }
+                val feature = cachedFeature ?: loadIfOpenAPISpecification(
+                    contractSource,
+                    specmaticConfig
+                )?.second
 
-                if(hasOpenApiFileExtension(contractPath.path) && !isOpenAPI(contractPath.path.trim())) {
-                    logger.log("Ignoring ${contractPath.path} as it is not an OpenAPI specification")
+                if(feature == null) {
                     emptyList()
                 }
                 else try {
-                    val implicitDataDirs = implicitDirsForSpecifications(contractPath)
+                    val implicitDataDirs = implicitDirsForSpecifications(specFile)
                     val externalDataDirs = dataDirFiles(externalDataDirPaths)
 
-                    val feature = parseContractFileToFeature(
-                        contractPath,
-                        CommandHook(HookName.stub_load_contract),
-                        contractSource.provider,
-                        contractSource.repository,
-                        contractSource.branch,
-                        contractSource.specificationPath,
-                        specmaticConfig = specmaticConfig
-                    )
-
+                    consoleLog("")
+                    val dataFiles = implicitDataDirs.flatMap { filesInDir(it).orEmpty() }
+                    if(dataFiles.isEmpty()) {
+                        debugLogNonExistentDataFiles(implicitDataDirs.map { it.path }.relativePaths())
+                    } else {
+                        consoleLog(dataFilesLogForStubScan(
+                            dataFiles,
+                            implicitDataDirs.map { it.path }.relativePaths()
+                        ))
+                    }
                     val stubData = when {
                         implicitDataDirs.any { it.isDirectory } -> {
                             implicitDataDirs.filter { it.isDirectory }.flatMap { implicitDataDir ->
-                                consoleLog("Loading stub expectations from ${implicitDataDir.path}".prependIndent("  "))
-                                logIgnoredFiles(implicitDataDir)
 
-                                val stubDataFiles = filesInDir(implicitDataDir)?.toList()?.filter { it.extension == "json" }.orEmpty()
-                                printDataFiles(stubDataFiles)
+                                val stubDataFiles =
+                                    filesInDir(implicitDataDir)?.toList()?.sorted()?.filter { it.extension == "json" }.orEmpty()
+                                logIgnoredFiles(implicitDataDir)
 
                                 stubDataFiles.mapNotNull {
                                     try {
@@ -266,14 +276,21 @@ fun loadContractStubsFromImplicitPaths(
                                 }
                             }
                         }
+
                         else -> emptyList()
                     }
 
                     val implicitExampleDirs = stubData.map { File(it.first) }
+                    consoleDebug(featuresLogForStubScan(listOf(Pair(specFile.path, feature))))
+                    logStubScanForDebugging(
+                        listOf(Pair(specFile.path, feature)),
+                        implicitExampleDirs,
+                        implicitDataDirs.map { it.path }.relativePaths()
+                    )
                     loadContractStubs(
                         features = listOf(
                             Pair(
-                                contractPath.path,
+                                specFile.path,
                                 feature.overrideInlineExamples(
                                     (implicitExampleDirs + externalDataDirs).map {
                                         it.nameWithoutExtension
@@ -285,18 +302,20 @@ fun loadContractStubsFromImplicitPaths(
                         logIgnoredFiles = true
                     )
                 } catch(e: Throwable) {
-                    logger.log("Could not load ${contractPath.canonicalPath}")
+                    logger.log("Could not load ${specFile.canonicalPath}")
                     logger.log(e)
                     emptyList()
                 }
             }
-            contractPath.isDirectory -> {
+            specFile.isDirectory -> {
                 loadContractStubsFromImplicitPaths(
-                    contractPathDataList = contractPath.listFiles()?.toList()?.map {
+                    contractPathDataList = specFile.listFiles()?.toList()?.map {
                         ContractPathData("",  it.absolutePath)
                     } ?: emptyList(),
                     specmaticConfig = specmaticConfig,
-                    externalDataDirPaths = externalDataDirPaths
+                    externalDataDirPaths = externalDataDirPaths,
+                    cachedFeatures = cachedFeatures,
+                    processedInvalidSpecs = processedInvalidSpecs
                 )
             }
             else -> emptyList()
@@ -317,7 +336,7 @@ fun hasOpenApiFileExtension(contractPath: String): Boolean =
 private fun logIgnoredFiles(implicitDataDir: File) {
     val ignoredFiles = implicitDataDir.listFiles()?.toList()?.filter { it.extension != "json" }?.filter { it.isFile } ?: emptyList()
     if (ignoredFiles.isNotEmpty()) {
-        consoleLog(StringLog("Ignoring the following files:".prependIndent("  ")))
+        consoleLog(StringLog("Ignoring the following files:".prependIndent(INDENT)))
         for (file in ignoredFiles) {
             consoleLog(StringLog(file.absolutePath.prependIndent("    ")))
         }
@@ -328,11 +347,12 @@ fun loadContractStubsFromFiles(
     contractPathDataList: List<ContractPathData>,
     dataDirPaths: List<String>,
     specmaticConfig: SpecmaticConfig,
-    strictMode: Boolean = false
+    strictMode: Boolean = false,
+    withImplicitStubs: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
-    val contactPathsString = contractPathDataList.joinToString(System.lineSeparator()) { it.path }
-    consoleLog(StringLog("Loading the following contracts:${System.lineSeparator()}$contactPathsString"))
-    consoleLog(StringLog(""))
+    val contactPathsString = contractPathDataList.joinToString(System.lineSeparator()) { "- ${it.path}".prependIndent(INDENT) }
+    logger.newLine()
+    consoleLog(StringLog("Loading the following spec files:${System.lineSeparator()}$contactPathsString${System.lineSeparator()}"))
 
     val invalidContractPaths = contractPathDataList.filter { File(it.path).exists().not() }.map { it.path }
     if (invalidContractPaths.isNotEmpty() && strictMode) {
@@ -344,39 +364,57 @@ fun loadContractStubsFromFiles(
 
     val features = contractPathDataList.mapNotNull { contractPathData ->
         loadIfOpenAPISpecification(contractPathData, specmaticConfig)
-    }.overrideInlineExamplesWithSameNameFrom(
-        dataDirFiles(dataDirPaths)
-    )
+    }.overrideInlineExamplesWithSameNameFrom(dataDirFiles(dataDirPaths))
 
-    logger.debug("Loading stubs from implicit directories within the ${dataDirPaths.joinToString(", ")}")
-    return loadImplicitExpectationsFromDataDirsForFeature(
+    dataDirPaths.forEach { dataDirPath ->
+        val dataFiles = dataDirFiles(listOf(dataDirPath))
+        consoleLog("")
+        if(dataFiles.isEmpty()) {
+            debugLogNonExistentDataFiles(dataDirPaths)
+        } else {
+            consoleLog(dataFilesLogForStubScan(dataFiles, listOf(dataDirPath).relativePaths()))
+        }
+    }
+
+    val explicitStubs = loadImplicitExpectationsFromDataDirsForFeature(
         features,
         dataDirPaths,
         specmaticConfig,
         strictMode,
         contractPathDataList
     ).ifEmpty {
-        logger.debug("No implicit stubs found in ${dataDirPaths.joinToString(", ")}")
-        logger.debug("Loading all the stubs from ${dataDirPaths.joinToString(", ")} since no implicit stubs found")
+        logger.debug(featuresLogForStubScan(features))
         loadExpectationsForFeatures(
             features,
             dataDirPaths,
             strictMode
         )
     }
+    if(withImplicitStubs.not()) return explicitStubs
+
+    val implicitStubs = loadContractStubsFromImplicitPaths(
+        contractPathDataList = contractPathDataList,
+        specmaticConfig = specmaticConfig,
+        externalDataDirPaths = dataDirPaths,
+        cachedFeatures = features.map { it.second },
+        processedInvalidSpecs = contractPathDataList.filter { isInvalidOpenAPISpecification(it.path) }.map { it.path }
+    )
+
+    return explicitStubs.plus(implicitStubs)
+}
+
+private fun debugLogNonExistentDataFiles(dataDirPaths: List<String>) {
+    consoleDebug(StringLog("Skipped the non-existent example directories:${System.lineSeparator()}${dataDirPaths.withAbsolutePaths()}"))
 }
 
 fun loadExpectationsForFeatures(
     features: List<Pair<String, Feature>>,
     dataDirPaths: List<String>,
-    strictMode: Boolean = false
+    strictMode: Boolean = false,
+    dirsToBeSkipped: Set<String> = emptySet()
 ): List<Pair<Feature, List<ScenarioStub>>> {
-    val dataFiles = dataDirFiles(dataDirPaths)
-    if(dataFiles.isNotEmpty()) {
-        logger.newLine()
-        logger.log("Loading stub expectations for specs: ${features.joinToString(",") { it.first }}")
-        printDataFiles(dataFiles)
-    }
+    val dataFiles = dataDirFiles(dataDirPaths, dirsToBeSkipped)
+    logStubScanForDebugging(features, dataFiles, dataDirPaths)
 
     val mockData = dataFiles.mapNotNull {
         try {
@@ -390,6 +428,16 @@ fun loadExpectationsForFeatures(
     return loadContractStubs(features, mockData, strictMode)
 }
 
+private fun List<String>.withAbsolutePaths(): String {
+    return this.joinToString(System.lineSeparator()) { "- $it (absolute path ${File(it).canonicalPath})".prependIndent(INDENT) }
+}
+
+private fun List<String>.relativePaths(): List<String> {
+    return this.map {
+        File(it).canonicalFile.relativeTo(File(".").canonicalFile).path
+    }.map { ".${File.separator}$it" }
+}
+
 private fun  List<Pair<String, Feature>>.overrideInlineExamplesWithSameNameFrom(dataFiles: List<File>): List<Pair<String, Feature>> {
     val externalExampleNames = dataFiles.map { it.nameWithoutExtension }.toSet()
     return this.map {
@@ -401,9 +449,12 @@ private fun  List<Pair<String, Feature>>.overrideInlineExamplesWithSameNameFrom(
 }
 
 private fun dataDirFiles(
-    dataDirPaths: List<String>
+    dataDirPaths: List<String>,
+    dirsToBeSkipped: Set<String> = emptySet()
 ): List<File> {
-    return allDirsInTree(dataDirPaths).flatMap {
+    return allDirsInTree(dataDirPaths).filter {
+        it.path !in dirsToBeSkipped
+    }.flatMap {
         logIgnoredFiles(it)
         it.listFiles()?.toList()?.sorted() ?: emptyList<File>()
     }.filter { it.extension == "json" }
@@ -419,25 +470,28 @@ fun loadImplicitExpectationsFromDataDirsForFeature(
     return specPathToImplicitDataDirPaths(specmaticConfig, dataDirPaths, contractPathDataList).flatMap { (specPath, implicitOriginalDataDirPairList) ->
         val associatedFeature = features.firstOrNull { (specPathAssociatedToFeature, _) ->
             File(specPathAssociatedToFeature).canonicalPath == File(specPath).canonicalPath
-        } ?: return@flatMap emptyList()
+        }
+
+        if(associatedFeature == null) {
+            logger.debug("Skipping the loading of examples for '$specPath' as it is not a OpenAPI specification")
+            return@flatMap emptyList()
+        }
+        logger.debug(featuresLogForStubScan(listOf(associatedFeature)))
 
         implicitOriginalDataDirPairList.flatMap { (implicitDataDir, originalDataDir) ->
-            logger.debug("Loading examples for $specPath from $implicitDataDir...")
             val implicitStubs = loadExpectationsForFeatures(
                 features = listOf(associatedFeature),
                 dataDirPaths = listOf(implicitDataDir),
                 strictMode = strictMode
             )
             if(implicitStubs.all { (_, stubs) -> stubs.isEmpty() }) {
-                logger.debug("No matching examples found for $specPath in $implicitDataDir")
-                logger.debug("Proceeding with loading stub expectations from $originalDataDir for $specPath")
                 loadExpectationsForFeatures(
-                    listOf(associatedFeature),
-                    listOf(originalDataDir),
-                    strictMode
+                    features = listOf(associatedFeature),
+                    dataDirPaths = listOf(originalDataDir),
+                    strictMode = strictMode,
+                    dirsToBeSkipped = setOf(implicitDataDir)
                 )
             } else {
-                logger.debug("Successfully loaded stub expectations for $specPath in $implicitDataDir")
                 implicitStubs
             }
         }
@@ -474,11 +528,75 @@ data class ImplicitOriginalDataDirPair(
     val dataDir: String
 )
 
-private fun printDataFiles(dataFiles: List<File>) {
+private fun logStubScanForDebugging(
+    features: List<Pair<String, *>>,
+    dataFiles: List<File>,
+    dataDirPaths: List<String>
+) {
     if (dataFiles.isNotEmpty()) {
-        val dataFilesString = dataFiles.joinToString(System.lineSeparator()) { it.path.prependIndent("  ") }
-        consoleLog(StringLog("Scanning the following to find the matching stub files:${System.lineSeparator()}$dataFilesString".prependIndent("  ")))
+        consoleDebug(dataFilesLogForStubScan(dataFiles, dataDirPaths.relativePaths(), true))
+    } else {
+        val existingDataFiles = dataFiles.groupBy { it.exists() }
+        if (existingDataFiles.isNotEmpty()) {
+            logger.debug(featuresLogForStubScan(features))
+            logger.debug(System.lineSeparator())
+            logger.debug(
+                "${
+                    "Skipped example loading since no example directories/files found within:".prependIndent(
+                        INDENT
+                    )
+                }${System.lineSeparator()}${dataFiles.map { it.canonicalPath }.withAbsolutePaths()}"
+            )
+        }
+
+        val nonExistentDataFiles = dataFiles.groupBy { it.exists().not() }
+        if (nonExistentDataFiles.isNotEmpty()) {
+            logger.debug(featuresLogForStubScan(features))
+            logger.debug(System.lineSeparator())
+            logger.debug(
+                "${"Skipped example loading since the example directories do not exist:".prependIndent(INDENT)}${System.lineSeparator()}${
+                    dataFiles.map { it.canonicalPath }.withAbsolutePaths()
+                }"
+            )
+        }
     }
+}
+
+private fun featuresLogForStubScan(features: List<Pair<String, *>>): String {
+    if(features.size == 1) {
+        val feature = features.single()
+        return buildString {
+            append(System.lineSeparator())
+            append("Scanning for stub expectations for '${feature.first}'".prependIndent(" "))
+        }
+    }
+    return buildString {
+        append(System.lineSeparator())
+        append("Scanning for stub expectations for specs:".prependIndent(" "))
+        append(System.lineSeparator())
+        append(features.joinToString(System.lineSeparator()) { "- ${it.first}".prependIndent(INDENT) })
+    }
+}
+
+private fun dataFilesLogForStubScan(
+    dataFiles: List<File>,
+    dataDirPaths: List<String>,
+    debugMode: Boolean = false
+): StringLog {
+    if(dataFiles.isEmpty()) {
+        return StringLog("")
+    }
+
+    val dataFilesString = dataFiles.joinToString(System.lineSeparator()) { file ->
+        "- ${file.canonicalPath}".prependIndent(INDENT)
+    }
+
+    return StringLog(buildString {
+        val messagePrefix = if(debugMode) "Scanning example files from" else "Example files in"
+        append("$messagePrefix '${dataDirPaths.joinToString(", ")}'".prependIndent(" "))
+        append(System.lineSeparator())
+        append(dataFilesString)
+    })
 }
 
 class StubMatchExceptionReport(val request: HttpRequest, val e: NoMatchingScenario) {
@@ -510,6 +628,36 @@ fun stubMatchErrorMessage(
     stubFile: String,
     specs: List<String> = emptyList()
 ): String {
+    val errorReports = stubMatchErrorReports(matchResults)
+
+    if(errorReports.isEmpty() || matchResults.isEmpty())
+        return stubMatchErrorMessageForEmpty(matchResults, stubFile, specs)
+
+    return stubMatchErrorMessageForNonEmpty(errorReports, stubFile)
+}
+
+private fun stubMatchErrorMessageForEmpty(
+    matchResults: List<StubMatchResults>,
+    stubFile: String,
+    specs: List<String>
+): String {
+    return "$stubFile didn't match any of the contracts from ${specs.joinToString(", ")}\n${matchResults.firstOrNull()?.errorReport?.exceptionReport?.request?.requestNotRecognized()?.prependIndent(INDENT)}".trim()
+}
+
+private fun stubMatchErrorMessageForNonEmpty(
+    errorReports: List<StubMatchErrorReport>,
+    stubFile: String
+): String {
+    return errorReports.joinToString("${System.lineSeparator()}${System.lineSeparator()}") { (exceptionReport, contractFilePath) ->
+        "$stubFile didn't match $contractFilePath${System.lineSeparator()}${
+            exceptionReport.message.prependIndent(
+                "  "
+            )
+        }"
+    }
+}
+
+private fun stubMatchErrorReports(matchResults: List<StubMatchResults>): List<StubMatchErrorReport> {
     val matchResultsWithErrorReports = matchResults.mapNotNull { it.errorReport }
 
     val errorReports: List<StubMatchErrorReport> = matchResultsWithErrorReports.map {
@@ -523,19 +671,7 @@ fun stubMatchErrorMessage(
             it.hasErrors()
         }
     }
-
-    if(errorReports.isEmpty() || matchResults.isEmpty())
-        return "$stubFile didn't match any of the contracts from ${specs.joinToString(", ")}\n${matchResults.firstOrNull()?.errorReport?.exceptionReport?.request?.requestNotRecognized()?.prependIndent("  ")}".trim()
-
-
-
-    return errorReports.joinToString("${System.lineSeparator()}${System.lineSeparator()}") { (exceptionReport, contractFilePath) ->
-        "$stubFile didn't match $contractFilePath${System.lineSeparator()}${
-            exceptionReport.message.prependIndent(
-                "  "
-            )
-        }"
-    }
+    return errorReports
 }
 
 fun loadContractStubs(
@@ -556,12 +692,20 @@ fun loadContractStubs(
 
         if(matchResults.all { it.feature == null }) {
             val specs = features.map { it.first }
-            val errorMessage = stubMatchErrorMessage(matchResults, stubFile, specs).prependIndent("  ")
-            if(strictMode) throw Exception(errorMessage)
+            val errorReports = stubMatchErrorReports(matchResults)
+
+            if (strictMode) throw Exception(stubMatchErrorMessage(matchResults, stubFile, specs))
             else {
-                val message = "No matching spec found for stub '${stubFile}':${System.lineSeparator()} $errorMessage"
-                if (logIgnoredFiles) logger.log(message)
-                logger.debug(message)
+                if (logIgnoredFiles) {
+                    val errorMessage = stubMatchErrorMessage(matchResults, stubFile, specs)
+                    val message = ">> Error loading stub expectation file '${stubFile}':${System.lineSeparator()} $errorMessage"
+                    logger.newLine()
+                    logger.log(message.prependIndent(INDENT))
+                    logger.newLine()
+                }
+                else {
+                    logPartialErrorMessages(errorReports, stubFile, matchResults, specs)
+                }
             }
             return@flatMap emptyList()
         }
@@ -570,7 +714,7 @@ fun loadContractStubs(
             if (matchResult.feature == null) {
                 null
             } else {
-                logger.debug("Successfully loaded the stub expectation from '${stub.filePath.orEmpty()} for ${matchResult.feature.path}'")
+                logger.debug("Successfully loaded the stub expectation from '${stub.filePath.orEmpty()}".prependIndent(" "))
                 Pair(matchResult.feature, stub)
             }
         }
@@ -580,6 +724,26 @@ fun loadContractStubs(
     val missingFeatures = features.map { it.second }.filter { it !in stubbedFeatures }
 
     return contractInfoFromStubs.plus(missingFeatures.map { Pair(it, emptyList()) })
+}
+
+private fun logPartialErrorMessages(
+    errorReports: List<StubMatchErrorReport>,
+    stubFile: String,
+    matchResults: List<StubMatchResults>,
+    specs: List<String>
+) {
+    val errorMessage = stubMatchErrorMessageForNonEmpty(errorReports, stubFile).takeIf { errorReports.isNotEmpty() }
+    if (errorMessage != null) {
+        val errorMessagePrefix = ">> Error loading stub expectation file '${stubFile}':".prependIndent(INDENT)
+        val message = "$errorMessagePrefix${System.lineSeparator()}${errorMessage.prependIndent(INDENT.plus(" "))}"
+        logger.newLine()
+        logger.log(message)
+        logger.newLine()
+    }
+    if (matchResults.isEmpty() || errorReports.isEmpty()) {
+        val errorMessageForDebugLog = "Skipped loading the stub expectation from '${stubFile}' as it didn't match the spec(s) '${specs.joinToString(", ")}'".prependIndent(INDENT)
+        logger.debug(errorMessageForDebugLog)
+    }
 }
 
 fun allDirsInTree(
@@ -644,15 +808,21 @@ fun implicitContractDataDir(contractPath: String, customBase: String? = null): F
 }
 
 fun loadIfOpenAPISpecification(contractPathData: ContractPathData, specmaticConfig: SpecmaticConfig): Pair<String, Feature>? {
-    if (recognizedExtensionButNotOpenAPI(contractPathData) || isOpenAPI(contractPathData.path))
-        return Pair(contractPathData.path, parseContractFileToFeature(contractPathData.path, CommandHook(HookName.stub_load_contract), contractPathData.provider, contractPathData.repository, contractPathData.branch, contractPathData.specificationPath).copy(specmaticConfig = specmaticConfig))
+    if(hasOpenApiFileExtension(contractPathData.path).not()) {
+        logger.log("Ignoring ${contractPathData.path} as it does not have a recognized specification extension")
+        return null
+    }
+    if(isOpenAPI(contractPathData.path).not()) {
+        logger.log("Ignoring ${contractPathData.path} as it is not a valid OpenAPI specification")
+        return null
+    }
 
-    logger.log("Ignoring ${contractPathData.path} as it does not have a recognized specification extension")
-    return null
+    return Pair(contractPathData.path, parseContractFileToFeature(contractPathData.path, CommandHook(HookName.stub_load_contract), contractPathData.provider, contractPathData.repository, contractPathData.branch, contractPathData.specificationPath).copy(specmaticConfig = specmaticConfig))
 }
 
-private fun recognizedExtensionButNotOpenAPI(contractPathData: ContractPathData) =
-    !hasOpenApiFileExtension(contractPathData.path) && File(contractPathData.path).extension in CONTRACT_EXTENSIONS
+fun isInvalidOpenAPISpecification(specPath: String): Boolean {
+    return hasOpenApiFileExtension(specPath).not() || isOpenAPI(specPath).not()
+}
 
 fun isOpenAPI(path: String): Boolean =
     try {

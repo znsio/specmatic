@@ -1,5 +1,6 @@
 package io.specmatic.conversions
 
+import io.specmatic.core.CONTENT_TYPE
 import io.specmatic.core.HttpPathPattern
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.pattern.parsedValue
@@ -18,7 +19,7 @@ class ExampleRequestBuilder(
                 examplesBasedOnParameters.getValue(exampleName).map { exampleRequest ->
                     exampleRequest
                         .copy(
-                            headers = exampleRequest.headers + mapOf("Content-Type" to contentType),
+                            headers = exampleRequest.headers + if(CONTENT_TYPE !in exampleRequest.headers) mapOf("Content-Type" to contentType) else exampleRequest.headers,
                             body = parsedValue(bodyValue))
                 }
             } else {

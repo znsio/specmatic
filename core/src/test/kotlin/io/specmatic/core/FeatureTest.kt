@@ -6,6 +6,7 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.HasValue
 import io.specmatic.core.pattern.NumberPattern
 import io.specmatic.core.pattern.StringPattern
 import io.specmatic.core.pattern.parsedJSONObject
@@ -2645,7 +2646,9 @@ paths:
 
             every { scenario.generateHttpResponseV2(any()) } returns responseList
 
-            val pairs = feature.generateDiscriminatorBasedRequestResponseList(scenario)
+            val pairs = feature.generateDiscriminatorBasedRequestResponseList(
+                HasValue(scenario)
+            )
 
             assertEquals(3, pairs.size)
             assertTrue(pairs.any { it.request == request1 && it.response == response1 })
@@ -2680,7 +2683,7 @@ paths:
 
             every { scenario.generateHttpResponseV2(any()) } returns responseList
 
-            val pairs = feature.generateDiscriminatorBasedRequestResponseList(scenario)
+            val pairs = feature.generateDiscriminatorBasedRequestResponseList(HasValue(scenario))
 
             assertEquals(2, pairs.size)
             assertTrue(pairs.any { it.request == request1 && it.response == response1 })
@@ -2692,7 +2695,7 @@ paths:
             every { scenario.generateHttpRequestV2() } returns emptyList()
             every { scenario.generateHttpResponseV2(any()) } returns emptyList()
 
-            val pairs = feature.generateDiscriminatorBasedRequestResponseList(scenario)
+            val pairs = feature.generateDiscriminatorBasedRequestResponseList(HasValue(scenario))
 
             assertTrue(pairs.isEmpty())
         }

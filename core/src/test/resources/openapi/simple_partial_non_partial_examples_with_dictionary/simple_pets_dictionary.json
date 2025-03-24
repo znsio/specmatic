@@ -1,0 +1,12 @@
+{
+  "QUERY-PARAMS.tag": "cat",
+  "PATH-PARAMS.id": 1,
+  "HEADERS.CREATOR-ID": "John",
+  "NewPet.name": "Tom",
+  "NewPet.tag": "cat",
+  "NewPet.color": "black",
+  "Pet.id": 1,
+  "Pet.name": "Tom",
+  "Pet.tag": "cat",
+  "Pet.color": "black"
+}

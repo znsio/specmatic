@@ -1,6 +1,10 @@
 package io.specmatic.core.filters
 
+import io.specmatic.core.TestResult
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.ENHANCED_FUNC_NAME
+import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
+import io.specmatic.test.TestResultRecord
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -520,5 +524,39 @@ class ScenarioMetadataFilterTests {
         val filterExpression = "METHOD='GET' && STATUS='2'00'"
         val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
         assertEquals(filterExpression, enhancedExpression)
+    }
+
+    @Test
+    fun `should filter items having metadata`() {
+        val items: List<HasScenarioMetadata> = listOf(
+            TestResultRecord(
+                path = "/customer",
+                method = "GET",
+                responseStatus = 200,
+                result = TestResult.Success
+            ),
+            TestResultRecord(
+                path = "/employee",
+                method = "GET",
+                responseStatus = 200,
+                result = TestResult.MissingInSpec
+            ),
+            TestResultRecord(
+                path = "/employee",
+                method = "POST",
+                responseStatus = 200,
+                result = TestResult.NotCovered
+            )
+        )
+
+        val filter = "METHOD='GET'"
+
+        val filteredItems = filterUsing(items.asSequence(), ScenarioMetadataFilter.from(filter)).toList()
+
+        val paths = filteredItems.map { it.toScenarioMetadata().path }
+        assertThat(paths).containsExactlyInAnyOrder("/customer", "/employee")
+
+        val methods = filteredItems.map { it.toScenarioMetadata().method }.distinct()
+        assertThat(methods).containsOnly("GET")
     }
 }

@@ -1,6 +1,6 @@
 package io.specmatic.core.log
 
-interface LogStrategy {
+interface LogStrategy : UsesIndentation, UsesBoundary {
     val printer: CompositePrinter
     var infoLoggingEnabled: Boolean
 
@@ -10,7 +10,7 @@ interface LogStrategy {
     fun log(e: Throwable, msg: String? = null)
     fun log(msg: String)
     fun log(msg: LogMessage)
-    fun logError(e:Throwable)
+    fun logError(e: Throwable)
     fun newLine()
     fun debug(msg: String): String
     fun debug(msg: LogMessage)
@@ -18,6 +18,7 @@ interface LogStrategy {
     fun disableInfoLogging() {
         infoLoggingEnabled = false
     }
+
     fun enableInfoLogging() {
         infoLoggingEnabled = true
     }

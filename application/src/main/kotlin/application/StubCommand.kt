@@ -42,7 +42,7 @@ class StubCommand : Callable<Unit> {
     @Autowired
     private var specmaticConfig: SpecmaticConfig = SpecmaticConfig()
 
-    @Parameters(arity = "0..*", description = ["Contract file paths"])
+    @Parameters(arity = "0..*", description = ["Contract file paths", "Spec file paths"])
     var contractPaths: List<String> = mutableListOf()
 
     @Option(names = ["--data", "--examples"], description = ["Directories containing JSON examples"], required = false)
@@ -145,8 +145,9 @@ class StubCommand : Callable<Unit> {
         try {
             contractSources = when (contractPaths.isEmpty()) {
                 true -> {
-                    logger.debug("No contractPaths specified. Using configuration file named $configFileName")
                     specmaticConfigPath = File(Configuration.configFilePath).canonicalPath
+
+                    logger.debug("Using the spec paths configured for stubs in the configuration file '$specmaticConfigPath'")
                     specmaticConfig.contractStubPathData()
                 }
                 else -> contractPaths.map {

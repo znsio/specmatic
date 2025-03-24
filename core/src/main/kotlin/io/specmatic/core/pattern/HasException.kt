@@ -23,7 +23,6 @@ data class HasException<T>(val t: Throwable, val message: String = "", val bread
 
     override fun <U> ifValue(fn: (T) -> U): ReturnValue<U> {
         return cast()
-
     }
 
     override fun update(fn: (T) -> T): ReturnValue<T> {
@@ -35,7 +34,13 @@ data class HasException<T>(val t: Throwable, val message: String = "", val bread
     }
 
     override fun <U, V> combine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
-        return cast()
+        val otherReturnValue = when(acc) {
+            is HasException -> acc.toHasFailure()
+            is HasFailure -> acc
+            else -> return cast()
+        }
+
+        return this.toHasFailure().combine(otherReturnValue, fn)
     }
 
     override fun <V> cast(): ReturnValue<V> {
@@ -44,6 +49,10 @@ data class HasException<T>(val t: Throwable, val message: String = "", val bread
 
     override val value: T
         get() = throw t
+
+    override fun <U, V> exceptionElseCombine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
+        return cast()
+    }
 
     override fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U> {
         return cast()

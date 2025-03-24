@@ -1,7 +1,7 @@
 package io.specmatic.core.log
 
 class JSONFilePrinter(private val file: LogFile): LogPrinter {
-    override fun print(msg: LogMessage) {
+    override fun print(msg: LogMessage, indentation: String) {
         file.appendText("${msg.toJSONObject()}\n")
     }
 }

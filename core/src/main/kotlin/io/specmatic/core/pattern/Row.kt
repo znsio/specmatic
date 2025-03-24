@@ -7,6 +7,7 @@ import io.specmatic.core.value.JSONObjectValue
 
 const val DEREFERENCE_PREFIX = "$"
 const val FILENAME_PREFIX = "@"
+const val REQUEST_BODY_FIELD = "(REQUEST-BODY)"
 
 data class Row(
     val columnNames: List<String> = emptyList(),
@@ -159,5 +160,16 @@ data class Row(
             val updatedJSONExample = jsonExample.removeKey(property)
             withoutColumn.copy(requestBodyJSONExample = updatedJSONExample)
         } ?: withoutColumn
+    }
+
+    fun updateRequest(request: HttpRequest, requestPattern: HttpRequestPattern, resolver: Resolver): Row {
+        val path = requestPattern.httpPathPattern?.extractPathParams(request.path.orEmpty(), resolver).orEmpty()
+        val headers = request.headers
+        val queryParams = request.queryParams.asValueMap().mapValues { it.value.toStringLiteral() }
+        val bodyEntry = if (request.body !is NoBodyValue) {
+            mapOf(REQUEST_BODY_FIELD to request.body.toStringLiteral())
+        } else emptyMap()
+
+        return this.copy(columnNames = emptyList(), values = emptyList()).addFields(path + headers + queryParams + bodyEntry).copy(requestExample = request)
     }
 }

@@ -10,7 +10,7 @@ internal class ReadyMessageTest {
         val messages = mutableListOf<LogMessage>()
 
         val printer = object: LogPrinter {
-            override fun print(msg: LogMessage) {
+            override fun print(msg: LogMessage, indentation: String) {
                 messages.add(msg)
             }
         }

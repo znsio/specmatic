@@ -23,7 +23,7 @@ class AssertPatternTest {
         val patternType = resolvedHop(parsedValue(value).exactMatchElseType(), resolver)
 
         println("value: $value, prefix: $prefix, key: $key, value: $value, patternType: ${patternType.javaClass.simpleName}")
-        val assert = AssertPattern.parse(prefix, key, parsedValue(value))
+        val assert = AssertPattern.parse(prefix, key, parsedValue(value), resolver)
         assertThat(assert).isNotNull.isInstanceOf(AssertPattern::class.java)
         assert as AssertPattern
         assertThat(assert.prefix).isEqualTo("REQUEST.BODY")
@@ -33,26 +33,29 @@ class AssertPatternTest {
 
     @Test
     fun `should not parse literal values to ExactValue Pattern`() {
-        val assert = AssertPattern.parse("REQUEST.BODY", "name", StringValue("john"))
+        val resolver = Resolver()
+        val assert = AssertPattern.parse("REQUEST.BODY", "name", StringValue("john"), resolver)
         assertThat(assert).isNull()
     }
 
     @Test
     fun `should not parse composite values to AssertPattern`() {
+        val resolver = Resolver()
         val compositeValue = parsedJSONObject("""
         {
             "key": "value",
             "key2": "value2"
         }
         """.trimIndent())
-        val assert = AssertPattern.parse("REQUEST.BODY", "composite", compositeValue)
+        val assert = AssertPattern.parse("REQUEST.BODY", "composite", compositeValue, resolver)
         println(assert)
         assertThat(assert).isNull()
     }
 
     @Test
     fun `should return success when value matches the pattern`() {
-        val assert = AssertPattern(prefix = "REQUEST.BODY", key = "name", pattern = parsedPattern("john"))
+        val resolver = Resolver()
+        val assert = AssertPattern(prefix = "REQUEST.BODY", key = "name", pattern = parsedPattern("john"), resolver)
 
         val bodyValue = JSONObjectValue(mapOf("name" to StringValue("john")))
         val currentStore = bodyValue.toFactStore("REQUEST.BODY")
@@ -64,7 +67,8 @@ class AssertPatternTest {
 
     @Test
     fun `should return failure when value does not match the pattern`() {
-        val assert = AssertPattern(prefix = "REQUEST.BODY", key = "name", pattern = parsedPattern("(string)"))
+        val resolver = Resolver()
+        val assert = AssertPattern(prefix = "REQUEST.BODY", key = "name", pattern = parsedPattern("(string)"), resolver)
 
         val bodyValue = JSONObjectValue(mapOf("name" to NumberValue(100)))
         val currentStore = bodyValue.toFactStore("REQUEST.BODY")
@@ -81,7 +85,8 @@ class AssertPatternTest {
 
     @Test
     fun ` should return failure when value does not exist`() {
-        val assert = AssertPattern(prefix = "REQUEST.BODY", key = "name", pattern = parsedPattern("(string)"))
+        val resolver = Resolver()
+        val assert = AssertPattern(prefix = "REQUEST.BODY", key = "name", pattern = parsedPattern("(string)"), resolver)
 
         val bodyValue = JSONObjectValue(mapOf())
         val currentStore = bodyValue.toFactStore("REQUEST.BODY")
@@ -98,7 +103,8 @@ class AssertPatternTest {
 
     @Test
     fun `should be able to create dynamic asserts based on prefix value`() {
-        val assert = AssertPattern(prefix = "REQUEST.BODY", key = "name", pattern = parsedPattern("(string)"))
+        val resolver = Resolver()
+        val assert = AssertPattern(prefix = "REQUEST.BODY", key = "name", pattern = parsedPattern("(string)"), resolver)
         val jsonValue = JSONObjectValue(mapOf("name" to NumberValue(100)))
         val arrayValue = JSONArrayValue(List(3) { jsonValue })
 
@@ -125,7 +131,8 @@ class AssertPatternTest {
 
     @Test
     fun `should assert all array values based on dynamic asserts when prefix value is an array`() {
-        val assert = AssertPattern(prefix = "REQUEST.BODY", key = "name", pattern = parsedPattern("(string)"))
+        val resolver = Resolver()
+        val assert = AssertPattern(prefix = "REQUEST.BODY", key = "name", pattern = parsedPattern("(string)"), resolver)
 
         val jsonValue = JSONObjectValue(mapOf("name" to NumberValue(100)))
         val arrayValue = JSONArrayValue(List(3) { jsonValue })
@@ -143,5 +150,27 @@ class AssertPatternTest {
         >> REQUEST.BODY[2].name
         Expected string, actual was 100 (number)
         """.trimIndent())
+    }
+
+    @Test
+    fun `should be able to resolve pattern from resolver`() {
+        val resolver = Resolver(newPatterns = mapOf("(Test)" to NumberPattern()))
+        val assert = AssertPattern(prefix = "REQUEST.BODY", key = "name", pattern = parsedPattern("(Test)"), resolver)
+        val jsonValue = JSONObjectValue(mapOf("name" to NumberValue(100)))
+        val currentStore = jsonValue.toFactStore("REQUEST.BODY")
+
+        val result = assert.assert(currentStore, currentStore)
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should return failure if pattern token does not resolve`() {
+        val resolver = Resolver()
+        val assert = AssertPattern(prefix = "REQUEST.BODY", key = "name", pattern = parsedPattern("(Test)"), resolver)
+        val jsonValue = JSONObjectValue(mapOf("name" to NumberValue(100)))
+        val currentStore = jsonValue.toFactStore("REQUEST.BODY")
+
+        val result = assert.assert(currentStore, currentStore)
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
     }
 }

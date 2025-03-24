@@ -1,0 +1,97 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Simple API
+paths:
+  /creators/{creatorId}/pets/{petId}:
+    patch:
+      parameters:
+        - name: creatorId
+          in: path
+          schema:
+            type: number
+          required: true
+        - name: petId
+          in: path
+          schema:
+            type: number
+          required: true
+        - name: creatorId
+          in: query
+          schema:
+            type: number
+          required: true
+        - name: petId
+          in: query
+          schema:
+            type: number
+          required: true
+        - name: CREATOR-ID
+          in: header
+          schema:
+            type: number
+          required: true
+        - name: PET-ID
+          in: header
+          schema:
+            type: number
+          required: true
+      description: Creates a new pet in the store. Duplicates are allowed
+      requestBody:
+        description: Pet to add to the store
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewPet'
+      responses:
+        '201':
+          description: pet response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - creatorId
+        - petId
+        - traceId
+      properties:
+        id:
+          type: number
+        traceId:
+          type: string
+        creatorId:
+          type: number
+        petId:
+          type: number
+    NewPet:
+      type: object
+      required:
+        - creatorId
+        - petId
+      properties:
+        creatorId:
+          type: number
+        petId:
+          type: number
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: number
+        message:
+          type: string

@@ -828,7 +828,8 @@ paths:
             schema:
               type: object
               properties:
-                data: number
+                data:
+                  type: number
       responses:
         '200':
           description: Says hello
@@ -858,8 +859,7 @@ paths:
             val responseString = response.toLogString()
             println(responseString)
 
-            assertThat(responseString).contains("in the stub")
-            assertThat(responseString).contains("not in the contract")
+            assertThat(responseString).contains("Contract expected number but stub contained \"abc\"")
         }
     }
 

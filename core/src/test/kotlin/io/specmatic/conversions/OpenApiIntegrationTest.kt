@@ -185,7 +185,9 @@ Examples:
                 )
                 val result = feature.scenarios.first().httpRequestPattern.matches(httpRequest, Resolver())
                 assertThat(result).isInstanceOf(Result.Failure::class.java)
-                assertThat(result.reportString()).contains("Authorization header is missing in request")
+                assertThat(result.reportString())
+                    .contains(">> REQUEST.HEADERS.Authorization")
+                    .contains("Expected header named \"Authorization\" was missing")
             }
 
             @Test
@@ -558,7 +560,9 @@ Background:
             )
             val result = feature.scenarios.first().httpRequestPattern.matches(httpRequest, Resolver())
             assertThat(result).isInstanceOf(Result.Failure::class.java)
-            assertThat(result.reportString()).contains("Authorization header is missing in request")
+            assertThat(result.reportString())
+                .contains(">> REQUEST.HEADERS.Authorization")
+                .contains("Expected header named \"Authorization\" was missing")
         }
 
         @Test

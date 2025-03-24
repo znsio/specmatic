@@ -72,7 +72,7 @@ fun parseContractFileToFeature(
     overlayContent: String = "",
     strictMode: Boolean = false
 ): Feature {
-    logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
+    logger.debug("Parsing spec file ${file.path}, absolute path ${file.canonicalPath}")
     return when (file.extension) {
         in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(
             hook.readContract(file.path),
@@ -160,9 +160,10 @@ data class Feature(
     }
 
     fun generateDiscriminatorBasedRequestResponseList(
-        scenario: Scenario,
+        scenarioValue: HasValue<Scenario>,
         allowOnlyMandatoryKeysInJSONObject: Boolean = false
     ): List<DiscriminatorBasedRequestResponse> {
+        val scenario = scenarioValue.value
         try {
             val requests = scenario.generateHttpRequestV2(
                 allowOnlyMandatoryKeysInJSONObject = allowOnlyMandatoryKeysInJSONObject
@@ -182,7 +183,8 @@ data class Feature(
                         request = request,
                         response = response,
                         requestDiscriminator = requestDiscriminator,
-                        responseDiscriminator = responseDiscriminator
+                        responseDiscriminator = responseDiscriminator,
+                        scenarioValue = scenarioValue
                     )
                 }
             } else {
@@ -194,7 +196,8 @@ data class Feature(
                         request = request,
                         response = response,
                         requestDiscriminator = requestDiscriminator,
-                        responseDiscriminator = responseDiscriminator
+                        responseDiscriminator = responseDiscriminator,
+                        scenarioValue = scenarioValue
                     )
                 }
             }
@@ -467,18 +470,46 @@ data class Feature(
         return matchResultFlagBased(scenarioStub.request, scenarioStub.response, mismatchMessages)
     }
 
-    fun matchResultFlagBased(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages): Results {
-        val results = scenarios.map {
-            it.matches(request, response, mismatchMessages, flagsBased)
+    fun negativeScenariosFor(originalScenario: Scenario): Sequence<ReturnValue<Scenario>> {
+        return negativeScenarioFor(originalScenario).newBasedOn(
+            originalScenario.exampleRow ?: Row(),
+            flagsBased
+        ).filterNot {
+            val scenario = it.value
+            originalScenario.httpRequestPattern.matches(
+                scenario.generateHttpRequest(flagsBased),
+                scenario.resolver
+            ).isSuccess()
         }
+    }
+
+    fun matchResultFlagBased(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages): Results {
+        val isBadRequest = (response.status == 400)
+
+        val scenarios = if(isBadRequest) {
+            scenarios.asSequence().filter {
+                it.isA4xxScenario() && it.httpRequestPattern.matchesPathAndMethod(request, it.resolver).isSuccess()
+            }
+        } else this.scenarios.asSequence()
+
+        val results = scenarios.map {
+            if(isBadRequest) it.matchesResponse(request, response, mismatchMessages)
+            else it.matches(request, response, mismatchMessages, flagsBased)
+        }.toList()
 
         if(results.any { it.isSuccess() })
             return Results(results).withoutFluff()
 
-        val deepErrors = results.filterNot { it.isFluffy(0) }
+        val deepErrors: List<Result> = results.filterNot {
+            it.isFluffy()
+        }.ifEmpty {
+            results.filter {
+                it is Result.Failure && it.hasReason(FailureReason.URLPathParamMismatchButSameStructure)
+            }
+        }
 
         if(deepErrors.isNotEmpty())
-            return Results(deepErrors)
+            return Results(deepErrors).distinct()
 
         return Results(listOf(Result.Failure("No matching specification found for this example")))
     }
@@ -593,7 +624,7 @@ data class Feature(
                     scenarioAsTest(concreteTestScenario, comment, workflow, originalScenario, originalScenarios)
                 },
                 orFailure = {
-                    ScenarioTestGenerationFailure(originalScenario, it.failure)
+                    ScenarioTestGenerationFailure(originalScenario, it.failure, it.message)
                 },
                 orException = {
                     ScenarioTestGenerationException(originalScenario, it.t, it.message, it.breadCrumb)
@@ -732,6 +763,10 @@ data class Feature(
                 })
             }
         }
+    }
+
+    fun negativeScenarioFor(scenario: Scenario): Scenario {
+        return scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
     }
 
     fun generateBackwardCompatibilityTestScenarios(): List<Scenario> =
@@ -1791,11 +1826,11 @@ data class Feature(
             try {
                 with(exampleFromFile) {
                     OpenApiSpecification.OperationIdentifier(
-                        requestMethod.orEmpty(),
-                        requestPath.orEmpty(),
-                        responseStatus ?: 0,
-                        exampleFromFile.headers.filter { it.key.lowercase() == "content-type" }.values.firstOrNull(),
-                        exampleFromFile.responseHeaders?.let { it.jsonObject.filter { it.key.lowercase() == "content-type" }.values.firstOrNull()?.toStringLiteral() }
+                        requestMethod = requestMethod.orEmpty(),
+                        requestPath = requestPath.orEmpty(),
+                        responseStatus = responseStatus ?: 0,
+                        requestContentType = exampleFromFile.requestContentType,
+                        responseContentType = exampleFromFile.responseContentType
                     ) to exampleFromFile.toRow(specmaticConfig)
                 }
             } catch (e: Throwable) {
@@ -2490,5 +2525,6 @@ data class DiscriminatorBasedRequestResponse(
     val request: HttpRequest,
     val response: HttpResponse,
     val requestDiscriminator: DiscriminatorMetadata,
-    val responseDiscriminator: DiscriminatorMetadata
+    val responseDiscriminator: DiscriminatorMetadata,
+    val scenarioValue: HasValue<Scenario>
 )

@@ -1,10 +1,12 @@
 package io.specmatic.core
 
+import io.ktor.http.*
+import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
+import io.specmatic.core.pattern.isOptional
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
-import io.ktor.http.*
 
 const val HEADERS_BREADCRUMB = "HEADERS"
 
@@ -38,24 +40,65 @@ data class HttpHeadersPattern(
         }
     }
 
-    private fun matchEach(parameters: Pair<Map<String, String>, Resolver>): MatchingResult<Pair<Map<String, String>, Resolver>> {
+    private fun isContentTypeAsPerPattern(
+        contentTypePattern: Pattern?,
+        resolver: Resolver
+    ): Boolean {
+        return when(contentTypePattern) {
+            null -> true
+            else -> {
+                contentTypePattern.matches(parsedValue(contentType), resolver).isSuccess()
+            }
+        }
+    }
+
+    private fun matchContentType(parameters: Pair<Map<String, String>, Resolver>):  MatchingResult<Pair<Map<String, String>, Resolver>> {
+
         val (headers, resolver) = parameters
 
-        val contentTypeHeaderValue = headers["Content-Type"]
+        val contentTypeHeaderValueFromRequest = headers[CONTENT_TYPE]
+        val contentTypePattern = pattern[CONTENT_TYPE] ?: pattern["$CONTENT_TYPE?"]
 
-        if(contentType != null && contentTypeHeaderValue != null) {
+        val isContentTypeNotAsPerPattern = isContentTypeAsPerPattern(contentTypePattern, resolver).not()
+
+        if (contentTypePattern != null && isContentTypeNotAsPerPattern) {
+            val contentTypeMatchResult = contentTypePattern.matches(
+                parsedValue(contentTypeHeaderValueFromRequest),
+                resolver
+            )
+
+            if (contentTypeMatchResult is Result.Failure) {
+                val matchFailure: Result.Failure =
+                    contentTypeMatchResult
+                        .withFailureReason(FailureReason.ContentTypeMismatch)
+                        .breadCrumb(CONTENT_TYPE)
+
+                return MatchFailure(matchFailure)
+            }
+        } else if (contentType != null && contentTypeHeaderValueFromRequest != null) {
             val parsedContentType = simplifiedContentType(contentType.lowercase())
-            val parsedContentTypeHeaderValue  = simplifiedContentType(contentTypeHeaderValue.lowercase())
+            val parsedContentTypeHeaderValue = simplifiedContentType(contentTypeHeaderValueFromRequest.lowercase())
 
-            if(parsedContentType != parsedContentTypeHeaderValue)
+            if (parsedContentType != parsedContentTypeHeaderValue) {
                 return MatchFailure(
                     Result.Failure(
-                        resolver.mismatchMessages.mismatchMessage(contentType, contentTypeHeaderValue),
+                        resolver.mismatchMessages.mismatchMessage(contentType, contentTypeHeaderValueFromRequest),
                         breadCrumb = "Content-Type",
                         failureReason = FailureReason.ContentTypeMismatch
                     )
                 )
+            }
         }
+
+        return MatchSuccess(parameters)
+    }
+
+
+    private fun matchEach(parameters: Pair<Map<String, String>, Resolver>): MatchingResult<Pair<Map<String, String>, Resolver>> {
+        val (headers, resolver) = parameters
+
+        val contentTypeMatchResult = matchContentType(parameters)
+        if (contentTypeMatchResult is MatchFailure) return contentTypeMatchResult
 
         val headersWithRelevantKeys = when {
             ancestorHeaders != null -> withoutIgnorableHeaders(headers, ancestorHeaders)
@@ -164,15 +207,38 @@ data class HttpHeadersPattern(
     }
 
     fun generate(resolver: Resolver): Map<String, String> {
-        val headers = pattern.mapValues { (key, pattern) ->
+        val generatedHeaders = pattern.mapValues { (key, pattern) ->
             attempt(breadCrumb = "HEADERS.$key") {
                 toStringLiteral(resolver.withCyclePrevention(pattern) {
                     it.generate("HEADERS", key, pattern)
                 })
             }
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
-        if (contentType.isNullOrBlank()) return headers
-        return headers.plus(CONTENT_TYPE to contentType)
+
+        if(contentType == null)
+            return generatedHeaders
+
+        val generatedContentTypeValue = generatedHeaders[CONTENT_TYPE] ?: return generatedHeaders.withMediaType()
+
+        if (!contentTypeHeaderIsConst(generatedContentTypeValue, resolver))
+            return generatedHeaders.withMediaType()
+
+        return generatedHeaders
+    }
+
+    private fun contentTypeHeaderIsConst(
+        generatedContentType: String,
+        resolver: Resolver,
+    ): Boolean {
+        val contentTypePattern: Pattern = pattern[CONTENT_TYPE] ?: pattern["${CONTENT_TYPE}?"] ?: return false
+        val regeneratedContentType = contentTypePattern.generate(resolver).toStringLiteral()
+        return generatedContentType == regeneratedContentType
+    }
+
+    private fun Map<String, String>.withMediaType(
+    ): Map<String, String> {
+        if (contentType.isNullOrBlank()) return this
+        return this.plus(CONTENT_TYPE to contentType)
     }
 
     private fun toStringLiteral(headerValue: Value) = when (headerValue) {
@@ -348,41 +414,24 @@ data class HttpHeadersPattern(
     }
 
     fun fillInTheBlanks(headers: Map<String, String>, resolver: Resolver): ReturnValue<Map<String, String>> {
-        val headersToConsider = ancestorHeaders?.let {
-            headers.filterKeys { key -> key in it || "$key?" in it }
-        } ?: headers
+        val headersWithContentType = if (contentType != null && CONTENT_TYPE !in headers) {
+            headers.plus(CONTENT_TYPE to contentType)
+        } else headers
 
-        val map: Map<String, ReturnValue<String>> = headersToConsider.mapValues { (headerName, headerValue) ->
-            val headerPattern = pattern[headerName] ?: pattern["$headerName?"] ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
-
-            if(isPatternToken(headerValue)) {
-                val generatedValue = resolver.generate("HEADERS", headerName, resolver.getPattern(headerValue))
-                val matchResult = headerPattern.matches(generatedValue, resolver)
-
-                val returnValue: ReturnValue<String> = if(matchResult is Result.Failure)
-                    HasFailure(matchResult, "Could not generate value for key $headerName")
-                else
-                    HasValue(generatedValue.toStringLiteral())
-
-                returnValue
-            } else {
-                exception { headerPattern.parse(headerValue, resolver) }?.let { return@mapValues HasException(it) }
-
-                HasValue(headerValue)
-            }.breadCrumb(headerName)
+        if (headersWithContentType.isEmpty() && pattern.isEmpty()) return HasValue(emptyMap())
+        val headersValue = headersWithContentType.mapValues { (key, value) ->
+            val pattern = pattern[key] ?: pattern["$key?"] ?: return@mapValues StringValue(value)
+            runCatching { pattern.parse(value, resolver) }.getOrDefault(StringValue(value))
         }
 
-        val headersInPartialR = map.mapFold()
-
-        val missingHeadersR = pattern.filterKeys { !it.endsWith("?") && it !in headers }.mapValues { (headerName, headerPattern) ->
-            val generatedValue = HasValue(resolver.generate("HEADERS", headerName, headerPattern).toStringLiteral())
-
-            generatedValue.breadCrumb(headerName)
-        }.mapFold()
-
-        return headersInPartialR.combine(missingHeadersR) { headersInPartial, missingHeaders ->
-            headersInPartial + missingHeaders
-        }
+        return fill(
+            jsonPatternMap = pattern, jsonValueMap = headersValue,
+            resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys),
+            typeAlias = "($HEADERS_BREADCRUMB)"
+        ).realise(
+            hasValue = { valuesMap, _ -> HasValue(valuesMap.mapValues { it.value.toStringLiteral() }) },
+            orException = { e -> e.cast() }, orFailure = { f -> f.cast() }
+        )
     }
 
     fun fixValue(headers: Map<String, String>, resolver: Resolver): Map<String, String> {
@@ -404,6 +453,11 @@ data class HttpHeadersPattern(
 
         return fixedHeaders.mapValues { it.value.toStringLiteral() }
     }
+
+}
+
+internal fun logContentTypeAndPatternMismatchWarning(contentType: String) {
+    logger.log("WARNING: The content type schema specified in the specification does not match the media type $contentType")
 }
 
 private fun parseOrString(pattern: Pattern, sampleValue: String, resolver: Resolver) =

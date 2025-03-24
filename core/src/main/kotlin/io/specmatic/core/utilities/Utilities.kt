@@ -18,10 +18,7 @@ import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.nativeString
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.NullPattern
-import io.specmatic.core.pattern.NumberPattern
-import io.specmatic.core.pattern.parsedJSON
+import io.specmatic.core.pattern.*
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
@@ -84,7 +81,7 @@ fun readFile(filePath: String): String {
 
 fun parseXML(xmlData: String): Document {
     val builder = newXMLBuilder()
-    return removeIrrelevantNodes(builder.parse(InputSource(StringReader(xmlData))))
+    return removeIrrelevantNodes(builder.parse(InputSource(StringReader(xmlData.removePrefix(UTF_BYTE_ORDER_MARK)))))
 }
 
 fun newXMLBuilder(): DocumentBuilder {
@@ -291,8 +288,8 @@ fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, sele
         it.loadContracts(selector, workingDirectory, configFilePath)
     }
 
-    logger.debug("Contract file paths in $configFilePath:")
-    logger.debug(contractPathData.joinToString(System.lineSeparator()) { it.path }.prependIndent("  "))
+    logger.debug("Spec file paths in $configFilePath:")
+    logger.debug(contractPathData.joinToString(System.lineSeparator()) { "- ${it.path}" })
 
     return contractPathData
 }

@@ -79,9 +79,7 @@ interface Pattern {
     }
 
     fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        exception { parse(value.toStringLiteral(), resolver) }?.let { return HasException(it) }
-
-        return HasValue(value)
+        return fillInTheBlanksWithPattern(value, resolver, this)
     }
 
     fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String? = null): Pattern {
@@ -101,6 +99,35 @@ interface Pattern {
     val pattern: Any
 }
 
+fun fillInTheBlanksWithPattern(value: Value, resolver: Resolver, self: Pattern): ReturnValue<Value> {
+    val resolvedPattern = when (val resolvedPattern = resolveToPattern(value, resolver, self)) {
+        is ReturnFailure -> return resolvedPattern.cast()
+        else -> resolvedPattern.value
+    }
+
+    return when {
+        isPatternToken(value) -> runCatching { resolver.generate(resolvedPattern) }.map(::HasValue).getOrElse(::HasException)
+        resolver.isNegative -> HasValue(value)
+        else -> resolvedPattern.matches(value, resolver).toReturnValue(value)
+    }
+}
+
+fun resolveToPattern(value: Value, resolver: Resolver, self: Pattern): ReturnValue<Pattern> {
+    if (value !is StringValue || !value.isPatternToken()) return HasValue(self)
+
+    return runCatching {
+        val pattern = resolver.getPattern(value.string)
+        if (pattern is AnyValuePattern) return@runCatching HasValue(self)
+        if (resolver.isNegative) return@runCatching HasValue(pattern)
+        self.encompasses(pattern, resolver, resolver).toReturnValue(pattern)
+    }.getOrElse(::HasException)
+}
+
 fun Pattern.isDiscriminator(): Boolean {
     return this is ExactValuePattern && this.discriminator
+}
+
+fun fillInIfPatternToken(value: Value, pattern: Pattern, resolver: Resolver): ReturnValue<Value> {
+    if (value !is StringValue || !value.isPatternToken()) return HasValue(value)
+    return runCatching { pattern.fillInTheBlanks(StringValue("(anyvalue)"), resolver) }.getOrElse(::HasException)
 }

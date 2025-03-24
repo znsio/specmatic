@@ -452,6 +452,10 @@ class HttpStub(
             { it.value }, { it.key }
         )[baseUrl].orEmpty().toSet()
 
+        val specsForGivenPort = specToStubBaseUrlMap.entries
+            .filter { (_, stubBaseUrl) -> stubBaseUrl in resolvedBaseUrls }
+            .map { it.key }
+            .toSet()
         return features.filter { feature ->
             feature.path in specsForGivenPort
         }
@@ -1252,6 +1256,41 @@ fun extractHost(url: String): String? {
 
 fun extractPort(url: String): Int? {
     return URI(url).port.takeIf { it != -1 }
+}
+
+fun normalizeHost(host: String): String {
+    return try {
+        InetAddress.getByName(host).hostAddress
+    } catch (e: Exception) {
+        host
+    }
+}
+
+fun extractHost(url: String): String? {
+    return URI(url).host
+}
+
+fun extractPort(url: String): Int? {
+    return URI(url).port.takeIf { it != -1 }
+}
+
+fun resolveLocalhostIfPresent(url: String): List<String> {
+    val uri = URI(url)
+    val host = uri.host
+
+    if (host != "localhost") return listOf(url)
+
+    val port = when {
+        uri.port != -1 -> uri.port
+        uri.scheme == "https" -> 443
+        else -> 80
+    }
+
+    return InetAddress.getAllByName(host).map { inetAddress ->
+        val ip = inetAddress.hostAddress
+        val bracketedIp = if (ip.contains(":")) "[$ip]" else ip
+        "${uri.scheme}://$bracketedIp:$port"
+    }.plus(url)
 }
 
 fun normalizeHost(host: String): String {

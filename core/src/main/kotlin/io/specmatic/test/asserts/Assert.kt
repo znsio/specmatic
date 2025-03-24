@@ -1,9 +1,12 @@
 package io.specmatic.test.asserts
 
+import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.ScalarValue
 import io.specmatic.core.value.Value
+
+val ASSERT_KEYS = setOf("\$if", "\$then", "\$else")
 
 interface Assert {
     fun assert(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result
@@ -25,24 +28,24 @@ interface Assert {
     val key: String
 
     companion object {
-        fun parse(prefix: String, key: String, value: Value): Assert? {
+        fun parse(prefix: String, key: String, value: Value, resolver: Resolver): Assert? {
             return when (key) {
-                "\$if" -> AssertConditional.parse(prefix, key, value)
-                else -> if (value is ScalarValue) { parseScalarValue(prefix, key, value) } else null
+                "\$if" -> AssertConditional.parse(prefix, key, value, resolver)
+                else -> if (value is ScalarValue) { parseScalarValue(prefix, key, value, resolver) } else null
             }
         }
 
-        private fun parseScalarValue(prefix: String, key: String, value: Value): Assert? {
+        private fun parseScalarValue(prefix: String, key: String, value: Value, resolver: Resolver): Assert? {
             return AssertComparison.parse(prefix, key, value)
                     ?: AssertArray.parse(prefix, key, value)
-                    ?: AssertPattern.parse(prefix, key, value)
+                    ?: AssertPattern.parse(prefix, key, value, resolver)
                     ?: AssertExistence.parse(prefix, key, value)
         }
     }
 }
 
-fun parsedAssert(prefix: String, key: String, value: Value): Assert? {
-    return Assert.parse(prefix, key, value)
+fun parsedAssert(prefix: String, key: String, value: Value, resolver: Resolver = Resolver()): Assert? {
+    return Assert.parse(prefix, key, value, resolver)
 }
 
 fun <T> Value.suffixIfMoreThanOne(block: (suffix: String, suffixValue: Value) -> T): List<T> {

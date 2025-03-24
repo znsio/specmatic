@@ -91,27 +91,27 @@ data class Resolver(
         return patternMatchStrategy(this, factKey, pattern, sampleValue)
     }
 
-    fun actualPatternMatch(factKey: String?, pattern: Pattern, sampleValue: Value): Result {
-        if (mockMode && ExampleProcessor.isSubstitutionToken(sampleValue)) return Result.Success()
+    private fun patternTokenMatch(pattern: Pattern, sampleData: Value): Result? {
+        if (!mockMode) return null
+        if (ExampleProcessor.isSubstitutionToken(sampleData)) return Result.Success()
 
-        val patternFromSampleValue = patternFromTokenBased(sampleValue)
-        if (mockMode
-            && patternFromSampleValue != null
-            && (patternFromSampleValue is AnyValuePattern ||
-                    pattern.encompasses(patternFromSampleValue, this, this).isSuccess())
-            ) {
-            return Result.Success()
-        }
+        val patternFromValue = patternFromTokenBased(sampleData) ?: return null
+        if (patternFromValue is AnyValuePattern) return Result.Success()
+
+        return pattern.encompasses(patternFromValue, this, this)
+    }
+
+    fun actualPatternMatch(factKey: String?, pattern: Pattern, sampleValue: Value): Result {
+        val tokenMatchResult = patternTokenMatch(pattern, sampleValue)
+        if (tokenMatchResult != null) return tokenMatchResult
 
         return pattern.matches(sampleValue, this).ifSuccess {
             if (factKey != null && factStore.has(factKey)) {
                 val result = factStore.match(sampleValue, factKey)
-
                 if(result is Result.Failure) {
                     result.reason("Resolver was not able to match fact $factKey with value $sampleValue.")
                 }
             }
-
             Result.Success()
         }
     }

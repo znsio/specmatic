@@ -30,7 +30,7 @@ jobs:
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: ./gradlew --info sonarqube -x test
+      run: ./gradlew --info sonarqube -x test -Dorg.gradle.jvmargs='-Xmx4096m'
     - name: Upload core Gradle Log
       if: always()
       uses: actions/upload-artifact@v4

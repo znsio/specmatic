@@ -151,7 +151,7 @@ class CyclePrevention {
             val randomResponse = stub.client.execute(HttpRequest("GET", "/data"))
             assertThat(
                 stubContract.scenarios.first().let { scenario ->
-                    scenario.httpResponsePattern.matches(
+                    scenario.httpResponsePattern.matchesResponse(
                         randomResponse,
                         scenario.resolver
                     )
@@ -230,7 +230,7 @@ class CyclePrevention {
 
             assertThat(
                 feature.scenarios.first().let { scenario ->
-                    scenario.httpResponsePattern.matches(
+                    scenario.httpResponsePattern.matchesResponse(
                         response,
                         scenario.resolver
                     )
@@ -298,7 +298,7 @@ class CyclePrevention {
 
             assertThat(
                 feature.scenarios.first().let { scenario ->
-                    scenario.httpResponsePattern.matches(
+                    scenario.httpResponsePattern.matchesResponse(
                         response,
                         scenario.resolver
                     )
@@ -457,7 +457,7 @@ class CyclePrevention {
         }
 
         assertThat(
-            feature.scenarios.first().let { it.httpResponsePattern.matches(response, it.resolver) }).isInstanceOf(
+            feature.scenarios.first().let { it.httpResponsePattern.matchesResponse(response, it.resolver) }).isInstanceOf(
             Success::class.java
         )
     }
@@ -509,7 +509,7 @@ class CyclePrevention {
         }
 
         assertThat(
-            feature.scenarios.first().let { it.httpResponsePattern.matches(response, it.resolver) }).isInstanceOf(
+            feature.scenarios.first().let { it.httpResponsePattern.matchesResponse(response, it.resolver) }).isInstanceOf(
             Success::class.java
         )
     }
@@ -559,7 +559,7 @@ class CyclePrevention {
         }
 
         assertThat(
-            feature.scenarios.first().let { it.httpResponsePattern.matches(response, it.resolver) }).isInstanceOf(
+            feature.scenarios.first().let { it.httpResponsePattern.matchesResponse(response, it.resolver) }).isInstanceOf(
             Success::class.java
         )
     }

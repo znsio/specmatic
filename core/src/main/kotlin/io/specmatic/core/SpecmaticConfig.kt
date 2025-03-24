@@ -42,6 +42,7 @@ import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
+import io.specmatic.stub.resolveLocalhostIfPresent
 import java.io.File
 
 private const val excludedEndpointsWarning =
@@ -312,7 +313,9 @@ data class SpecmaticConfig(
                     is Consumes.ObjectValue -> consumes.baseUrl
                 }
             }
-        }.plus(defaultBaseUrl).distinct()
+        }.plus(defaultBaseUrl).flatMap {
+            resolveLocalhostIfPresent(it)
+        }.distinct()
     }
 
     @JsonIgnore

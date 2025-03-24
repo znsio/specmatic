@@ -1,14 +1,29 @@
 package io.specmatic.core.pattern
 
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.toXMLNode
+import org.apache.commons.io.ByteOrderMark
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.fail
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
+import java.nio.charset.Charset
 import java.util.function.Consumer
 
 internal class GrammarKtTest {
+    companion object {
+        @JvmStatic
+        fun bomProvider(): List<ByteOrderMark> {
+            return ByteOrderMark::class.java.fields.mapNotNull { it.get(null) as? ByteOrderMark }
+        }
+    }
+
     @Test
     fun `value starting with a brace which is not json parses to string value`() {
         assertThat(parsedValue("""{one""")).isInstanceOf(StringValue::class.java)
@@ -44,6 +59,50 @@ internal class GrammarKtTest {
             fail("Expected pattern in string")
 
         assertThat(type.pattern.typeName).isEqualTo("JSONDataStructure")
+    }
+
+    @ParameterizedTest
+    @MethodSource("bomProvider")
+    fun `should be able to parse scalar data with BOM`(bom: ByteOrderMark) {
+        val charSet = Charset.forName(bom.charsetName)
+        val inputBytes = bom.bytes + "DATA".toByteArray(charSet)
+        val inputString = String(inputBytes, charset = charSet)
+
+        assertThat(parsedScalarValue(inputString)).isEqualTo(StringValue("DATA"))
+    }
+
+    @ParameterizedTest
+    @MethodSource("bomProvider")
+    fun `should be able to parse JsonObject data with BOM`(bom: ByteOrderMark) {
+        val charSet = Charset.forName(bom.charsetName)
+        val inputBytes = bom.bytes + "{\"DATA\" : \"VALUE\"}".toByteArray(charSet)
+        val inputString = String(inputBytes, charset = charSet)
+
+        assertDoesNotThrow { parsedValue(inputString) as JSONObjectValue }
+        assertDoesNotThrow { parsedJSON(inputString) as JSONObjectValue }
+        assertDoesNotThrow { parsedJSONObject(inputString) }
+    }
+
+    @ParameterizedTest
+    @MethodSource("bomProvider")
+    fun `should be able to parse JsonArray data with BOM`(bom: ByteOrderMark) {
+        val charSet = Charset.forName(bom.charsetName)
+        val inputBytes = bom.bytes + "[\"VALUE\"]".toByteArray(charSet)
+        val inputString = String(inputBytes, charset = charSet)
+
+        assertDoesNotThrow { parsedValue(inputString) as JSONArrayValue }
+        assertDoesNotThrow { parsedJSON(inputString) as JSONArrayValue }
+        assertDoesNotThrow { parsedJSONArray(inputString) }
+    }
+
+    @ParameterizedTest
+    @MethodSource("bomProvider")
+    fun `should be able to parse xml data with BOM`(bom: ByteOrderMark) {
+        val charSet = Charset.forName(bom.charsetName)
+        val inputBytes = bom.bytes + "<DATA />".toByteArray(charSet)
+        val inputString = String(inputBytes, charset = charSet)
+
+        assertDoesNotThrow { toXMLNode(inputString) }
     }
 
     @Nested

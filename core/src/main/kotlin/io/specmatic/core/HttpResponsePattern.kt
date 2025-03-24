@@ -19,7 +19,7 @@ data class HttpResponsePattern(
 ) {
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body.exactMatchElseType())
 
-    fun generateResponse(resolver: Resolver): HttpResponse {
+    fun fillInTheBlanks(resolver: Resolver): HttpResponse {
         return generateResponseWith(
             value = resolver.withCyclePrevention(body, body::generate),
             resolver = resolver
@@ -56,13 +56,6 @@ data class HttpResponsePattern(
         }
     }
 
-    fun matches(response: HttpResponse, resolver: Resolver): Result {
-        return when(val result = matchesResponse(response, resolver)) {
-            is Result.Failure -> result.breadCrumb("RESPONSE")
-            else -> result
-        }
-    }
-
     fun matchesResponse(response: HttpResponse, resolver: Resolver): Result {
         return response to resolver to
             ::matchStatus then
@@ -78,7 +71,7 @@ data class HttpResponsePattern(
         attempt(breadCrumb = "RESPONSE") {
             val responseExample: ResponseExample = row.exactResponseExample ?: return@attempt this
 
-            val responseExampleMatchResult = matches(responseExample.responseExample, resolver)
+            val responseExampleMatchResult = matchesResponse(responseExample.responseExample, resolver)
 
             if(responseExampleMatchResult is Result.Failure)
                 throw ContractException("""Error in response in example "${row.name}": ${responseExampleMatchResult.reportString()}""")
@@ -94,7 +87,7 @@ data class HttpResponsePattern(
             this.copy(responseValueAssertion = responseValueAssertion)
         }
 
-    fun matchesMock(response: HttpResponse, resolver: Resolver) = matches(response, resolver)
+    fun matchesMock(response: HttpResponse, resolver: Resolver) = matchesResponse(response, resolver)
 
     private fun matchStatus(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         if(status == DEFAULT_RESPONSE_CODE)
@@ -106,14 +99,20 @@ data class HttpResponsePattern(
 
         return when (response.status) {
             status -> MatchSuccess(parameters)
-            else -> MatchFailure(mismatchResult("status $status", "status ${response.status}").copy(breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch))
+            else -> MatchFailure(mismatchResult("status $status", "status ${response.status}").copy(breadCrumb = "RESPONSE.STATUS", failureReason = FailureReason.StatusMismatch))
         }
     }
 
     private fun matchHeaders(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
         val (response, resolver) = parameters
         return when (val result = headersPattern.matches(response.headers, resolver)) {
-            is Result.Failure -> MatchSuccess(Triple(response, resolver, listOf(result)))
+            is Result.Failure -> MatchSuccess(
+                Triple(
+                    response,
+                    resolver,
+                    listOf(result.breadCrumb("RESPONSE"))
+                )
+            )
             else -> MatchSuccess(Triple(response, resolver, emptyList()))
         }
     }
@@ -126,9 +125,15 @@ data class HttpResponsePattern(
             else -> response.body
         }
 
-        val result = resolver.matchesPattern(null, body, parsedValue)
+        val result = resolver.matchesPattern(null, body, parsedValue).breadCrumb("BODY")
         if(result is Result.Failure)
-            return MatchSuccess(Triple(response, resolver, failures.plus(result.breadCrumb("BODY"))))
+            return MatchSuccess(
+                Triple(
+                    response,
+                    resolver,
+                    failures.plus(result.breadCrumb("RESPONSE"))
+                )
+            )
 
         return MatchSuccess(parameters)
     }
@@ -139,7 +144,13 @@ data class HttpResponsePattern(
         val result = responseValueAssertion.matches(response, resolver.copy(mismatchMessages = valueMismatchMessages))
 
         if(result is Result.Failure)
-            return MatchSuccess(Triple(response, resolver, failures.plus(result)))
+            return MatchSuccess(
+                Triple(
+                    response,
+                    resolver,
+                    failures.plus(result)
+                )
+            )
 
         return MatchSuccess(parameters)
     }
@@ -148,7 +159,7 @@ data class HttpResponsePattern(
 
     fun encompasses(other: HttpResponsePattern, olderResolver: Resolver, newerResolver: Resolver): Result {
         if(status != other.status)
-            return Result.Failure("The status didn't match", breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch)
+            return Result.Failure("The status didn't match", breadCrumb = "RESPONSE.STATUS", failureReason = FailureReason.StatusMismatch)
 
         val headerResult = headersPattern.encompasses(other.headersPattern, Resolver(), Resolver())
         val bodyResult = resolvedHop(body, olderResolver).encompasses(resolvedHop(other.body, newerResolver), olderResolver, newerResolver).breadCrumb("BODY")
@@ -183,7 +194,7 @@ data class HttpResponsePattern(
         )
     }
 
-    fun generateResponse(partial: HttpResponse, resolver: Resolver): HttpResponse {
+    fun fillInTheBlanks(partial: HttpResponse, resolver: Resolver): HttpResponse {
         val headers = headersPattern.fillInTheBlanks(partial.headers, resolver).breadCrumb("HEADERS")
         val body: ReturnValue<Value> = body.fillInTheBlanks(partial.body, resolver).breadCrumb("BODY")
 

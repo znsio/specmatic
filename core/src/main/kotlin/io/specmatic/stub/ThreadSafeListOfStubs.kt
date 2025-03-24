@@ -15,8 +15,8 @@ enum class StubCategory {
 
 enum class StubType {
     NORMAL,
-    PARTIAL,
-    DATA_LOOKUP
+    DATA_LOOKUP,
+    PARTIAL
 }
 
 data class ClassifiedStub(val stub: HttpStubData, val category: StubCategory, val type: StubType): Comparable<ClassifiedStub> {
@@ -140,7 +140,7 @@ class ThreadSafeListOfStubs(httpStubs: List<HttpStubData>, private val specToPor
                 ).response
 
                 val response = if (stubData.partial == null) resolvedResponse
-                else stubData.responsePattern.generateResponse(resolvedResponse, stubData.resolver)
+                else stubData.responsePattern.fillInTheBlanks(resolvedResponse, stubData.resolver)
 
                 result to stubData.copy(response = response)
             } catch (e: ContractException) {

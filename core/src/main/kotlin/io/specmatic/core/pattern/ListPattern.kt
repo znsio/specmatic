@@ -12,6 +12,10 @@ data class ListPattern(
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
 
+    override fun updateResolverPatterns(resolver: Resolver): Resolver {
+        return pattern.updateResolverPatterns(resolver)
+    }
+
     override fun fixValue(value: Value, resolver: Resolver): Value {
         if (resolver.matchesPattern(null, this, value).isSuccess()) return value
         if (value !is JSONArrayValue || (value.list.isEmpty() && resolver.allPatternsAreMandatory)) {

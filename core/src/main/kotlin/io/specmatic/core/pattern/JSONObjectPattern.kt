@@ -86,6 +86,12 @@ data class JSONObjectPattern(
     val additionalProperties: AdditionalProperties = AdditionalProperties.NoAdditionalProperties
 ) : Pattern, PossibleJsonObjectPatternContainer {
 
+    override fun updateResolverPatterns(resolver: Resolver): Resolver {
+        return pattern.values.fold(resolver) { accResolver, pattern ->
+            pattern.updateResolverPatterns(accResolver)
+        }
+    }
+
     override fun fixValue(value: Value, resolver: Resolver): Value {
         if (resolver.matchesPattern(null, this, value).isSuccess()) return value
         val valueMap = (value as? JSONObjectValue)?.jsonObject.orEmpty()

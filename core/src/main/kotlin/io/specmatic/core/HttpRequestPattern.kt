@@ -316,9 +316,10 @@ data class HttpRequestPattern(
             }
 
             requestPattern = attempt(breadCrumb = "BODY") {
+                val resolverWithUpdatedPatterns = body.updateResolverPatterns(resolver)
                 requestPattern.copy(
                     body = when (request.body) {
-                        is StringValue -> encompassedType(request.bodyString, null, body, resolver)
+                        is StringValue -> encompassedType(request.bodyString, null, body, resolverWithUpdatedPatterns)
                         else -> request.body.exactMatchElseType()
                     }
                 )

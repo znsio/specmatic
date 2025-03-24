@@ -94,6 +94,10 @@ interface Pattern {
         return value.takeIf { resolver.matchesPattern(null, this, value).isSuccess() } ?: resolver.generate(this)
     }
 
+    fun updateResolverPatterns(resolver: Resolver): Resolver {
+        return resolver
+    }
+
     val typeAlias: String?
     val typeName: String
     val pattern: Any

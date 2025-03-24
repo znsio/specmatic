@@ -45,6 +45,14 @@ data class AnyPattern(
         )
     }
 
+    override fun updateResolverPatterns(resolver: Resolver): Resolver {
+        val updatedPatterns = getUpdatedPattern(resolver).mapNotNull { it.typeAlias?.let { alias -> alias to it } }
+        val updatedResolver = resolver.copy(newPatterns = resolver.newPatterns.plus(updatedPatterns))
+        return updatedPatterns.fold(updatedResolver) { accResolver, (_, pattern) ->
+            pattern.updateResolverPatterns(accResolver)
+        }
+    }
+
     override fun fixValue(value: Value, resolver: Resolver): Value {
         if (resolver.matchesPattern(null, this, value).isSuccess()) return value
         val discBasedFixedValue = if (discriminator != null && value is JSONObjectValue && discriminator.property in value.jsonObject) {

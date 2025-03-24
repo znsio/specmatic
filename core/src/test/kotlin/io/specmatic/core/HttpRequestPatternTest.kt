@@ -805,4 +805,45 @@ internal class HttpRequestPatternTest {
             assertThat(currentAccountRequestBody.jsonObject["@type"]?.toStringLiteral()).isEqualTo("current")
         }
     }
+
+    @Test
+    fun `should fallback to string value if parse fails when converting request to pattern`() {
+        val httpRequestPattern = HttpRequestPattern(
+            method = "GET",
+            httpPathPattern = buildHttpPathPattern(URI("/(id:uuid)")),
+            headersPattern = HttpHeadersPattern(mapOf("key" to DatePattern)),
+            httpQueryParamPattern = HttpQueryParamPattern(mapOf("key" to QueryParameterScalarPattern(DateTimePattern))),
+            body = JSONObjectPattern(mapOf("key" to EmailPattern()))
+        )
+        val httpRequest = HttpRequest(
+            path = "/invalidUUID",
+            method = "GET",
+            headers = mapOf("key" to "invalidDate"),
+            queryParams = QueryParameters(mapOf("key" to "invalidDateTime")),
+            body = JSONObjectValue(mapOf("key" to StringValue("invalidEmail")))
+        )
+        val newRequestPattern = httpRequestPattern.generate(httpRequest, Resolver())
+
+        assertThat(newRequestPattern.httpPathPattern).isEqualTo(buildHttpPathPattern("/invalidUUID"))
+        assertThat(newRequestPattern.method).isEqualTo("GET")
+        assertThat(newRequestPattern.headersPattern.pattern).isEqualTo(mapOf("key" to "invalidDate".toExactValuePattern()))
+        assertThat(newRequestPattern.body).isEqualTo(JSONObjectPattern(mapOf("key" to "invalidEmail".toExactValuePattern())))
+        assertThat(newRequestPattern.httpQueryParamPattern.queryPatterns).isEqualTo(mapOf(
+            "key" to QueryParameterScalarPattern("invalidDateTime".toExactValuePattern())
+        ))
+    }
+
+    @Test
+    fun `should return NoBodyPattern when request body is EmptyString`() {
+        val httpRequestPattern = HttpRequestPattern(
+            method = "GET", httpPathPattern = buildHttpPathPattern("/"),
+            body = JSONObjectPattern(mapOf("key" to EmailPattern()))
+        )
+        val httpRequest = HttpRequest(path = "/", method = "GET")
+        val newRequestPattern = httpRequestPattern.generate(httpRequest, Resolver())
+
+        assertThat(newRequestPattern.body).isEqualTo(NoBodyPattern)
+    }
+
+    private fun String.toExactValuePattern(): ExactValuePattern = ExactValuePattern(StringValue(this))
 }

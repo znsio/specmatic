@@ -3,9 +3,13 @@ package integration_tests
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
+import io.specmatic.core.Result
 import io.specmatic.core.log.DebugLogger
 import io.specmatic.core.log.withLogger
+import io.specmatic.core.parseContractFileToFeature
+import io.specmatic.core.pattern.AnyPattern
 import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.pattern.resolvedHop
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
@@ -15,6 +19,7 @@ import io.specmatic.stub.captureStandardOutput
 import io.specmatic.stub.createStubFromContracts
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.io.File
 
 class PartialExampleTest {
     @Test
@@ -607,5 +612,27 @@ class PartialExampleTest {
         >> RESPONSE.BODY.message
         Expected string, actual was number
         """.trimIndent())
+    }
+
+    @Test
+    fun `should match the correct discriminator based pattern example when examples only have pattern tokens`() {
+        val apiSpecification = File("src/test/resources/openapi/discriminator_with_no_unique/openapi.yaml")
+        val examplesFolder = apiSpecification.parentFile.resolve("examples_with_tokens")
+
+        val scenario = parseContractFileToFeature(apiSpecification).scenarios.first()
+        val requestPattern = resolvedHop(scenario.httpRequestPattern.body, scenario.resolver) as AnyPattern
+        val responsePattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver) as AnyPattern
+
+        createStubFromContracts(listOf(apiSpecification.canonicalPath), listOf(examplesFolder.canonicalPath), timeoutMillis = 0).use { stub ->
+            val catRequest = HttpRequest("POST", "/pets", body = requestPattern.generateValue(scenario.resolver, "cat"))
+            val catResponse = stub.client.execute(catRequest)
+            val matchesExpectedDog = responsePattern.matchesValue(catResponse.body, scenario.resolver, "dog")
+            assertThat(matchesExpectedDog).withFailMessage(matchesExpectedDog.reportString()).isInstanceOf(Result.Success::class.java)
+
+            val dogRequest = HttpRequest("POST", "/pets", body = requestPattern.generateValue(scenario.resolver, "dog"))
+            val dogResponse = stub.client.execute(dogRequest)
+            val matchesExpectedCat = responsePattern.matchesValue(dogResponse.body, scenario.resolver, "cat")
+            assertThat(matchesExpectedCat).withFailMessage(matchesExpectedCat.reportString()).isInstanceOf(Result.Success::class.java)
+        }
     }
 }

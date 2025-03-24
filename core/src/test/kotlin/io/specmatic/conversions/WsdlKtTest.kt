@@ -4,9 +4,13 @@ import io.specmatic.Utils.readTextResource
 import io.specmatic.core.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedValue
-import io.specmatic.core.value.*
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
+import io.specmatic.core.value.XMLNode
+import io.specmatic.core.value.toXML
 import io.specmatic.core.wsdl.parser.WSDL
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
@@ -228,7 +232,7 @@ Scenario: test request returns test response
         """.trimIndent()
 
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
-        HttpStub(wsdlFeature).use {
+        HttpStub(wsdlFeature, baseURL = DEFAULT_STUB_BASEURL).use {
             val soapRequest =
                 """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleRequest>WKTGM</SimpleRequest></soapenv:Body></soapenv:Envelope>"""
 
@@ -269,7 +273,7 @@ Background:
 
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
 
-        HttpStub(wsdlFeature).use { stub ->
+        HttpStub(wsdlFeature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest(
                 "POST",
                 "/SOAPService/SimpleSOAP",

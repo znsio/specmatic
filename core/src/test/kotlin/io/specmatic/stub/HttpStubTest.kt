@@ -59,7 +59,7 @@ internal class HttpStubTest {
 
         val request = HttpRequest(method = "GET", path = "/")
 
-        HttpStub(gherkin).use { stub ->
+        HttpStub(gherkin, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val response = HttpClient(stub.endPoint).execute(request)
             assertThat(response.headers[SPECMATIC_TYPE_HEADER]).isEqualTo("random")
         }
@@ -80,7 +80,7 @@ Scenario: Square of a number
         val request = HttpRequest(method = "POST", path = "/number", body = NumberValue(10))
         val response = HttpResponse(status = 200, body = "100")
 
-        HttpStub(gherkin, listOf(ScenarioStub(request, response))).use { fake ->
+        HttpStub(gherkin, listOf(ScenarioStub(request, response)), DEFAULT_STUB_BASEURL).use { fake ->
             val postResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/number", "10")
             assertThat(postResponse.body).isEqualTo("100")
         }
@@ -97,7 +97,7 @@ Scenario: Get a number
   And response-body (number)
 """.trim()
 
-        HttpStub(gherkin).use { fake ->
+        HttpStub(gherkin, baseURL = DEFAULT_STUB_BASEURL).use { fake ->
             val mockData =
                 """{"http-request": {"method": "GET", "path": "/number"}, "http-response": {"status": 200, "body": 10}}"""
             val stubSetupURL = "${fake.endPoint}/_specmatic/expectations"
@@ -126,7 +126,7 @@ Scenario: Multiply a number by 3
 
         val testResourcesDir = Paths.get("src", "test", "resources")
 
-        HttpStub(gherkin).use { fake ->
+        HttpStub(gherkin, baseURL = DEFAULT_STUB_BASEURL).use { fake ->
             val mockData =
                 """{"http-request": {"method": "GET", "path": "/multiply/(value:number)"}, "http-response": {"status": 200, "body": 10, "externalisedResponseCommand": "${testResourcesDir.absolutePathString()}/response.sh 3"}}"""
             val stubSetupURL = "${fake.endPoint}/_specmatic/expectations"
@@ -152,7 +152,7 @@ Scenario: Get a number
   And response-body (number)
 """.trim()
 
-        HttpStub(gherkin).use { fake ->
+        HttpStub(gherkin, baseURL = DEFAULT_STUB_BASEURL).use { fake ->
             testMock(
                 """{"http-request": {"method": "GET", "path": "/number"}, "http-response": {"status": 200, "body": 10}}""",
                 "10",
@@ -192,7 +192,7 @@ And response-body (string)
         val request = HttpRequest("POST", "/date", emptyMap(), StringValue("(datetime)"))
         val mock = ScenarioStub(request, HttpResponse(200, "done"))
 
-        HttpStub(gherkin, listOf(mock)).use { fake ->
+        HttpStub(gherkin, listOf(mock), baseURL = DEFAULT_STUB_BASEURL).use { fake ->
             val postResponse =
                 RestTemplate().postForEntity<String>(fake.endPoint + "/date", "2020-04-12T00:00:00+05:00")
             assertThat(postResponse.statusCode.value()).isEqualTo(200)
@@ -214,7 +214,7 @@ And response-body (string)
         val request = HttpRequest("POST", "/date", emptyMap(), parsedValue("""{"date": "(datetime)"}"""))
         val mock = ScenarioStub(request, HttpResponse(200, "done"))
 
-        HttpStub(gherkin, listOf(mock)).use { fake ->
+        HttpStub(gherkin, listOf(mock), DEFAULT_STUB_BASEURL).use { fake ->
             val postResponse =
                 RestTemplate().postForEntity<String>(
                     fake.endPoint + "/date",
@@ -240,7 +240,7 @@ And response-body (string)
         val mock = ScenarioStub(request, HttpResponse(200, "done"))
 
         try {
-            HttpStub(gherkin, listOf(mock)).use { fake ->
+            HttpStub(gherkin, listOf(mock), DEFAULT_STUB_BASEURL).use { fake ->
                 val postResponse =
                     RestTemplate().postForEntity<String>(fake.endPoint + "/date", """2020-04-12T00:00:00""")
                 assertThat(postResponse.statusCode.value()).isEqualTo(200)
@@ -264,7 +264,7 @@ And response-body (string)
         """.trim()
 
         try {
-            HttpStub(gherkin).use { fake ->
+            HttpStub(gherkin, baseURL = DEFAULT_STUB_BASEURL).use { fake ->
                 val expectation = """ {
 "http-request": {
     "method": "GET",
@@ -308,7 +308,7 @@ And response-body (string)
             val delayInSeconds = 3
             val delayInMilliseconds = delayInSeconds * 1000
 
-            HttpStub(gherkin).use { fake ->
+            HttpStub(gherkin, baseURL = DEFAULT_STUB_BASEURL).use { fake ->
                 val expectation = """ {
 "http-request": {
     "method": "GET",
@@ -391,7 +391,7 @@ Scenario: Square of a number
 """.trim()
         )
 
-        HttpStub(listOf(feature, feature)).use { stub ->
+        HttpStub(listOf(feature, feature), baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val client = HttpClient(stub.endPoint)
             val request = HttpRequest(method = "POST", path = "/wrong_path", body = NumberValue(10))
             val squareResponse = client.execute(request)
@@ -422,6 +422,7 @@ Scenario: Square of a number
 
         HttpStub(
             listOf(feature),
+            baseURL = DEFAULT_STUB_BASEURL,
             passThroughTargetBase = "http://example.com",
             httpClientFactory = httpClientFactory
         ).use { stub ->
@@ -456,6 +457,7 @@ Scenario: Square of a number
 
         HttpStub(
             listOf(feature),
+            baseURL = DEFAULT_STUB_BASEURL,
             passThroughTargetBase = "http://example.com",
             httpClientFactory = httpClientFactory
         ).use { stub ->
@@ -488,6 +490,7 @@ Scenario: Square of a number
 
         HttpStub(
             listOf(feature),
+            baseURL = DEFAULT_STUB_BASEURL,
             passThroughTargetBase = "http://example.com",
             httpClientFactory = httpClientFactory
         ).use { stub ->
@@ -533,7 +536,7 @@ paths:
 """.trim(), ""
         ).toFeature()
 
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val stubData = """
                 {
                     "http-request": {
@@ -607,7 +610,7 @@ paths:
                         body = "Hi!"
                     )
                 )
-            )
+            ), DEFAULT_STUB_BASEURL
         ).use { stub ->
             assertThat(stub.stubCount).isEqualTo(1)
             assertThat(stub.transientStubCount).isEqualTo(0)
@@ -619,7 +622,7 @@ paths:
         val specification =
             OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_space_in_path.yaml").toFeature()
 
-        HttpStub(specification).use { stub ->
+        HttpStub(specification, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest("GET", "/actuator/health")
 
             val response = stub.client.execute(request)
@@ -690,7 +693,7 @@ components:
 
         val credentials = "Basic " + Base64.getEncoder().encodeToString("user:password".toByteArray())
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest(
                 "POST",
                 "/hello",
@@ -716,7 +719,7 @@ components:
             ScenarioStub.parse(file.readText())
         }
 
-        HttpStub(feature, examples).use { stub ->
+        HttpStub(feature, examples, DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest(
                 "GET",
                 "/hello/10",
@@ -929,7 +932,7 @@ components:
             """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(listOf(feature), strictMode = true).use { stub ->
+        HttpStub(listOf(feature), baseURL = DEFAULT_STUB_BASEURL, strictMode = true).use { stub ->
             val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"field": "$fieldValue"}"""))
             val response = stub.client.execute(request)
 
@@ -988,7 +991,7 @@ components:
             """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(listOf(feature), strictMode = true).use { stub ->
+        HttpStub(listOf(feature), baseURL = DEFAULT_STUB_BASEURL, strictMode = true).use { stub ->
             val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"field": "$fieldValue"}"""))
             val response = stub.client.execute(request)
 
@@ -1019,7 +1022,7 @@ paths:
                 additionalProperties: true
 """.trimIndent()
         val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(HttpRequest("GET", "/data")).let { response ->
                 assertThat(response.status).isEqualTo(200)
                 val responseValue = parsedJSON(response.body.toStringLiteral())
@@ -1058,7 +1061,7 @@ paths:
                 type: string
 """.trimIndent()
         val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.setExpectation(
                 ScenarioStub(
                     HttpRequest(
@@ -1082,7 +1085,7 @@ paths:
 
     @Test
     fun `should return descriptive error message when there are no valid specifications loaded`() {
-        val httpStub = HttpStub(emptyList())
+        val httpStub = HttpStub(emptyList(), baseURL = DEFAULT_STUB_BASEURL)
         httpStub.use { stub ->
             val response =
                 stub.client.execute(HttpRequest("POST", "/data", emptyMap(), parsedJSONObject("""{"id": 10}""")))
@@ -1122,7 +1125,7 @@ paths:
             """.trimIndent(), ""
                 ).toFeature()
 
-                HttpStub(listOf(feature)).use { stub ->
+                HttpStub(listOf(feature), baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                     val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"name": "John Doe", "age": 30}"""))
                     val response = stub.client.execute(request)
 
@@ -1159,7 +1162,7 @@ paths:
             """.trimIndent(), ""
             ).toFeature()
 
-            HttpStub(listOf(feature)).use { stub ->
+            HttpStub(listOf(feature), baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                 val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"name": "John Doe", "age": 30}"""))
                 val response = stub.client.execute(request)
 
@@ -1221,7 +1224,7 @@ paths:
                     response = HttpResponse(status = 201, body = parsedJSONObject("""{"id": "123"}"""))
                 )
 
-                HttpStub(feature, listOf(example)).use { stub ->
+                HttpStub(feature, listOf(example), baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                     val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"name": "John Doe", "age": 30}"""))
                     val response = stub.client.execute(request)
 
@@ -1285,7 +1288,11 @@ paths:
 
             val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-            HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            HttpStub(
+                listOf(feature),
+                baseURL = DEFAULT_STUB_BASEURL,
+                specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml"
+            ).use { stub ->
                 val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
                 val response = stub.client.execute(request)
 
@@ -1347,7 +1354,11 @@ paths:
 
             val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-            HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            HttpStub(
+                listOf(feature),
+                baseURL = DEFAULT_STUB_BASEURL,
+                specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml"
+            ).use { stub ->
                 val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
                 val response = stub.client.execute(request)
 
@@ -1414,7 +1425,11 @@ paths:
 
             val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-            HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            HttpStub(
+                listOf(feature),
+                baseURL = DEFAULT_STUB_BASEURL,
+                specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml"
+            ).use { stub ->
                 val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
                 val response = stub.client.execute(request)
 
@@ -1476,7 +1491,11 @@ paths:
 
             val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-            HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            HttpStub(
+                listOf(feature),
+                baseURL = DEFAULT_STUB_BASEURL,
+                specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml"
+            ).use { stub ->
                 val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
                 val response = stub.client.execute(request)
 
@@ -1538,7 +1557,11 @@ paths:
 
             val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-            HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            HttpStub(
+                listOf(feature),
+                baseURL = DEFAULT_STUB_BASEURL,
+                specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml"
+            ).use { stub ->
                 val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
                 val response = stub.client.execute(request)
 
@@ -1599,7 +1622,7 @@ paths:
 
         @Test
         fun `should load and serve expectations for payload from inline examples`() {
-            HttpStub(featureWithInlineExample).use { stub ->
+            HttpStub(featureWithInlineExample, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                 val response = stub.client.execute(
                     HttpRequest(
                         method = "POST",
@@ -1629,7 +1652,7 @@ paths:
                             body = parsedJSONObject("""{"message":"file_overrides_example_expectation"}""")
                         )
                     )
-                )
+                ), DEFAULT_STUB_BASEURL
             ).use { stub ->
                 val response = stub.client.execute(
                     HttpRequest(
@@ -1647,7 +1670,7 @@ paths:
 
         @Test
         fun `should load and serve expectations from the dynamic expectation over the inline example based expectation`() {
-            HttpStub(featureWithInlineExample).use { stub ->
+            HttpStub(featureWithInlineExample, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                 stub.setExpectation(
                     ScenarioStub(
                         HttpRequest(
@@ -1784,7 +1807,7 @@ paths:
             val specification =
                 OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_space_in_path.yaml").toFeature()
 
-            HttpStub(specification).use { stub ->
+            HttpStub(specification, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                 val request = HttpRequest("GET", pathWithSpace)
 
                 val response = stub.client.execute(request)
@@ -1869,7 +1892,7 @@ paths:
         """.trimIndent(), ""
             ).toFeature()
 
-            HttpStub(specification).use { stub ->
+            HttpStub(specification, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                 val request = HttpRequest("GET", "/data", queryParametersMap = mapOf(queryParamWithSpace to "5"))
 
                 val response = stub.client.execute(request)
@@ -1933,7 +1956,7 @@ paths:
         """.trimIndent(), ""
             ).toFeature()
 
-            HttpStub(specification).use { stub ->
+            HttpStub(specification, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                 val request = HttpRequest("GET", "/data", queryParametersMap = mapOf("enabled" to "True"))
 
                 val response = stub.client.execute(request)
@@ -1971,7 +1994,7 @@ paths:
                                 type: integer
         """.trimIndent(), "").toFeature()
 
-            HttpStub(specification).use { stub ->
+            HttpStub(specification, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                 val request = HttpRequest("GET", "/data", body = NoBodyValue)
 
                 val response = stub.client.execute(request)
@@ -2009,7 +2032,7 @@ paths:
                                 type: integer
         """.trimIndent(), "").toFeature()
 
-            HttpStub(specification).use { stub ->
+            HttpStub(specification, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                 val request = HttpRequest("GET", "/data", body = NoBodyValue)
 
                 val response = stub.client.execute(request)
@@ -2040,7 +2063,7 @@ Then status 200
             val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>10</data>"""))
             val mock = ScenarioStub(request, HttpResponse.OK)
 
-            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            val postResponse = HttpStub(gherkin, listOf(mock), DEFAULT_STUB_BASEURL).use { fake ->
                 RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
             }
 
@@ -2059,7 +2082,7 @@ Then status 200
             val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>10</data>"""))
             val mock = ScenarioStub(request, HttpResponse.OK)
 
-            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            val postResponse = HttpStub(gherkin, listOf(mock), DEFAULT_STUB_BASEURL).use { fake ->
                 RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
             }
 
@@ -2078,7 +2101,7 @@ Then status 200
             val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>(number)</data>"""))
             val mock = ScenarioStub(request, HttpResponse.OK)
 
-            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            val postResponse = HttpStub(gherkin, listOf(mock), DEFAULT_STUB_BASEURL).use { fake ->
                 RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
             }
 
@@ -2099,14 +2122,14 @@ And response-body (number)
             val expectedNumber = 100000
             val mock = ScenarioStub(request, HttpResponse.ok(NumberValue(expectedNumber)))
 
-            HttpStub(gherkin, listOf(mock)).use { fake ->
+            HttpStub(gherkin, listOf(mock), DEFAULT_STUB_BASEURL).use { fake ->
                 RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
             }.let { postResponse ->
                 assertThat(postResponse.statusCode.value()).isEqualTo(200)
                 assertThat(postResponse.body?.toString()?.toInt() == expectedNumber)
             }
 
-            HttpStub(gherkin, listOf(mock)).use { fake ->
+            HttpStub(gherkin, listOf(mock), DEFAULT_STUB_BASEURL).use { fake ->
                 RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>20</data>""")
             }.let { postResponse ->
                 assertThat(postResponse.statusCode.value()).isEqualTo(200)
@@ -2126,7 +2149,7 @@ Then status 200
             val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data></data>"""))
             val mock = ScenarioStub(request, HttpResponse.OK)
 
-            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            val postResponse = HttpStub(gherkin, listOf(mock), DEFAULT_STUB_BASEURL).use { fake ->
                 RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data></data>""")
             }
 
@@ -2145,7 +2168,7 @@ Then status 200
             val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data></data>"""))
             val mock = ScenarioStub(request, HttpResponse.OK)
 
-            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            val postResponse = HttpStub(gherkin, listOf(mock), DEFAULT_STUB_BASEURL).use { fake ->
                 RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data/>""")
             }
 
@@ -2164,7 +2187,7 @@ Then status 200
             val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data number="10"/>"""))
             val mock = ScenarioStub(request, HttpResponse.OK)
 
-            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            val postResponse = HttpStub(gherkin, listOf(mock), DEFAULT_STUB_BASEURL).use { fake ->
                 RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data number="10"/>""")
             }
 
@@ -2183,7 +2206,7 @@ Then status 200
             val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data number="(number)"/>"""))
             val mock = ScenarioStub(request, HttpResponse.OK)
 
-            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            val postResponse = HttpStub(gherkin, listOf(mock), DEFAULT_STUB_BASEURL).use { fake ->
                 RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data number="10"/>""")
             }
 
@@ -2202,7 +2225,7 @@ Then status 200
             val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data number="10"/>"""))
             val mock = ScenarioStub(request, HttpResponse.OK)
 
-            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            val postResponse = HttpStub(gherkin, listOf(mock), DEFAULT_STUB_BASEURL).use { fake ->
                 RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data number="10"/>""")
             }
 
@@ -2221,7 +2244,7 @@ Then status 200
             val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data/>"""))
             val mock = ScenarioStub(request, HttpResponse.OK)
 
-            val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            val postResponse = HttpStub(gherkin, listOf(mock), DEFAULT_STUB_BASEURL).use { fake ->
                 RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data/>""")
             }
 
@@ -2286,6 +2309,7 @@ Then status 200
 
             HttpStub(
                 features = scenarioStubs.features(),
+                baseURL = DEFAULT_STUB_BASEURL,
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
                 specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
@@ -2296,7 +2320,7 @@ Then status 200
                     body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
                 )
                 val importedProductResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9001, null)
+                    endPointFromBaseURL("localhost:9001", null)
                 ).execute(request)
                 assertThat(
                     (importedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
@@ -2304,7 +2328,7 @@ Then status 200
 
 
                 val exportedProductResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9002, null)
+                    endPointFromBaseURL("localhost:9002", null)
                 ).execute(request)
                 assertThat(
                     (exportedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
@@ -2312,7 +2336,7 @@ Then status 200
 
 
                 val anotherExportedProductResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9003, null)
+                    endPointFromBaseURL("localhost:9003", null)
                 ).execute(request)
                 assertThat(
                     (anotherExportedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
@@ -2329,12 +2353,13 @@ Then status 200
 
             HttpStub(
                 features = scenarioStubs.features(),
+                baseURL = DEFAULT_STUB_BASEURL,
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
                 specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use {
                 val productWithoutCategoryResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9000, null)
+                    endPointFromBaseURL("localhost:9000", null)
                 ).execute(
                     HttpRequest(
                         method = "POST",
@@ -2347,7 +2372,7 @@ Then status 200
 
 
                 val productWithCategoryResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9001, null)
+                    endPointFromBaseURL("localhost:9001", null)
                 ).execute(
                     HttpRequest(
                         method = "POST",
@@ -2369,6 +2394,7 @@ Then status 200
 
             HttpStub(
                 features = scenarioStubs.features(),
+                baseURL = DEFAULT_STUB_BASEURL,
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
                 specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
@@ -2379,7 +2405,7 @@ Then status 200
                     body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
                 )
                 val response = HttpClient(
-                    endPointFromHostAndPort("localhost", 9000, null)
+                    endPointFromBaseURL("localhost:9000", null)
                 ).execute(request)
 
                 assertThat(response.status).isEqualTo(400)
@@ -2395,6 +2421,7 @@ Then status 200
 
             HttpStub(
                 features = scenarioStubs.features(),
+                baseURL = DEFAULT_STUB_BASEURL,
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
                 specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
@@ -2406,7 +2433,7 @@ Then status 200
                     body = parsedJSONObject("""{"name": "Widget", "price": 9.99}""")
                 )
                 val productWithCategoryResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9001, null)
+                    endPointFromBaseURL("localhost:9001", null)
                 ).execute(productWithoutCategoryExampleBasedRequest)
 
                 assertThat(productWithCategoryResponse.status).isEqualTo(400)
@@ -2418,7 +2445,7 @@ Then status 200
                     body = parsedJSONObject("""{"name": "Nokia", "price": 100.0, "category": "Electronics"}""")
                 )
                 val productWithoutCategoryResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9000, null)
+                    endPointFromBaseURL("localhost:9000", null)
                 ).execute(productWithCategoryBasedRequest)
 
                 assertThat(productWithoutCategoryResponse.status).isEqualTo(400)
@@ -2434,6 +2461,7 @@ Then status 200
 
             HttpStub(
                 features = scenarioStubs.features(),
+                baseURL = DEFAULT_STUB_BASEURL,
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
                 specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
@@ -2445,7 +2473,7 @@ Then status 200
                 )
 
                 val importedProductResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9000, null)
+                    endPointFromBaseURL("localhost:9000", null)
                 ).execute(exportedProductStubbedRequest)
 
                 assertThat(
@@ -2453,7 +2481,7 @@ Then status 200
                 ).isNotEqualTo("Xiaomi").isNotEmpty()
 
                 val exportedProductResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9001, null)
+                    endPointFromBaseURL("localhost:9001", null)
                 ).execute(exportedProductStubbedRequest)
 
                 assertThat(
@@ -2471,12 +2499,13 @@ Then status 200
 
             HttpStub(
                 features = scenarioStubs.features(),
+                baseURL = DEFAULT_STUB_BASEURL,
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
                 specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use {
                 val productsResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9000, null)
+                    endPointFromBaseURL("localhost:9000", null)
                 ).execute(
                     HttpRequest(
                         method = "POST",
@@ -2491,7 +2520,7 @@ Then status 200
                 ).isNotEqualTo("Xiaomi").isNotEmpty()
 
                 val ordersResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9000, null)
+                    endPointFromBaseURL("localhost:9000", null)
                 ).execute(
                     HttpRequest(
                         method = "POST",
@@ -2519,12 +2548,13 @@ Then status 200
 
             HttpStub(
                 features = scenarioStubs.features(),
+                baseURL = DEFAULT_STUB_BASEURL,
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
                 specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use {
                 val productsResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9000, null)
+                    endPointFromBaseURL("localhost:9000", null)
                 ).execute(
                     HttpRequest(
                         method = "POST",
@@ -2540,7 +2570,7 @@ Then status 200
 
 
                 val exportedProductsResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9001, null)
+                    endPointFromBaseURL("localhost:9001", null)
                 ).execute(
                     HttpRequest(
                         method = "POST",
@@ -2555,7 +2585,7 @@ Then status 200
                 ).isEqualTo("200")
 
                 val ordersResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9001, null)
+                    endPointFromBaseURL("localhost:9001", null)
                 ).execute(
                     HttpRequest(
                         method = "POST",
@@ -2583,12 +2613,13 @@ Then status 200
 
             HttpStub(
                 features = scenarioStubs.features(),
+                baseURL = DEFAULT_STUB_BASEURL,
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
                 specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use {
                 val postProductResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9000, null)
+                    endPointFromBaseURL("localhost:9000", null)
                 ).execute(
                     HttpRequest(
                         method = "POST",
@@ -2604,7 +2635,7 @@ Then status 200
 
 
                 val postOrderResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9000, null)
+                    endPointFromBaseURL("localhost:9000", null)
                 ).execute(
                     HttpRequest(
                         method = "POST",
@@ -2643,6 +2674,7 @@ Then status 200
 
             HttpStub(
                 features = scenarioStubs.features(),
+                baseURL = DEFAULT_STUB_BASEURL,
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
                 specToStubBaseUrlMap = contractPathData.map {
@@ -2657,7 +2689,7 @@ Then status 200
                     body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
                 )
                 val importedProductResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9001, null)
+                    endPointFromBaseURL("localhost:9001", null)
                 ).execute(request)
                 assertThat(
                     (importedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
@@ -2665,7 +2697,7 @@ Then status 200
 
 
                 val exportedProductResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9002, null)
+                    endPointFromBaseURL("localhost:9002", null)
                 ).execute(request)
                 assertThat(
                     (exportedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
@@ -2673,7 +2705,7 @@ Then status 200
 
 
                 val anotherExportedProductResponse = HttpClient(
-                    endPointFromHostAndPort("localhost", 9003, null)
+                    endPointFromBaseURL("localhost:9003", null)
                 ).execute(request)
                 assertThat(
                     (anotherExportedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")
@@ -2709,7 +2741,7 @@ Then status 200
                         every { scenarios } returns emptyList()
                     }
                 )
-                HttpStub(features = features).use { stub ->
+                HttpStub(features = features, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                     val result = stub.featuresAssociatedTo(8080.toLocalBaseUrl(), features, specToStubBaseUrlMap)
 
                     assertEquals(features.take(1), result)
@@ -2736,7 +2768,7 @@ Then status 200
                         every { scenarios } returns emptyList()
                     }
                 )
-                HttpStub(features = features).use { stub ->
+                HttpStub(features = features, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                     val result = stub.featuresAssociatedTo(7070.toLocalBaseUrl(), features, specToStubBaseUrlMap)
 
                     assertEquals(emptyList<Feature>(), result)
@@ -2761,7 +2793,7 @@ Then status 200
                     }
                 )
 
-                HttpStub(features = features).use { stub ->
+                HttpStub(features = features, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                     val result = stub.featuresAssociatedTo(8080.toLocalBaseUrl(), features, specToStubBaseUrlMap)
 
                     assertEquals(emptyList<Feature>(), result)
@@ -2773,7 +2805,7 @@ Then status 200
                 val specToStubBaseUrlMap = mapOf("spec1.yaml" to 8080).toBaseUrlMap()
                 val features = emptyList<Feature>()
 
-                HttpStub(features = features).use { stub ->
+                HttpStub(features = features, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                     val result = stub.featuresAssociatedTo(8080.toLocalBaseUrl(), features, specToStubBaseUrlMap)
 
                     assertEquals(emptyList<Feature>(), result)
@@ -2800,7 +2832,7 @@ Then status 200
                 }
                 val features = listOf(feature1,feature2)
 
-                HttpStub(features = features).use { stub ->
+                HttpStub(features = features, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                     val result = stub.featuresAssociatedTo(8080.toLocalBaseUrl(), features, specToStubBaseUrlMap)
 
                     assertThat(result).isEqualTo(listOf(feature1, feature2))

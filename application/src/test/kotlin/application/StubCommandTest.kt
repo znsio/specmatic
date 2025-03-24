@@ -2,6 +2,9 @@ package application
 
 import com.ginsberg.junit.exit.ExpectSystemExitWithStatus
 import com.ninjasquad.springmockk.MockkBean
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import io.specmatic.core.CONTRACT_EXTENSION
 import io.specmatic.core.CONTRACT_EXTENSIONS
 import io.specmatic.core.parseGherkinStringToFeature
@@ -9,9 +12,6 @@ import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.StubServerWatcher
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpClientFactory
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -103,16 +103,14 @@ internal class StubCommandTest {
                 )
             }.returns(stubInfo)
 
-            val host = "0.0.0.0"
-            val port = 9000
+            val baseURL = "0.0.0.0:9000"
             val certInfo = CertInfo()
             val strictMode = false
 
             every {
                 httpStubEngine.runHTTPStub(
                     stubInfo,
-                    host,
-                    port,
+                    baseURL,
                     certInfo,
                     strictMode,
                     any(),
@@ -136,7 +134,6 @@ internal class StubCommandTest {
 
             verify(exactly = 1) {
                 httpStubEngine.runHTTPStub(
-                    any(),
                     any(),
                     any(),
                     certInfo,
@@ -218,8 +215,7 @@ internal class StubCommandTest {
                 )
             }.returns(stubInfo)
 
-            val host = "0.0.0.0"
-            val port = 9000
+            val baseURL = "0.0.0.0:9000"
             val certInfo = CertInfo()
             val strictMode = false
             val passThroughTargetBase = "http://passthroughTargetBase"
@@ -227,8 +223,7 @@ internal class StubCommandTest {
             every {
                 httpStubEngine.runHTTPStub(
                     stubInfo,
-                    host,
-                    port,
+                    baseURL,
                     certInfo,
                     strictMode,
                     passThroughTargetBase,
@@ -256,8 +251,7 @@ internal class StubCommandTest {
             verify(exactly = 1) {
                 httpStubEngine.runHTTPStub(
                     stubInfo,
-                    host,
-                    any(),
+                    "http://$baseURL",
                     certInfo,
                     strictMode,
                     any(),

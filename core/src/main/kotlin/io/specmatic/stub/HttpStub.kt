@@ -13,41 +13,20 @@ import io.ktor.server.response.*
 import io.ktor.util.*
 import io.ktor.util.pipeline.*
 import io.specmatic.core.*
-import io.specmatic.core.log.HttpLogMessage
-import io.specmatic.core.log.LogMessage
-import io.specmatic.core.log.LogTail
-import io.specmatic.core.log.dontPrintToConsole
-import io.specmatic.core.log.logger
+import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
-import io.specmatic.core.utilities.capitalizeFirstChar
-import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.utilities.jsonStringToValueMap
-import io.specmatic.core.utilities.saveJsonFile
-import io.specmatic.core.utilities.toMap
-import io.specmatic.core.value.EmptyString
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.Value
-import io.specmatic.core.value.toXMLNode
-import io.specmatic.mock.NoMatchingScenario
-import io.specmatic.mock.ScenarioStub
-import io.specmatic.mock.TRANSIENT_MOCK
-import io.specmatic.mock.mockFromJSON
-import io.specmatic.mock.validateMock
+import io.specmatic.core.utilities.*
+import io.specmatic.core.value.*
+import io.specmatic.mock.*
 import io.specmatic.stub.report.StubEndpoint
 import io.specmatic.stub.report.StubUsageReport
 import io.specmatic.stub.report.StubUsageReportJson
 import io.specmatic.test.HttpClient
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.BroadcastChannel
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.channels.broadcast
+import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
@@ -448,9 +427,7 @@ class HttpStub(
         features: List<Feature>,
         specToStubBaseUrlMap: Map<String, String>
     ): List<Feature> {
-        val specsForGivenPort = specToStubBaseUrlMap.entries.groupBy(
-            { it.value }, { it.key }
-        )[baseUrl].orEmpty().toSet()
+        val resolvedBaseUrls = resolveLocalhostIfPresent(baseUrl)
 
         val specsForGivenPort = specToStubBaseUrlMap.entries
             .filter { (_, stubBaseUrl) -> stubBaseUrl in resolvedBaseUrls }
@@ -1242,8 +1219,13 @@ fun endPointFromBaseURL(baseURL: String, keyData: KeyData?): String {
         null -> "http"
         else -> "https"
     }
-    val uri = URI(baseURL)
-    return uri.toString().replaceFirst(uri.scheme + "://", "$protocol://")
+    return if (!baseURL.startsWith("http") && !baseURL.startsWith("https")) {
+        val uri = URI("$protocol://$baseURL")
+        uri.toString()
+    } else {
+        val uri = URI(baseURL)
+        uri.toString().replaceFirst(uri.scheme + "://", "$protocol://")
+    }
 }
 
 fun resolved(host: String): String {
@@ -1251,27 +1233,20 @@ fun resolved(host: String): String {
 }
 
 fun extractHost(url: String): String? {
-    return URI(url).host
-}
-
-fun extractPort(url: String): Int? {
-    return URI(url).port.takeIf { it != -1 }
-}
-
-fun normalizeHost(host: String): String {
-    return try {
-        InetAddress.getByName(host).hostAddress
-    } catch (e: Exception) {
-        host
+    return if (!url.startsWith("http") && !url.startsWith("https")) {
+        URI("http://$url").host
+    } else {
+        URI(url).host
     }
 }
 
-fun extractHost(url: String): String? {
-    return URI(url).host
-}
-
 fun extractPort(url: String): Int? {
-    return URI(url).port.takeIf { it != -1 }
+    val port = if (!url.startsWith("http") && !url.startsWith("https")) {
+        URI("http://$url").port
+    } else {
+        URI(url).port
+    }
+    return port.takeIf { it != -1 }
 }
 
 fun resolveLocalhostIfPresent(url: String): List<String> {

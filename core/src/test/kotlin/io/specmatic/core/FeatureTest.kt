@@ -1,15 +1,13 @@
 package io.specmatic.core
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.mockk.every
 import io.mockk.mockk
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.HasValue
-import io.specmatic.core.pattern.NumberPattern
-import io.specmatic.core.pattern.StringPattern
-import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
 import io.specmatic.stub.captureStandardOutput
@@ -2797,6 +2795,27 @@ paths:
 
             assertTrue(pairs.isEmpty())
         }
+    }
+
+    @Test
+    fun `EmptyStringPattern in request should result in no request body`() {
+        val httpRequestPattern = HttpRequestPattern(
+            method = "POST",
+            httpPathPattern = HttpPathPattern.from("/data"),
+            body = EmptyStringPattern
+        )
+
+        val scenario = Scenario(
+            "",
+            httpRequestPattern,
+            HttpResponsePattern(status = 200),
+            exampleName = "example"
+        )
+
+        val feature = Feature(name = "", scenarios = listOf(scenario))
+
+        val openAPI = feature.toOpenApi()
+        assertThat(openAPI.paths["/data"]?.post?.requestBody).isNull()
     }
 
     companion object {

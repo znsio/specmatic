@@ -12,6 +12,7 @@ import io.specmatic.core.discriminator.DiscriminatorBasedValueGenerator
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
+import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 
@@ -318,6 +319,8 @@ data class HttpRequestPattern(
             requestPattern = attempt(breadCrumb = "BODY") {
                 requestPattern.copy(
                     body = when (request.body) {
+                        EmptyString -> EmptyStringPattern
+                        NoBodyValue -> NoBodyPattern
                         is StringValue -> encompassedType(request.bodyString, null, body, resolver)
                         else -> request.body.exactMatchElseType()
                     }
@@ -445,7 +448,7 @@ data class HttpRequestPattern(
     private fun encompassedType(valueString: String, key: String?, type: Pattern, resolver: Resolver): Pattern {
         return when {
             isPatternToken(valueString) -> resolvedHop(parsedPattern(valueString, key), resolver)
-            else -> type.parseToType(valueString, resolver)
+            else -> runCatching { type.parseToType(valueString, resolver) }.getOrElse { StringValue(valueString).exactMatchElseType() }
         }
     }
 

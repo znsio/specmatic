@@ -472,7 +472,7 @@ data class Scenario(
         }
     }
 
-    fun fillInTheBlanksAndResolvePatterns(row: Row, resolver: Resolver): ReturnValue<Row> {
+    private fun fillInTheBlanksAndResolvePatterns(row: Row, resolver: Resolver): ReturnValue<Row> {
         if (row.requestExample == null) return HasValue(row)
 
         return runCatching {
@@ -487,7 +487,7 @@ data class Scenario(
         }
     }
 
-    fun fillInTheBlanksAndResolvePatterns(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
+    private fun fillInTheBlanksAndResolvePatterns(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
         val resolvedRequest = ExampleProcessor.resolve(httpRequest, ExampleProcessor::defaultIfNotExits)
         val updatedResolver = resolver.copy(isNegative = httpResponsePattern.status in invalidRequestStatuses)
         return httpRequestPattern.fillInTheBlanks(resolvedRequest, updatedResolver)

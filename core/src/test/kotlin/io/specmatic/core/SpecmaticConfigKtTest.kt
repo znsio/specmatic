@@ -263,20 +263,20 @@ internal class SpecmaticConfigKtTest {
     }
 
     @Nested
-    inner class StubPortConfigTests {
+    inner class StubBaseUrlConfigTests {
         @Test
-        fun `should return all stub ports from sources`() {
+        fun `should return all stub baseUrls from sources`() {
             val source1 = Source(
                 stub = listOf(
                     Consumes.StringValue("9000_first.yaml"),
                     Consumes.StringValue("9000_second.yaml"),
                     Consumes.ObjectValue(
                         specs = listOf("9001_first.yaml", "9001_second.yaml"),
-                        port = 9001
+                        baseUrl = "http://localhost:9001"
                     ),
                     Consumes.ObjectValue(
                         specs = listOf("9002_first.yaml"),
-                        port = 9002
+                        baseUrl = "http://localhost:9002"
                     ),
                 )
             )
@@ -286,11 +286,11 @@ internal class SpecmaticConfigKtTest {
                     Consumes.StringValue("9000_third.yaml"),
                     Consumes.ObjectValue(
                         specs = listOf("9001_third.yaml", "9001_fourth.yaml"),
-                        port = 9001
+                        baseUrl = "http://localhost:9001"
                     ),
                     Consumes.ObjectValue(
                         specs = listOf("9002_second.yaml"),
-                        port = 9002
+                        baseUrl = "http://localhost:9002"
                     ),
                 )
             )
@@ -299,7 +299,17 @@ internal class SpecmaticConfigKtTest {
                 sources = listOf(source1, source2)
             )
 
-            assertThat(specmaticConfig.stubPorts(9000)).isEqualTo(listOf(9000, 9001, 9002))
+            assertThat(
+                specmaticConfig.stubBaseUrls(
+                   "http://localhost:9000"
+                )
+            ).containsAll(
+                listOf(
+                    "http://localhost:9000",
+                    "http://localhost:9001",
+                    "http://localhost:9002"
+                )
+            )
         }
 
         @Test
@@ -310,11 +320,11 @@ internal class SpecmaticConfigKtTest {
                     Consumes.StringValue("9000_second.yaml"),
                     Consumes.ObjectValue(
                         specs = listOf("9001_first.yaml", "9001_second.yaml"),
-                        port = 9001
+                        baseUrl = "http://localhost:9001"
                     ),
                     Consumes.ObjectValue(
                         specs = listOf("9002_first.yaml"),
-                        port = 9002
+                        baseUrl = "http://localhost:9002"
                     ),
                 )
             )
@@ -324,11 +334,11 @@ internal class SpecmaticConfigKtTest {
                     Consumes.StringValue("9000_third.yaml"),
                     Consumes.ObjectValue(
                         specs = listOf("9001_third.yaml", "9001_fourth.yaml"),
-                        port = 9001
+                        baseUrl = "http://localhost:9001"
                     ),
                     Consumes.ObjectValue(
                         specs = listOf("9002_second.yaml"),
-                        port = 9002
+                        baseUrl = "http://localhost:9002",
                     ),
                 )
             )

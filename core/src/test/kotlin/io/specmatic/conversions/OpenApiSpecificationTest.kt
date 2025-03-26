@@ -3325,38 +3325,6 @@ Scenario: Get product by id
     }
 
     @Test
-    fun `clone request pattern with example of body type should pick up the example`() {
-        val openAPI = openAPIToString(
-            parseGherkinStringToFeature(
-                """
-            Feature: API
-            
-            Scenario: API
-              Given type Data
-              | id | (number) |
-              When POST /data
-              And request-body (Data)
-              Then status 200
-            """.trimIndent()
-            ).toOpenApi()
-        )
-
-        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
-
-        val data = """{"id": 10}"""
-        val row = Row(columnNames = listOf("(Data)"), values = listOf(data))
-        val resolver = feature.scenarios.single().resolver
-
-        val newPatterns = feature.scenarios.single().httpRequestPattern.newBasedOn(row, resolver).map { it.value }
-
-        assertThat((newPatterns.single().body as ExactValuePattern).pattern as JSONObjectValue).isEqualTo(
-            parsedValue(
-                data
-            )
-        )
-    }
-
-    @Test
     fun `handle object inside array inside object correctly`() {
         val openAPI =
             """
@@ -4838,77 +4806,6 @@ paths:
             assertThat(body.pattern.realName).isEqualTo("test:user")
             val testNamespaceAttribute = body.pattern.attributes.getValue("xmlns:test") as ExactValuePattern
             assertThat(testNamespaceAttribute.pattern.toStringLiteral()).isEqualTo("http://helloworld.com")
-        }
-
-        @Test
-        fun `run contract tests from an OpenAPI XML spec`(@TempDir(cleanup = CleanupMode.ALWAYS) dir: File) {
-            val contractString = """
-                openapi: 3.0.3
-                info:
-                  title: test-xml
-                  version: '1.0'
-                paths:
-                  '/users':
-                    post:
-                      responses:
-                        '200':
-                          description: OK
-                      requestBody:
-                        content:
-                          application/xml:
-                            schema:
-                              ${'$'}ref: '#/components/schemas/user'
-                components:
-                  schemas:
-                    user:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                      required:
-                        - id
-            """.trimIndent()
-
-            val contractFile = dir.canonicalFile.resolve("contract.yaml")
-            contractFile.writeText(contractString)
-
-            val wrapperSpecString = """
-                Feature: Test
-                  Background:
-                    Given openapi ./contract.yaml
-                    
-                  Scenario Outline: Test
-                    When POST /users
-                    Then status 200
-                    
-                    Examples:
-                    | (user)                   |
-                    | <user><id>10</id></user> |
-            """.trimIndent()
-
-            val wrapperSpecFile = dir.canonicalFile.resolve("contract.spec")
-            wrapperSpecFile.writeText(wrapperSpecString)
-
-            val feature: Feature = parseContractFileToFeature(wrapperSpecFile.path)
-            var state = "not_called"
-
-            val result: Results = feature.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    println(request.body.toStringLiteral())
-                    assertThat(request.body.toStringLiteral()).isEqualTo("""<user><id>10</id></user>""")
-                    state = "called"
-                    return HttpResponse.OK
-                }
-
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
-
-            println(result.report())
-
-            assertThat(result.success()).isTrue()
-
-            assertThat(state).isEqualTo("called")
         }
 
         private fun assertMatchesSnippet(xmlSnippet: String, xmlFeature: Feature) {

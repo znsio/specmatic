@@ -477,11 +477,11 @@ data class Scenario(
 
         return runCatching {
             ExampleProcessor.resolve(row.requestExample, ExampleProcessor::defaultIfNotExits)
-        }.mapCatching { resolved ->
+        }.mapCatching { resolvedRequest ->
             val updatedResolver = resolver.copy(isNegative = httpResponsePattern.status in invalidRequestStatuses)
-            httpRequestPattern.fillInTheBlanks(resolved, updatedResolver)
-        }.mapCatching { resolved ->
-            row.updateRequest(resolved, httpRequestPattern, resolver)
+            httpRequestPattern.fillInTheBlanks(resolvedRequest, updatedResolver)
+        }.mapCatching { filledInResolvedRequest ->
+            row.updateRequest(filledInResolvedRequest, httpRequestPattern, resolver)
         }.map(::HasValue).getOrElse { e ->
             when(e) {
                 is ContractException -> HasFailure(e.failure(), message = row.name)

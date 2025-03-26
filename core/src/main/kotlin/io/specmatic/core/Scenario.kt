@@ -509,10 +509,8 @@ data class Scenario(
     fun validExamplesOrException(flagsBased: FlagsBased) {
         val rowsToValidate = examples.flatMap { it.rows }
 
-        val updatedResolver = flagsBased.update(resolver)
-
         val errors = rowsToValidate.mapNotNull { row ->
-            val resolverForExample = resolverForValidation(updatedResolver, row)
+            val resolverForExample = flagsBased.update(resolverForValidation(resolver, row))
 
             val requestError = nullOrExceptionString {
                 validateRequestExample(row, resolverForExample)

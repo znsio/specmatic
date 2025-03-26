@@ -320,27 +320,38 @@ data class Scenario(
         )
     }
 
-    fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages, flagsBased: FlagsBased): Result {
-        if (httpResponsePattern.status == DEFAULT_RESPONSE_CODE) {
+    fun matches(
+        httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages,
+        flagsBased: FlagsBased, isPartial: Boolean = false
+    ): Result {
+        if (httpResponsePattern.status == DEFAULT_RESPONSE_CODE || httpResponse.status != httpResponsePattern.status) {
             return Result.Failure(
                 breadCrumb = "STATUS",
                 failureReason = FailureReason.StatusMismatch
             ).updateScenario(this)
         }
 
-        val updatedFlagBased = if (isRequestAttributeSelected(httpRequest)) {
-            flagsBased.copy(unexpectedKeyCheck = ValidateUnexpectedKeys)
-        } else flagsBased
+        val updatedResolver = flagsBased.update(
+            resolver.copy(
+                mockMode = true,
+                mismatchMessages = mismatchMessages,
+                findKeyErrorCheck = if (isPartial) PARTIAL_KEYCHECK else resolver.findKeyErrorCheck
+            )
+        )
 
-        val updatedResolver = updatedFlagBased.update(resolver.copy(mismatchMessages = mismatchMessages, mockMode = true))
         val updatedScenario = newBasedOnAttributeSelectionFields(httpRequest.queryParams)
-
-        val responseMatch = updatedScenario.matches(httpResponse, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
-        if(responseMatch is Result.Failure && responseMatch.hasReason(FailureReason.StatusMismatch)) {
-            return responseMatch.updateScenario(updatedScenario)
+        val requestMatch = when(httpResponse.status in invalidRequestStatuses) {
+            false -> updatedScenario.matches(httpRequest, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
+            else -> updatedScenario.httpRequestPattern.withWildcardPathPattern().matchesPathAndMethod(httpRequest, updatedResolver)
         }
 
-        val requestMatch = updatedScenario.matches(httpRequest, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
+        val fieldsSelected = fieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams)
+        if (fieldsSelected.isNotEmpty()) {
+            val result = httpResponse.checkIfAllRootLevelKeysAreAttributeSelected(fieldsSelected, resolver)
+            if (result is Result.Failure) return Result.fromResults(listOf(requestMatch, result)).updateScenario(updatedScenario)
+        }
+
+        val responseMatch = updatedScenario.matches(httpResponse, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
         return Result.fromResults(listOf(requestMatch, responseMatch)).updateScenario(updatedScenario)
     }
 
@@ -425,7 +436,7 @@ data class Scenario(
 
         return scenarioBreadCrumb(this) {
             attempt {
-                val rowValue =  when(val resolvedRow = resolveRow(row, resolver)) {
+                val rowValue =  when(val resolvedRow = fillInTheBlanksAndResolvePatterns(row, resolver)) {
                     is HasValue -> resolvedRow.value
                     is HasException -> return@attempt sequenceOf(resolvedRow.cast())
                     is HasFailure -> return@attempt sequenceOf(resolvedRow.cast())
@@ -461,22 +472,25 @@ data class Scenario(
         }
     }
 
-    private fun resolveRow(row: Row, resolver: Resolver): ReturnValue<Row> {
+    fun fillInTheBlanksAndResolvePatterns(row: Row, resolver: Resolver): ReturnValue<Row> {
         if (row.requestExample == null) return HasValue(row)
 
         return runCatching {
-            ExampleProcessor.resolve(row.requestExample, ExampleProcessor::defaultIfNotExits)
-        }.mapCatching { resolved ->
-            val updatedResolver = resolver.copy(isNegative = httpResponsePattern.status in invalidRequestStatuses)
-            httpRequestPattern.fillInTheBlanks(resolved, updatedResolver)
-        }.mapCatching { resolved ->
-            row.updateRequest(resolved, httpRequestPattern, resolver)
+            fillInTheBlanksAndResolvePatterns(row.requestExample, resolver)
+        }.mapCatching { filledInResolvedRequest ->
+            row.updateRequest(filledInResolvedRequest, httpRequestPattern, resolver)
         }.map(::HasValue).getOrElse { e ->
             when(e) {
                 is ContractException -> HasFailure(e.failure(), message = row.name)
                 else -> HasException(e, message = row.name, breadCrumb = "")
             }
         }
+    }
+
+    fun fillInTheBlanksAndResolvePatterns(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
+        val resolvedRequest = ExampleProcessor.resolve(httpRequest, ExampleProcessor::defaultIfNotExits)
+        val updatedResolver = resolver.copy(isNegative = httpResponsePattern.status in invalidRequestStatuses)
+        return httpRequestPattern.fillInTheBlanks(resolvedRequest, updatedResolver)
     }
 
     private fun newBasedOnBackwardCompatibility(row: Row): Sequence<Scenario> {

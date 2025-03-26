@@ -2682,6 +2682,38 @@ Then status 200
             }
         }
 
+        @Test
+        fun `should be able to serve requests matching partial examples`() {
+            val specmaticConfigFile = File("src/test/resources/multi_port_stub_with_partials/specmatic.yaml")
+            val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+            val contractPathData = contractStubPaths(specmaticConfigFile.absolutePath)
+            val scenarioStubs = scenarioStubsFrom(specmaticConfigFile, contractPathData, specmaticConfig)
+
+            HttpStub(
+                features = scenarioStubs.features(),
+                rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+                specmaticConfigPath = specmaticConfigFile.canonicalPath,
+                specToStubPortMap = contractPathData.specToPortMap()
+            ).use { _ ->
+                val request = HttpRequest(
+                    method = "POST",
+                    path = "/products",
+                    body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
+                )
+
+                val exportedProductResponse = HttpClient(endPointFromHostAndPort("localhost", 9002, null)).execute(request)
+                assertThat(exportedProductResponse.body).isEqualTo(
+                    parsedJSONObject("""{"id": "999", "name": "Nokia", "category": "Mobile"}""")
+                )
+
+
+                val importedProductResponse = HttpClient(endPointFromHostAndPort("localhost", 9001, null)).execute(request)
+                assertThat(importedProductResponse.body).isEqualTo(
+                    parsedJSONObject("""{"id": "999", "name": "Nokia", "category": "Mobile", "senderName": "Payne"}""")
+                )
+            }
+        }
+
         @Nested
         inner class FeaturesAssociatedToTests {
 

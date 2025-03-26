@@ -1,0 +1,38 @@
+openapi: 3.0.3
+info:
+  title: Exported Product API
+  version: 1.0.0
+paths:
+  /products:
+    post:
+      description: Create a new product entry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                category:
+                  type: string
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  category:
+                    type: string

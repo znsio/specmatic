@@ -689,7 +689,7 @@ data class Scenario(
                 IgnoreFacts(),
                 true,
                 patterns,
-                findKeyErrorCheck = keyCheck.disableOverrideUnexpectedKeycheck(),
+                findKeyErrorCheck = keyCheck,
                 mismatchMessages = updatedMismatchMessages
             )
 

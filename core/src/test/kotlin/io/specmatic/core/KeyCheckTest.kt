@@ -172,4 +172,16 @@ internal class KeyCheckTest {
         assertThat(errors[0].name).isEqualTo("key1")
         assertThat(errors[1].name).isEqualTo("key2")
     }
+
+    @Test
+    fun `isPartial should return true when keyCheck is partial key check`() {
+        val partialKeyChecks = listOf(
+            KeyCheck(patternKeyCheck = noPatternKeyCheck, unexpectedKeyCheck = IgnoreUnexpectedKeys),
+            KeyCheck(patternKeyCheck = noPatternKeyCheck, unexpectedKeyCheck = ValidateUnexpectedKeys),
+        )
+
+        assertThat(partialKeyChecks).allSatisfy {
+            assertThat(it.isPartial()).isTrue()
+        }
+    }
 }

@@ -1,9 +1,7 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.*
-import io.specmatic.core.PARTIAL_KEYCHECK
-import io.specmatic.core.Resolver
-import io.specmatic.core.Result
+import io.specmatic.core.*
 import io.specmatic.core.utilities.withNullPattern
 import io.specmatic.core.value.*
 import org.assertj.core.api.Assertions.assertThat
@@ -428,6 +426,32 @@ internal class AnyPatternTest {
         >> (when Sub2 object).prop
         Expected number, actual was true (boolean)
         """.trimIndent())
+    }
+
+    @Test
+    fun `matches should allow missing discriminator key when keyCheck is partial`() {
+        val pattern = AnyPattern(
+            listOf(
+                JSONObjectPattern(mapOf("type" to "sub1".toDiscriminator(), "prop" to StringPattern(), "extra" to StringPattern()), typeAlias = "(Sub1)"),
+                JSONObjectPattern(mapOf("type" to "sub2".toDiscriminator(), "prop" to NumberPattern()), typeAlias = "(Sub2)")
+            ), typeAlias = "(Base)",
+            discriminator = Discriminator(
+                property = "type",
+                values = setOf("sub1", "sub2"),
+                mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
+            )
+        )
+
+        val partialResolvers = listOf(
+            Resolver(findKeyErrorCheck = PARTIAL_KEYCHECK),
+            Resolver(findKeyErrorCheck = KeyCheck(noPatternKeyCheck, IgnoreUnexpectedKeys)),
+            Resolver(findKeyErrorCheck = KeyCheck(noPatternKeyCheck, ValidateUnexpectedKeys)),
+        )
+
+        assertThat(partialResolvers).allSatisfy {
+            val result = pattern.matches(JSONObjectValue(mapOf("prop" to StringValue("value"))), it)
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
     }
 
     @Test

@@ -606,39 +606,21 @@ data class HttpRequestPattern(
             }
 
             val newBodies: Sequence<ReturnValue<Pattern>> = attempt(breadCrumb = "BODY") {
-                body.let {
-                    if (it is DeferredPattern && row.containsField(it.pattern)) {
-                        val example = row.getField(it.pattern)
-                        sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
-                    } else if (it.typeAlias?.let { p -> isPatternToken(p) } == true && row.containsField(it.typeAlias!!)) {
-                        val example = row.getField(it.typeAlias!!)
-                        sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
-                    } else if (it is XMLPattern && it.referredType?.let { referredType -> row.containsField("($referredType)") } == true) {
-                        val referredType = "(${it.referredType})"
-                        val example = row.getField(referredType)
-                        sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
-                    } else if (row.containsField("(REQUEST-BODY)")) {
-                        val example = row.getField("(REQUEST-BODY)")
-                        val value = it.parse(example, resolver)
-
-                        val requestBodyAsIs = if (!isInvalidRequestResponse(status)) {
-                            val result = resolver.matchesPattern(null, body, value)
-
-                            if (result is Failure)
-                                throw ContractException(result.toFailureReport())
-                            else
-                                ExactValuePattern(value)
-                        } else
-                            ExactValuePattern(value)
-
-                        if (status.toString().startsWith("2"))
-                            resolver.generateHttpRequestbodies(body, row, requestBodyAsIs, value)
-                        else
-                            sequenceOf(HasValue(requestBodyAsIs))
-                    } else {
-                        resolver.generateHttpRequestbodies(body, row)
-                    }
+                val rawRequestBody = row.getFieldOrNull(REQUEST_BODY_FIELD) ?: return@attempt resolver.generateHttpRequestBodies(this.body, row)
+                val parsedValue = runCatching { body.parse(rawRequestBody, resolver) }.getOrElse { e ->
+                    if (isInvalidRequestResponse(status)) StringValue(rawRequestBody)
+                    else throw e
                 }
+                val requestBodyAsIs = ExactValuePattern(parsedValue)
+
+                if (!isInvalidRequestResponse(status)) {
+                    resolver.matchesPattern(null, body, parsedValue).throwOnFailure()
+                }
+
+                if (status in 200..299)
+                    resolver.generateHttpRequestBodies(this.body, row, requestBodyAsIs)
+                else
+                    sequenceOf(HasValue(requestBodyAsIs))
             }
 
             val newFormFieldsPatterns: Sequence<ReturnValue<Map<String, Pattern>>> =
@@ -775,30 +757,11 @@ data class HttpRequestPattern(
             val newQueryParamsPatterns =
                 httpQueryParamPattern.negativeBasedOn(row, resolver).map { it.ifValue { HttpQueryParamPattern(it) } }
 
-            val newBodies: Sequence<ReturnValue<out Pattern>> = returnValue(breadCrumb = "BODY") {
-                body.let {
-                    if (it is DeferredPattern && row.containsField(it.pattern)) {
-                        val example = row.getField(it.pattern)
-                        sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
-                    } else if (it.typeAlias?.let { p -> isPatternToken(p) } == true && row.containsField(it.typeAlias!!)) {
-                        val example = row.getField(it.typeAlias!!)
-                        sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
-                    } else if (it is XMLPattern && it.referredType?.let { referredType -> row.containsField("($referredType)") } == true) {
-                        val referredType = "(${it.referredType})"
-                        val example = row.getField(referredType)
-                        sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
-                    } else if (row.containsField("(REQUEST-BODY)")) {
-                        val example = row.getField("(REQUEST-BODY)")
-                        val value = it.parse(example, resolver)
-                        val result = body.matches(value, resolver)
-                        if (result is Failure)
-                            throw ContractException(result.toFailureReport())
-
-                        body.negativeBasedOn(row.noteRequestBody(), resolver)
-                    } else {
-                        body.negativeBasedOn(row, resolver)
-                    }
-                }
+            val newBodies: Sequence<ReturnValue<out Pattern>> = returnValue(breadCrumb = "BODY") returnNewBodies@ {
+                val rawRequestBody = row.getFieldOrNull(REQUEST_BODY_FIELD) ?: return@returnNewBodies body.negativeBasedOn(row, resolver)
+                val parsedValue = body.parse(rawRequestBody, resolver)
+                body.matches(parsedValue, resolver).throwOnFailure()
+                this.body.negativeBasedOn(row.noteRequestBody(), resolver)
             }
 
             val newHeadersPattern = headersPattern.negativeBasedOn(row, resolver)

@@ -2,26 +2,14 @@ package io.specmatic.stub
 
 import io.mockk.InternalPlatformDsl.toStr
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.HttpResponsePattern
-import io.specmatic.core.KeyData
-import io.specmatic.core.QueryParameters
-import io.specmatic.core.Resolver
-import io.specmatic.core.SPECMATIC_RESULT_HEADER
+import io.specmatic.core.*
 import io.specmatic.core.log.consoleLog
-import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.NumberValue
-import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.XMLValue
-import io.specmatic.core.value.toXMLNode
+import io.specmatic.core.value.*
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stubResponse
 import io.specmatic.test.HttpClient
@@ -64,7 +52,7 @@ paths:
                 type: number
         """.trimIndent(), "").toFeature()
 
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.setExpectation("""
                 {
                     "http-request": {
@@ -107,7 +95,7 @@ paths:
                 type: number
         """.trimIndent(), "").toFeature()
 
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.setExpectation("""
                 {
                     "http-request": {
@@ -161,7 +149,7 @@ paths:
                 type: string
         """.trimIndent(), "").toFeature()
 
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.setExpectation("""
                 {
                     "http-request": {
@@ -236,7 +224,7 @@ paths:
                 type: string
         """.trimIndent(), "").toFeature()
 
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.setExpectation("""
                 {
                     "http-request": {
@@ -294,7 +282,7 @@ Feature: Test
 
         val feature = parseGherkinStringToFeature(gherkin)
 
-        HttpStub(feature).use {
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val body = """{
 "event": "features",
 "id": "332f8278",
@@ -386,22 +374,27 @@ Feature: GET API
 
     @Test
     fun `generates a valid endpoint when a port is not given`() {
-        assertThat(endPointFromHostAndPort("localhost", null, null)).isEqualTo("http://localhost")
+        assertThat(endPointFromBaseURL("localhost", null)).isEqualTo("http://localhost")
     }
 
     @Test
     fun `generates a valid endpoint when a non 80 port is given`() {
-        assertThat(endPointFromHostAndPort("localhost", 9000, null)).isEqualTo("http://localhost:9000")
+        assertThat(endPointFromBaseURL("localhost:9000", null)).isEqualTo("http://localhost:9000")
     }
 
     @Test
     fun `generates a valid endpoint when port 80 is given`() {
-        assertThat(endPointFromHostAndPort("localhost", 80, null)).isEqualTo("http://localhost")
+        assertThat(endPointFromBaseURL("localhost:80", null)).isEqualTo("http://localhost")
     }
 
     @Test
     fun `generates an https endpoint when key store data is provided`() {
-        assertThat(endPointFromHostAndPort("localhost", 80, KeyData(KeyStore.getInstance(KeyStore.getDefaultType()), ""))).isEqualTo("https://localhost")
+        assertThat(
+            endPointFromBaseURL(
+                "localhost:80",
+                KeyData(KeyStore.getInstance(KeyStore.getDefaultType()), "")
+            )
+        ).isEqualTo("https://localhost")
     }
 
     @Test
@@ -550,7 +543,7 @@ Feature: POST API
 
         val errors: Vector<String> = Vector()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             usingMultipleThreads { stubNumber ->
                 `set an expectation and exercise it`(stubNumber, stub)?.let {
                     errors.add(it)
@@ -839,7 +832,7 @@ paths:
                 type: number
         """.trimIndent(), "").toFeature()
 
-        HttpStub(contract, emptyList()).use {
+        HttpStub(contract, emptyList(), DEFAULT_STUB_BASEURL).use {
             val response = it.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = StringValue("""
                 {
                     "http-request": {
@@ -892,7 +885,7 @@ paths:
                 type: number
         """.trimIndent(), "").toFeature()
 
-        HttpStub(contract, emptyList()).use {
+        HttpStub(contract, emptyList(), DEFAULT_STUB_BASEURL).use {
             val response = it.client.execute(HttpRequest("POST", "/data", body = StringValue("""hello world""".trimIndent())) )
 
             val responseString = response.toLogString()
@@ -989,7 +982,7 @@ paths:
 """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(contract, emptyList()).use { stub ->
+        HttpStub(contract, emptyList(), DEFAULT_STUB_BASEURL).use { stub ->
             val queryParameters = QueryParameters(paramPairs = listOf("brand_id" to "1"))
             val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
 

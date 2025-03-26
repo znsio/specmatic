@@ -1,12 +1,16 @@
 package integration_tests
 
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.*
+import io.specmatic.core.ATTRIBUTE_SELECTION_DEFAULT_FIELDS
+import io.specmatic.core.ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
+import io.specmatic.core.EXAMPLES_DIR_SUFFIX
+import io.specmatic.core.HttpRequest
 import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.captureStandardOutput
 import org.assertj.core.api.Assertions.assertThat
@@ -237,7 +241,7 @@ security:
 
         val credentials = "Basic " + Base64.getEncoder().encodeToString("user:password".toByteArray())
 
-        HttpStub(feature).use {
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val response = it.client.execute(HttpRequest(
                 "POST",
                 "/hello",
@@ -305,7 +309,7 @@ components:
 
         val credentials = "Basic " + Base64.getEncoder().encodeToString("user:password".toByteArray())
 
-        HttpStub(feature).use {
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val response = it.client.execute(HttpRequest(
                 "POST",
                 "/hello",
@@ -364,7 +368,7 @@ paths:
          """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(feature).use {
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val response = it.client.execute(HttpRequest(
                 "POST",
                 "/hello",
@@ -426,7 +430,7 @@ security:
 
         val credentials = "Basic " + Base64.getEncoder().encodeToString("user:password".toByteArray())
 
-        HttpStub(feature).use {
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val response = it.client.execute(HttpRequest(
                 "GET",
                 "/hello",
@@ -440,7 +444,7 @@ security:
 
     @Test
     fun `expectations for query params from examples`() {
-        HttpStub(featureWithQueryParamExamples).use { stub ->
+        HttpStub(featureWithQueryParamExamples, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(HttpRequest("GET", "/?type=data"))
                 .let { response ->
                     assertThat(response.status).isEqualTo(200)
@@ -451,7 +455,7 @@ security:
 
     @Test
     fun `expectations for path params from examples`() {
-        HttpStub(featureWithPathParamExamples).use { stub ->
+        HttpStub(featureWithPathParamExamples, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(HttpRequest("GET", "/xyz123"))
                 .let { response ->
                     assertThat(response.status).isEqualTo(200)
@@ -467,7 +471,7 @@ security:
 
     @Test
     fun `expectations for header params from examples`() {
-        HttpStub(featureWithHeaderParamExamples).use { stub ->
+        HttpStub(featureWithHeaderParamExamples, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(HttpRequest("GET", "/hello", headers = mapOf("userId" to "John")))
                 .let { response ->
                     assertThat(response.status).isEqualTo(200)
@@ -483,7 +487,7 @@ security:
 
     @Test
     fun `expectations from examples ignores omitted parameters while matching stub request`() {
-        HttpStub(featureWithOmittedParamExamples).use { stub ->
+        HttpStub(featureWithOmittedParamExamples, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(HttpRequest("GET", "/hello", headers = mapOf("userId" to "John")))
                 .let { response ->
                     assertThat(response.status).isEqualTo(200)
@@ -554,7 +558,7 @@ components:
         name: 'Macbook'""".trimIndent()
 
         val contract = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(HttpRequest("POST", "/products", emptyMap(), parsedJSONObject("""{"name": "Macbook"}""")))
                 .let { response ->
                     assertThat(response.status).isEqualTo(200)
@@ -626,7 +630,7 @@ paths:
 """.trimIndent()
 
         val contract = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest(
                 "POST",
                 "/products/10",
@@ -690,7 +694,7 @@ paths:
         val contract = OpenApiSpecification.fromYAML(spec, "").toFeature()
         val (output, _) = captureStandardOutput {
             try {
-                HttpStub(contract).close()
+                HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).close()
             } catch(_: Throwable) {
             }
         }
@@ -728,7 +732,7 @@ paths:
             val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
             val stubScenarios = specFilepath.getExternalExamplesFromContract()
 
-            HttpStub(feature, stubScenarios).use {
+            HttpStub(feature, stubScenarios, DEFAULT_STUB_BASEURL).use {
                 val response = it.client.execute(HttpRequest(
                     "GET",
                     "/employeesObjectResponse",
@@ -751,7 +755,7 @@ paths:
             val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
             val stubScenarios = specFilepath.getExternalExamplesFromContract()
 
-            HttpStub(feature, stubScenarios).use {
+            HttpStub(feature, stubScenarios, DEFAULT_STUB_BASEURL).use {
                 val response = it.client.execute(HttpRequest(
                     "GET",
                     "/employeesObjectResponse"
@@ -773,7 +777,7 @@ paths:
             val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
             val stubScenarios = specFilepath.getExternalExamplesFromContract()
 
-            HttpStub(feature, stubScenarios).use {
+            HttpStub(feature, stubScenarios, DEFAULT_STUB_BASEURL).use {
                 val response = it.client.execute(HttpRequest(
                     "GET",
                     "/employeesArrayResponse",
@@ -796,7 +800,7 @@ paths:
             val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
             val stubScenarios = specFilepath.getExternalExamplesFromContract()
 
-            HttpStub(feature, stubScenarios).use {
+            HttpStub(feature, stubScenarios, DEFAULT_STUB_BASEURL).use {
                 val response = it.client.execute(HttpRequest(
                     "GET",
                     "/employeesArrayResponse"
@@ -818,7 +822,7 @@ paths:
             val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
             val stubScenarios = specFilepath.getExternalExamplesFromContract()
 
-            HttpStub(feature, stubScenarios).use {
+            HttpStub(feature, stubScenarios, DEFAULT_STUB_BASEURL).use {
                 val response = it.client.execute(HttpRequest(
                     "GET",
                     "/employeesAllOfResponse",
@@ -841,7 +845,7 @@ paths:
             val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
             val stubScenarios = specFilepath.getExternalExamplesFromContract()
 
-            HttpStub(feature, stubScenarios).use {
+            HttpStub(feature, stubScenarios, DEFAULT_STUB_BASEURL).use {
                 val response = it.client.execute(HttpRequest(
                     "GET",
                     "/employeesAllOfResponse"
@@ -863,7 +867,7 @@ paths:
             val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
             val stubScenarios = specFilepath.getExternalExamplesFromContract()
 
-            HttpStub(feature, stubScenarios).use {
+            HttpStub(feature, stubScenarios, DEFAULT_STUB_BASEURL).use {
                 val response = it.client.execute(HttpRequest(
                     "GET",
                     "/employeesObjectResponse",

@@ -1,16 +1,17 @@
 package io.specmatic.core
 
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Test
 import io.specmatic.conversions.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.value.*
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
 
 class PostmanKtTests {
     @Test
@@ -901,7 +902,7 @@ Scenario: With form data
 """
 
             val contractBehaviour = parseGherkinStringToFeature(gherkin)
-            stub = HttpStub(contractBehaviour)
+            stub = HttpStub(contractBehaviour, baseURL = DEFAULT_STUB_BASEURL)
         }
 
         @AfterAll

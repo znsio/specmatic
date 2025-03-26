@@ -1,12 +1,15 @@
 package integration_tests
 
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.*
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
+import io.specmatic.core.Result
 import io.specmatic.core.SPECMATIC_TYPE_HEADER
-import io.specmatic.core.jsonObject
+import io.specmatic.core.Scenario
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
@@ -172,7 +175,7 @@ components:
 
         @Nested
         inner class Stub {
-            var stub = HttpStub(getAPI)
+            var stub = HttpStub(getAPI, baseURL = DEFAULT_STUB_BASEURL)
 
             @AfterEach
             fun teardown() {

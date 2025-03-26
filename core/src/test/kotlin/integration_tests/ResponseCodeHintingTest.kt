@@ -8,6 +8,7 @@ import io.specmatic.core.Scenario
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.mock.TRANSIENT_MOCK_ID
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.SPECMATIC_RESPONSE_CODE_HEADER
 import io.specmatic.test.TestExecutor
@@ -53,7 +54,7 @@ class ResponseCodeHintingTest {
             """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(listOf(feature)).use { stub ->
+        HttpStub(listOf(feature), baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "John Doe"}"""))
 
             val dynamic200Example = ScenarioStub(request, HttpResponse.ok("200 response")).toJSON()
@@ -115,7 +116,7 @@ class ResponseCodeHintingTest {
             """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(listOf(feature)).use { stub ->
+        HttpStub(listOf(feature), baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"name": "John Doe"}"""))
 
             stub.client.execute(request.addHeaderIfMissing(SPECMATIC_RESPONSE_CODE_HEADER, "200")).let { response ->
@@ -168,7 +169,7 @@ class ResponseCodeHintingTest {
             """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(listOf(feature)).use { stub ->
+        HttpStub(listOf(feature), baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "John Doe"}"""))
 
             val dynamic200Example = ScenarioStub(request, HttpResponse.ok("200 response")).toJSON()
@@ -223,7 +224,7 @@ class ResponseCodeHintingTest {
             """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(listOf(feature)).use { stub ->
+        HttpStub(listOf(feature), baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "John Doe"}"""))
 
             val dynamic200Example = ScenarioStub(request, HttpResponse(202, "202 response")).toJSON().addEntry(TRANSIENT_MOCK_ID, "abc123")
@@ -283,7 +284,7 @@ class ResponseCodeHintingTest {
             """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(listOf(feature)).use { stub ->
+        HttpStub(listOf(feature), baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "John Doe"}"""))
 
             val dynamic200Example = ScenarioStub(request, HttpResponse(202, "202 response")).toJSON().addEntry(TRANSIENT_MOCK_ID, "abc123")
@@ -338,7 +339,7 @@ class ResponseCodeHintingTest {
             """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(listOf(feature), strictMode = true).use { stub ->
+        HttpStub(listOf(feature), baseURL = DEFAULT_STUB_BASEURL, strictMode = true).use { stub ->
             val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"name": "John Doe"}"""))
 
             val dynamic200Example = ScenarioStub(request, HttpResponse.ok("200 response")).toJSON()

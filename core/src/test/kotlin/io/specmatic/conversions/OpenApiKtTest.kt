@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.core.*
-import io.specmatic.core.HttpRequest
 import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
@@ -19,6 +18,7 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.jsonBody
 import io.specmatic.runningOnWindows
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
 import io.specmatic.test.TestExecutor
 import io.specmatic.trimmedLinesString
@@ -28,15 +28,26 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.RepeatedTest
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.core.ParameterizedTypeReference
-import org.springframework.http.*
+import org.springframework.http.ContentDisposition
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
+import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.web.client.HttpClientErrorException
@@ -85,7 +96,7 @@ Scenario: zero should return not found
     fun `should create stub from gherkin that includes OpenAPI spec`() {
         val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
 
-        val response = HttpStub(feature).use {
+        val response = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             restTemplate.exchange(
                 URI.create("http://localhost:9000/hello/1"), HttpMethod.GET,
@@ -95,7 +106,7 @@ Scenario: zero should return not found
 
         assertThat(response.statusCodeValue).isEqualTo(200)
 
-        HttpStub(feature).use {
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             try {
                 restTemplate.exchange(
@@ -579,7 +590,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val response = HttpStub(feature).use {
+        val response = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             restTemplate.exchange(URI.create("http://localhost:9000/pets/1"), HttpMethod.GET, null, Pet::class.java)
         }
@@ -602,7 +613,7 @@ Background:
         headers.set("X-Request-ID", "717e5682-c214-11eb-8529-0242ac130003")
         val requestEntity: HttpEntity<String> = HttpEntity("", headers)
         listOf("http://localhost:9000/pets", "http://localhost:9000/pets?tag=test&limit=3").forEach { urlString ->
-            val response = HttpStub(feature).use {
+            val response = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
                 val restTemplate = RestTemplate()
                 restTemplate.exchange(
                     URI.create(urlString),
@@ -625,7 +636,7 @@ Background:
             )
         }
 
-        HttpStub(feature).use {
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             try {
                 restTemplate.exchange(
@@ -668,7 +679,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val response = HttpStub(feature).use {
+        val response = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             restTemplate.exchange(
                 URI.create("http://localhost:9000/petIds"),
@@ -696,7 +707,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        HttpStub(feature).use {
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             val httpClientErrorException = assertThrows<HttpClientErrorException> {
                 restTemplate.exchange(
@@ -721,7 +732,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        HttpStub(feature).use {
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             val httpClientErrorException = assertThrows<HttpClientErrorException> {
                 restTemplate.exchange(
@@ -777,7 +788,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        HttpStub(feature).use {
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             val body: MultiValueMap<String, Any> = LinkedMultiValueMap()
             body.add("orderId", 1)
@@ -811,7 +822,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        HttpStub(feature).use {
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             val body: MultiValueMap<String, Any> = LinkedMultiValueMap()
             body.add("orderId", 1)
@@ -839,7 +850,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val petResponse = HttpStub(feature).use {
+        val petResponse = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             restTemplate.postForObject(
                 URI.create("http://localhost:9000/pets"),
@@ -863,7 +874,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val petResponse = HttpStub(feature).use {
+        val petResponse = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val requestBody = ObjectMapper().writeValueAsString(Pet("scooby", "golden", 1, "retriever", 1))
                 .toRequestBody("application/json".toMediaTypeOrNull())
             val request =
@@ -907,7 +918,7 @@ Background:
         val result = testBackwardCompatibility(feature, feature)
         assertThat(result.success()).isTrue()
 
-        val resp = HttpStub(feature).use {
+        val resp = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val request =
                 Request.Builder().url("http://localhost:9000/demo/circular-reference-non-nullable")
                     .addHeader("Content-Type", "application/json")
@@ -936,7 +947,7 @@ Background:
         val result = testBackwardCompatibility(feature, feature)
         assertThat(result.success()).isTrue()
 
-        val resp = HttpStub(feature).use {
+        val resp = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val request =
                 Request.Builder().url("http://localhost:9000/demo/circular-reference-optional-non-nullable")
                     .addHeader("Content-Type", "application/json")
@@ -966,7 +977,7 @@ Background:
         val result = testBackwardCompatibility(feature, feature)
         assertThat(result.success()).isTrue()
 
-        val resp = HttpStub(feature).use {
+        val resp = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val request =
                 Request.Builder().url("http://localhost:9000/demo/circular-reference-nullable")
                     .addHeader("Content-Type", "application/json")
@@ -996,7 +1007,7 @@ Background:
         val result = testBackwardCompatibility(feature, feature)
         assertThat(result.success()).isTrue()
 
-        val resp = HttpStub(feature).use {
+        val resp = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val request =
                 Request.Builder().url("http://localhost:9000/demo/circular-reference-polymorphic")
                     .addHeader("Content-Type", "application/json")
@@ -1024,7 +1035,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val petResponse = HttpStub(feature).use {
+        val petResponse = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             restTemplate.postForObject(
                 URI.create("http://localhost:9000/pets"),
@@ -1048,7 +1059,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val petResponse = HttpStub(feature).use {
+        val petResponse = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             restTemplate.postForObject(
                 URI.create("http://localhost:9000/pets"),
@@ -1072,7 +1083,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        HttpStub(feature).use {
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             try {
                 restTemplate.postForObject(
@@ -1098,7 +1109,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val petResponse = HttpStub(feature).use {
+        val petResponse = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             restTemplate.postForObject(
                 URI.create("http://localhost:9000/pets"),
@@ -1122,7 +1133,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        HttpStub(feature).use {
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             try {
                 restTemplate.postForObject(
@@ -1575,7 +1586,7 @@ Background:
 
         val request: HttpEntity<MultiValueMap<String, String>> = HttpEntity<MultiValueMap<String, String>>(map, headers)
 
-        val response = HttpStub(feature).use {
+        val response = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             restTemplate.postForEntity(
                 URI.create("http://localhost:9000/services/jsonAndNonJsonPayload"),
@@ -2523,7 +2534,7 @@ components:
     fun `should work with password and email formats while generating stub`() {
         val feature = OpenApiSpecification.fromFile("openapi/spec_with_password_and_email_format_strings.yaml").toFeature()
 
-        val response = HttpStub(feature).use {
+        val response = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val restTemplate = RestTemplate()
             restTemplate.postForObject(
                 URI.create("http://localhost:9000/users"),
@@ -2540,7 +2551,7 @@ components:
         val feature = OpenApiSpecification.fromFile("openapi/spec_with_password_and_email_format_strings.yaml").toFeature()
 
         val exception = Assertions.assertThrows(HttpClientErrorException::class.java) {
-            HttpStub(feature).use {
+            HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
                 val restTemplate = RestTemplate()
                 restTemplate.postForObject(
                     URI.create("http://localhost:9000/users"),

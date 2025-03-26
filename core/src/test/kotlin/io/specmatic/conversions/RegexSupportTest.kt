@@ -7,6 +7,7 @@ import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
@@ -257,7 +258,7 @@ class RegexSupportTest {
                 HttpResponse(200, body = parsedJSONObject("""{"id": "$matchesReqex"}"""))
             )
 
-            HttpStub(feature).use { stub ->
+            HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                 stub.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectation.toJSON())).let { response ->
                     assertThat(response.status).isEqualTo(200)
                 }
@@ -281,7 +282,7 @@ class RegexSupportTest {
                 regexBreakingResponse
             )
 
-            HttpStub(feature).use { stub ->
+            HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                 stub.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = badRequestExpectation.toJSON())).let { response ->
                     assertThat(response.status).isEqualTo(400)
                 }
@@ -296,7 +297,7 @@ class RegexSupportTest {
         fun `an API spec with pattern in a request and response should match request values against the regex and generate response values when there are no expectations`() {
             val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "$matchesReqex"}"""))
 
-            HttpStub(feature).use { stub ->
+            HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                 val response = stub.client.execute(request)
 
                 assertThat(response.status).isEqualTo(200)
@@ -310,7 +311,7 @@ class RegexSupportTest {
         fun `an API spec with pattern in a request should reject requests that do not match the pattern when there are no expectations`() {
             val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "$doesNotMatchRegex"}"""))
 
-            HttpStub(feature).use { stub ->
+            HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
                 val response = stub.client.execute(request)
 
                 assertThat(response.status).isEqualTo(400)

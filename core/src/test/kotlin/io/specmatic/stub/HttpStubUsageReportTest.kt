@@ -95,7 +95,7 @@ paths:
         val stubContract1 = OpenApiSpecification.fromYAML(helloAndDataSpec, "").toFeature()
         val stubContract2 = OpenApiSpecification.fromYAML(hello2AndData2Spec, "").toFeature()
 
-        HttpStub(listOf(stubContract1, stubContract2)).use { stub ->
+        HttpStub(listOf(stubContract1, stubContract2), baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             assertThat(stub.allEndpoints).isEqualTo(listOf(
                 StubEndpoint("/data", "GET", 200, serviceType = "HTTP"),
                 StubEndpoint("/hello", "GET", 200, serviceType = "HTTP"),
@@ -110,7 +110,11 @@ paths:
         val stubContract1 = OpenApiSpecification.fromYAML(helloAndDataSpec, "", sourceProvider = "git", sourceRepository = "https://github.com/znsio/specmatic-order-contracts.git", sourceRepositoryBranch = "main", specificationPath = "in/specmatic/examples/store/helloAndDataSpec.yaml").toFeature()
         val stubContract2 = OpenApiSpecification.fromYAML(hello2AndData2Spec, "", sourceProvider = "git", sourceRepository = "https://github.com/znsio/specmatic-order-contracts.git", sourceRepositoryBranch = "main", specificationPath = "in/specmatic/examples/store/hello2AndData2Spec.yaml").toFeature()
 
-        HttpStub(listOf(stubContract1, stubContract2), specmaticConfigPath = "./specmatic.json").use { stub ->
+        HttpStub(
+            listOf(stubContract1, stubContract2),
+            baseURL = DEFAULT_STUB_BASEURL,
+            specmaticConfigPath = "./specmatic.json"
+        ).use { stub ->
             stub.client.execute(HttpRequest("GET", "/data"))
             stub.client.execute(HttpRequest("GET", "/unknown"))
             stub.client.execute(HttpRequest("GET", "/hello"))
@@ -158,7 +162,7 @@ paths:
     fun `should log all successful requests when response is faked`() {
         val contract = OpenApiSpecification.fromYAML(helloAndDataSpec, "").toFeature()
 
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(HttpRequest("GET", "/data"))
             stub.client.execute(HttpRequest("GET", "/hello"))
 
@@ -173,7 +177,7 @@ paths:
     fun `should log all successful requests when response is stubbed`() {
         val contract = OpenApiSpecification.fromYAML(helloAndDataSpec, "").toFeature()
 
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.setExpectation("""
                 {
                     "http-request": {
@@ -205,7 +209,7 @@ paths:
     fun `should not log unsuccessful requests`() {
         val contract = OpenApiSpecification.fromYAML(helloAndDataSpec, "").toFeature()
 
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
 
             stub.client.execute(HttpRequest("GET", "/data"))
             stub.client.execute(HttpRequest("GET", "/unknown"))
@@ -220,7 +224,7 @@ paths:
     fun `should not log unsuccessful requests in strict mode`() {
         val contract = OpenApiSpecification.fromYAML(helloAndDataSpec, "").toFeature()
 
-        HttpStub(features = listOf(contract), strictMode = true).use { stub ->
+        HttpStub(features = listOf(contract), baseURL = DEFAULT_STUB_BASEURL, strictMode = true).use { stub ->
 
             stub.setExpectation("""
                 {
@@ -248,7 +252,7 @@ paths:
     fun `should log all requests successfully when multiple threads make requests concurrently`() {
         val contract = OpenApiSpecification.fromYAML(helloAndDataSpec, "").toFeature()
 
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
 
             val threads = List(10) {
                 thread {

@@ -4,4 +4,4 @@ contracts:
       - product_without_category.yaml
       - specs:
           - product_with_category.yaml
-        port: 9001
+        baseUrl: http://localhost:9001

@@ -436,7 +436,7 @@ data class Scenario(
 
         return scenarioBreadCrumb(this) {
             attempt {
-                val rowValue =  when(val resolvedRow = resolveRow(row, resolver)) {
+                val rowValue =  when(val resolvedRow = fillInTheBlanksAndResolvePatterns(row, resolver)) {
                     is HasValue -> resolvedRow.value
                     is HasException -> return@attempt sequenceOf(resolvedRow.cast())
                     is HasFailure -> return@attempt sequenceOf(resolvedRow.cast())
@@ -472,14 +472,11 @@ data class Scenario(
         }
     }
 
-    fun resolveRow(row: Row, resolver: Resolver): ReturnValue<Row> {
+    fun fillInTheBlanksAndResolvePatterns(row: Row, resolver: Resolver): ReturnValue<Row> {
         if (row.requestExample == null) return HasValue(row)
 
         return runCatching {
-            ExampleProcessor.resolve(row.requestExample, ExampleProcessor::defaultIfNotExits)
-        }.mapCatching { resolvedRequest ->
-            val updatedResolver = resolver.copy(isNegative = httpResponsePattern.status in invalidRequestStatuses)
-            httpRequestPattern.fillInTheBlanks(resolvedRequest, updatedResolver)
+            fillInTheBlanksAndResolvePatterns(row.requestExample, resolver)
         }.mapCatching { filledInResolvedRequest ->
             row.updateRequest(filledInResolvedRequest, httpRequestPattern, resolver)
         }.map(::HasValue).getOrElse { e ->
@@ -488,6 +485,12 @@ data class Scenario(
                 else -> HasException(e, message = row.name, breadCrumb = "")
             }
         }
+    }
+
+    fun fillInTheBlanksAndResolvePatterns(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
+        val resolvedRequest = ExampleProcessor.resolve(httpRequest, ExampleProcessor::defaultIfNotExits)
+        val updatedResolver = resolver.copy(isNegative = httpResponsePattern.status in invalidRequestStatuses)
+        return httpRequestPattern.fillInTheBlanks(resolvedRequest, updatedResolver)
     }
 
     private fun newBasedOnBackwardCompatibility(row: Row): Sequence<Scenario> {

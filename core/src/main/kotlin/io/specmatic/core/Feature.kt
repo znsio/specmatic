@@ -639,17 +639,21 @@ data class Feature(
             matchResult.isSuccess() || (matchResult as Result.Failure).hasReason(FailureReason.URLPathParamMismatchButSameStructure) && isBadRequest
         } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
 
-        return originalScenario.resolveRow(example.toRow(specmaticConfig), originalScenario.resolver).ifValue { row ->
+        return runCatching {
+            originalScenario.fillInTheBlanksAndResolvePatterns(example.request, originalScenario.resolver)
+        }.mapCatching { resolvedRequest ->
             scenarioAsTest(
                 concreteTestScenario =  Scenario(
                     name = originalScenario.apiIdentifier,
-                    httpRequestPattern = row.requestExample?.toPattern() ?: originalScenario.httpRequestPattern,
-                    httpResponsePattern = row.responseExample?.let { HttpResponsePattern(it) } ?: originalScenario.httpResponsePattern,
+                    httpRequestPattern = resolvedRequest.toPattern(),
+                    httpResponsePattern = HttpResponsePattern(example.response)
                 ),
                 comment = null,
                 workflow = Workflow(),
                 originalScenario = originalScenario
             )
+        }.map(::HasValue).getOrElse { e ->
+            e.asReturnValue(example.testName)
         }
     }
 
@@ -659,7 +663,7 @@ data class Feature(
         workflow: Workflow,
         originalScenario: Scenario,
         originalScenarios: List<Scenario> = emptyList()
-    ) = ScenarioAsTest(
+    ): ContractTest = ScenarioAsTest(
         scenario = adjustTestDescription(concreteTestScenario, originalScenarios),
         feature = this.copy(scenarios = originalScenarios),
         flagsBased,

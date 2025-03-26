@@ -842,7 +842,7 @@ internal class HttpRequestPatternTest {
         val httpRequest = HttpRequest(path = "/", method = "GET")
         val newRequestPattern = httpRequestPattern.generate(httpRequest, Resolver())
 
-        assertThat(newRequestPattern.body).isEqualTo(NoBodyPattern)
+        assertThat(newRequestPattern.body).isEqualTo(EmptyStringPattern)
     }
 
     private fun String.toExactValuePattern(): ExactValuePattern = ExactValuePattern(StringValue(this))

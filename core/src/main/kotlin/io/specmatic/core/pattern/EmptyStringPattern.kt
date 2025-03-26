@@ -44,5 +44,5 @@ object EmptyStringPattern : Pattern {
 
     override val pattern: Any = ""
 
-    override fun toString(): String = "(nothing)"
+    override fun toString(): String = "(emptystring)"
 }

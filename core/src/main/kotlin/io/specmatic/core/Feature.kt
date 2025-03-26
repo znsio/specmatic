@@ -1668,7 +1668,7 @@ data class Feature(
             pattern is NumberPattern || (pattern is DeferredPattern && pattern.pattern == "(number)") -> NumberSchema()
             pattern is BooleanPattern || (pattern is DeferredPattern && pattern.pattern == "(boolean)") -> BooleanSchema()
             pattern is DateTimePattern || (pattern is DeferredPattern && pattern.pattern == "(datetime)") -> StringSchema()
-            pattern is StringPattern || pattern is EmptyStringPattern || (pattern is DeferredPattern && pattern.pattern == "(string)") || (pattern is DeferredPattern && pattern.pattern == "(nothing)") -> StringSchema()
+            pattern is StringPattern || pattern is EmptyStringPattern || (pattern is DeferredPattern && pattern.pattern == "(string)") || (pattern is DeferredPattern && pattern.pattern == "(emptystring)") -> StringSchema()
             pattern is NullPattern || (pattern is DeferredPattern && pattern.pattern == "(null)") -> Schema<Any>().apply {
                 this.nullable = true
             }

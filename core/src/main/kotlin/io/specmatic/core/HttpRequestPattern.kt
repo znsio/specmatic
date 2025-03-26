@@ -319,7 +319,8 @@ data class HttpRequestPattern(
             requestPattern = attempt(breadCrumb = "BODY") {
                 requestPattern.copy(
                     body = when (request.body) {
-                        EmptyString -> NoBodyPattern
+                        EmptyString -> EmptyStringPattern
+                        NoBodyValue -> NoBodyPattern
                         is StringValue -> encompassedType(request.bodyString, null, body, resolver)
                         else -> request.body.exactMatchElseType()
                     }

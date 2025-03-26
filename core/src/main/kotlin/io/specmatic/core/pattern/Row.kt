@@ -49,6 +49,11 @@ data class Row(
         return getValue(columnName).fetch()
     }
 
+    fun getFieldOrNull(columnName: String): String? {
+        if (!containsField(columnName)) return null
+        return getField(columnName)
+    }
+
     private fun getValue(columnName: String): RowValue {
         val value = requestBodyJSONExample?.getValueFromTopLevelKeys(columnName) ?: cells.getValue(columnName)
 

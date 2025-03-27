@@ -68,10 +68,10 @@ class AssertConditionalTest {
         @Test
         fun `should execute then asserts when conditional asserts are met`() {
             val assert = AssertConditional(
-                keys = listOf("BODY"),
-                conditionalAsserts = listOf(AssertComparison(listOf("BODY", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)),
-                thenAsserts = listOf(AssertComparison(listOf("BODY", "address"), lookupKey = "ENTITY.address", isEqualityCheck = true)),
-                elseAsserts = listOf(AssertComparison(listOf("BODY", "address"), lookupKey = "ENTITY.address", isEqualityCheck = false))
+                keys = listOf("BODY", "[*]"),
+                conditionalAsserts = listOf(AssertComparison(listOf("BODY", "[*]", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)),
+                thenAsserts = listOf(AssertComparison(listOf("BODY", "[*]", "address"), lookupKey = "ENTITY.address", isEqualityCheck = true)),
+                elseAsserts = listOf(AssertComparison(listOf("BODY", "[*]", "address"), lookupKey = "ENTITY.address", isEqualityCheck = false))
             )
 
             val bodyValue = JSONArrayValue(
@@ -97,10 +97,10 @@ class AssertConditionalTest {
         @Test
         fun `should execute else asserts when conditional asserts are not met`() {
             val assert = AssertConditional(
-                keys = listOf("BODY"),
-                conditionalAsserts = listOf(AssertComparison(listOf("BODY", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)),
-                thenAsserts = listOf(AssertComparison(listOf("BODY", "address"), lookupKey = "ENTITY.address", isEqualityCheck = true)),
-                elseAsserts = listOf(AssertComparison(listOf("BODY", "address"), lookupKey = "ENTITY.address", isEqualityCheck = false))
+                keys = listOf("BODY", "[*]"),
+                conditionalAsserts = listOf(AssertComparison(listOf("BODY", "[*]", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)),
+                thenAsserts = listOf(AssertComparison(listOf("BODY", "[*]", "address"), lookupKey = "ENTITY.address", isEqualityCheck = true)),
+                elseAsserts = listOf(AssertComparison(listOf("BODY", "[*]", "address"), lookupKey = "ENTITY.address", isEqualityCheck = false))
             )
 
             val bodyValue = JSONArrayValue(
@@ -128,20 +128,17 @@ class AssertConditionalTest {
 
     @Test
     fun `should be able to create dynamic asserts based on prefix value`() {
-        val assert = AssertConditional(
-            keys = listOf("BODY"),
-            conditionalAsserts = listOf(
-                AssertComparison(listOf("BODY", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true),
-                AssertComparison(listOf("BODY", "id"), lookupKey = "ENTITY.name", isEqualityCheck = true)
-            ),
-            thenAsserts = listOf(AssertComparison(listOf("BODY", "address"), lookupKey = "ENTITY.address", isEqualityCheck = true)),
-            elseAsserts = listOf(AssertComparison(listOf("BODY", "address"), lookupKey = "ENTITY.address", isEqualityCheck = false))
+        val arrayAssert = AssertConditional(
+            keys = listOf("BODY", "[*]"),
+            conditionalAsserts = listOf(AssertComparison(listOf("BODY", "[*]", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)),
+            thenAsserts = listOf(AssertComparison(listOf("BODY", "[*]", "address"), lookupKey = "ENTITY.address", isEqualityCheck = true)),
+            elseAsserts = listOf(AssertComparison(listOf("BODY", "[*]", "address"), lookupKey = "ENTITY.address", isEqualityCheck = false))
         )
 
         val jsonValue = JSONObjectValue(mapOf("name" to StringValue("Jane")))
         val arrayValue = JSONArrayValue(List(3) { jsonValue })
 
-        val arrayBasedAsserts = assert.dynamicAsserts(arrayValue.toFactStore("BODY"))
+        val arrayBasedAsserts = arrayAssert.dynamicAsserts(arrayValue.toFactStore("BODY"))
         assertThat(arrayBasedAsserts.size).isEqualTo(3)
         arrayBasedAsserts.forEachIndexed { index, it ->
 
@@ -170,7 +167,14 @@ class AssertConditionalTest {
             }
         }
 
-        val jsonBasedAsserts = assert.dynamicAsserts(jsonValue.toFactStore("BODY"))
+        val objectAssert = AssertConditional(
+            keys = listOf("BODY"),
+            conditionalAsserts = listOf(AssertComparison(listOf("BODY", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)),
+            thenAsserts = listOf(AssertComparison(listOf("BODY", "address"), lookupKey = "ENTITY.address", isEqualityCheck = true)),
+            elseAsserts = listOf(AssertComparison(listOf("BODY", "address"), lookupKey = "ENTITY.address", isEqualityCheck = false))
+        )
+
+        val jsonBasedAsserts = objectAssert.dynamicAsserts(jsonValue.toFactStore("BODY"))
         assertThat(jsonBasedAsserts.size).isEqualTo(1)
         assertThat(jsonBasedAsserts).allSatisfy {
 
@@ -203,13 +207,13 @@ class AssertConditionalTest {
     @Test
     fun `should correctly align dynamic asserts when few generate more dynamic asserts than others`() {
         val assert = AssertConditional(
-            keys = listOf("BODY"),
+            keys = listOf("BODY", "[*]"),
             conditionalAsserts = listOf(
-                AssertComparison(listOf("BODY", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true),
-                AssertComparison(listOf("BODY", "id"), lookupKey = "ENTITY.id", isEqualityCheck = true)
+                AssertComparison(listOf("BODY", "[*]", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true),
+                AssertComparison(listOf("BODY", "[*]", "id"), lookupKey = "ENTITY.id", isEqualityCheck = true)
             ),
-            thenAsserts = listOf(AssertComparison(listOf("BODY", "orders", "items", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)),
-            elseAsserts = listOf(AssertComparison(listOf("BODY", "orders", "items", "price"), lookupKey = "ENTITY.price", isEqualityCheck = true))
+            thenAsserts = listOf(AssertComparison(listOf("BODY", "[*]", "orders", "[*]", "items", "[*]", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)),
+            elseAsserts = listOf(AssertComparison(listOf("BODY", "[*]", "orders", "[*]", "items", "[*]", "price"), lookupKey = "ENTITY.price", isEqualityCheck = true))
         )
 
         val jsonValue = parsedJSON("""

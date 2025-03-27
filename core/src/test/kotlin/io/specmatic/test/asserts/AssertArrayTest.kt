@@ -29,7 +29,7 @@ class AssertArrayTest {
 
     @Test
     fun `should return success when array contains expected value`() {
-        val assert = AssertArray(keys = listOf("BODY", "name"), lookupKey = "ENTITY.name", arrayAssertType = ArrayAssertType.ARRAY_HAS)
+        val assert = AssertArray(keys = listOf("BODY", "[*]", "name"), lookupKey = "ENTITY.name", arrayAssertType = ArrayAssertType.ARRAY_HAS)
 
         val actualStore = mapOf("ENTITY.name" to StringValue("John"))
         val bodyValue = JSONArrayValue(
@@ -47,7 +47,7 @@ class AssertArrayTest {
 
     @Test
     fun `should return failure when array does not contain expected value`() {
-        val assert = AssertArray(keys = listOf("BODY", "name"), lookupKey = "ENTITY.name", arrayAssertType = ArrayAssertType.ARRAY_HAS)
+        val assert = AssertArray(keys = listOf("BODY", "[*]", "name"), lookupKey = "ENTITY.name", arrayAssertType = ArrayAssertType.ARRAY_HAS)
 
         val actualStore = mapOf("ENTITY.name" to StringValue("John"))
         val bodyValue = JSONArrayValue(

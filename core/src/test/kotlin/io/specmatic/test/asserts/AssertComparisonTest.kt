@@ -50,7 +50,6 @@ class AssertComparisonTest {
         val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, actualStore)
-        println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).containsIgnoringWhitespaces("""
@@ -68,7 +67,6 @@ class AssertComparisonTest {
         val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, actualStore)
-        println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
     }
@@ -82,7 +80,6 @@ class AssertComparisonTest {
         val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, actualStore)
-        println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).containsIgnoringWhitespaces("""
@@ -100,28 +97,27 @@ class AssertComparisonTest {
         val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, actualStore)
-        println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `should be able to create dynamic asserts based on prefix value`() {
-        val assert = AssertComparison(keys = listOf("BODY", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)
+        val arrayAssert = AssertComparison(keys = listOf("BODY", "[*]", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)
         val jsonValue = JSONObjectValue(mapOf("name" to StringValue("Jane")))
         val arrayValue = JSONArrayValue(List(3) { jsonValue })
 
-        val arrayBasedAsserts = assert.dynamicAsserts(arrayValue.toFactStore("BODY"))
+        val arrayBasedAsserts = arrayAssert.dynamicAsserts(arrayValue.toFactStore("BODY"))
         assertThat(arrayBasedAsserts.size).isEqualTo(3)
         arrayBasedAsserts.forEachIndexed { index, it ->
             assertThat(it).isInstanceOf(AssertComparison::class.java)
-            it as AssertComparison
             assertThat(it.keys).containsExactly("BODY", "[$index]", "name")
             assertThat(it.lookupKey).isEqualTo("ENTITY.name")
             assertThat(it.isEqualityCheck).isTrue
         }
 
-        val jsonBasedAsserts = assert.dynamicAsserts(jsonValue.toFactStore("BODY"))
+        val objectAssert = AssertComparison(keys = listOf("BODY", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)
+        val jsonBasedAsserts = objectAssert.dynamicAsserts(jsonValue.toFactStore("BODY"))
         assertThat(jsonBasedAsserts.size).isEqualTo(1)
         assertThat(jsonBasedAsserts).allSatisfy {
             assertThat(it).isInstanceOf(AssertComparison::class.java)
@@ -141,7 +137,6 @@ class AssertComparisonTest {
         val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, actualStore)
-        println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).containsIgnoringWhitespaces("""
@@ -158,7 +153,6 @@ class AssertComparisonTest {
         val currentStore = emptyMap<String, Value>()
 
         val result = assert.assert(currentStore, actualStore)
-        println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).containsIgnoringWhitespaces("""
@@ -175,7 +169,7 @@ class AssertComparisonTest {
         val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, actualStore)
-        println(result.reportString())
+
         assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 }

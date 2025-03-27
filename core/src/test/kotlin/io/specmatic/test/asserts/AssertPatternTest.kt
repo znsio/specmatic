@@ -102,11 +102,11 @@ class AssertPatternTest {
     @Test
     fun `should be able to create dynamic asserts based on prefix value`() {
         val resolver = Resolver()
-        val assert = AssertPattern(keys = listOf("BODY", "name"), pattern = parsedPattern("(string)"), resolver)
+        val arrayAssert = AssertPattern(keys = listOf("BODY", "[*]", "name"), pattern = parsedPattern("(string)"), resolver)
         val jsonValue = JSONObjectValue(mapOf("name" to NumberValue(100)))
         val arrayValue = JSONArrayValue(List(3) { jsonValue })
 
-        val arrayBasedAsserts = assert.dynamicAsserts(arrayValue.toFactStore("BODY"))
+        val arrayBasedAsserts = arrayAssert.dynamicAsserts(arrayValue.toFactStore("BODY"))
         assertThat(arrayBasedAsserts.size).isEqualTo(3)
         arrayBasedAsserts.forEachIndexed { index, it ->
             assertThat(it).isInstanceOf(AssertPattern::class.java); it as AssertPattern
@@ -114,7 +114,8 @@ class AssertPatternTest {
             assertThat(it.pattern).isInstanceOf(StringPattern::class.java)
         }
 
-        val jsonBasedAsserts = assert.dynamicAsserts(jsonValue.toFactStore("BODY"))
+        val objectAssert = AssertPattern(keys = listOf("BODY", "name"), pattern = parsedPattern("(string)"), resolver)
+        val jsonBasedAsserts = objectAssert.dynamicAsserts(jsonValue.toFactStore("BODY"))
         assertThat(jsonBasedAsserts.size).isEqualTo(1)
         assertThat(jsonBasedAsserts).allSatisfy {
             assertThat(it).isInstanceOf(AssertPattern::class.java); it as AssertPattern
@@ -126,7 +127,7 @@ class AssertPatternTest {
     @Test
     fun `should assert all array values based on dynamic asserts when prefix value is an array`() {
         val resolver = Resolver()
-        val assert = AssertPattern(keys = listOf("BODY", "name"), pattern = parsedPattern("(string)"), resolver)
+        val assert = AssertPattern(keys = listOf("BODY", "[*]", "name"), pattern = parsedPattern("(string)"), resolver)
 
         val jsonValue = JSONObjectValue(mapOf("name" to NumberValue(100)))
         val arrayValue = JSONArrayValue(List(3) { jsonValue })

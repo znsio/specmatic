@@ -32,10 +32,11 @@ interface Assert {
         val currentKey = remainingKeys.first()
         val newBase = (pathSoFar + currentKey).combinedKey()
         val currentValue = store[newBase] ?: ifNotExists(newBase)
+        val nextRemainingKeys = remainingKeys.drop(1)
 
-        return currentValue.suffixIfMoreThanOne { suffix, _ ->
+        return currentValue.getSuffixIfArray(nextRemainingKeys) { keys, suffix ->
             val newPathSoFar = (pathSoFar + currentKey + suffix).filter(String::isNotEmpty)
-            generateDynamicPaths(remainingKeys.drop(1), store, newPathSoFar, ifNotExists)
+            generateDynamicPaths(keys, store, newPathSoFar, ifNotExists)
         }
     }
 
@@ -82,11 +83,18 @@ fun parsedAssert(prefix: String, key: String, value: Value, resolver: Resolver =
     return Assert.parse(keys, value, resolver)
 }
 
-fun <T> Value.suffixIfMoreThanOne(block: (suffix: String, suffixValue: Value) -> List<T>): List<T> {
+fun <T> Value.getSuffixIfArray(remainingKeys: List<String>, block: (List<String>, String) -> List<T>): List<T> {
     return when (this) {
-        is JSONArrayValue -> this.list.flatMapIndexed { index, value -> block("[$index]", value) }
-        else -> block("", this)
+        is JSONArrayValue -> {
+            if (remainingKeys.isEmpty()) return block(remainingKeys, "")
+            this.list.indices.flatMap { block(remainingKeys.removeFirst("[*]"), "[$it]") }
+        }
+        else -> block(remainingKeys, "")
     }
+}
+
+private fun List<String>.removeFirst(predicate: String): List<String> {
+    return if (this.first() == predicate) this.drop(1) else this
 }
 
 fun <T> String.isKeyAssert(block: (String) -> T): T? {

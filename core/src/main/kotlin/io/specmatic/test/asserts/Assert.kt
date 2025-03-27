@@ -77,9 +77,7 @@ interface Assert {
 }
 
 fun parsedAssert(prefix: String, key: String, value: Value, resolver: Resolver = Resolver()): Assert? {
-    val prefixKeys = prefix.split('.').filter(String::isNotEmpty)
-    val keyParts = key.split('.').filter(String::isNotEmpty)
-    val keys = if (prefixKeys.takeLast(keyParts.size) == keyParts) prefixKeys else prefixKeys + keyParts
+    val keys = "$prefix.$key".splitBySeparators()
     return Assert.parse(keys, value, resolver)
 }
 
@@ -95,6 +93,16 @@ fun <T> Value.getSuffixIfArray(remainingKeys: List<String>, block: (List<String>
 
 private fun List<String>.removeFirst(predicate: String): List<String> {
     return if (this.first() == predicate) this.drop(1) else this
+}
+
+private fun String.splitBySeparators(): List<String> {
+    return split(".").flatMap { part ->
+        when {
+            part.startsWith("[*]") -> listOf("[*]", part.removePrefix("[*]"))
+            part.endsWith("[*]") -> listOf(part.removeSuffix("[*]"), "[*]")
+            else -> listOf(part)
+        }
+    }.filter(String::isNotEmpty)
 }
 
 fun <T> String.isKeyAssert(block: (String) -> T): T? {

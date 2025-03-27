@@ -2,6 +2,7 @@ package io.specmatic.test.asserts
 
 import io.ktor.http.*
 import io.specmatic.core.Result
+import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
@@ -9,6 +10,16 @@ import io.specmatic.core.value.Value
 enum class ArrayAssertType { ARRAY_HAS }
 
 class AssertArray(override val keys: List<String>, val lookupKey: String, val arrayAssertType: ArrayAssertType): Assert {
+
+    init {
+        require(keys[keys.lastIndex - 1].matches("\\[\\*]|\\[\\d+]".toRegex())) {
+            throw ContractException(
+                breadCrumb = combinedKey,
+                errorMessage = "Array Asserts can only be used on arrays"
+            )
+        }
+    }
+
     override fun execute(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
         return AssertComparison(keys = keys, lookupKey = lookupKey, isEqualityCheck = true).execute(currentFactStore, actualFactStore)
     }

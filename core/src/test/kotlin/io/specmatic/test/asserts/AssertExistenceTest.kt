@@ -13,10 +13,10 @@ import org.junit.jupiter.params.provider.CsvSource
 class AssertExistenceTest {
     @ParameterizedTest
     @CsvSource(
-        "REQUEST.BODY.name, name, exists",
-        "REQUEST.BODY,      name, not_exists",
-        "REQUEST.BODY.name, name, is_null",
-        "REQUEST.BODY,      name, is_not_null",
+        "REQUEST.BODY, name, exists",
+        "REQUEST.BODY, name, not_exists",
+        "REQUEST.BODY, name, is_null",
+        "REQUEST.BODY, name, is_not_null",
     )
     fun `should be able to parse assertions`(prefix: String, key: String, checkTypeString: String) {
         val checkType = ExistenceCheckType.fromString(checkTypeString)!!

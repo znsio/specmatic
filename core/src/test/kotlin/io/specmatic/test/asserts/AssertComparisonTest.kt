@@ -24,9 +24,7 @@ class AssertComparisonTest {
 
     @ParameterizedTest
     @CsvSource(
-        "REQUEST.BODY.name, name, ENTITY.name, true",
         "REQUEST.BODY, name, ENTITY.name, true",
-        "REQUEST.BODY.name, name, ENTITY.name, false",
         "REQUEST.BODY, name, ENTITY.name, false"
     )
     fun `should be able to parse equal and not equal assertions`(prefix: String, key: String, lookupKey: String, isEqualityCheck: Boolean) {

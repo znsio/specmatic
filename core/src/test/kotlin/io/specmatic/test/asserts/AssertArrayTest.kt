@@ -20,17 +20,16 @@ class AssertArrayTest {
         val value = StringValue("\$${assertType}($lookupKey)")
 
         println("value: $value, prefix: $prefix, key: $key, lookupKey: $lookupKey, assertType: $assertType")
-        val assert = AssertArray.parse(prefix, key, value)
-        assertThat(assert).isNotNull.isInstanceOf(AssertArray::class.java)
-        assertThat(assert!!.prefix).isEqualTo("REQUEST.BODY")
-        assertThat(assert.key).isEqualTo(key)
+        val assert = parsedAssert(prefix, key, value)
+        assertThat(assert).isNotNull.isInstanceOf(AssertArray::class.java); assert as AssertArray
+        assertThat(assert.keys).containsExactly("REQUEST", "BODY", "name")
         assertThat(assert.lookupKey).isEqualTo(lookupKey)
         assertThat(assert.arrayAssertType).isEqualTo(ArrayAssertType.ARRAY_HAS)
     }
 
     @Test
     fun `should return success when array contains expected value`() {
-        val assert = AssertArray(prefix = "REQUEST.BODY", key = "name", lookupKey = "ENTITY.name", arrayAssertType = ArrayAssertType.ARRAY_HAS)
+        val assert = AssertArray(keys = listOf("BODY", "name"), lookupKey = "ENTITY.name", arrayAssertType = ArrayAssertType.ARRAY_HAS)
 
         val actualStore = mapOf("ENTITY.name" to StringValue("John"))
         val bodyValue = JSONArrayValue(
@@ -40,17 +39,15 @@ class AssertArrayTest {
                 JSONObjectValue(mapOf("name" to StringValue("May")))
             )
         )
-        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
-
+        val currentStore = bodyValue.toFactStore("BODY")
         val result = assert.assert(currentStore, actualStore)
-        println(result.reportString())
 
-        assertThat(result).isInstanceOf(Result.Success::class.java)
+        assertThat(result).withFailMessage(result.reportString()).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `should return failure when array does not contain expected value`() {
-        val assert = AssertArray(prefix = "REQUEST.BODY", key = "name", lookupKey = "ENTITY.name", arrayAssertType = ArrayAssertType.ARRAY_HAS)
+        val assert = AssertArray(keys = listOf("BODY", "name"), lookupKey = "ENTITY.name", arrayAssertType = ArrayAssertType.ARRAY_HAS)
 
         val actualStore = mapOf("ENTITY.name" to StringValue("John"))
         val bodyValue = JSONArrayValue(
@@ -59,33 +56,33 @@ class AssertArrayTest {
                 JSONObjectValue(mapOf("name" to StringValue("May")))
             )
         )
-        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+        val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, actualStore)
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).containsIgnoringWhitespaces("""
-        >> REQUEST.BODY
-        None of the values in "REQUEST.BODY[*].name" matched "ENTITY.name" of value "John"
+        >> BODY[*].name
+        None of the values matched "ENTITY.name" of value "John"
         """.trimIndent())
     }
 
     @Test
     fun `should return failure when the value is not an array`() {
-        val assert = AssertArray(prefix = "REQUEST.BODY", key = "name", lookupKey = "ENTITY.name", arrayAssertType = ArrayAssertType.ARRAY_HAS)
+        val assert = AssertArray(keys = listOf("BODY", "name"), lookupKey = "ENTITY.name", arrayAssertType = ArrayAssertType.ARRAY_HAS)
 
         val actualStore = mapOf("ENTITY.name" to StringValue("John"))
         val bodyValue = JSONObjectValue(mapOf("name" to StringValue("Jane")))
-        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+        val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, actualStore)
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).containsIgnoringWhitespaces("""
-        >> REQUEST.BODY
-        Expected "REQUEST.BODY" to be an array
+        >> BODY.name
+        None of the values matched "ENTITY.name" of value "John"
         """.trimIndent())
     }
 }

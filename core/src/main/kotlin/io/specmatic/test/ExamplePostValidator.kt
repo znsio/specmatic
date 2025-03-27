@@ -55,10 +55,12 @@ object ExamplePostValidator: ResponseValidator {
             "RESPONSE.HEADERS.${it.key}" to StringValue(it.value)
         }.toMap()
 
-        return this.body.traverse(
+        val body = this.body.traverse(
             prefix = "RESPONSE.BODY",
             onScalar = { value, key -> mapOf(key to value) },
             onComposite = { value, key -> mapOf(key to value) }
-        ) + headers
+        )
+
+        return mapOf("RESPONSE" to this.toJSON()) + body + headers
     }
 }

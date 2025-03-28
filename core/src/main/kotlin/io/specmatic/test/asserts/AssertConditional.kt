@@ -22,11 +22,17 @@ class AssertConditional(override val keys: List<String>, val conditionalAsserts:
     private fun collectDynamicAsserts(currentFactStore: Map<String, Value>, asserts: List<Assert>, dynamicPaths: List<List<String>>): List<List<Assert>> {
         if (asserts.isEmpty()) return emptyList()
         val dynamicAsserts = asserts.flatMap { it.dynamicAsserts(currentFactStore) { NullValue } }
-        return dynamicPaths.map { path -> dynamicAsserts.filter { assert -> assert.keys.startsWith(path) } }
+        return dynamicPaths.map { path -> dynamicAsserts.filter { assert -> assert.keys.withWildCardStartsWith(path) } }
     }
 
-    private fun List<String>.startsWith(prefix: List<String>): Boolean {
-        return this.take(prefix.size) == prefix
+    private fun List<String>.withWildCardStartsWith(prefix: List<String>): Boolean {
+        return this.take(prefix.size).zip(prefix).all { (current, expected) ->
+            current == expected || current.isWildcardMatch(expected)
+        }
+    }
+
+    private fun String.isWildcardMatch(other: String): Boolean {
+        return (this.startsWith("[") && other == WILDCARD_INDEX) || (other.startsWith("[") && this == WILDCARD_INDEX)
     }
 
     override fun dynamicAsserts(currentFactStore: Map<String, Value>, ifNotExists: (String) -> Value): List<AssertConditional> {

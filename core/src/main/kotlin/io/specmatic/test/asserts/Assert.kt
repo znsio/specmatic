@@ -10,6 +10,7 @@ import io.specmatic.core.value.ScalarValue
 import io.specmatic.core.value.Value
 
 val ASSERT_KEYS = setOf("\$if", "\$then", "\$else")
+const val WILDCARD_INDEX = "[*]"
 
 interface Assert {
     fun assert(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
@@ -52,6 +53,10 @@ interface Assert {
         return this.filter(String::isNotEmpty).reduce { acc, key -> if (key.startsWith("[")) acc + key else "$acc.$key" }
     }
 
+    fun List<String>.withWildCard(): List<String> {
+        return this.map { if (it.startsWith("[")) WILDCARD_INDEX else it }
+    }
+
     companion object {
         fun parse(keys: List<String>, value: Value, resolver: Resolver): Assert? {
             return when (keys.last()) {
@@ -85,7 +90,7 @@ fun <T> Value.getSuffixIfArray(remainingKeys: List<String>, block: (List<String>
     return when (this) {
         is JSONArrayValue -> {
             if (remainingKeys.isEmpty()) return block(remainingKeys, "")
-            this.list.indices.flatMap { block(remainingKeys.removeFirst("[*]"), "[$it]") }
+            this.list.indices.flatMap { block(remainingKeys.removeFirst(WILDCARD_INDEX), "[$it]") }
         }
         else -> block(remainingKeys, "")
     }
@@ -98,8 +103,8 @@ private fun List<String>.removeFirst(predicate: String): List<String> {
 private fun String.splitBySeparators(): List<String> {
     return split(".").flatMap { part ->
         when {
-            part.startsWith("[*]") -> listOf("[*]", part.removePrefix("[*]"))
-            part.endsWith("[*]") -> listOf(part.removeSuffix("[*]"), "[*]")
+            part.startsWith(WILDCARD_INDEX) -> listOf(WILDCARD_INDEX, part.removePrefix(WILDCARD_INDEX))
+            part.endsWith(WILDCARD_INDEX) -> listOf(part.removeSuffix(WILDCARD_INDEX), WILDCARD_INDEX)
             else -> listOf(part)
         }
     }.filter(String::isNotEmpty)

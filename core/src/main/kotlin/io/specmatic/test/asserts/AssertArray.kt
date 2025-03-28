@@ -27,12 +27,6 @@ class AssertArray(override val keys: List<String>, val lookupKey: String, val ar
         return results.toResultIfAny(currentFactStore, actualFactStore)
     }
 
-    private fun List<String>.wildCardIndex(): String {
-        return this.reduce { acc, key ->
-            if (key.startsWith("[")) "$acc[*]" else "$acc.$key"
-        }
-    }
-
     private fun List<Result>.toResultIfAny(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
         val expectedValue = actualFactStore[lookupKey] ?: return Result.Failure(
             breadCrumb = lookupKey,
@@ -41,7 +35,7 @@ class AssertArray(override val keys: List<String>, val lookupKey: String, val ar
 
         val indexedKeys = generateDynamicPaths(keys, currentFactStore) { NullValue }.firstOrNull() ?: keys
         return this.firstOrNull { it is Result.Success } ?: Result.Failure(
-            breadCrumb = indexedKeys.wildCardIndex(),
+            breadCrumb = indexedKeys.withWildCard().combinedKey(),
             message = "None of the values matched ${lookupKey.quote()} of value ${expectedValue.displayableValue()}",
         )
     }

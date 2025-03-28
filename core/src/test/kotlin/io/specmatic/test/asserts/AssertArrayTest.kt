@@ -4,6 +4,7 @@ import io.specmatic.core.Result
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.test.asserts.AssertComparisonTest.Companion.toFactStore
 import org.assertj.core.api.Assertions.assertThat
@@ -124,5 +125,69 @@ class AssertArrayTest {
             assertThat(it.lookupKey).isEqualTo("ENTITY.name")
             assertThat(it.arrayAssertType).isEqualTo(ArrayAssertType.ARRAY_HAS)
         }
+    }
+
+    @Test
+    fun `when nested in conditional assert should assert on array and not items in array`() {
+        val arrayAssert = AssertArray(
+            keys = listOf("BODY", "[*]", "details", "[*]", "name"),
+            lookupKey = "ENTITY.name",
+            arrayAssertType = ArrayAssertType.ARRAY_HAS
+        )
+        val conditionalAssert = AssertConditional(
+            keys = listOf("BODY", "[*]", "details", "[*]"),
+            conditionalAsserts = listOf(arrayAssert),
+            thenAsserts = listOf(AssertComparison(listOf("BODY", "[*]", "details", "[*]", "age"), lookupKey = "ENTITY.age", isEqualityCheck = true)),
+            elseAsserts = emptyList()
+        )
+        val value = JSONArrayValue(List(3) {
+            JSONObjectValue(mapOf(
+                "details" to JSONArrayValue(List(2) { index ->
+                    if (index == 0) {
+                        JSONObjectValue(mapOf("name" to StringValue("John"), "age" to NumberValue(2)))
+                    } else {
+                        JSONObjectValue(mapOf("name" to StringValue("Jane"), "age" to NumberValue(2)))
+                    }
+                })
+            ))
+        })
+        val currentStore = value.toFactStore("BODY")
+
+        val dynamicAsserts = conditionalAssert.dynamicAsserts(currentStore)
+        val expectedKeys = listOf(
+            listOf("BODY", "[0]", "details", "[0]"),
+            listOf("BODY", "[0]", "details", "[1]"),
+            listOf("BODY", "[1]", "details", "[0]"),
+            listOf("BODY", "[1]", "details", "[1]"),
+            listOf("BODY", "[2]", "details", "[0]"),
+            listOf("BODY", "[2]", "details", "[1]")
+        )
+        assertThat(dynamicAsserts.size).isEqualTo(6)
+        dynamicAsserts.forEachIndexed { i, it ->
+            assertThat(it).isInstanceOf(AssertConditional::class.java)
+            assertThat(it.keys).containsExactlyElementsOf(expectedKeys[i])
+
+            assertThat(it.conditionalAsserts).hasSize(1)
+            assertThat(it.conditionalAsserts).allSatisfy { assert ->
+                assertThat(assert).isInstanceOf(AssertArray::class.java); assert as AssertArray
+                assertThat(assert.keys).containsExactly("BODY", expectedKeys[i][1], "details", "[*]", "name")
+                assertThat(assert.lookupKey).isEqualTo("ENTITY.name")
+                assertThat(assert.arrayAssertType).isEqualTo(ArrayAssertType.ARRAY_HAS)
+            }
+
+            assertThat(it.thenAsserts).hasSize(1)
+            assertThat(it.thenAsserts).allSatisfy { assert ->
+                assertThat(assert).isInstanceOf(AssertComparison::class.java); assert as AssertComparison
+                assertThat(assert.keys).containsExactlyElementsOf(expectedKeys[i] + "age")
+                assertThat(assert.lookupKey).isEqualTo("ENTITY.age")
+                assertThat(assert.isEqualityCheck).isTrue
+            }
+
+            assertThat(it.elseAsserts).isEmpty()
+        }
+
+        val actualStore = mapOf("ENTITY.name" to StringValue("John"), "ENTITY.age" to NumberValue(2))
+        val result = conditionalAssert.assert(currentStore, actualStore)
+        assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 }

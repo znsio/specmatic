@@ -21,7 +21,10 @@ class AssertArray(override val keys: List<String>, val lookupKey: String, val ar
     }
 
     override fun execute(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
-        return AssertComparison(keys = keys, lookupKey = lookupKey, isEqualityCheck = true).execute(currentFactStore, actualFactStore)
+        val comparisonAssert = AssertComparison(keys, lookupKey, isEqualityCheck = true)
+        val asserts = runCatching { comparisonAssert.dynamicAsserts(currentFactStore) }.getOrElse { e -> return e.toFailure() }
+        val results = asserts.map { it.execute(currentFactStore, actualFactStore) }
+        return results.toResultIfAny(currentFactStore, actualFactStore)
     }
 
     private fun List<String>.wildCardIndex(): String {
@@ -30,7 +33,7 @@ class AssertArray(override val keys: List<String>, val lookupKey: String, val ar
         }
     }
 
-    override fun List<Result>.toResult(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
+    private fun List<Result>.toResultIfAny(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
         val expectedValue = actualFactStore[lookupKey] ?: return Result.Failure(
             breadCrumb = lookupKey,
             message = "Could not resolve ${lookupKey.quote()} in store"
@@ -44,8 +47,10 @@ class AssertArray(override val keys: List<String>, val lookupKey: String, val ar
     }
 
     override fun dynamicAsserts(currentFactStore: Map<String, Value>, ifNotExists: (String) -> Value): List<AssertArray> {
-        return this.generateDynamicPaths(keys, currentFactStore, ifNotExists = ifNotExists).map { keys ->
-            AssertArray(keys, lookupKey, arrayAssertType)
+        val keysWithoutAssertingArray = keys.subList(0, keys.size - 2)
+        val assertingArrayKeys= keys.subList(keys.size - 2, keys.size)
+        return this.generateDynamicPaths(keysWithoutAssertingArray, currentFactStore, ifNotExists = ifNotExists).map { keys ->
+            AssertArray(keys + assertingArrayKeys, lookupKey, arrayAssertType)
         }
     }
 

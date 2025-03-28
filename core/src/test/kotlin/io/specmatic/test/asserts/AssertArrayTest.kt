@@ -99,4 +99,30 @@ class AssertArrayTest {
         Array Asserts can only be used on arrays
         """.trimIndent())
     }
+
+    @Test
+    fun `should be able to create dynamic asserts based on keys`() {
+        val arrayAssert = AssertArray(
+            keys = listOf("BODY", "[*]", "details", "[*]", "name"),
+            lookupKey = "ENTITY.name",
+            arrayAssertType = ArrayAssertType.ARRAY_HAS
+        )
+
+        val value = JSONArrayValue(List(3) {
+            JSONObjectValue(mapOf(
+                "details" to JSONArrayValue(List(2) {
+                    JSONObjectValue(mapOf("name" to StringValue("John")))
+                })
+            ))
+        })
+        val dynamicAsserts = arrayAssert.dynamicAsserts(value.toFactStore("BODY"))
+
+        assertThat(dynamicAsserts.size).isEqualTo(3)
+        dynamicAsserts.forEachIndexed { index, it ->
+            assertThat(it).isInstanceOf(AssertArray::class.java); it as AssertArray
+            assertThat(it.keys).containsExactly("BODY", "[$index]", "details", "[*]", "name")
+            assertThat(it.lookupKey).isEqualTo("ENTITY.name")
+            assertThat(it.arrayAssertType).isEqualTo(ArrayAssertType.ARRAY_HAS)
+        }
+    }
 }

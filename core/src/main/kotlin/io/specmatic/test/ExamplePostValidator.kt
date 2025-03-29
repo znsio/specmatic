@@ -12,7 +12,7 @@ object ExamplePostValidator: ResponseValidator {
         if (scenario.isNegative) return null
         val asserts  = scenario.exampleRow?.toAsserts(scenario)?.takeIf { it.isNotEmpty() } ?: return null
 
-        val actualFactStore = httpRequest.toFactStore() + ExampleProcessor.getFactStore()
+        val actualFactStore = httpRequest.toFactStore(scenario) + ExampleProcessor.getFactStore()
         val currentFactStore = httpResponse.toFactStore()
 
         val results = asserts.map { it.assert(currentFactStore, actualFactStore) }
@@ -34,33 +34,28 @@ object ExamplePostValidator: ResponseValidator {
         ).values.filterNotNull() + headerAsserts
     }
 
-    private fun HttpRequest.toFactStore(): Map<String, Value> {
-        val queryParams = this.queryParams.asMap().map {
-            "REQUEST.QUERY-PARAMS.${it.key}" to StringValue(it.value)
-        }.toMap()
+    private fun HttpRequest.toFactStore(scenario: Scenario): Map<String, Value> {
+        val pathParams = if(scenario.httpRequestPattern.httpPathPattern != null && this.path != null) {
+            scenario.httpRequestPattern.httpPathPattern.extractPathParams(this.path, scenario.resolver).toFactStore("REQUEST.PATH-PARAMS")
+        } else emptyMap()
 
-        val headers = this.headers.map {
-            "REQUEST.HEADERS.${it.key}" to StringValue(it.value)
-        }.toMap()
+        val queryParams = queryParams.asMap().toFactStore("REQUEST.QUERY-PARAMS")
+        val headers = headers.toFactStore("REQUEST.HEADERS")
 
-        return this.body.traverse(
-            prefix = "REQUEST.BODY",
-            onScalar = { value, key -> mapOf(key to value) },
-            onComposite = { value, key -> mapOf(key to value) }
-        ) + queryParams + headers
+        return body.traverse(
+            prefix = "REQUEST.BODY", onScalar = ::toFactEntry, onComposite = ::toFactEntry
+        ) + pathParams + queryParams + headers + mapOf("REQUEST" to this.toJSON())
     }
 
     private fun HttpResponse.toFactStore(): Map<String, Value> {
-        val headers = this.headers.map {
-            "RESPONSE.HEADERS.${it.key}" to StringValue(it.value)
-        }.toMap()
+        val headers = headers.toFactStore("RESPONSE.HEADERS")
 
-        val body = this.body.traverse(
-            prefix = "RESPONSE.BODY",
-            onScalar = { value, key -> mapOf(key to value) },
-            onComposite = { value, key -> mapOf(key to value) }
-        )
-
-        return mapOf("RESPONSE" to this.toJSON()) + body + headers
+        return body.traverse(
+            prefix = "RESPONSE.BODY", onScalar = ::toFactEntry, onComposite = ::toFactEntry
+        ) + headers + mapOf("RESPONSE" to this.toJSON())
     }
+
+    private fun Map<String, String>.toFactStore(prefix: String) = mapKeys { "$prefix.${it.key}" }.mapValues { StringValue(it.value) }
+
+    private fun toFactEntry(value: Value, prefix: String): Map<String, Value> = mapOf(prefix to value)
 }

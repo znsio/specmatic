@@ -31,14 +31,28 @@ interface Assert {
         if (remainingKeys.isEmpty()) return listOf(pathSoFar)
 
         val currentKey = remainingKeys.first()
-        val newBase = (pathSoFar + currentKey).combinedKey()
-        val currentValue = store[newBase] ?: ifNotExists(newBase)
         val nextRemainingKeys = remainingKeys.drop(1)
 
-        return currentValue.getSuffixIfArray(nextRemainingKeys) { keys, suffix ->
-            val newPathSoFar = (pathSoFar + currentKey + suffix).filter(String::isNotEmpty)
-            generateDynamicPaths(keys, store, newPathSoFar, ifNotExists)
+        if (currentKey == WILDCARD_INDEX) {
+            val currentBase = pathSoFar.combinedKey()
+            val currentValue = store[currentBase] ?: ifNotExists(currentBase)
+            if (currentValue !is JSONArrayValue) {
+                throw ContractException(
+                    breadCrumb = currentBase,
+                    errorMessage = "Expected ${JSONArrayValue(emptyList()).displayableType()} but found ${currentValue.displayableType()}"
+                )
+            }
+
+            return currentValue.list.indices.flatMap { index ->
+                val newPathSoFar = (pathSoFar + "[$index]").filter(String::isNotEmpty)
+                generateDynamicPaths(nextRemainingKeys, store, newPathSoFar, ifNotExists)
+            }
         }
+
+        val currentBase = (pathSoFar + currentKey).combinedKey()
+        store[currentBase] ?: ifNotExists(currentBase)
+        val newPathSoFar = (pathSoFar + currentKey).filter(String::isNotEmpty)
+        return generateDynamicPaths(nextRemainingKeys, store, newPathSoFar, ifNotExists)
     }
 
     fun List<Result>.toResult(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
@@ -86,28 +100,8 @@ fun parsedAssert(prefix: String, key: String, value: Value, resolver: Resolver =
     return Assert.parse(keys, value, resolver)
 }
 
-fun <T> Value.getSuffixIfArray(remainingKeys: List<String>, block: (List<String>, String) -> List<T>): List<T> {
-    return when (this) {
-        is JSONArrayValue -> {
-            if (remainingKeys.isEmpty()) return block(remainingKeys, "")
-            this.list.indices.flatMap { block(remainingKeys.removeFirst(WILDCARD_INDEX), "[$it]") }
-        }
-        else -> block(remainingKeys, "")
-    }
-}
-
-private fun List<String>.removeFirst(predicate: String): List<String> {
-    return if (this.first() == predicate) this.drop(1) else this
-}
-
 private fun String.splitBySeparators(): List<String> {
-    return split(".").flatMap { part ->
-        when {
-            part.startsWith(WILDCARD_INDEX) -> listOf(WILDCARD_INDEX, part.removePrefix(WILDCARD_INDEX))
-            part.endsWith(WILDCARD_INDEX) -> listOf(part.removeSuffix(WILDCARD_INDEX), WILDCARD_INDEX)
-            else -> listOf(part)
-        }
-    }.filter(String::isNotEmpty)
+    return this.replace(WILDCARD_INDEX, "|$WILDCARD_INDEX|").split(".", "|").filter(String::isNotEmpty)
 }
 
 fun <T> String.isKeyAssert(block: (String) -> T): T? {

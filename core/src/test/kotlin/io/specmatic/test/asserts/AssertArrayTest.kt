@@ -84,8 +84,8 @@ class AssertArrayTest {
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).containsIgnoringWhitespaces("""
-        >> BODY[*]
-        Could not resolve "BODY[*]" in response
+        >> BODY
+        Expected json array but found json object
         """.trimIndent())
     }
 

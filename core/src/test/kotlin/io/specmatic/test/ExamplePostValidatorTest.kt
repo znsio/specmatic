@@ -299,6 +299,23 @@ class ExamplePostValidatorTest {
         """.trimIndent())
     }
 
+    @Test
+    fun `should be able to assert on request path parameters`() {
+        val scenario = scenarioFrom(
+            responseExampleForAssertion = HttpResponse(body = parsedValue("""{"id": "${"$"}eq(REQUEST.PATH-PARAMS.id)"}""".trimIndent())),
+            httpRequestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/users/(id:number)"), method = "GET")
+        )
+        val request = HttpRequest(method = "GET", path = "/users/123")
+        val response = HttpResponse(body = parsedValue("""{"id": 456}"""))
+        val result = ExamplePostValidator.postValidate(scenario, request, response)
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java); result as Result.Failure
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        >> RESPONSE.BODY.id
+        Expected 456 to equal "123"
+        """.trimIndent())
+    }
+
     companion object {
         fun scenarioFrom(
             responseExampleForAssertion: HttpResponse,

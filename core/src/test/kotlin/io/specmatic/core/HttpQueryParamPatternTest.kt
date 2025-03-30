@@ -665,6 +665,16 @@ class HttpQueryParamPatternTest {
             println(fixedValue)
             assertThat(fixedValue.asMap()).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
         }
+
+        @Test
+        fun `should not add missing mandatory keys when resolver is set to partial`() {
+            val httpQueryPattern = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val resolver = Resolver(findKeyErrorCheck = PARTIAL_KEYCHECK, dictionary = mapOf("(number)" to NumberValue(999), "(boolean)" to BooleanValue(true)))
+            val partialInvalidValue = QueryParameters(mapOf("number" to "(string)"))
+            val fixedValue = httpQueryPattern.fixValue(partialInvalidValue, resolver)
+
+            assertThat(fixedValue.asMap()).isEqualTo(mapOf("number" to "999"))
+        }
     }
 
     @Nested

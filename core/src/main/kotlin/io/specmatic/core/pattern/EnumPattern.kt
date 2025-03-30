@@ -80,6 +80,10 @@ data class EnumPattern(
         else pattern.fillInTheBlanks(value, resolver)
     }
 
+    override fun fixValue(value: Value, resolver: Resolver): Value {
+        return value.takeIf { this.matches(value, resolver).isSuccess() } ?: resolver.generate(this)
+    }
+
     override fun equals(other: Any?): Boolean = other is EnumPattern && other.pattern == this.pattern
 
     override fun hashCode(): Int = pattern.hashCode()

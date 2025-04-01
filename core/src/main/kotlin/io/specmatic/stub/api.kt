@@ -135,8 +135,6 @@ internal fun createStub(
             loadContractStubsFromFiles(contractStubPaths, dataDirPaths, specmaticConfig, strict, withImplicitStubs = true)
         }
 
-        LifecycleHooks.afterLoadingStaticExamples.call(ExamplesUsedFor.Stub, stubs)
-
         val features = stubs.map { it.first }
         val expectations = contractInfoToHttpExpectations(stubs)
 
@@ -403,9 +401,7 @@ fun loadContractStubsFromFiles(
         processedInvalidSpecs = contractPathDataList.filter { isInvalidOpenAPISpecification(it.path) }.map { it.path }
     )
 
-    return explicitStubs.plus(implicitStubs).also {
-        LifecycleHooks.afterLoadingStaticExamples.call(ExamplesUsedFor.Stub, it)
-    }
+    return explicitStubs.plus(implicitStubs)
 }
 
 private fun debugLogNonExistentDataFiles(dataDirPaths: List<String>) {

@@ -1,28 +1,12 @@
 @file:JvmName("API")
 package io.specmatic.stub
 
-import io.specmatic.core.CONTRACT_EXTENSION
-import io.specmatic.core.CONTRACT_EXTENSIONS
-import io.specmatic.core.CommandHook
-import io.specmatic.core.ContractAndStubMismatchMessages
-import io.specmatic.core.DATA_DIR_SUFFIX
-import io.specmatic.core.Feature
-import io.specmatic.core.HookName
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.MISSING_CONFIG_FILE_MESSAGE
-import io.specmatic.core.OPENAPI_FILE_EXTENSIONS
-import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.WorkingDirectory
-import io.specmatic.core.getConfigFilePath
+import io.specmatic.core.*
 import io.specmatic.core.git.SystemGit
-import io.specmatic.core.isContractFile
-import io.specmatic.core.loadSpecmaticConfigOrDefault
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
-import io.specmatic.core.parseContractFileToFeature
-import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.ContractPathData.Companion.specToPortMap
 import io.specmatic.core.utilities.contractStubPaths
@@ -148,6 +132,9 @@ internal fun createStub(
         } else {
             loadContractStubsFromFiles(contractStubPaths, dataDirPaths, specmaticConfig, strict, withImplicitStubs = true)
         }
+
+        LifecycleHooks.afterLoadingStaticExamples.call(ExamplesUsedFor.Stub, stubs)
+
         val features = stubs.map { it.first }
         val expectations = contractInfoToHttpExpectations(stubs)
 

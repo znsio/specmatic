@@ -1,14 +1,7 @@
-package io.specmatic.core
+package io.specmatic.core.lifecycle
 
+import io.specmatic.core.Feature
 import io.specmatic.mock.ScenarioStub
-
-enum class ExamplesUsedFor {
-    Test, Stub, Validation
-}
-
-interface AfterLoadingStaticExamples {
-    fun call(examplesUsedFor: ExamplesUsedFor, examples: List<Pair<Feature, List<ScenarioStub>>>)
-}
 
 object LifecycleHooks {
     var afterLoadingStaticExamples: AfterLoadingStaticExamples = object : AfterLoadingStaticExamples {

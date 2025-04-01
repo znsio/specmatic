@@ -3,6 +3,8 @@ package io.specmatic.stub
 
 import io.specmatic.core.*
 import io.specmatic.core.git.SystemGit
+import io.specmatic.core.lifecycle.ExamplesUsedFor
+import io.specmatic.core.lifecycle.LifecycleHooks
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.log.consoleLog

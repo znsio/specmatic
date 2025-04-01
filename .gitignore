@@ -20,4 +20,5 @@ perfiz/*_data
 .java-version
 gen-kt/
 gen-resources/
-
+works/
+not-works/

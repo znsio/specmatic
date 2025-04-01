@@ -7,9 +7,10 @@ RUN apk update && \
     apk add --no-cache openjdk17-jre git curl && \
     rm -rf /var/cache/apk/*
 
+ARG VERSION
+
 # Copy the Specmatic JAR file into the container
-COPY ./application/build/libs/specmatic.jar /usr/src/app/specmatic.jar
+COPY ./application/build/libs/application-${VERSION}-all-unobfuscated.jar /usr/src/app/specmatic.jar
 
 # Set the entrypoint to run the Specmatic JAR
 ENTRYPOINT ["java", "-jar", "/usr/src/app/specmatic.jar"]
-

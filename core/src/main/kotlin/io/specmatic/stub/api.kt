@@ -403,7 +403,9 @@ fun loadContractStubsFromFiles(
         processedInvalidSpecs = contractPathDataList.filter { isInvalidOpenAPISpecification(it.path) }.map { it.path }
     )
 
-    return explicitStubs.plus(implicitStubs)
+    return explicitStubs.plus(implicitStubs).also {
+        LifecycleHooks.afterLoadingStaticExamples.call(ExamplesUsedFor.Stub, it)
+    }
 }
 
 private fun debugLogNonExistentDataFiles(dataDirPaths: List<String>) {

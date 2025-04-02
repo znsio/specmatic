@@ -1,0 +1,23 @@
+{
+  "http-request": {
+    "path": "/products",
+    "method": "POST",
+    "body": {
+      "name": "(string)",
+      "type": "book",
+      "inventory": "(number)"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "http-response": {
+    "status": 201,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "id": 103
+    }
+  }
+}

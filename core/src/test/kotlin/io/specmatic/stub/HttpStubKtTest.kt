@@ -32,7 +32,11 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.json.JSONObject
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledOnOs
 import org.junit.jupiter.api.condition.OS
@@ -998,6 +1002,25 @@ paths:
 
             assertThat(response.status).isEqualTo(200)
             assertThat(response.body.toString()).isNotEmpty
+        }
+    }
+
+    @Test
+    fun `should return specific expectation over general`() {
+        createStubFromContracts(listOf("src/test/resources/spec_with_mixed_examples.yaml"), timeoutMillis = 0).use { stub ->
+            val tests = listOf(Triple("Harry Potter", 100, "100"),
+                Triple("Treasure Island", 100, "101"),
+                Triple("Sherlock Holmes", 100, "102"),
+                Triple("A Tale Of Two Cities", 200, "103"))
+
+            tests.forEach { (name, inventory, id) ->
+                val request = HttpRequest("POST", "/products", body = parsedJSONObject("""{"name": "$name", "type": "book", "inventory": $inventory}"""))
+                stub.client.execute(request).let { response ->
+                    val jsonResponse = response.body as JSONObjectValue
+
+                    assertThat(jsonResponse.findFirstChildByName("id")?.toStringLiteral()).isEqualTo(id)
+                }
+            }
         }
     }
 }

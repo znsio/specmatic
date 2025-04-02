@@ -75,7 +75,55 @@ class ThreadSafeListOfStubs(
         return httpStubData.responsePattern.status == expectedResponseCode
     }
 
-    fun matchingNonTransientStub(httpRequest: HttpRequest): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
+    fun matchingNonTransientStaticStub(httpRequest: HttpRequest): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
+        val expectedResponseCode = httpRequest.expectedResponseCode()
+
+        val listMatchResults: List<Pair<Result, HttpStubData>> = matchResults { httpStubData ->
+            httpStubData.filter {
+                hasExpectedResponseCode(it, expectedResponseCode)
+            }.filter { it.partial == null }.map {
+                Pair(it.matches(httpRequest), it)
+            }.plus(partialMatchResults(httpStubData, httpRequest))
+        }
+
+        val mocks = listMatchResults.map { (result, stubData) ->
+            if (result !is Result.Success) return@map Pair(result, stubData)
+
+            val response = if (stubData.partial == null) stubData.response
+            else stubData.responsePattern.fillInTheBlanks(stubData.partial.response, stubData.resolver)
+
+            val stubResponse = HttpStubResponse(
+                response,
+                stubData.delayInMilliseconds,
+                stubData.contractPath,
+                feature = stubData.feature,
+                scenario = stubData.scenario
+            )
+
+            try {
+                val originalRequest =
+                    if (stubData.partial != null) stubData.partial.request
+                    else stubData.originalRequest
+
+                stubResponse.resolveSubstitutions(
+                    httpRequest,
+                    originalRequest ?: httpRequest,
+                    stubData.data
+                )
+
+                result to stubData.copy(response = response)
+            } catch (e: ContractException) {
+                if (isMissingData(e)) Pair(e.failure(), stubData)
+                else throw e
+            }
+        }
+
+        val mock = mocks.find { (result, _) -> result is Result.Success }
+
+        return Pair(mock?.second, listMatchResults)
+    }
+
+    fun matchingNonTransientDynamicStub(httpRequest: HttpRequest): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
         val expectedResponseCode = httpRequest.expectedResponseCode()
 
         val listMatchResults: List<Pair<Result, HttpStubData>> = matchResults { httpStubData ->

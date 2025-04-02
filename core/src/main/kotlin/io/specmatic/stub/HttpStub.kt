@@ -615,12 +615,12 @@ class HttpStub(
 
                 if (stub.stubToken != null) {
                     resultWithRequestBodyRegex.forEach {
-                        httpExpectations.addTransientStub(it, stub)
+                        httpExpectations.addDynamicTransient(it, stub)
                     }
 
                 } else {
                     resultWithRequestBodyRegex.forEach {
-                        httpExpectations.addStub(it, stub)
+                        httpExpectations.addDynamic(it, stub)
                     }
                 }
             }

@@ -5,35 +5,49 @@ import io.specmatic.core.Result
 import io.specmatic.mock.ScenarioStub
 
 class HttpExpectations(
-    private val threadSafeHttpStubs: ThreadSafeListOfStubs = ThreadSafeListOfStubs(mutableListOf(), emptyMap()),
-    private val threadSafeHttpStubQueue: ThreadSafeListOfStubs = ThreadSafeListOfStubs(mutableListOf(), emptyMap())
+    private val nonTransientStatic: ThreadSafeListOfStubs = ThreadSafeListOfStubs(mutableListOf(), emptyMap()),
+    private val transientStatic: ThreadSafeListOfStubs = ThreadSafeListOfStubs(mutableListOf(), emptyMap()),
+    private val nonTransientDynamic: ThreadSafeListOfStubs = ThreadSafeListOfStubs(mutableListOf(), emptyMap())
 ) {
 
-    val stubCount: Int = threadSafeHttpStubs.size
-    val transientStubCount: Int = threadSafeHttpStubQueue.size
+    val stubCount: Int = nonTransientStatic.size
+    val transientStubCount: Int = transientStatic.size
 
     fun removeTransientMock(httpStubData: HttpStubData) {
-        threadSafeHttpStubQueue.remove(httpStubData)
+        transientStatic.remove(httpStubData)
     }
 
     fun removeWithToken(token: String?) {
-        threadSafeHttpStubQueue.removeWithToken(token)
+        transientStatic.removeWithToken(token)
     }
 
-    fun addTransientStub(expectation: Pair<Result.Success, HttpStubData>, stub: ScenarioStub) {
-        return threadSafeHttpStubQueue.addToStub(expectation, stub)
+    fun addDynamicTransient(expectation: Pair<Result.Success, HttpStubData>, stub: ScenarioStub) {
+        return transientStatic.addToStub(expectation, stub)
     }
 
-    fun addStub(expectation: Pair<Result.Success, HttpStubData>, stub: ScenarioStub) {
-        return threadSafeHttpStubs.addToStub(expectation, stub)
+    fun addDynamic(expectation: Pair<Result.Success, HttpStubData>, stub: ScenarioStub) {
+        return nonTransientDynamic.addToStub(expectation, stub)
     }
 
     fun associatedTo(port: Int, defaultPort: Int): HttpExpectations {
-        return HttpExpectations(threadSafeHttpStubs.stubAssociatedTo(port, defaultPort), threadSafeHttpStubQueue.stubAssociatedTo(port, defaultPort))
+        return HttpExpectations(nonTransientStatic.stubAssociatedTo(port, defaultPort), transientStatic.stubAssociatedTo(port, defaultPort), nonTransientDynamic)
     }
 
     fun matchingStub(httpRequest: HttpRequest): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
-        return threadSafeHttpStubQueue.matchingTransientStub(httpRequest)
-            ?: threadSafeHttpStubs.matchingNonTransientStub(httpRequest)
+        val transientMatch = transientStatic.matchingTransientStub(httpRequest)
+        if(transientMatch != null)
+            return transientMatch
+
+        val nonTransientDynamicMatch = nonTransientDynamic.matchingNonTransientStub(httpRequest)
+        if(nonTransientDynamicMatch.first != null)
+            return nonTransientDynamicMatch
+
+        val nonTransientStaticMatch = nonTransientStatic.matchingNonTransientStub(httpRequest)
+        if(nonTransientStaticMatch.first != null)
+            return nonTransientStaticMatch
+
+        val failures = nonTransientDynamicMatch.second + nonTransientStaticMatch.second
+
+        return Pair(null, failures)
     }
 }

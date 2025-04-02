@@ -443,6 +443,18 @@ internal class AnyPatternTest {
         }
     }
 
+    @Test
+    fun `should be able to determine if pattern is scalar based correctly`() {
+        val scalarBasedPatterns = listOf(
+            AnyPattern(listOf(StringPattern(), NullPattern)),
+            AnyPattern(listOf(NullPattern, StringPattern()))
+        )
+
+        assertThat(scalarBasedPatterns).allSatisfy {
+            assertThat(it.isScalarBasedPattern()).isTrue()
+        }
+    }
+
     @Nested
     inner class GenerateForEveryDiscriminatorDetailsValueTests {
         @Test

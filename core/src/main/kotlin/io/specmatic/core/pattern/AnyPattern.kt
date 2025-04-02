@@ -460,7 +460,7 @@ data class AnyPattern(
 
     @Suppress("unused") // Being used in openapi
     fun isScalarBasedPattern(): Boolean {
-        return pattern.size == 2 && pattern.count { it is NullPattern } == 1 && pattern.count { it is ScalarType } == 1
+        return pattern.size == 2 && pattern.count { it is NullPattern } == 1 && pattern.count { it is ScalarType } == 2
     }
 
     private fun getDiscriminatorBasedPattern(updatedPatterns: List<Pattern>, discriminatorValue: String, resolver: Resolver): JSONObjectPattern? {

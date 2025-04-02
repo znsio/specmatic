@@ -404,7 +404,7 @@ class HttpStub(
         }
     }
 
-    fun serveStubResponse(
+    private fun serveStubResponse(
         httpRequest: HttpRequest,
         port: Int,
         defaultPort: Int
@@ -926,18 +926,18 @@ private fun stubbedResponse(
     httpRequest: HttpRequest
 ): Pair<List<Pair<Result, HttpStubData>>, Pair<HttpStubResponse, HttpStubData>?> {
 
-    val (mock, matchResults) = stubThatMatchesRequest(threadSafeStubQueue, threadSafeStubs, httpRequest)
+    val (stubData, matchResults) = stubThatMatchesRequest(threadSafeStubQueue, threadSafeStubs, httpRequest)
 
-    val stubResponse = mock?.let {
+    val stubResponse = stubData?.let {
         val softCastResponse = it.softCastResponseToXML(httpRequest).response
         HttpStubResponse(
             softCastResponse,
             it.delayInMilliseconds,
             it.contractPath,
             examplePath = it.examplePath,
-            feature = mock.feature,
-            scenario = mock.scenario,
-            mock = mock
+            feature = stubData.feature,
+            scenario = stubData.scenario,
+            mock = stubData
         ) to it
     }
 

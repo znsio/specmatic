@@ -36,6 +36,10 @@ interface Value {
     fun hasDataTemplate(): Boolean {
         return this is StringValue && this.string.hasDataTemplate()
     }
+
+    fun precisionScore(): Int {
+        return 0
+    }
 }
 
 fun Value.mergeWith(other: Value): Value {

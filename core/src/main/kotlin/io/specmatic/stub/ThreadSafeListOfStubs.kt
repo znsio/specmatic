@@ -8,6 +8,9 @@ import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 import io.specmatic.mock.ScenarioStub
 
+private const val PARTIAL = "partial"
+private const val EXACT = "exact"
+
 class ThreadSafeListOfStubs(
     private val httpStubs: MutableList<HttpStubData>,
     private val specToPortMap: Map<String, Int>
@@ -89,8 +92,11 @@ class ThreadSafeListOfStubs(
         val mocks = listMatchResults.map { (result, stubData) ->
             if (result !is Result.Success) return@map Pair(result, stubData)
 
-            val response = if (stubData.partial == null) stubData.response
-            else stubData.responsePattern.fillInTheBlanks(stubData.partial.response, stubData.resolver)
+            val response =
+                if (stubData.partial == null)
+                    stubData.response
+                else
+                    stubData.responsePattern.fillInTheBlanks(stubData.partial.response, stubData.resolver)
 
             val stubResponse = HttpStubResponse(
                 response,
@@ -118,9 +124,26 @@ class ThreadSafeListOfStubs(
             }
         }
 
-        val mock = mocks.find { (result, _) -> result is Result.Success }
+        val successfulMatches = mocks.filter { (result, _) -> result is Result.Success }
+        val grouped = successfulMatches.groupBy { (_, stubData) ->
+            if(stubData.partial != null) PARTIAL else EXACT
+        }
 
-        return Pair(mock?.second, listMatchResults)
+        val exactMatch = grouped[EXACT].orEmpty().sortedBy {
+            it.second.originalRequest?.precisionScore ?: Int.MAX_VALUE
+        }.find { (result, _) -> result is Result.Success }
+
+        if(exactMatch != null)
+            return Pair(exactMatch.second, listMatchResults)
+
+        val partialMatch = grouped[PARTIAL].orEmpty().sortedBy {
+            it.second.originalRequest?.precisionScore ?: Int.MAX_VALUE
+        }.find { (result, _) -> result is Result.Success }
+
+        if(partialMatch != null)
+            return Pair(partialMatch.second, listMatchResults)
+
+        return Pair(null, listMatchResults)
     }
 
     fun matchingNonTransientDynamicStub(httpRequest: HttpRequest): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {

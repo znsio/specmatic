@@ -121,6 +121,9 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
         )
     }
 
+    override fun precisionScore(): Int {
+        return jsonObject.values.sumOf { it.precisionScore() }
+    }
 }
 
 internal fun dictionaryToDeclarations(jsonObject: Map<String, Value>, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Triple<Map<String, DeferredPattern>, Map<String, Pattern>, ExampleDeclarations> {

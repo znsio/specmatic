@@ -3,8 +3,8 @@
         "path": "/products",
         "method": "POST",
         "body": {
-            "name": "Treasure Island",
-            "type": "book",
+            "name": "Precise Example Product",
+            "type": "other",
             "inventory": 100
         },
         "headers": {

@@ -6,6 +6,7 @@ import io.specmatic.core.utilities.ContractSourceEntry
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.HttpExpectations
 import io.specmatic.stub.HttpStubData
 import io.specmatic.stub.HttpStubResponse
 import io.specmatic.stub.ThreadSafeListOfStubs
@@ -74,8 +75,7 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeSt
     return io.specmatic.stub.getHttpResponse(
         httpRequest,
         features,
-        ThreadSafeListOfStubs(threadSafeStubs.toMutableList(), emptyMap()),
-        ThreadSafeListOfStubs(mutableListOf(), emptyMap()),
+        HttpExpectations(ThreadSafeListOfStubs(threadSafeStubs.toMutableList(), emptyMap())),
         strictMode
     ).response
 }

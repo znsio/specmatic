@@ -701,10 +701,11 @@ paths:
               schema:
                 type: string
         """.trimIndent(), "").toFeature()
-        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc123"}""")), listOf(contract), ThreadSafeListOfStubs(
-            mutableListOf(),
-            emptyMap()
-        ), ThreadSafeListOfStubs(mutableListOf(), emptyMap()), false).response
+        val response: HttpStubResponse = getHttpResponse(
+            HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc123"}""")),
+            listOf(contract),
+            HttpExpectations(), false
+        ).response
 
         println(response.response.toLogString())
 
@@ -749,10 +750,10 @@ paths:
         )
 
         assertThatThrownBy {
-            getHttpResponse(HttpRequest("POST", "/data", body = StringValue("Hello")), listOf(contract), ThreadSafeListOfStubs(
+            getHttpResponse(HttpRequest("POST", "/data", body = StringValue("Hello")), listOf(contract), HttpExpectations(ThreadSafeListOfStubs(
                 mutableListOf(stub),
                 emptyMap()
-            ), ThreadSafeListOfStubs(mutableListOf(), emptyMap()), false)
+            ), ThreadSafeListOfStubs(mutableListOf(), emptyMap())), false)
         }.satisfies(Consumer {
             it as ContractException
 
@@ -798,10 +799,12 @@ paths:
             responsePattern = contract.scenarios.single().httpResponsePattern
         )
 
-        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc"}""")), listOf(contract), ThreadSafeListOfStubs(
-            mutableListOf(stub),
-            emptyMap()
-        ), ThreadSafeListOfStubs(mutableListOf(), emptyMap()),true).response
+        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc"}""")), listOf(contract),
+            HttpExpectations(
+                ThreadSafeListOfStubs(
+                    mutableListOf(stub),
+                    emptyMap()
+                )),true).response
         val requestString = response.response.toLogString()
 
         println(requestString)

@@ -429,6 +429,20 @@ internal class AnyPatternTest {
         """.trimIndent())
     }
 
+    @Test
+    fun `should prioritise non-null pattern generation when its a nullable pattern`() {
+        val nullableScalarPatterns = listOf(
+            AnyPattern(listOf(NullPattern, StringPattern(), NullPattern)),
+            AnyPattern(listOf(StringPattern(), NullPattern)),
+            AnyPattern(listOf(NullPattern, StringPattern()))
+        )
+
+        assertThat(nullableScalarPatterns).allSatisfy {
+            val generatedValue = it.generate(Resolver())
+            assertThat(generatedValue).isInstanceOf(StringValue::class.java)
+        }
+    }
+
     @Nested
     inner class GenerateForEveryDiscriminatorDetailsValueTests {
         @Test
@@ -689,6 +703,28 @@ internal class AnyPatternTest {
                 println(fixedValue.toStringLiteral())
                 assertThat(fixedValue).isNotEqualTo(it).isInstanceOf(JSONObjectValue::class.java)
             }
+        }
+
+        @Test
+        fun `should work when pattern is scalar based of nullable type`() {
+            val pattern = AnyPattern(listOf(NullPattern, StringPattern()))
+            val resolver = Resolver(dictionary = mapOf("(string)" to StringValue("TODO")))
+            val invalidValue = NumberValue(999)
+            val fixedValue = pattern.fixValue(invalidValue, resolver)
+
+            assertThat(fixedValue).isInstanceOf(StringValue::class.java); fixedValue as StringValue
+            assertThat(fixedValue.string).isEqualTo("TODO")
+        }
+
+        @Test
+        fun `scalar value should be picked from dictionary when pattern has typeAlias and matching key in dictionary`() {
+            val pattern = AnyPattern(listOf(NullPattern, StringPattern()), typeAlias = "(StringOrEmpty)")
+            val resolver = Resolver(dictionary = mapOf("StringOrEmpty" to StringValue("TODO")))
+            val invalidValue = NumberValue(999)
+            val fixedValue = pattern.fixValue(invalidValue, resolver)
+
+            assertThat(fixedValue).isInstanceOf(StringValue::class.java); fixedValue as StringValue
+            assertThat(fixedValue.string).isEqualTo("TODO")
         }
     }
 

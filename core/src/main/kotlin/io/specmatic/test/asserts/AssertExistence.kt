@@ -3,6 +3,7 @@ package io.specmatic.test.asserts
 import io.ktor.http.*
 import io.specmatic.core.Result
 import io.specmatic.core.value.NullValue
+import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
 enum class ExistenceCheckType(val value: String, val errorMessageSuffix: String) {
@@ -18,27 +19,10 @@ enum class ExistenceCheckType(val value: String, val errorMessageSuffix: String)
     }
 }
 
-class AssertExistence(override val prefix: String, override val key: String, val checkType: ExistenceCheckType): Assert {
-    override fun assert(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
-        val prefixValue = currentFactStore[prefix] ?: return Result.Failure(breadCrumb = prefix, message = "Could not resolve ${prefix.quote()} in current fact store")
+class AssertExistence(override val keys: List<String>, val checkType: ExistenceCheckType): Assert {
+    override fun execute(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
+        val actualValue = currentFactStore[combinedKey]
 
-        val dynamicList = dynamicAsserts(prefixValue)
-        val results = dynamicList.map { newAssert ->
-            val finalKey = newAssert.combinedKey
-            val actualValue = currentFactStore[finalKey]
-            assert(finalKey, actualValue)
-        }
-
-        return results.toResult()
-    }
-
-    override fun dynamicAsserts(prefixValue: Value): List<Assert> {
-        return prefixValue.suffixIfMoreThanOne {suffix, _ ->
-            AssertExistence(prefix = "$prefix$suffix", key = key, checkType = checkType)
-        }
-    }
-
-    private fun assert(finalKey: String, actualValue: Value?): Result {
         val success = when (checkType) {
             ExistenceCheckType.EXISTS -> actualValue != null
             ExistenceCheckType.NOT_EXISTS -> actualValue == null
@@ -47,18 +31,23 @@ class AssertExistence(override val prefix: String, override val key: String, val
         }
 
         return if (success) { Result.Success() } else Result.Failure(
-            breadCrumb = finalKey,
-            message = "Expected ${finalKey.quote()} to ${checkType.errorMessageSuffix}"
+            breadCrumb = combinedKey,
+            message = "Expected ${combinedKey.quote()} to ${checkType.errorMessageSuffix}"
         )
     }
 
-    companion object {
-        fun parse(prefix: String, key: String, value: Value): AssertExistence? {
-            val match = ASSERT_PATTERN.find(value.toStringLiteral()) ?: return null
-            val keyPrefix = prefix.removeSuffix(".${key}")
+    override fun dynamicAsserts(currentFactStore: Map<String, Value>, ifNotExists: (String) -> Value): List<AssertExistence> {
+        return generateDynamicPaths(remainingKeys = keys, store = currentFactStore, ifNotExists = { NullValue }).map { keys ->
+            AssertExistence(keys, checkType)
+        }
+    }
 
+    companion object {
+        fun parse(keys: List<String>, value: Value): AssertExistence? {
+            if (value !is StringValue) return null
+            val match = ASSERT_PATTERN.find(value.nativeValue) ?: return null
             val assertType = ExistenceCheckType.fromString(match.groupValues[1]) ?: return null
-            return AssertExistence(keyPrefix, key, assertType)
+            return AssertExistence(keys, assertType)
         }
     }
 }

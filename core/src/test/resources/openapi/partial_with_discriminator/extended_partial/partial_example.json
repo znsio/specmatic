@@ -1,0 +1,22 @@
+{
+  "partial": {
+    "http-request": {
+      "path": "/pets",
+      "method": "POST",
+      "body": {
+        "livesLeft": "(number)",
+        "extraKey": "extraValue"
+      }
+    },
+    "http-response": {
+      "status": 201,
+      "body": {
+        "id": 1
+      },
+      "status-text": "Created",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    }
+  }
+}

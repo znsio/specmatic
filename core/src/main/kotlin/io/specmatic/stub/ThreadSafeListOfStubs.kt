@@ -24,7 +24,7 @@ class ThreadSafeListOfStubs(
         return portToListOfStubsMap(defaultPort)[port] ?: emptyStubs()
     }
 
-    fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {
+    private fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {
         synchronized(this) {
             return fn(httpStubs.toList())
         }

@@ -9,6 +9,7 @@ import io.specmatic.core.Result.Success
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.utilities.jsonStringToValueMap
+import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.shouldMatch
 import io.specmatic.trimmedLinesList
@@ -908,6 +909,53 @@ paths:
                      ${ContractAndStubMismatchMessages.mismatchMessage("number", """"data" """.trim())}
                 """.trimIndent().trimmedLinesList())
         })
+    }
+
+    @Test
+    fun `should be able to serialize partial stubs to JSON`() {
+        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
+        val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
+        val scenarioStub = ScenarioStub(partial = ScenarioStub(request, response))
+
+        val json = scenarioStub.toJSON()
+        assertThat(json.keys()).containsExactly(PARTIAL)
+        assertThat((json.jsonObject[PARTIAL] as JSONObjectValue).keys()).containsExactly(MOCK_HTTP_REQUEST, MOCK_HTTP_RESPONSE)
+        assertThat((json.jsonObject[PARTIAL] as JSONObjectValue).jsonObject[MOCK_HTTP_REQUEST]).isEqualTo(request.toJSON())
+        assertThat((json.jsonObject[PARTIAL] as JSONObjectValue).jsonObject[MOCK_HTTP_RESPONSE]).isEqualTo(response.toJSON())
+    }
+
+    @Test
+    fun `additional data should be added to partial stub JSON`() {
+        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
+        val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
+        val additionalData = JSONObjectValue(mapOf("foo" to StringValue("bar")))
+        val scenarioStub = ScenarioStub(partial = ScenarioStub(request, response), data = additionalData)
+
+        val json = scenarioStub.toJSON()
+        assertThat(json.keys()).containsExactly("foo", PARTIAL)
+        assertThat(json.jsonObject["foo"]).isEqualTo(StringValue("bar"))
+    }
+
+    @Test
+    fun `should be able to update request in an partial stub`() {
+        val request = HttpRequest(method = "POST", path = "/customer")
+        val stub = ScenarioStub(partial = ScenarioStub(request))
+        val updatedRequest = HttpRequest(method = "GET", path = "/customer")
+        val withUpdatedRequest = stub.updateRequest(updatedRequest)
+
+        assertThat(withUpdatedRequest.requestElsePartialRequest()).isEqualTo(updatedRequest)
+        assertThat(withUpdatedRequest.partial?.request).isEqualTo(updatedRequest)
+    }
+
+    @Test
+    fun `should be able to update response in an partial stub`() {
+        val response = HttpResponse(status = 200)
+        val stub = ScenarioStub(partial = ScenarioStub(response = response))
+        val updatedResponse = HttpResponse(status = 201)
+        val withUpdatedResponse = stub.updateResponse(updatedResponse)
+
+        assertThat(withUpdatedResponse.response()).isEqualTo(updatedResponse)
+        assertThat(withUpdatedResponse.partial?.response).isEqualTo(updatedResponse)
     }
 }
 

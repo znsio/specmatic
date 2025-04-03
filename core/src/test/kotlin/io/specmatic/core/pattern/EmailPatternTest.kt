@@ -3,7 +3,7 @@ package io.specmatic.core.pattern
 import io.specmatic.GENERATION
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
-import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -38,5 +38,22 @@ class EmailPatternTest {
         val matchResult = pattern.matches(filledInValue, resolver)
 
         assertThat(matchResult.isSuccess()).withFailMessage(matchResult.reportString()).isTrue()
+    }
+
+    @Test
+    fun `should be able to fix invalid values`() {
+        val pattern = JSONObjectPattern(mapOf("email" to EmailPattern()), typeAlias = "(Test)")
+        val resolver = Resolver(dictionary = mapOf("Test.email" to StringValue("SomeDude@example.com")))
+        val invalidValues = listOf(
+            StringValue("Unknown"),
+            NumberValue(999),
+            NullValue
+        )
+
+        assertThat(invalidValues).allSatisfy {
+            val fixedValue = pattern.fixValue(JSONObjectValue(mapOf("email" to it)), resolver)
+            fixedValue as JSONObjectValue
+            assertThat(fixedValue.jsonObject["email"]).isEqualTo(StringValue("SomeDude@example.com"))
+        }
     }
 }

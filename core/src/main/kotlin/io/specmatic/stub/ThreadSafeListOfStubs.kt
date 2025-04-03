@@ -136,9 +136,7 @@ class ThreadSafeListOfStubs(
         if(exactMatch != null)
             return Pair(exactMatch.second, listMatchResults)
 
-        val partialMatch = grouped[PARTIAL].orEmpty().sortedBy {
-            it.second.originalRequest?.precisionScore ?: Int.MAX_VALUE
-        }.find { (result, _) -> result is Result.Success }
+        val partialMatch = grouped[PARTIAL].orEmpty().find { (result, _) -> result is Result.Success }
 
         if(partialMatch != null)
             return Pair(partialMatch.second, listMatchResults)

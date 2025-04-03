@@ -78,7 +78,7 @@ class ThreadSafeListOfStubs(
         return httpStubData.responsePattern.status == expectedResponseCode
     }
 
-    fun matchingNonTransientStaticStub(httpRequest: HttpRequest): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
+    fun matchingStaticStub(httpRequest: HttpRequest): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
         val expectedResponseCode = httpRequest.expectedResponseCode()
 
         val listMatchResults: List<Pair<Result, HttpStubData>> = matchResults { httpStubData ->
@@ -146,7 +146,7 @@ class ThreadSafeListOfStubs(
         return Pair(null, listMatchResults)
     }
 
-    fun matchingNonTransientDynamicStub(httpRequest: HttpRequest): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
+    fun matchingDynamicStub(httpRequest: HttpRequest): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
         val expectedResponseCode = httpRequest.expectedResponseCode()
 
         val listMatchResults: List<Pair<Result, HttpStubData>> = matchResults { httpStubData ->

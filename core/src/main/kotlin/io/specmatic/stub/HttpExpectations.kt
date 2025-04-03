@@ -37,11 +37,11 @@ class HttpExpectations(
         if(transientMatch != null)
             return transientMatch
 
-        val dynamicMatch = dynamic.matchingNonTransientDynamicStub(httpRequest)
+        val dynamicMatch = dynamic.matchingDynamicStub(httpRequest)
         if(dynamicMatch.first != null)
             return dynamicMatch
 
-        val staticMatch = static.matchingNonTransientStaticStub(httpRequest)
+        val staticMatch = static.matchingStaticStub(httpRequest)
         if(staticMatch.first != null)
             return staticMatch
 

@@ -6,54 +6,99 @@ import io.specmatic.core.HttpResponsePattern
 import io.specmatic.core.Resolver
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.mock.ScenarioStub
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Test
 
 class HttpExpectationsTest {
-    @Nested
-    inner class ExpectationPrioritization {
-        private val specificRequest = HttpRequest("POST", "/products", body = parsedJSONObject("""{"name": "Specific Value"}"""))
-        private val generalRequest = HttpRequest("POST", "/products", body = parsedJSONObject("""{"name": "(string)"}"""))
+    private val request = HttpRequest("POST", "/products", body = parsedJSONObject("""{"name": "Specific Value"}"""))
 
-        private val specificExpectation = HttpStubData(
-            requestType = specificRequest.toPattern(),
-            response = HttpResponse.ok(parsedJSONObject("{\"id\": 10}")),
+    private val staticStubData = HttpStubData(
+        requestType = request.toPattern(),
+        response = HttpResponse.ok(parsedJSONObject("{\"id\": 10}")),
+        responsePattern = HttpResponsePattern(HttpResponse.OK),
+        resolver = Resolver(),
+        originalRequest = request
+    )
+
+    private val sandwichedSpecificExpectation = mutableListOf(staticStubData)
+    private val expectations = HttpExpectations(
+        static = ThreadSafeListOfStubs(sandwichedSpecificExpectation, emptyMap())
+    )
+
+    @Test
+    fun `it should return a matching expectation`() {
+        val responseToSpecificValue = expectations.matchingStub(request)
+        val expectedResponse = responseToSpecificValue.first ?: fail("Expected a response for the given request to be found")
+
+        val jsonResponse = expectedResponse.response.body as JSONObjectValue
+        assertThat(jsonResponse.findFirstChildByName("id")?.toStringLiteral()).isEqualTo("10")
+    }
+
+    @Test
+    fun `it should return a dynamic expectation over a static one`() {
+        val response = HttpResponse.ok(parsedJSONObject("{\"id\": 20}"))
+        val dynamicStubData = HttpStubData(
+            requestType = request.toPattern(),
+            response = response,
             responsePattern = HttpResponsePattern(HttpResponse.OK),
             resolver = Resolver(),
-            originalRequest = specificRequest
+            originalRequest = request
         )
 
-        private val generalExpectation = HttpStubData(
-            requestType = generalRequest.toPattern(),
-            response = HttpResponse.ok(parsedJSONObject("{\"id\": 20}")),
+        val scenarioStub = ScenarioStub(
+            request = request,
+            response = response
+        )
+
+        expectations.addDynamic(io.specmatic.core.Result.Success() to dynamicStubData, scenarioStub)
+
+        val responseToSpecificValue = expectations.matchingStub(request)
+        val expectedResponse = responseToSpecificValue.first ?: fail("Expected a response for the given request to be found")
+
+        val jsonResponse = expectedResponse.response.body as JSONObjectValue
+        assertThat(jsonResponse.findFirstChildByName("id")?.toStringLiteral()).isEqualTo("20")
+    }
+
+    @Test
+    fun `it should return a transient expectation over a dynamic or static one`() {
+        val dynamicStubResponse = HttpResponse.ok(parsedJSONObject("{\"id\": 20}"))
+        val dynamicStubData = HttpStubData(
+            requestType = request.toPattern(),
+            response = dynamicStubResponse,
             responsePattern = HttpResponsePattern(HttpResponse.OK),
             resolver = Resolver(),
-            originalRequest = generalRequest
+            originalRequest = request
         )
 
-        private val sandwichedSpecificExpectation = mutableListOf(generalExpectation, specificExpectation, generalExpectation)
-        val expectations = HttpExpectations(
-            static = ThreadSafeListOfStubs(sandwichedSpecificExpectation, emptyMap())
+        val dynamicScenarioStub = ScenarioStub(
+            request = request,
+            response = dynamicStubResponse
         )
 
-        @Test
-        fun `it should prioritize specific over general expectations`() {
-            val responseToSpecificValue = expectations.matchingStub(specificRequest)
-            val expectedResponse = responseToSpecificValue.first ?: fail("Expected a response for the given request to be found")
+        expectations.addDynamic(io.specmatic.core.Result.Success() to dynamicStubData, dynamicScenarioStub)
 
-            val jsonResponse = expectedResponse.response.body as JSONObjectValue
-            assertThat(jsonResponse.findFirstChildByName("id")?.toStringLiteral()).isEqualTo("10")
-        }
+        val transientStubResponse = HttpResponse.ok(parsedJSONObject("{\"id\": 20}"))
+        val transientStubData = HttpStubData(
+            requestType = request.toPattern(),
+            response = transientStubResponse,
+            responsePattern = HttpResponsePattern(HttpResponse.OK),
+            resolver = Resolver(),
+            originalRequest = request
+        )
 
-        @Test
-        fun `it should use the general expectation when the specific does not match the request`() {
-            val responseToSpecificValue = expectations.matchingStub(generalRequest)
-            val expectedResponse = responseToSpecificValue.first ?: fail("Expected a response for the given request to be found")
+        val transientScenarioStub = ScenarioStub(
+            request = request,
+            response = transientStubResponse
+        )
 
-            val jsonResponse = expectedResponse.response.body as JSONObjectValue
-            assertThat(jsonResponse.findFirstChildByName("id")?.toStringLiteral()).isEqualTo("20")
-        }
+        expectations.addDynamic(io.specmatic.core.Result.Success() to transientStubData, transientScenarioStub)
+
+        val responseToSpecificValue = expectations.matchingStub(request)
+        val expectedResponse = responseToSpecificValue.first ?: fail("Expected a response for the given request to be found")
+
+        val jsonResponse = expectedResponse.response.body as JSONObjectValue
+        assertThat(jsonResponse.findFirstChildByName("id")?.toStringLiteral()).isEqualTo("20")
     }
 }

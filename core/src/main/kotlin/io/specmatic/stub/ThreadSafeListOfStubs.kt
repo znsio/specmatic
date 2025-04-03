@@ -8,47 +8,83 @@ import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 import io.specmatic.mock.ScenarioStub
 
-class ThreadSafeListOfStubs(
-    private val httpStubs: MutableList<HttpStubData>,
-    private val specToPortMap: Map<String, Int>
-) {
-    val size: Int
-        get() {
-            return httpStubs.size
+enum class StubCategory {
+    TRANSIENT,
+    PERSISTENT
+}
+
+enum class StubType {
+    NORMAL,
+    DATA_LOOKUP,
+    PARTIAL
+}
+
+data class ClassifiedStub(val stub: HttpStubData, val category: StubCategory, val type: StubType): Comparable<ClassifiedStub> {
+    companion object {
+        fun from(httpStubData: HttpStubData): ClassifiedStub {
+            val type = when {
+                httpStubData.data.jsonObject.isNotEmpty() -> StubType.DATA_LOOKUP
+                httpStubData.partial != null -> StubType.PARTIAL
+                else -> StubType.NORMAL
+            }
+
+            val category = when(httpStubData.stubToken != null) {
+                true -> StubCategory.TRANSIENT
+                false -> StubCategory.PERSISTENT
+            }
+
+            return ClassifiedStub(httpStubData, category, type)
         }
+    }
+
+    override fun compareTo(other: ClassifiedStub): Int {
+        return compareValuesBy(this, other, { it.category }, { it.type })
+    }
+}
+
+class ThreadSafeListOfStubs(httpStubs: List<HttpStubData>, private val specToPortMap: Map<String, Int>) {
+
+    private val httpStubs: MutableList<ClassifiedStub> = httpStubs.map(ClassifiedStub::from).sortedWith(compareBy({ it.category }, { it.type })).toMutableList()
+
+    val size: Int get() = synchronized(this) { httpStubs.size }
 
     fun stubAssociatedTo(port: Int, defaultPort: Int): ThreadSafeListOfStubs {
         return portToListOfStubsMap(defaultPort)[port] ?: emptyStubs()
     }
 
     fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {
-        synchronized(this) {
-            return fn(httpStubs.toList())
+        return synchronized(this) {
+            fn(httpStubs.map { it.stub })
         }
     }
 
     fun addToStub(result: Pair<Result, HttpStubData?>, stub: ScenarioStub) {
         synchronized(this) {
-            result.second.let {
-                if(it != null)
-                    httpStubs.add(0, it.copy(delayInMilliseconds = stub.delayInMilliseconds, stubToken = stub.stubToken))
+            result.second?.let { httpStubData ->
+                val modifiedHttpStubData = httpStubData.copy(
+                    delayInMilliseconds = stub.delayInMilliseconds,
+                    stubToken = stub.stubToken
+                )
+                val newClassifiedStub = ClassifiedStub.from(modifiedHttpStubData)
+                addStubData(newClassifiedStub)
             }
         }
     }
 
+    private fun addStubData(newClassifiedStub: ClassifiedStub) = synchronized(this) {
+        val index = httpStubs.indexOfFirst { it >= newClassifiedStub }.takeIf { it >= 0 } ?: httpStubs.size
+        httpStubs.add(index, newClassifiedStub)
+    }
+
     fun remove(element: HttpStubData) {
         synchronized(this) {
-            httpStubs.remove(element)
+            httpStubs.removeAll { it.stub == element }
         }
     }
 
     fun removeWithToken(token: String?) {
         synchronized(this) {
-            httpStubs.mapIndexed { index, httpStubData ->
-                if (httpStubData.stubToken == token) index else null
-            }.filterNotNull().reversed().map { index ->
-                httpStubs.removeAt(index)
-            }
+            httpStubs.removeAll { it.stub.stubToken == token }
         }
     }
 
@@ -58,9 +94,7 @@ class ThreadSafeListOfStubs(
         val queueMatchResults: List<Pair<Result, HttpStubData>> = matchResults { stubs ->
             stubs.filter {
                 hasExpectedResponseCode(it, expectedResponseCode)
-            }.map {
-                Pair(it.matches(httpRequest), it)
-            }
+            }.map { Pair(it.matches(httpRequest), it) }
         }
 
         val (_, queueMock) = queueMatchResults.findLast { (result, _) ->
@@ -89,11 +123,9 @@ class ThreadSafeListOfStubs(
         val mock = listMatchResults.map { (result, stubData) ->
             if (result !is Result.Success) return@map Pair(result, stubData)
 
-            val response = if (stubData.partial == null) stubData.response
-            else stubData.responsePattern.fillInTheBlanks(stubData.partial.response, stubData.resolver)
-
+            val originalRequest = stubData.partial?.request ?: stubData.originalRequest
             val stubResponse = HttpStubResponse(
-                response,
+                response = stubData.partial?.response ?: stubData.response,
                 stubData.delayInMilliseconds,
                 stubData.contractPath,
                 feature = stubData.feature,
@@ -101,15 +133,14 @@ class ThreadSafeListOfStubs(
             )
 
             try {
-                val originalRequest =
-                    if (stubData.partial != null) stubData.partial.request
-                    else stubData.originalRequest
+                val resolvedResponse = stubResponse.resolveSubstitutions(
+                    request = httpRequest,
+                    originalRequest = originalRequest ?: httpRequest,
+                    data = stubData.data
+                ).response
 
-                stubResponse.resolveSubstitutions(
-                    httpRequest,
-                    originalRequest ?: httpRequest,
-                    stubData.data
-                )
+                val response = if (stubData.partial == null) resolvedResponse
+                else stubData.responsePattern.fillInTheBlanks(resolvedResponse, stubData.resolver)
 
                 result to stubData.copy(response = response)
             } catch (e: ContractException) {
@@ -122,19 +153,16 @@ class ThreadSafeListOfStubs(
     }
 
     private fun portToListOfStubsMap(defaultPort: Int): Map<Int, ThreadSafeListOfStubs> {
-        synchronized(this) {
-            return httpStubs.groupBy {
-                specToPortMap[it.contractPath] ?: defaultPort
+        return synchronized(this) {
+            httpStubs.groupBy {
+                specToPortMap[it.stub.contractPath] ?: defaultPort
             }.mapValues { (_, stubs) ->
-                ThreadSafeListOfStubs(stubs as MutableList<HttpStubData>, specToPortMap)
+                ThreadSafeListOfStubs(stubs.map { it.stub }, specToPortMap)
             }
         }
     }
 
-    private fun partialMatchResults(
-        httpStubData: List<HttpStubData>,
-        httpRequest: HttpRequest
-    ): List<Pair<Result, HttpStubData>> {
+    private fun partialMatchResults(httpStubData: List<HttpStubData>, httpRequest: HttpRequest): List<Pair<Result, HttpStubData>> {
         val expectedResponseCode = httpRequest.expectedResponseCode()
 
         return httpStubData.mapNotNull { it.partial?.let { partial -> it to partial } }
@@ -162,17 +190,3 @@ class ThreadSafeListOfStubs(
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

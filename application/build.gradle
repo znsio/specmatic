@@ -33,7 +33,8 @@ def jgit_version = "7.0.0.202409031743-r"
 
 dependencies {
     // TODO Put library reference overrides here to eliminate vulnerabilities, and remove the override when no longer needed
-    implementation 'io.netty:netty-codec-http:4.1.118.Final' // used by ktor-server-netty-jvm 2.3.13 in core (last checked on Feb 13 2025)
+    implementation 'io.netty:netty-codec-http:4.1.118.Final'
+    // used by ktor-server-netty-jvm 2.3.13 in core (last checked on Feb 13 2025)
     implementation 'joda-time:joda-time:2.13.1' // used by swagger-parser 2.1.22
     implementation 'net.minidev:json-smart:2.5.2' // used by json-path 2.9.0 (last checked on Feb 13 2025)
 
@@ -78,8 +79,10 @@ dependencies {
     implementation(project(':junit5-support'))
 
     implementation "io.ktor:ktor-client-cio:$ktor_version"
-    implementation 'io.swagger.parser.v3:swagger-parser:2.1.24'
-
+    implementation('io.swagger.parser.v3:swagger-parser:2.1.24') {
+        exclude group: 'org.mozilla', module: 'rhino'
+    }
+    implementation 'org.mozilla:rhino:1.7.15'
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.3"
 
     implementation "org.jetbrains.kotlin:kotlin-reflect"

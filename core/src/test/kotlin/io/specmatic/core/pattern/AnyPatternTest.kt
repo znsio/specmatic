@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 
 internal class AnyPatternTest {
     @Test
@@ -737,6 +738,19 @@ internal class AnyPatternTest {
 
             assertThat(fixedValue).isInstanceOf(StringValue::class.java); fixedValue as StringValue
             assertThat(fixedValue.string).isEqualTo("TODO")
+        }
+
+        @Test
+        fun `nullable pattern dictionary lookup should not throw an exception`() {
+            val pattern = AnyPattern(listOf(NullPattern, NumberPattern()))
+            val jsonObjPattern = JSONObjectPattern(mapOf("id" to pattern), typeAlias = "(Test)")
+            val resolver = Resolver(dictionary = mapOf("Test.id" to NumberValue(999)))
+
+            val invalidValue = JSONObjectValue(mapOf("id" to StringValue("INVALID")))
+            val fixedValue = assertDoesNotThrow { jsonObjPattern.fixValue(invalidValue, resolver) }
+
+            assertThat(fixedValue).isInstanceOf(JSONObjectValue::class.java); fixedValue as JSONObjectValue
+            assertThat(fixedValue.jsonObject).isEqualTo(mapOf("id" to NumberValue(999)))
         }
     }
 

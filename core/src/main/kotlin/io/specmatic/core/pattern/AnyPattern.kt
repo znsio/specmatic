@@ -58,17 +58,12 @@ data class AnyPattern(
 
         if (discBasedFixedValue != null) return discBasedFixedValue
 
-        val updatedPatterns = getUpdatedPattern(resolver)
+        val updatedPatterns = getUpdatedPattern(resolver).sortedBy { it is NullPattern }
         val patternMatches = updatedPatterns.map { pattern ->
             AnyPatternMatch(pattern, pattern.matches(value, resolver))
         }
 
-        val matchingPatternNew = patternMatches.minBy {
-            when(it.pattern) {
-                is NullPattern -> Int.MAX_VALUE
-                else -> (it.result as? Failure)?.failureCount() ?: 0
-            }
-        }
+        val matchingPatternNew = patternMatches.minBy { (it.result as? Failure)?.failureCount() ?: 0 }
         val updatedResolver = resolver.updateLookupPath(this.typeAlias, "")
         return matchingPatternNew.pattern.fixValue(value, updatedResolver)
     }

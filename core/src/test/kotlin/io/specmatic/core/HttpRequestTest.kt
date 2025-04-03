@@ -1,6 +1,5 @@
 package io.specmatic.core
 
-import com.fasterxml.jackson.annotation.JsonValue
 import io.specmatic.core.HttpRequest.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -21,6 +20,7 @@ import io.specmatic.core.utilities.Flags
 import io.specmatic.core.value.*
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.params.provider.CsvSource
 
 internal class HttpRequestTest {
     @Test
@@ -380,5 +380,18 @@ internal class HttpRequestTest {
         } finally {
             System.clearProperty(Flags.SPECMATIC_PRETTY_PRINT)
         }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "10, 10, 0",
+        "(string), 10, 1",
+        "10, (string), 1",
+        "(string), (string), 2",
+        ignoreLeadingAndTrailingWhitespace = true
+    )
+    fun `should calculate precision score based on the number of patterns seen`(id: String, count: String, precisionScore: Int) {
+        val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"id": "$id", "count": "$count"}"""))
+        assertThat(request.precisionScore).isEqualTo(precisionScore)
     }
 }

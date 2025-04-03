@@ -605,6 +605,7 @@ private fun generateIfPatternToken(value: Value, resolver: Resolver): ReturnValu
 }
 
 private fun adjustedPattern(jsonPatternMap: Map<String, Pattern>, resolver: Resolver): Map<String, Pattern> {
+    if (resolver.findKeyErrorCheck.isPartial()) return emptyMap()
     if (!resolver.allPatternsAreMandatory) return jsonPatternMap.filterKeys { !isOptional(it) }
     return jsonPatternMap.mapKeys { withoutOptionality(it.key) }
 }

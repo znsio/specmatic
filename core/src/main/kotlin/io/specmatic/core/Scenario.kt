@@ -894,13 +894,18 @@ data class Scenario(
         return defaultAttributeSelectionFields.plus(attributeSelectionFieldsFromRequest)
     }
 
-    fun fixRequestResponse(httpRequest: HttpRequest, httpResponse: HttpResponse, flagsBased: FlagsBased): Pair<HttpRequest, HttpResponse> {
+    fun fixRequestResponse(httpRequest: HttpRequest, httpResponse: HttpResponse, flagsBased: FlagsBased, isPartial: Boolean): Pair<HttpRequest, HttpResponse> {
         val updatedResolver = flagsBased.copy(
             unexpectedKeyCheck = when {
                 isRequestAttributeSelected(httpRequest) -> ValidateUnexpectedKeys
                 else -> flagsBased.unexpectedKeyCheck
             }
-        ).update(resolver).copy(mockMode = true)
+        ).update(
+            resolver.copy(
+                mockMode = true,
+                findKeyErrorCheck = if (isPartial) PARTIAL_KEYCHECK else resolver.findKeyErrorCheck
+            )
+        )
 
         this.newBasedOnAttributeSelectionFields(httpRequest.queryParams).let { newScenario ->
             return Pair(

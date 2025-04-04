@@ -61,7 +61,7 @@ class EmailPattern (private val stringPatternDelegate: StringPattern) :
         typeStack: TypeStack
     ): Result {
         val resolvedOther = resolvedHop(otherPattern, otherResolver)
-        if(resolvedOther !is EmailPattern) return Result.Failure("Expected email, get ${resolvedOther.typeAlias}")
+        if(resolvedOther !is EmailPattern) return Result.Failure("Expected email, got ${resolvedOther.typeName}")
 
         return stringPatternDelegate.encompasses(resolvedOther.stringPatternDelegate, thisResolver, otherResolver, typeStack)
     }

@@ -47,7 +47,7 @@ const val DEFAULT_STUB_BASEURL = "localhost:9000"
 class HttpStub(
     private val features: List<Feature>,
     rawHttpStubs: List<HttpStubData> = emptyList(),
-    val baseURL: String,
+    val baseURL: String = DEFAULT_STUB_BASEURL,
     private val log: (event: LogMessage) -> Unit = dontPrintToConsole,
     private val strictMode: Boolean = false,
     val keyData: KeyData? = null,
@@ -79,7 +79,7 @@ class HttpStub(
     constructor(
         gherkinData: String,
         scenarioStubs: List<ScenarioStub> = emptyList(),
-        baseURL: String,
+        baseURL: String = DEFAULT_STUB_BASEURL,
         log: (event: LogMessage) -> Unit = dontPrintToConsole
     ) : this(
         parseGherkinStringToFeature(gherkinData),
@@ -264,8 +264,9 @@ class HttpStub(
                         isFlushTransientStubsRequest(httpRequest) -> handleFlushTransientStubsRequest(httpRequest)
                         else -> serveStubResponse(
                             httpRequest,
-                            baseUrl = "${call.request.local.scheme}://${call.request.local.serverHost}:${call.request.local.serverPort}",
-                            defaultBaseUrl = endPointFromBaseURL(baseURL, keyData)
+                            baseUrl = "${call.request.local.scheme}://${call.request.local.serverHost}:${call.request.local.localPort}",
+                            defaultBaseUrl = endPointFromBaseURL(baseURL, keyData),
+                            urlPath = call.request.path()
                         )
                     }
 
@@ -357,7 +358,6 @@ class HttpStub(
             null -> connectors.addAll(
                 hostPortList.map { (host, port) ->
                     EngineConnectorBuilder().also {
-
                         it.host = host
                         it.port = port
                     }
@@ -403,13 +403,17 @@ class HttpStub(
     fun serveStubResponse(
         httpRequest: HttpRequest,
         baseUrl: String,
-        defaultBaseUrl: String
+        defaultBaseUrl: String,
+        urlPath: String
     ): HttpStubResponse {
+        val url = "$baseUrl$urlPath"
+        val stubBaseUrlPath = specmaticConfig.stubBaseUrlPathAssociatedTo(url, defaultBaseUrl)
+
         return getHttpResponse(
-            httpRequest = httpRequest,
-            features = featuresAssociatedTo(baseUrl, features, specToBaseUrlMap),
-            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(baseUrl, defaultBaseUrl),
-            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(baseUrl, defaultBaseUrl),
+            httpRequest = httpRequest.trimBaseUrlPath(stubBaseUrlPath),
+            features = featuresAssociatedTo(baseUrl, features, specToBaseUrlMap, urlPath),
+            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(baseUrl, defaultBaseUrl, urlPath),
+            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(baseUrl, defaultBaseUrl, urlPath),
             strictMode = strictMode,
             passThroughTargetBase = passThroughTargetBase,
             httpClientFactory = httpClientFactory,
@@ -425,16 +429,21 @@ class HttpStub(
     internal fun featuresAssociatedTo(
         baseUrl: String,
         features: List<Feature>,
-        specToStubBaseUrlMap: Map<String, String>
+        specToStubBaseUrlMap: Map<String, String>,
+        urlPath: String
     ): List<Feature> {
-        val resolvedBaseUrls = resolveLocalhostIfPresent(baseUrl)
+        val resolvedBaseUrls = resolveLocalhostIfPresent(baseUrl, urlPath)
 
-        val specsForGivenPort = specToStubBaseUrlMap.entries
-            .filter { (_, stubBaseUrl) -> stubBaseUrl in resolvedBaseUrls }
+        val specsForGivenBaseUrl = specToStubBaseUrlMap.entries
+            .filter { (_, stubBaseUrl) ->
+                resolvedBaseUrls.any { url ->
+                    url.startsWith(stubBaseUrl)
+                }
+            }
             .map { it.key }
             .toSet()
         return features.filter { feature ->
-            feature.path in specsForGivenPort
+            feature.path in specsForGivenBaseUrl
         }
     }
 
@@ -1228,6 +1237,20 @@ fun endPointFromBaseURL(baseURL: String, keyData: KeyData?): String {
     }
 }
 
+fun endPointFromHostAndPort(host: String, port: Int?, keyData: KeyData?): String {
+    val protocol = when (keyData) {
+        null -> "http"
+        else -> "https"
+    }
+
+    val computedPortString = when (port) {
+        80, null -> ""
+        else -> ":$port"
+    }
+
+    return "$protocol://$host$computedPortString"
+}
+
 fun resolved(host: String): String {
     return if(host == "127.0.0.1") "localhost" else host
 }
@@ -1249,7 +1272,10 @@ fun extractPort(url: String): Int? {
     return port.takeIf { it != -1 }
 }
 
-fun resolveLocalhostIfPresent(url: String): List<String> {
+fun resolveLocalhostIfPresent(
+    url: String,
+    urlPath: String = ""
+): List<String> {
     val uri = URI(url)
     val host = uri.host
 
@@ -1265,7 +1291,7 @@ fun resolveLocalhostIfPresent(url: String): List<String> {
         val ip = inetAddress.hostAddress
         val bracketedIp = if (ip.contains(":")) "[$ip]" else ip
         "${uri.scheme}://$bracketedIp:$port"
-    }.plus(url)
+    }.plus("${uri.scheme}://$host:$port").map { it.plus(urlPath) }
 }
 
 fun normalizeHost(host: String): String {

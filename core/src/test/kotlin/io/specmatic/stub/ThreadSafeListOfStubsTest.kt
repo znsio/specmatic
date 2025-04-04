@@ -30,7 +30,8 @@ class ThreadSafeListOfStubsTest {
 
             val result = threadSafeList.stubAssociatedTo(
                 baseUrl = "http://localhost:8080",
-                defaultBaseUrl = "http://localhost:9090"
+                defaultBaseUrl = "http://localhost:9090",
+                urlPath = ""
             )
 
             assertNotNull(result)
@@ -57,7 +58,8 @@ class ThreadSafeListOfStubsTest {
 
             val result = threadSafeList.stubAssociatedTo(
                 baseUrl = "http://localhost:8000",
-                defaultBaseUrl = "http://localhost:9090"
+                defaultBaseUrl = "http://localhost:9090",
+                urlPath = ""
             )
 
             assertThat(result.size).isEqualTo(0)
@@ -82,7 +84,11 @@ class ThreadSafeListOfStubsTest {
 
             val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToBaseUrlMap)
 
-            val result = threadSafeList.stubAssociatedTo(baseUrl = "http://localhost:9090", defaultBaseUrl = "http://localhost:9090")
+            val result = threadSafeList.stubAssociatedTo(
+                baseUrl = "http://localhost:9090",
+                defaultBaseUrl = "http://localhost:9090",
+                urlPath = ""
+            )
 
             assertNotNull(result)
             assertEquals(2, result!!.size)
@@ -109,7 +115,11 @@ class ThreadSafeListOfStubsTest {
 
             val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToBaseUrlMap)
 
-            val result = threadSafeList.stubAssociatedTo(baseUrl = "http://localhost:8080", defaultBaseUrl = "http://localhost:9090")
+            val result = threadSafeList.stubAssociatedTo(
+                baseUrl = "http://localhost:8080",
+                defaultBaseUrl = "http://localhost:9090",
+                urlPath = ""
+            )
 
             assertNotNull(result)
             assertEquals(3, result!!.size)
@@ -124,7 +134,8 @@ class ThreadSafeListOfStubsTest {
 
             val result = threadSafeList.stubAssociatedTo(
                 baseUrl = "http://localhost:8080",
-                defaultBaseUrl = "http://localhost:9090"
+                defaultBaseUrl = "http://localhost:9090",
+                urlPath = ""
             )
 
             assertThat(result.size).isEqualTo(0)

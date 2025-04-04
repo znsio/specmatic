@@ -17,11 +17,16 @@ class ThreadSafeListOfStubs(
             return httpStubs.size
         }
 
-    fun stubAssociatedTo(baseUrl: String, defaultBaseUrl: String): ThreadSafeListOfStubs {
-        val resolvedBaseUrls = resolveLocalhostIfPresent(baseUrl) + resolveLocalhostIfPresent(defaultBaseUrl)
+    fun stubAssociatedTo(baseUrl: String, defaultBaseUrl: String, urlPath: String): ThreadSafeListOfStubs {
+        val resolvedBaseUrls = resolveLocalhostIfPresent(baseUrl, urlPath) + resolveLocalhostIfPresent(defaultBaseUrl, urlPath)
+        val baseUrlToListOfStubsMap = baseUrlToListOfStubsMap(defaultBaseUrl)
 
         return resolvedBaseUrls
-            .firstNotNullOfOrNull { resolvedUrl -> baseUrlToListOfStubsMap(defaultBaseUrl)[resolvedUrl] }
+            .firstNotNullOfOrNull { resolvedUrl ->
+                baseUrlToListOfStubsMap.entries.firstOrNull {
+                    resolvedUrl.startsWith(it.key)
+                }?.value
+            }
             ?: emptyStubs()
     }
 

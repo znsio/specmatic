@@ -44,6 +44,7 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.stub.resolveLocalhostIfPresent
 import java.io.File
+import java.net.URI
 
 private const val excludedEndpointsWarning =
     "WARNING: excludedEndpoints is not supported in Specmatic config v2. . Refer to https://specmatic.io/documentation/configuration.html#report-configuration to see how to exclude endpoints."
@@ -313,9 +314,18 @@ data class SpecmaticConfig(
                     is Consumes.ObjectValue -> consumes.baseUrl
                 }
             }
-        }.plus(defaultBaseUrl).flatMap {
-            resolveLocalhostIfPresent(it)
+        }.plus(defaultBaseUrl).flatMap { stubBaseUrl ->
+            resolveLocalhostIfPresent(stubBaseUrl).map { resolvedBaseUrl ->
+                "$resolvedBaseUrl${URI(stubBaseUrl).path}"
+            }
         }.distinct()
+    }
+
+    @JsonIgnore
+    fun stubBaseUrlPathAssociatedTo(url: String, defaultBaseUrl: String): String {
+        return stubBaseUrls(defaultBaseUrl).firstOrNull { stubBaseUrl ->
+            url.startsWith(stubBaseUrl)
+        }?.let { URI(it).path }.orEmpty()
     }
 
     @JsonIgnore

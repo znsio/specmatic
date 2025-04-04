@@ -384,7 +384,7 @@ Feature: GET API
 
     @Test
     fun `generates a valid endpoint when port 80 is given`() {
-        assertThat(endPointFromBaseURL("localhost:80", null)).isEqualTo("http://localhost")
+        assertThat(endPointFromBaseURL("localhost:80", null)).isEqualTo("http://localhost:80")
     }
 
     @Test
@@ -394,7 +394,7 @@ Feature: GET API
                 "localhost:80",
                 KeyData(KeyStore.getInstance(KeyStore.getDefaultType()), "")
             )
-        ).isEqualTo("https://localhost")
+        ).isEqualTo("https://localhost:80")
     }
 
     @Test

@@ -2,9 +2,21 @@ package integration_tests
 
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
-import io.specmatic.core.pattern.*
-import io.specmatic.core.value.*
-import io.specmatic.stub.*
+import io.specmatic.core.pattern.JSONObjectPattern
+import io.specmatic.core.pattern.NumberPattern
+import io.specmatic.core.pattern.QueryParameterScalarPattern
+import io.specmatic.core.pattern.StringPattern
+import io.specmatic.core.pattern.parsedJSON
+import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.value.BooleanValue
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NullValue
+import io.specmatic.core.value.NumberValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
+import io.specmatic.stub.HttpStub
+import io.specmatic.stub.SPECMATIC_RESPONSE_CODE_HEADER
 import io.specmatic.stub.createStubFromContracts
 import io.specmatic.stub.httpRequestLog
 import io.specmatic.stub.httpResponseLog
@@ -39,7 +51,7 @@ class DictionaryTest {
             .fromFile("src/test/resources/openapi/spec_with_dictionary/spec.yaml")
             .toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val response = stub.client.execute(HttpRequest("POST", "/data", body = parsedJSON("""{"name": "data"}""")))
 
             val jsonResponsePayload = response.body as JSONObjectValue
@@ -98,7 +110,7 @@ class DictionaryTest {
             .fromFile("src/test/resources/openapi/spec_with_dictionary_and_response_headers/spec.yaml")
             .toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val response = stub.client.execute(HttpRequest("POST", "/data", body = parsedJSONObject("""{"name": "data"}""")))
             assertThat(response.status).isEqualTo(200)
             assertThat(response.headers["X-Trace-ID"]).isEqualTo("trace123")
@@ -111,7 +123,7 @@ class DictionaryTest {
             .fromFile("src/test/resources/openapi/spec_with_dictionary_and_multilevel_response/spec.yaml")
             .toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest("GET", "/person")
             println(request.toLogString())
 
@@ -132,7 +144,7 @@ class DictionaryTest {
             .fromFile("src/test/resources/openapi/spec_with_dictionary_and_multilevel_schema/spec.yaml")
             .toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest("GET", "/person")
 
             val response = stub.client.execute(request)
@@ -153,7 +165,7 @@ class DictionaryTest {
             .fromFile("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_object_value/spec.yaml")
             .toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest("GET", "/person")
 
             val response = stub.client.execute(request)
@@ -174,7 +186,7 @@ class DictionaryTest {
             .fromFile("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_array_value/spec.yaml")
             .toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest("GET", "/person")
 
             val response = stub.client.execute(request)
@@ -194,7 +206,7 @@ class DictionaryTest {
             .fromFile("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_array_objects/spec.yaml")
             .toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val request = HttpRequest("GET", "/person")
 
             val response = stub.client.execute(request)

@@ -8,6 +8,7 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.shouldMatch
 import io.specmatic.shouldNotMatch
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions
@@ -277,7 +278,7 @@ paths:
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
 
             val expectations = listOf(
                 ScenarioStub(
@@ -352,7 +353,7 @@ paths:
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
 
             val invalidStub = ScenarioStub(
                 HttpRequest("POST", "/orders", body = parsedJSONArray("""[{"name": 10}]""")),

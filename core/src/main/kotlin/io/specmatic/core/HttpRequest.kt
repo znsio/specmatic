@@ -67,6 +67,12 @@ data class HttpRequest(
         metadata = metadata
     )
 
+    fun trimBaseUrlPath(baseUrlPath: String): HttpRequest {
+        return this.copy(
+            path = this.path?.replaceFirst(baseUrlPath, "").orEmpty()
+        )
+    }
+
     fun addHeaderIfMissing(name: String, value: String): HttpRequest {
         if(headers.containsKey(name))
             return this

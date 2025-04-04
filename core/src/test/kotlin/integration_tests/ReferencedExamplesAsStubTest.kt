@@ -6,6 +6,7 @@ import io.specmatic.core.HttpResponse
 import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -76,7 +77,7 @@ components:
         10""".trimIndent()
 
         val contract = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(HttpRequest("GET", "/products?brand_id=10"))
                 .let { response ->
                     assertThat(response.status).isEqualTo(200)
@@ -157,7 +158,7 @@ components:
         10""".trimIndent()
 
         val contract = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(HttpRequest("GET", "/products/10"))
                 .let { response ->
                     assertThat(response.status).isEqualTo(200)
@@ -225,7 +226,7 @@ components:
         'ABCD1234'""".trimIndent()
 
         val contract = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(HttpRequest("GET", "/products", mapOf("Authenticate" to "ABCD1234")))
                 .let { response ->
                     assertThat(response.status).isEqualTo(200)
@@ -293,7 +294,7 @@ components:
         name: 'Macbook'""".trimIndent()
 
         val contract = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(HttpRequest("POST", "/products", emptyMap(), parsedJSONObject("""{"name": "Macbook"}""")))
                 .let { response ->
                     assertThat(response.status).isEqualTo(200)
@@ -372,7 +373,7 @@ components:
         name: 'Macbook'""".trimIndent()
 
         val contract = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(HttpRequest("POST", "/products", emptyMap(), parsedJSONObject("""{"name": "Macbook"}""")))
                 .let { response ->
                     assertThat(response.status).isEqualTo(200)
@@ -441,7 +442,7 @@ components:
         """.trimIndent()
 
         val contract = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(HttpRequest("GET", "/products/10"))
                 .let { response ->
                     assertThat(response.status).isEqualTo(200)
@@ -512,7 +513,7 @@ components:
         """.trimIndent()
 
         val contract = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        HttpStub(contract).use { stub ->
+        HttpStub(contract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(HttpRequest("GET", "/products/10"))
                 .let { response ->
                     assertThat(response.status).isEqualTo(200)
@@ -596,7 +597,7 @@ components:
 
         val expectationFromFile = listOf(ScenarioStub(request, response))
 
-        HttpStub(contract, expectationFromFile).use { stub ->
+        HttpStub(contract, expectationFromFile, DEFAULT_STUB_BASEURL).use { stub ->
             stub.client.execute(request)
                 .let { response ->
                     assertThat(response.status).isEqualTo(200)

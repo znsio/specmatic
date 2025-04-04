@@ -7,6 +7,7 @@ import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
@@ -147,7 +148,7 @@ class CyclePrevention {
         """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(stubContract).use { stub ->
+        HttpStub(stubContract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val randomResponse = stub.client.execute(HttpRequest("GET", "/data"))
             assertThat(
                 stubContract.scenarios.first().let { scenario ->
@@ -225,7 +226,7 @@ class CyclePrevention {
         """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val response = stub.client.execute(HttpRequest("GET", "/data"))
 
             assertThat(
@@ -293,7 +294,7 @@ class CyclePrevention {
         """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val response = stub.client.execute(HttpRequest("GET", "/data"))
 
             assertThat(
@@ -387,7 +388,7 @@ class CyclePrevention {
         """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(feature).use {
+        HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             val response = it.client.execute(HttpRequest("GET", "/data"))
             assertThat(response.status).isEqualTo(400)
 
@@ -452,7 +453,7 @@ class CyclePrevention {
         """.trimIndent(), ""
         ).toFeature()
 
-        val response = HttpStub(feature).use {
+        val response = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             it.client.execute(HttpRequest("GET", "/data"))
         }
 
@@ -504,7 +505,7 @@ class CyclePrevention {
         """.trimIndent(), ""
         ).toFeature()
 
-        val response = HttpStub(feature).use {
+        val response = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             it.client.execute(HttpRequest("GET", "/data"))
         }
 
@@ -554,7 +555,7 @@ class CyclePrevention {
         """.trimIndent(), ""
         ).toFeature()
 
-        val response = HttpStub(feature).use {
+        val response = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             it.client.execute(HttpRequest("GET", "/data"))
         }
 
@@ -604,7 +605,7 @@ class CyclePrevention {
         """.trimIndent(), ""
         ).toFeature()
 
-        val response = HttpStub(feature).use {
+        val response = HttpStub(feature, baseURL = DEFAULT_STUB_BASEURL).use {
             it.client.execute(HttpRequest("GET", "/data"))
         }
 

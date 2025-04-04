@@ -11,6 +11,7 @@ import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
 import io.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThat
@@ -137,7 +138,7 @@ Scenario: JSON API to get account details with fact check
     @Test
     @Throws(Throwable::class)
     fun `contract mock should fail to match invalid body`() {
-        HttpStub(queryParamJsonContract).use { stub ->
+        HttpStub(queryParamJsonContract, baseURL = DEFAULT_STUB_BASEURL).use { stub ->
             val expectedRequest =
                 HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10")
             val expectedResponse = HttpResponse.jsonResponse("{call-mins-left: 100, smses-left: 200}")
@@ -228,7 +229,7 @@ Scenario: JSON API to get account details with fact check
     @Test
     @Throws(Throwable::class)
     fun `contract should mock multi valued arrays in request body`() {
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
             val responseBody =
                 "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
@@ -240,7 +241,7 @@ Scenario: JSON API to get account details with fact check
     @Test
     @Throws(Throwable::class)
     fun `contract should mock multi valued arrays using pattern in request body`() {
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/special_locations")
             val responseBody =
                 "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
@@ -252,7 +253,7 @@ Scenario: JSON API to get account details with fact check
     @Test
     @Throws(Throwable::class)
     fun `contract should mock multi valued arrays using pattern in response body`() {
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val requestBody =
                 "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/locations").updateBody(requestBody)
@@ -279,7 +280,7 @@ Scenario: JSON API to get account details with fact check
   | cities_exist | 
   | city_list | 
     """
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
             val expectedResponse =
                 HttpResponse(200, "{\"cities\":[{\"city\": \"Mumbai\"}, {\"city\": \"Bangalore\"}] }")
@@ -293,7 +294,7 @@ Scenario: JSON API to get account details with fact check
         httpRequest: HttpRequest,
         httpResponse: HttpResponse
     ): ResponseEntity<String> {
-        HttpStub(contractGherkinString).use { mock ->
+        HttpStub(contractGherkinString, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             mock.setExpectation(ScenarioStub(httpRequest, httpResponse))
             val restTemplate = RestTemplate()
             return restTemplate.exchange(
@@ -315,7 +316,7 @@ Scenario: JSON API to get account details with fact check
     And response-body (number)
 """.trimIndent()
 
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody("10")
             val expectedResponse = HttpResponse(200, "10")
             mock.setExpectation(ScenarioStub(expectedRequest, expectedResponse))
@@ -340,7 +341,7 @@ Scenario: JSON API to get account details with fact check
               And response-body (Employee*)
 """.trimIndent()
 
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/tech/employees?empType=contract")
             val expectedResponse = HttpResponse(200, """[{name: "emp1", id: 1, type: "contract", rating: null}]""")
             mock.setExpectation(ScenarioStub(expectedRequest, expectedResponse))
@@ -362,7 +363,7 @@ Scenario: JSON API to get account details with fact check
               And response-body (Employee*)
 """.trimIndent()
 
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/employees")
             val expectedResponse = HttpResponse(200, """[{name: "123123123", id: 123123123}]""")
             mock.setExpectation(ScenarioStub(expectedRequest, expectedResponse))
@@ -382,7 +383,7 @@ Scenario: JSON API to get account details with fact check
 """.trimIndent()
 
         val exception = assertThrows<ContractException>({ "Should throw Contract Exception" }) {
-            HttpStub(contractGherkin)
+            HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL)
         }
         assertThat(exception.message).isEqualTo("Enums NumberType type (string?) cannot be nullable. To mark the enum nullable please use it with nullable syntax. Suggested Usage: (NumberType?)")
     }
@@ -405,7 +406,7 @@ Scenario: JSON API to get account details with fact check
               And response-body (Employee*)
 """.trimIndent()
 
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/tech/employees?empType=contract")
             val expectedResponse = HttpResponse(200, """[{name: "emp1", id: 1, type: "contract", rating: 4}]""")
             try {
@@ -435,7 +436,7 @@ Scenario: JSON API to get account details with fact check
     Then status 200
 """.trimIndent()
 
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody(NumberValue(10))
             val expectedResponse = HttpResponse.OK
             mock.setExpectation(ScenarioStub(expectedRequest, expectedResponse))
@@ -451,7 +452,7 @@ Scenario: JSON API to get account details with fact check
     Then status 200
 """.trimIndent()
 
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody(NullValue)
             val expectedResponse = HttpResponse.OK
             mock.setExpectation(ScenarioStub(expectedRequest, expectedResponse))
@@ -467,7 +468,7 @@ Scenario: JSON API to get account details with fact check
     And response-body (number)
 """.trimIndent()
 
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/number")
             val expectedResponse = HttpResponse(200, "10")
             mock.setExpectation(ScenarioStub(expectedRequest, expectedResponse))
@@ -483,7 +484,7 @@ Scenario: JSON API to get account details with fact check
     And response-body (number?)
 """.trimIndent()
 
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/number")
             val expectedResponse = HttpResponse(200, "")
             mock.setExpectation(ScenarioStub(expectedRequest, expectedResponse))
@@ -499,7 +500,7 @@ Scenario: JSON API to get account details with fact check
     Then status 200
 """.trimIndent()
 
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables")
                 .updateBody(JSONObjectValue(mapOf("one" to NumberValue(1), "two" to NumberValue(2))))
             val expectedResponse = HttpResponse.OK
@@ -526,7 +527,7 @@ Scenario: JSON API to get account details with fact check
     And response-body (dictionary string number)
 """.trimIndent()
 
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/variables")
             val expectedResponse = HttpResponse(200, """{"one": 1, "two": 2}""")
             mock.setExpectation(ScenarioStub(expectedRequest, expectedResponse))
@@ -558,7 +559,7 @@ Scenario: JSON API to get account details with fact check
       | number | (number in string) |
 """.trimIndent()
 
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest =
                 HttpRequest().updateMethod("POST").updatePath("/variables").updateBody("""{"number": "10"}""")
             val expectedResponse = HttpResponse(200, """{"number": "20"}""")
@@ -587,7 +588,7 @@ Scenario: JSON API to get account details with fact check
     Then status 200
 """.trimIndent()
 
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest =
                 HttpRequest().updateMethod("POST").updatePath("/variables").copy(formFields = mapOf("Data" to "10"))
 
@@ -622,7 +623,7 @@ Scenario: JSON API to get account details with fact check
     Then status 200
 """.trimIndent()
 
-        HttpStub(contractGherkin).use { mock ->
+        HttpStub(contractGherkin, baseURL = DEFAULT_STUB_BASEURL).use { mock ->
             val expectedRequest = HttpRequest(
                 method = "POST",
                 path = "/variables",

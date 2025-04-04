@@ -88,7 +88,7 @@ data class GitRepo(
                 gitRepositoryURL,
                 branchName,
                 it.path,
-                it.port
+                it.baseUrl
             )
         }
     }

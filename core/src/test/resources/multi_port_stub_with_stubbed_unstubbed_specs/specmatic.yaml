@@ -3,9 +3,9 @@ contracts:
   - filesystem:
       directory: "."
     consumes:
-      - port: 9000
+      - baseUrl: http://localhost:9000
         specs:
           - imported_product/imported_product.yaml
-      - port: 9001
+      - baseUrl: http://localhost:9001
         specs:
           - exported_product/exported_product.yaml

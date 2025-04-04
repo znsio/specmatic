@@ -115,6 +115,10 @@ data class HttpResponse(
         return this.copy(headers = withoutSpecmaticHeaders)
     }
 
+    fun withoutSpecmaticResultHeader(): HttpResponse {
+        return this.copy(headers = this.headers.minus(SPECMATIC_RESULT_HEADER))
+    }
+
     companion object {
         val ERROR_400 = HttpResponse(400, "This request did not match any scenario.", emptyMap())
         val OK = HttpResponse(200, emptyMap())

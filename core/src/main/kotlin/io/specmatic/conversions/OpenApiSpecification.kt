@@ -427,7 +427,7 @@ class OpenApiSpecification(
         val data: List<Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>>> =
             openApiPaths().map { (openApiPath, pathItem) ->
                 val scenariosAndExamples = openApiOperations(pathItem).map { (httpMethod, openApiOperation) ->
-                    logger.debug("\n\nProcessing $httpMethod $openApiPath")
+                    logger.debug("${System.lineSeparator()}Processing $httpMethod $openApiPath")
 
                     try {
                         openApiOperation.validateParameters()
@@ -442,7 +442,7 @@ class OpenApiSpecification(
 
                     val httpResponsePatterns: List<ResponsePatternData> =
                         attempt(breadCrumb = "$httpMethod $openApiPath -> RESPONSE") {
-                            toHttpResponsePatterns(operation.responses)
+                            toHttpResponsePatterns(operation.responses, httpMethod, openApiPath, parsedOpenApi.components?.schemas.orEmpty())
                         }
 
                     val first2xxResponseStatus =
@@ -458,7 +458,7 @@ class OpenApiSpecification(
                     val httpRequestPatterns: List<RequestPatternsData> =
                         attempt("In $httpMethod $openApiPath request") {
                             toHttpRequestPatterns(
-                                specmaticPathParam, specmaticQueryParam, httpMethod, operation
+                                specmaticPathParam, specmaticQueryParam, httpMethod, operation, parsedOpenApi.components?.schemas.orEmpty()
                             )
                         }
 
@@ -850,7 +850,12 @@ class OpenApiSpecification(
         return value.toIntOrNull() != null
     }
 
-    private fun toHttpResponsePatterns(responses: ApiResponses?): List<ResponsePatternData> {
+    private fun toHttpResponsePatterns(
+        responses: ApiResponses?,
+        method: String,
+        path: String,
+        schemas: Map<String, Schema<Any>>
+    ): List<ResponsePatternData> {
         return responses.orEmpty().map { (status, response) ->
             logger.debug("Processing response payload with status $status")
 
@@ -858,7 +863,9 @@ class OpenApiSpecification(
             if(!isNumber(status) && status != "default")
                 throw ContractException("Response status codes are expected to be numbers, but \"$status\" was found")
 
-            attempt(breadCrumb = status) { openAPIResponseToSpecmatic(response, status, headersMap) }
+            attempt(breadCrumb = status) {
+                openAPIResponseToSpecmatic(response, status, headersMap, method, path, schemas)
+            }
         }.flatten()
     }
 
@@ -903,7 +910,10 @@ class OpenApiSpecification(
     private fun openAPIResponseToSpecmatic(
         response: ApiResponse,
         status: String,
-        headersMap: Map<String, Pattern>
+        headersMap: Map<String, Pattern>,
+        method: String,
+        path: String,
+        schemas: Map<String, Schema<Any>>
     ): List<ResponsePatternData> {
         if (response.content == null || response.content.isEmpty()) {
             val responsePattern = HttpResponsePattern(
@@ -923,8 +933,15 @@ class OpenApiSpecification(
                     extractParameterExamples(header.examples, headerName, acc)
                 }
 
+        val contentTypeHeaderPattern = headersMap.entries.find { it.key.lowercase() in listOf("content-type", "content-type?") }?.value
+
         return response.content.map { (contentType, mediaType) ->
             logger.debug("Processing response with content type $contentType")
+
+            val actualContentType = if(contentTypeHeaderPattern != null) {
+                val descriptor = "response of $method $path"
+                getAndLogActualContentTypeHeader(contentTypeHeaderPattern, contentType, descriptor, schemas) ?: contentType
+            } else contentType
 
             val responsePattern = HttpResponsePattern(
                 headersPattern = HttpHeadersPattern(headersMap, contentType = contentType),
@@ -947,10 +964,17 @@ class OpenApiSpecification(
                 when (status.toIntOrNull()) {
                     0, null -> emptyMap()
                     else -> exampleBodies.map {
+                        val mappedHeaderExamples = headerExamples[it.key]?.let { headerExample ->
+                            if(headerExample.entries.find { it.key.lowercase() == "content-type" } == null)
+                                headerExample.plus(CONTENT_TYPE to actualContentType)
+                            else
+                                headerExample
+                        } ?: mapOf(CONTENT_TYPE to actualContentType)
+
                         it.key to HttpResponse(
                             status.toInt(),
                             body = it.value ?: "",
-                            headers = headerExamples[it.key] ?: emptyMap()
+                            headers = mappedHeaderExamples
                         )
                     }.toMap()
                 }
@@ -963,7 +987,8 @@ class OpenApiSpecification(
         httpPathPattern: HttpPathPattern,
         httpQueryParamPattern: HttpQueryParamPattern,
         httpMethod: String,
-        operation: Operation
+        operation: Operation,
+        schemas: Map<String, Schema<Any>>
     ): List<RequestPatternsData> {
         logger.debug("Processing requests for $httpMethod")
 
@@ -990,6 +1015,8 @@ class OpenApiSpecification(
 
             toSpecmaticParamName(it.required != true, it.name) to toSpecmaticPattern(it.schema, emptyList())
         }
+
+        val contentTypeHeaderPattern = headersMap.entries.find { it.key.lowercase() in listOf("content-type", "content-type?") }?.value
 
         val headersPattern = HttpHeadersPattern(headersMap)
         val requestPattern = HttpRequestPattern(
@@ -1078,6 +1105,11 @@ class OpenApiSpecification(
                 )
 
                 else -> {
+                    val actualContentType = if(contentTypeHeaderPattern != null) {
+                        val descriptor = "request of $httpMethod ${httpPathPattern.path}"
+                        getAndLogActualContentTypeHeader(contentTypeHeaderPattern, contentType, descriptor, schemas) ?: contentType
+                    } else contentType
+
                     val examplesFromMediaType = mediaType.examples ?: emptyMap()
 
                     val exampleBodies: Map<String, String?> = examplesFromMediaType.mapValues {
@@ -1088,7 +1120,7 @@ class OpenApiSpecification(
                         if (specmaticConfig.getIgnoreInlineExamples() || getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
                             emptyMap()
                         else
-                            exampleRequestBuilder.examplesWithRequestBodies(exampleBodies, contentType)
+                            exampleRequestBuilder.examplesWithRequestBodies(exampleBodies, actualContentType)
 
                     val bodyIsRequired: Boolean = requestBody.required ?: true
 
@@ -1108,6 +1140,39 @@ class OpenApiSpecification(
                 }
             }.let { RequestPatternsData(it.first, it.second, Pair(contentType, mediaType)) }
         }
+    }
+
+    private fun getAndLogActualContentTypeHeader(
+        contentTypeHeaderPattern: Pattern,
+        contentType: String?,
+        descriptor: String,
+        schemas: Map<String, Schema<Any>>,
+    ): String? {
+        val concretePattern = when (contentTypeHeaderPattern) {
+            is DeferredPattern -> {
+                val schemaPath = withoutPatternDelimiters(contentTypeHeaderPattern.pattern)
+                val componentName = schemaPath.split("/").lastOrNull() ?: return contentType
+                val schema = schemas[componentName] ?: return contentType
+                val pattern = toSpecmaticPattern(schema, listOf(componentName), componentName, false)
+                return getAndLogActualContentTypeHeader(pattern, contentType, descriptor, schemas)
+            }
+            else -> contentTypeHeaderPattern
+        }
+
+        try {
+            val generated1 = concretePattern.generate(Resolver()).toStringLiteral()
+            val generated2 = concretePattern.generate(Resolver()).toStringLiteral()
+
+            if (generated1 == generated2 && generated1 != contentType) {
+                val warning = "WARNING: Media type \"$contentType\" in $descriptor does not match the respective Content-Type header. Using the Content-Type header as an override."
+                logger.log(warning)
+                return generated1
+            }
+        } catch (e: ContractException) {
+            // if an exception was thrown, we probably can't do the validation
+        }
+
+        return contentType
     }
 
     private fun headersPatternWithContentType(
@@ -1367,12 +1432,8 @@ class OpenApiSpecification(
             is DateTimeSchema -> DateTimePattern
             is DateSchema -> DatePattern
             is BooleanSchema -> BooleanPattern(example = schema.example?.toString())
-            is ObjectSchema -> {
-                if (schema.additionalProperties is Schema<*>) {
-                    toDictionaryPattern(schema, typeStack)
-                } else if (noPropertiesDefinedInSchema(schema)) {
-                    toFreeFormDictionaryWithStringKeysPattern()
-                } else if (schema.xml?.name != null) {
+            is ObjectSchema, is MapSchema -> {
+                if (schema.xml?.name != null) {
                     toXMLPattern(schema, typeStack = typeStack)
                 } else {
                     toJsonObjectPattern(schema, patternName, typeStack)
@@ -1499,13 +1560,9 @@ class OpenApiSpecification(
             else -> {
                 if (schema.nullable == true && schema.additionalProperties == null && schema.`$ref` == null) {
                     NullPattern
-                } else if (schema.additionalProperties is Schema<*>) {
-                    toDictionaryPattern(schema, typeStack)
-                } else if (schema.additionalProperties == true) {
-                    toFreeFormDictionaryWithStringKeysPattern()
-                } else if(schema.properties != null)
+                } else if (schema.additionalProperties is Schema<*> || schema.additionalProperties == true || schema.properties != null) {
                     toJsonObjectPattern(schema, patternName, typeStack)
-                else {
+                } else {
                     val schemaFragment = if(patternName.isNotBlank()) " in schema $patternName" else " in the schema"
 
                     if(schema.javaClass.simpleName != "Schema")
@@ -1627,7 +1684,7 @@ class OpenApiSpecification(
     }
 
     private fun toXMLPattern(
-        schema: Schema<Any>, nodeNameFromProperty: String? = null, typeStack: List<String>
+        schema: Schema<*>, nodeNameFromProperty: String? = null, typeStack: List<String>
     ): XMLPattern {
         val name = schema.xml?.name ?: nodeNameFromProperty
 
@@ -1774,25 +1831,6 @@ class OpenApiSpecification(
     private val primitiveOpenAPITypes =
         mapOf("string" to "(string)", "number" to "(number)", "integer" to "(number)", "boolean" to "(boolean)")
 
-    private fun toDictionaryPattern(
-        schema: Schema<*>, typeStack: List<String>
-    ): DictionaryPattern {
-        val valueSchema = schema.additionalProperties as Schema<Any>
-        val valueSchemaTypeName = valueSchema.`$ref` ?: valueSchema.types?.first() ?: ""
-        return DictionaryPattern(
-            StringPattern(), toSpecmaticPattern(valueSchema, typeStack, valueSchemaTypeName, false)
-        )
-    }
-
-    private fun noPropertiesDefinedInSchema(valueSchema: Schema<Any>) = valueSchema.properties == null
-
-    private fun toFreeFormDictionaryWithStringKeysPattern(): DictionaryPattern {
-        return DictionaryPattern(
-            StringPattern(), AnythingPattern
-        )
-    }
-
-
     private fun toJsonObjectPattern(
         schema: Schema<*>, patternName: String, typeStack: List<String>
     ): JSONObjectPattern {
@@ -1802,9 +1840,37 @@ class OpenApiSpecification(
         val maxProperties: Int? = schema.maxProperties
         val jsonObjectPattern = toJSONObjectPattern(schemaProperties, if(patternName.isNotBlank()) "(${patternName})" else "").copy(
             minProperties = minProperties,
-            maxProperties = maxProperties
+            maxProperties = maxProperties,
+            additionalProperties = additionalPropertiesFrom(schema, patternName, typeStack)
         )
         return cacheComponentPattern(patternName, jsonObjectPattern)
+    }
+
+    private fun additionalPropertiesFrom(
+        schema: Schema<*>, patternName: String, typeStack: List<String>
+    ): AdditionalProperties {
+        val schemaProperties = schema.properties.orEmpty()
+
+        val additionalProperties = schema.additionalProperties ?: return when {
+            schemaProperties.isEmpty() -> AdditionalProperties.FreeForm
+            else -> AdditionalProperties.NoAdditionalProperties
+        }
+
+        return when (additionalProperties) {
+            true -> AdditionalProperties.FreeForm
+            false -> AdditionalProperties.NoAdditionalProperties
+            is Schema<*> -> processAdditionalPropertiesSchema(additionalProperties, patternName, typeStack)
+            else -> throw ContractException(
+                breadCrumb = "$patternName.additionalProperties",
+                errorMessage = "Unrecognized type for additionalProperties: expected a boolean or a schema"
+            )
+        }
+    }
+
+    private fun processAdditionalPropertiesSchema(schema: Schema<*>, patternName: String, typeStack: List<String>): AdditionalProperties {
+        val parsedPattern = toSpecmaticPattern(schema, typeStack, patternName)
+        return if (parsedPattern is AnyNonNullJSONValue) AdditionalProperties.FreeForm
+        else AdditionalProperties.PatternConstrained(parsedPattern)
     }
 
     private fun toSchemaProperties(

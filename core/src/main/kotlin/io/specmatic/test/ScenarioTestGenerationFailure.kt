@@ -11,13 +11,14 @@ import io.specmatic.core.log.logger
 class ScenarioTestGenerationFailure(
     var scenario: Scenario,
     val failure: Result.Failure,
+    val message: String,
     private val baseURL: String,
 ): ContractTest {
 
     init {
-        val exampleRow = scenario.examples.flatMap { it.rows }.firstOrNull { it.name == failure.message }
+        val exampleRow = scenario.examples.flatMap { it.rows }.firstOrNull { it.name == message }
         if (exampleRow != null) {
-            scenario = scenario.copy(exampleRow = exampleRow, exampleName = failure.message)
+            scenario = scenario.copy(exampleRow = exampleRow, exampleName = message)
         }
     }
 

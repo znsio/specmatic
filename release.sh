@@ -91,7 +91,7 @@ echo
 
 
 echo Building
-./gradlew clean build
+./gradlew clean test assemble
 
 echo Pushing to remote
 git push

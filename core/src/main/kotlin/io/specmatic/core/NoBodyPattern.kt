@@ -41,6 +41,10 @@ object NoBodyPattern : Pattern {
         return Result.Failure("Expected no body, but found ${otherPattern.typeName}")
     }
 
+    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
+        return runCatching { parse(value.toStringLiteral(), resolver) }.map(::HasValue).getOrElse(::HasException)
+    }
+
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value = JSONArrayValue(valueList)
 
     override val typeAlias: String?

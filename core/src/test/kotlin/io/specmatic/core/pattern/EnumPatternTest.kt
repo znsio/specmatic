@@ -4,9 +4,7 @@ import io.specmatic.GENERATION
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.UseDefaultExample
-import io.specmatic.core.value.NullValue
-import io.specmatic.core.value.NumberValue
-import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Nested
@@ -169,5 +167,30 @@ class EnumPatternTest {
             assertThat(resultText).contains("01")
             assertThat(resultText).contains("02")
         }
+    }
+
+    @Test
+    fun `should be able to generate a value when pattern token of itself is supplied`() {
+        val enumValues: List<Value> = listOf("Cat", "Dog", "Fish").map { StringValue(it) }
+        val enumPattern = EnumPattern(enumValues, typeAlias = "(Test)")
+        val resolver = Resolver(newPatterns = mapOf("(Test)" to enumPattern))
+        val value = StringValue("(Test)")
+        val filledInValue = enumPattern.fillInTheBlanks(value, resolver).value
+
+        assertThat(enumValues).contains(filledInValue)
+    }
+
+    @Test
+    fun `should use dictionary value when filling in from pattern token`() {
+        val enumValues: List<Value> = listOf("Cat", "Dog", "Fish").map { StringValue(it) }
+        val enumPattern = EnumPattern(enumValues, typeAlias = "(AnimalType)")
+        val jsonPattern = JSONObjectPattern(mapOf("type" to enumPattern), typeAlias = "(Test)")
+
+        val dictionary= mapOf("Test.type" to StringValue("Dog"))
+        val resolver = Resolver(newPatterns = mapOf("(AnimalType)" to enumPattern), dictionary = dictionary)
+        val value = JSONObjectValue(mapOf("type" to StringValue("(AnimalType)")))
+        val filledInValue = jsonPattern.fillInTheBlanks(value, resolver).value
+
+        assertThat(filledInValue).isEqualTo(JSONObjectValue(mapOf("type" to StringValue("Dog"))))
     }
 }

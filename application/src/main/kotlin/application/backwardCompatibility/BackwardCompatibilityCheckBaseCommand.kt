@@ -43,6 +43,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     var repoDir: String = "."
 
     abstract fun checkBackwardCompatibility(oldFeature: IFeature, newFeature: IFeature): Results
+    abstract fun File.isValidFileFormat(): Boolean
     abstract fun File.isValidSpec(): Boolean
     abstract fun getFeatureFromSpecPath(path: String): IFeature
 
@@ -57,7 +58,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     final override fun call() {
         gitCommand = SystemGit(workingDirectory = Paths.get(repoDir).absolutePathString())
         addShutdownHook()
-        val filteredSpecs = getChangedSpecs(logSpecs = true)
+        val filteredSpecs = getChangedSpecs()
         val result = try {
             runBackwardCompatibilityCheckFor(
                 files = filteredSpecs,
@@ -74,7 +75,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         exitProcess(result.exitCode)
     }
 
-    fun getChangedSpecs(logSpecs: Boolean = false): Set<String> {
+    private fun getChangedSpecs(): Set<String> {
         val filesChangedInCurrentBranch = getChangedSpecsInCurrentBranch().filter {
             it.contains(targetPath)
         }.toSet()
@@ -84,24 +85,24 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         val specificationsOfChangedExternalisedExamples =
             getSpecsOfChangedExternalisedExamples(filesChangedInCurrentBranch)
 
-        if(logSpecs) {
-            logFilesToBeCheckedForBackwardCompatibility(
-                filesChangedInCurrentBranch,
-                filesReferringToChangedSchemaFiles,
-                specificationsOfChangedExternalisedExamples
-            )
-        }
+        logFilesToBeCheckedForBackwardCompatibility(
+            filesChangedInCurrentBranch,
+            filesReferringToChangedSchemaFiles,
+            specificationsOfChangedExternalisedExamples
+        )
 
-        return filesChangedInCurrentBranch +
+        val collectedFiles = filesChangedInCurrentBranch +
                 filesReferringToChangedSchemaFiles +
                 specificationsOfChangedExternalisedExamples
+
+        return collectedFiles.map { path -> File(path).canonicalPath }.toSet()
     }
 
     private fun getChangedSpecsInCurrentBranch(): Set<String> {
         return gitCommand.getFilesChangedInCurrentBranch(
             baseBranch()
         ).filter {
-            File(it).exists() && File(it).isValidSpec()
+            File(it).exists() && File(it).isValidFileFormat()
         }.toSet().also {
             if (it.isEmpty()) {
                 logger.log("$newLine No specs were changed, skipping the check.$newLine")
@@ -110,39 +111,43 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         }
     }
 
-    open fun getSpecsReferringTo(
-        schemaFiles: Set<String>,
-        visitedSpecs: Set<String> = setOf()
-    ): Set<String> {
-        if (schemaFiles.isEmpty()) return emptySet()
+    open fun getSpecsReferringTo(specFilePaths: Set<String>): Set<String> {
+        if (specFilePaths.isEmpty()) return emptySet()
+        val specFiles = specFilePaths.map { File(it) }
+        val allSpecFileContent = allSpecFiles().associateWith { it.readText() }
 
-        val inputFileNames = schemaFiles.map { File(it).name }
-        val result = allSpecFiles().filter {
-            it.readText().trim().let { specContent ->
-                inputFileNames.any { inputFileName ->
-                    val pattern = Pattern.compile("\\b${regexForMatchingReferred(inputFileName)}\\b")
-                    val matcher = pattern.matcher(specContent)
-                    matcher.find()
-                }
+        val referringSpecsSoFar = mutableSetOf<File>()
+        val queue = ArrayDeque(specFiles)
+
+        while (queue.isNotEmpty()) {
+            val combinedPattern = Pattern.compile(queue.toSet().joinToString(prefix = "\\b(?:", separator = "|", postfix = ")\\b") { specFile ->
+                regexForMatchingReferred(specFile.name).let { Regex.escape(it) }
+            })
+
+            queue.clear()
+
+            val referringSpecs = allSpecFileContent.entries.filter { (specFile, content) ->
+                specFile !in referringSpecsSoFar && combinedPattern.matcher(content).find()
+            }.map {
+                it.key
+            }.filter { referringSpecFile ->
+                referringSpecsSoFar.add(referringSpecFile)
             }
-        }.map { it.path }.toSet()
 
-        val updatedVisitedSpecs = result.fold(visitedSpecs) { acc, spec ->
-            if (spec in visitedSpecs)
-                return@fold acc
-
-            val updatedVisitedSpecs = acc + spec
-            updatedVisitedSpecs + getSpecsReferringTo(setOf(spec), updatedVisitedSpecs)
-
+            queue.addAll(referringSpecs)
         }
 
-        return (updatedVisitedSpecs - schemaFiles)
+        return referringSpecsSoFar.filter {
+            it !in specFiles
+        }.map {
+            it.canonicalPath
+        }.toSet()
     }
 
     internal fun allSpecFiles(): List<File> {
         return File(repoDir).walk().toList().filterNot {
             ".git" in it.path
-        }.filter { it.isFile && it.isValidSpec() }
+        }.filter { it.isFile && it.isValidFileFormat() }
     }
 
     private fun logFilesToBeCheckedForBackwardCompatibility(
@@ -182,6 +187,13 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
                 try {
                     logger.log("${index.inc()}. Running the check for $specFilePath:")
 
+                    if (with(File(specFilePath)) {
+                            exists() && isValidSpec().not()
+                        }) {
+                        logger.log("${ONE_INDENT}Skipping $specFilePath as it is not a valid spec file.$newLine")
+                        return@mapIndexed null
+                    }
+
                     // newer => the file with changes on the branch
                     val newer = getFeatureFromSpecPath(specFilePath)
                     val unusedExamples = getUnusedExamples(newer)
@@ -218,7 +230,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
                 }
             }
 
-            return CompatibilityReport(results)
+            return CompatibilityReport(results.filterNotNull())
         } finally {
             gitCommand.checkout(treeishWithChanges)
         }
@@ -303,7 +315,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     companion object {
         private const val HEAD = "HEAD"
         private const val MARGIN_SPACE = "  "
-        private const val ONE_INDENT = "  "
+        internal const val ONE_INDENT = "  "
         private const val TWO_INDENTS = "${ONE_INDENT}${ONE_INDENT}"
     }
 }

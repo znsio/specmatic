@@ -3,6 +3,7 @@ package io.specmatic.core.pattern
 import com.mifmif.common.regex.Generex
 import dk.brics.automaton.RegExp
 import dk.brics.automaton.State
+import io.specmatic.core.log.logger
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import kotlin.collections.MutableMap
@@ -15,10 +16,19 @@ internal const val WORD_BOUNDARY = "\\b"
 class RegExSpec(regex: String?) {
     private val originalRegex = regex
     private val regex = regex?.let {
-        validateRegex(replaceRegexLowerBounds(it))
-            .removePrefix("^").removeSuffix("$")
-            .removePrefix(WORD_BOUNDARY).removeSuffix(WORD_BOUNDARY)
-            .let { regexWithoutSurroundingDelimiters -> replaceShorthandEscapeSeq(regexWithoutSurroundingDelimiters) }
+        doesNotStartWithRegexDelimiters(it)
+        .replaceRegexLowerBounds()
+        .removePrefix("^").removeSuffix("$")
+        .removePrefix(WORD_BOUNDARY).removeSuffix(WORD_BOUNDARY)
+        .replaceShorthandEscapeSeq()
+        .validateRegex()
+    }
+
+    private fun doesNotStartWithRegexDelimiters(regex: String): String {
+        if (regex.startsWith("/") && regex.endsWith("/")) {
+            throw IllegalArgumentException("Invalid regex $originalRegex. OpenAPI follows ECMA-262 regular expressions, which do not support / / delimiters like those used in many programming languages")
+        }
+        return regex
     }
 
     private val isFinite = this.regex != null && !Generex(this.regex).isInfinite
@@ -70,28 +80,31 @@ class RegExSpec(regex: String?) {
     fun match(sampleData: StringValue) =
         regex?.let { Regex(it).matches(sampleData.toStringLiteral()) } ?: true
 
-    private fun replaceRegexLowerBounds(regex: String): String {
+    private fun String.replaceRegexLowerBounds(): String {
         val pattern = Regex("""\{,(\d+)}""")
-        return regex.replace(pattern) { matchResult ->
+        return this.replace(pattern) { matchResult ->
             "{0,${matchResult.groupValues[1]}}"
         }
     }
 
-    private fun validateRegex(regex: String): String {
-        if (regex.startsWith("/") && regex.endsWith("/")) {
-            throw IllegalArgumentException("Invalid regex $originalRegex. OpenAPI follows ECMA-262 regular expressions, which do not support / / delimiters like those used in many programming languages")
-        }
-        return runCatching { RegExp(regex); regex }.getOrElse {
+    private fun String.validateRegex(): String {
+        return runCatching {
+            val random = Generex(this).random()
+            if (!Regex(this).matches(random)) {
+                logger.log("WARNING: Please check the regex $originalRegex. We generated a random string $random and the regex does not match the string.")
+            }
+            this
+        }.getOrElse {
                 e -> throw IllegalArgumentException("Failed to parse regex $originalRegex\nReason: ${e.message}")
         }
     }
 
-    private fun replaceShorthandEscapeSeq(regex: String): String {
+    private fun String.replaceShorthandEscapeSeq(): String {
         // This regex matches a character class: a '[' followed by either an escaped char (e.g. \])
         // or any char that is not a ']', until the first unescaped ']'
         val charClassRegex = Regex("""\[(?:\\.|[^\]])*]""")
 
-        return charClassRegex.replace(regex) { matchResult ->
+        return charClassRegex.replace(this) { matchResult ->
             val charClass = matchResult.value
 
             // Check if the class is negated (i.e. starts with "[^")

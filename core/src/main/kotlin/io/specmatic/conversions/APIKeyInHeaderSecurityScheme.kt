@@ -5,8 +5,12 @@ import io.specmatic.core.pattern.Row
 import io.specmatic.core.pattern.StringPattern
 
 data class APIKeyInHeaderSecurityScheme(val name: String, private val apiKey:String?) : OpenAPISecurityScheme {
-    override fun matches(httpRequest: HttpRequest): Result {
-        return if (httpRequest.headers.containsKey(name)) Result.Success() else Result.Failure("API-key named $name was not present as a header")
+    override fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
+        return if (httpRequest.headers.containsKey(name) || resolver.mockMode) Result.Success()
+        else Result.Failure(
+            breadCrumb = "HEADERS.$name",
+            message = resolver.mismatchMessages.expectedKeyWasMissing("API-Key", name)
+        )
     }
 
     override fun removeParam(httpRequest: HttpRequest): HttpRequest {
@@ -20,6 +24,11 @@ data class APIKeyInHeaderSecurityScheme(val name: String, private val apiKey:Str
 
     override fun addTo(requestPattern: HttpRequestPattern, row: Row): HttpRequestPattern {
         return addToHeaderType(name, row, requestPattern)
+    }
+
+    override fun copyFromTo(originalRequest: HttpRequest, newHttpRequest: HttpRequest): HttpRequest {
+        if (!originalRequest.headers.containsKey(name)) return newHttpRequest
+        return newHttpRequest.addSecurityHeader(name, originalRequest.headers.getValue(name))
     }
 
     override fun isInRow(row: Row): Boolean = row.containsField(name)

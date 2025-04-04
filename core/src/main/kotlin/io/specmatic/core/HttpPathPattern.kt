@@ -7,6 +7,7 @@ import io.specmatic.core.value.StringValue
 import io.ktor.util.reflect.*
 import io.specmatic.conversions.convertPathParameterStyle
 import java.net.URI
+import kotlin.collections.joinToString
 
 val OMIT = listOf("(OMIT)", "(omit)")
 
@@ -81,10 +82,11 @@ data class HttpPathPattern(
 
         val finalMatchResult = Result.fromResults(failures)
 
-        return if(failures.any { it.failureReason == FailureReason.URLPathMisMatch })
-            finalMatchResult.withFailureReason(FailureReason.URLPathMisMatch)
-        else
-            finalMatchResult
+        val failureReason = if (structureMatches(path, resolver)) {
+            FailureReason.URLPathParamMismatchButSameStructure
+        } else FailureReason.URLPathMisMatch
+
+        return finalMatchResult.withFailureReason(failureReason)
     }
 
     fun generate(resolver: Resolver): String {
@@ -156,6 +158,32 @@ data class HttpPathPattern(
         return generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }
     }
 
+    fun readFrom(row: Row, resolver: Resolver): Sequence<List<URLPathSegmentPattern>> {
+        val generatedPatterns = newListBasedOn(pathSegmentPatterns.map { urlPathParamPattern ->
+            val key = urlPathParamPattern.key
+            if (key === null || !row.containsField(key)) return@map urlPathParamPattern
+
+            attempt(breadCrumb = "$PATH_BREAD_CRUMB.${withoutOptionality(key)}") {
+                val rowValue = row.getField(key)
+                when {
+                    isPatternToken(rowValue) ->  {
+                        val parts = withoutPatternDelimiters(rowValue).split(':')
+                        val tokenBody = parts.getOrNull(1) ?: parts.getOrNull(0) ?: throw ContractException("Invalid pattern token $rowValue in example")
+                        val pattern = resolver.getPattern(withPatternDelimiters(tokenBody))
+                        resolvedHop(pattern, resolver)
+                    }
+                    else ->  {
+                        val exactValue = parsedScalarValue(rowValue)
+                        URLPathSegmentPattern(ExactValuePattern(exactValue))
+                    }
+                }
+            }
+        }, row, resolver).map { it.value }
+
+        //TODO: replace this with Generics
+        return generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }
+    }
+
     fun newBasedOn(resolver: Resolver): Sequence<List<URLPathSegmentPattern>> {
         val generatedPatterns = newBasedOn(pathSegmentPatterns.mapIndexed { index, urlPathPattern ->
             attempt(breadCrumb = "[$index]") {
@@ -177,6 +205,15 @@ data class HttpPathPattern(
 
     fun pathParameters(): List<URLPathSegmentPattern> {
         return pathSegmentPatterns.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
+    }
+
+    fun withWildcardPathSegments(): HttpPathPattern {
+        return this.copy(
+            pathSegmentPatterns = this.pathSegmentPatterns.map {
+                if (it.pattern is ExactValuePattern) it
+                else it.copy(pattern = AnythingPattern)
+            }
+        )
     }
 
     private fun negatively(
@@ -259,14 +296,61 @@ data class HttpPathPattern(
     fun fixValue(path: String?, resolver: Resolver): String {
         if (path == null) return this.generate(resolver)
 
-        val pathSegments = path.split("/".toRegex()).filter { it.isNotEmpty() }.toTypedArray()
+        val pathSegments = path.split("/".toRegex()).filter { it.isNotEmpty() }.map(::removeKeyFromParameterToken)
         if (pathSegmentPatterns.size != pathSegments.size) return this.generate(resolver)
 
         val pathHadPrefix = path.startsWith("/")
         return pathSegmentPatterns.zip(pathSegments).map { (urlPathPattern, token) ->
-            val updatedResolver = resolver.updateLookupPath(PATH_BREAD_CRUMB, urlPathPattern.key.orEmpty())
+            val updatedResolver = resolver.updateLookupPath("PATH-PARAMS", urlPathPattern.key.orEmpty())
             urlPathPattern.fixValue(urlPathPattern.tryParse(token, updatedResolver), updatedResolver)
         }.joinToString("/", prefix = "/".takeIf { pathHadPrefix }.orEmpty() )
+    }
+
+    fun fillInTheBlanks(path: String?, resolver: Resolver): ReturnValue<String> {
+        if (path == null) return HasFailure("Path cannot be null")
+
+        val pathSegments = path.split("/").filter { it.isNotEmpty() }.map(::removeKeyFromParameterToken)
+        if (pathSegmentPatterns.size != pathSegments.size) {
+            return HasFailure("Expected ${pathSegmentPatterns.size} path segments but got ${pathSegments.size}")
+        }
+
+        val pathHadPrefix = path.startsWith("/")
+        val generatedSegments = pathSegmentPatterns.zip(pathSegments).map { (urlPathPattern, token) ->
+            val updatedResolver = resolver.updateLookupPath("PATH-PARAMS", urlPathPattern.key.orEmpty())
+            urlPathPattern.fillInTheBlanks(urlPathPattern.tryParse(token, updatedResolver), updatedResolver).breadCrumb(urlPathPattern.key)
+        }.listFold()
+
+        return generatedSegments.ifValue { value ->
+            value.joinToString(separator = "/", prefix = "/".takeIf { pathHadPrefix }.orEmpty()) {
+                it.toStringLiteral()
+            }
+        }
+    }
+
+    private fun removeKeyFromParameterToken(token: String): String {
+        if (!isPatternToken(token) || !token.contains(":")) return token
+        val patternType = withoutPatternDelimiters(token).split(":").last()
+        return withPatternDelimiters(patternType)
+    }
+
+    private fun structureMatches(path: String, resolver: Resolver): Boolean {
+        val pathSegments = path.split("/").filter(String::isNotEmpty)
+        if (pathSegments.size != pathSegmentPatterns.size) return false
+
+        pathSegmentPatterns.zip(pathSegments).forEach { (pattern, segment) ->
+            if (pattern.pattern !is ExactValuePattern && pattern.key != null) return@forEach
+            val parsedSegment = pattern.tryParse(segment, resolver)
+            val result = pattern.matches(parsedSegment, resolver)
+            if (result is Failure) return false
+        }
+
+        return true
+    }
+
+    companion object {
+        fun from(path: String): HttpPathPattern {
+            return buildHttpPathPattern(path)
+        }
     }
 }
 

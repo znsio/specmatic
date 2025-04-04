@@ -1,7 +1,5 @@
 package io.specmatic.core
 
-import io.mockk.every
-import io.mockk.mockk
 import io.specmatic.DefaultStrategies
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.pattern.*
@@ -10,11 +8,19 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.True
 import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.test.ScenarioAsTest
 import io.specmatic.test.TestExecutor
+import io.mockk.every
+import io.mockk.mockk
+import io.specmatic.conversions.APIKeyInHeaderSecurityScheme
+import io.specmatic.conversions.APIKeyInQueryParamSecurityScheme
+import io.specmatic.conversions.OpenAPISecurityScheme
+import io.specmatic.test.ScenarioAsTest
+import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import java.util.*
 import java.util.function.Consumer
 
@@ -55,7 +61,7 @@ internal class RunContractTestsUsingScenario {
     @Test
     fun `should not match when there is an Exception`() {
         val httpResponsePattern = mockk<HttpResponsePattern>(relaxed = true)
-        every { httpResponsePattern.matches(any(), any()) }.throws(ContractException("message"))
+        every { httpResponsePattern.matchesResponse(any(), any()) }.throws(ContractException("message"))
         val scenario = Scenario(
             "test",
             HttpRequestPattern(),
@@ -558,8 +564,7 @@ paths:
         ))
 
         val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
-        val contractTest =
-            ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario, baseURL = "")
+        val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario, baseURL = "")
 
         val (result, response) = contractTest.runTest(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -618,8 +623,7 @@ paths:
         ))
 
         val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
-        val contractTest =
-            ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario, baseURL = "")
+        val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario, baseURL = "")
 
         val (result, response) = contractTest.runTest(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -680,8 +684,7 @@ paths:
         ))
 
         val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario))
-        val contractTest =
-            ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario, baseURL = "")
+        val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario, baseURL = "")
 
         val (result, response) = contractTest.runTest(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -713,8 +716,7 @@ paths:
         ))
 
         val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario))
-        val contractTest =
-            ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario, baseURL = "")
+        val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario, baseURL = "")
 
         val (result, response) = contractTest.runTest(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -730,5 +732,97 @@ paths:
         >> RESPONSE.STATUS
         Expected status 201, actual was status 202
         """.trimIndent())
+    }
+
+    @ParameterizedTest
+    @MethodSource("io.specmatic.core.ScenarioTest#securitySchemaProvider")
+    fun `should use security schema values from examples when provided`(securitySchema: OpenAPISecurityScheme) {
+        val request = securitySchema.addTo(HttpRequest("POST", "/"))
+        val scenario = Scenario(
+            name = "SIMPLE POST",
+            httpRequestPattern = HttpRequestPattern(
+                httpPathPattern = buildHttpPathPattern("/"), method = "POST",
+                securitySchemes = listOf(securitySchema)
+            ),
+            httpResponsePattern = HttpResponsePattern(status = 200),
+            examples = listOf(
+                Examples(
+                    emptyList(),
+                    listOf(Row(requestExample = request))
+                )
+            )
+        )
+        val feature = Feature(name = "", scenarios = listOf(scenario))
+
+        val extractValue: (HttpRequest) -> String = { it ->
+            when(securitySchema) {
+                is APIKeyInHeaderSecurityScheme -> it.headers.getValue(securitySchema.name)
+                is APIKeyInQueryParamSecurityScheme -> it.queryParams.getValues(securitySchema.name).first()
+                else -> it.headers.getValue(AUTHORIZATION)
+            }
+        }
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK.also {
+                    val logs = listOf(request.toLogString(), it.toLogString())
+                    println(logs.joinToString(separator = "\n\n"))
+
+                    val result = securitySchema.matches(request, Resolver())
+                    assertThat(result).isInstanceOf(Result.Success::class.java)
+
+                    val actualValue = extractValue(request)
+                    val expectedValue = extractValue(request)
+                    assertThat(actualValue).isEqualTo(expectedValue)
+                }
+            }
+        })
+
+        assertThat(results.results).allSatisfy { assertThat(it).isInstanceOf(Result.Success::class.java) }
+    }
+
+    @ParameterizedTest
+    @MethodSource("io.specmatic.core.ScenarioTest#securitySchemaProvider")
+    fun `should generate security schema values if missing from examples`(securitySchema: OpenAPISecurityScheme) {
+        val scenario = Scenario(
+            name = "SIMPLE POST",
+            httpRequestPattern = HttpRequestPattern(
+                httpPathPattern = buildHttpPathPattern("/"), method = "POST",
+                securitySchemes = listOf(securitySchema)
+            ),
+            httpResponsePattern = HttpResponsePattern(status = 200),
+            examples = listOf(
+                Examples(
+                    emptyList(),
+                    listOf(Row(requestExample = HttpRequest("POST", "/")))
+                )
+            )
+        )
+        val feature = Feature(name = "", scenarios = listOf(scenario))
+
+        val extractValue: (HttpRequest) -> String = { it ->
+            when(securitySchema) {
+                is APIKeyInHeaderSecurityScheme -> it.headers.getValue(securitySchema.name)
+                is APIKeyInQueryParamSecurityScheme -> it.queryParams.getValues(securitySchema.name).first()
+                else -> it.headers.getValue(AUTHORIZATION)
+            }
+        }
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK.also {
+                    val logs = listOf(request.toLogString(), it.toLogString())
+                    println(logs.joinToString(separator = "\n\n"))
+
+                    val result = securitySchema.matches(request, Resolver())
+                    assertThat(result).isInstanceOf(Result.Success::class.java)
+
+                    val actualValue = extractValue(request)
+                    assertThat(actualValue).isNotEmpty()
+                }
+            }
+        })
+
+        assertThat(results.results).allSatisfy { assertThat(it).isInstanceOf(Result.Success::class.java) }
     }
 }

@@ -4,6 +4,7 @@ import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.Result
 import io.specmatic.core.Scenario
+import io.specmatic.core.filters.HasScenarioMetadata
 import io.specmatic.core.filters.ScenarioMetadata
 
 interface ResponseValidator {
@@ -16,8 +17,7 @@ interface ResponseValidator {
     }
 }
 
-interface ContractTest {
-    fun toScenarioMetadata(): ScenarioMetadata
+interface ContractTest : HasScenarioMetadata {
     fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord?
     fun testDescription(): String
     fun runTest(timeoutInMilliseconds: Long): Pair<Result, HttpResponse?>

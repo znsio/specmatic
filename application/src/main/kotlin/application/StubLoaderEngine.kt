@@ -29,9 +29,7 @@ class StubLoaderEngine {
 
         return when {
             dataDirs.isNotEmpty() -> {
-                loadContractStubsFromFiles(contractPathDataList, dataDirs, specmaticConfig, strictMode).plus(
-                    loadContractStubsFromImplicitPaths(contractPathDataList, specmaticConfig, dataDirs)
-                )
+                loadContractStubsFromFiles(contractPathDataList, dataDirs, specmaticConfig, strictMode, withImplicitStubs = true)
             }
             else -> loadContractStubsFromImplicitPaths(contractPathDataList, specmaticConfig, dataDirs)
         }

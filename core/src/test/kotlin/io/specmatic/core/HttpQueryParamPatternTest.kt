@@ -13,12 +13,8 @@ import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.trimmedLinesList
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Assertions.*
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
@@ -445,7 +441,7 @@ class HttpQueryParamPatternTest {
             assertThat(result.reportString().trimmedLinesList()).isEqualTo("""
                 >> QUERY-PARAMS.product_id
 
-                   Expected number, actual was "abc"
+                   Expected 1 (number), actual was "abc"
             """.trimIndent().trimmedLinesList())
         }
 
@@ -668,6 +664,120 @@ class HttpQueryParamPatternTest {
 
             println(fixedValue)
             assertThat(fixedValue.asMap()).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
+        }
+    }
+
+    @Nested
+    inner class FillInTheBlanksTests {
+        @Test
+        fun `should generate values for missing mandatory keys and pattern tokens`() {
+            val queryParams = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val params = QueryParameters(mapOf("number" to "(number)"))
+            val dictionary = mapOf(
+                "QUERY-PARAMS.number" to NumberValue(999), "QUERY-PARAMS.boolean" to BooleanValue(true)
+            )
+            val filledParams = queryParams.fillInTheBlanks(params, Resolver(dictionary = dictionary)).value
+
+            assertThat(filledParams.asMap()).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
+        }
+
+        @Test
+        fun `should not generate missing optional keys`() {
+            val queryParams = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean?" to BooleanPattern()))
+            val params = QueryParameters(mapOf("number" to "999"))
+            val dictionary = mapOf("QUERY-PARAMS.boolean" to BooleanValue(true))
+            val filledParams = queryParams.fillInTheBlanks(params, Resolver(dictionary = dictionary)).value
+
+            assertThat(filledParams.asMap()).isEqualTo(mapOf("number" to "999"))
+        }
+
+        @Test
+        fun `should handle any-value pattern token as a special case`() {
+            val queryParams = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val params = QueryParameters(mapOf("number" to "(anyvalue)"))
+            val dictionary = mapOf(
+                "QUERY-PARAMS.number" to NumberValue(999), "QUERY-PARAMS.boolean" to BooleanValue(true)
+            )
+            val filledParams = queryParams.fillInTheBlanks(params, Resolver(dictionary = dictionary)).value
+
+            assertThat(filledParams.asMap()).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
+        }
+
+        @Test
+        fun `should complain when pattern-token does not match the underlying pattern`() {
+            val queryParams = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val params = QueryParameters(mapOf("number" to "(string)"))
+            val exception = assertThrows<ContractException> { queryParams.fillInTheBlanks(params, Resolver()).value }
+
+            assertThat(exception.failure().reportString()).isEqualToNormalizingWhitespace("""
+            >> number
+            Expected number, actual was string
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should generate missing optional keys when allPatternsMandatory is set`() {
+            val queryParams = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean?" to BooleanPattern()))
+            val params = QueryParameters(mapOf("number" to "999"))
+            val dictionary = mapOf("QUERY-PARAMS.boolean" to BooleanValue(true))
+            val filledParams = queryParams.fillInTheBlanks(
+                params, Resolver(dictionary = dictionary).withAllPatternsAsMandatory()
+            ).value
+
+            assertThat(filledParams.asMap()).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
+        }
+
+        @Test
+        fun `should not generate missing mandatory keys when resolver is set to negative`() {
+            val queryParams = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean?" to BooleanPattern()))
+            val params = QueryParameters(mapOf("boolean" to "true"))
+            val filledParams = queryParams.fillInTheBlanks(params, Resolver(isNegative = true)).value
+
+            assertThat(filledParams.asMap()).isEqualTo(mapOf("boolean" to "true"))
+        }
+
+        @Test
+        fun `should allow extra keys when extensible-query-params or resolver is negative`() {
+            val queryParamsPattern = HttpQueryParamPattern(mapOf("number" to NumberPattern()))
+            val queryParameters = mapOf("number" to "(number)", "extraKey" to "(string)")
+            val dictionary = mapOf(
+                "QUERY-PARAMS.number" to NumberValue(999),
+                "QUERY-PARAMS.extraKey" to StringValue("ExtraValue")
+            )
+
+            val negativeResolver = Resolver(dictionary = dictionary, isNegative = true)
+            val negativeFilledParams = queryParamsPattern.fillInTheBlanks(QueryParameters(queryParameters), negativeResolver).value
+            assertThat(negativeFilledParams.asMap()).isEqualTo(
+                mapOf("number" to "999", "extraKey" to "ExtraValue")
+            )
+            
+            Flags.using(EXTENSIBLE_QUERY_PARAMS to "true") {
+                val resolver = Resolver(dictionary = dictionary)
+                val filledParams = queryParamsPattern.fillInTheBlanks(QueryParameters(queryParameters), resolver).value
+                assertThat(filledParams.asMap()).isEqualTo(
+                    mapOf("number" to "999", "extraKey" to "ExtraValue")
+                )
+            }
+        }
+
+        @Test
+        fun `should allow invalid pattern tokens when resolver is negative`() {
+            val queryParamsPattern = HttpQueryParamPattern(mapOf("test" to StringPattern()))
+            val invalidPatterns = listOf(
+                ListPattern(StringPattern()),
+                BooleanPattern(),
+                NullPattern,
+            )
+
+
+            assertThat(invalidPatterns).allSatisfy {
+                val resolver = Resolver(newPatterns = mapOf("(Test)" to it), isNegative = true)
+                val value = QueryParameters(mapOf("test" to "(Test)"))
+                val result = queryParamsPattern.fillInTheBlanks(value, resolver)
+
+                assertThat(result).isInstanceOf(HasValue::class.java); result as HasValue
+                println(result.value)
+            }
         }
     }
 }

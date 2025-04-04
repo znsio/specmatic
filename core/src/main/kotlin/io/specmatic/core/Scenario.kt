@@ -2,6 +2,7 @@ package io.specmatic.core
 
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
+import io.specmatic.core.filters.HasScenarioMetadata
 import io.specmatic.core.filters.ScenarioMetadata
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
@@ -84,7 +85,7 @@ data class Scenario(
     val dictionary: Map<String, Value> = emptyMap(),
     val attributeSelectionPattern: AttributeSelectionPatternDetails = AttributeSelectionPatternDetails.default,
     val exampleRow: Row? = null
-): ScenarioDetailsForResult {
+): ScenarioDetailsForResult, HasScenarioMetadata {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
         scenarioInfo.httpRequestPattern,
@@ -199,7 +200,7 @@ data class Scenario(
         scenarioBreadCrumb(this) {
             val facts = combineFacts(expectedFacts, actualFacts, resolver)
 
-            httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
+            httpResponsePattern.fillInTheBlanks(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
         }
 
     fun generateHttpResponseV2(
@@ -291,21 +292,17 @@ data class Scenario(
         allowOnlyMandatoryKeysInJSONObject: Boolean = false
     ): List<DiscriminatorBasedItem<HttpRequest>> =
         scenarioBreadCrumb(this) {
-            val updatedResolver = getUpdatedResolver(flagsBased, allowOnlyMandatoryKeysInJSONObject)
+            val updatedResolver = if (allowOnlyMandatoryKeysInJSONObject) {
+                flagsBased.update(
+                    resolver.copy(factStore = CheckFacts(expectedFacts), isNegative = this.isNegative)
+                ).withOnlyMandatoryKeysInJSONObject()
+            } else {
+                flagsBased.update(
+                    resolver.copy(factStore = CheckFacts(expectedFacts), isNegative = this.isNegative)
+                )
+            }
             httpRequestPattern.generateV2(updatedResolver)
         }
-
-    private fun getUpdatedResolver(flagsBased: FlagsBased, allowOnlyMandatoryKeysInJSONObject: Boolean): Resolver {
-        return if(allowOnlyMandatoryKeysInJSONObject) {
-            flagsBased.update(
-                resolver.copy(factStore = CheckFacts(expectedFacts))
-            ).withOnlyMandatoryKeysInJSONObject()
-        } else {
-            flagsBased.update(
-                resolver.copy(factStore = CheckFacts(expectedFacts))
-            )
-        }
-    }
 
     fun matchesResponse(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
         val attributeSelectedFields = fieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams)
@@ -323,27 +320,38 @@ data class Scenario(
         )
     }
 
-    fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages, flagsBased: FlagsBased): Result {
-        if (httpResponsePattern.status == DEFAULT_RESPONSE_CODE) {
+    fun matches(
+        httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages,
+        flagsBased: FlagsBased, isPartial: Boolean = false
+    ): Result {
+        if (httpResponsePattern.status == DEFAULT_RESPONSE_CODE || httpResponse.status != httpResponsePattern.status) {
             return Result.Failure(
                 breadCrumb = "STATUS",
                 failureReason = FailureReason.StatusMismatch
             ).updateScenario(this)
         }
 
-        val updatedFlagBased = if (isRequestAttributeSelected(httpRequest)) {
-            flagsBased.copy(unexpectedKeyCheck = ValidateUnexpectedKeys)
-        } else flagsBased
+        val updatedResolver = flagsBased.update(
+            resolver.copy(
+                mockMode = true,
+                mismatchMessages = mismatchMessages,
+                findKeyErrorCheck = if (isPartial) PARTIAL_KEYCHECK else resolver.findKeyErrorCheck
+            )
+        )
 
-        val updatedResolver = updatedFlagBased.update(resolver.copy(mismatchMessages = mismatchMessages, mockMode = true))
         val updatedScenario = newBasedOnAttributeSelectionFields(httpRequest.queryParams)
-
-        val responseMatch = updatedScenario.matches(httpResponse, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
-        if(responseMatch is Result.Failure && responseMatch.hasReason(FailureReason.StatusMismatch)) {
-            return responseMatch.updateScenario(updatedScenario)
+        val requestMatch = when(httpResponse.status in invalidRequestStatuses) {
+            false -> updatedScenario.matches(httpRequest, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
+            else -> updatedScenario.httpRequestPattern.withWildcardPathPattern().matchesPathAndMethod(httpRequest, updatedResolver)
         }
 
-        val requestMatch = updatedScenario.matches(httpRequest, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
+        val fieldsSelected = fieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams)
+        if (fieldsSelected.isNotEmpty()) {
+            val result = httpResponse.checkIfAllRootLevelKeysAreAttributeSelected(fieldsSelected, resolver)
+            if (result is Result.Failure) return Result.fromResults(listOf(requestMatch, result)).updateScenario(updatedScenario)
+        }
+
+        val responseMatch = updatedScenario.matches(httpResponse, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
         return Result.fromResults(listOf(requestMatch, responseMatch)).updateScenario(updatedScenario)
     }
 
@@ -383,7 +391,7 @@ data class Scenario(
         }
 
         return try {
-            httpResponsePattern.matches(httpResponse, resolver).updateScenario(this)
+            httpResponsePattern.matchesResponse(httpResponse, resolver).updateScenario(this)
         } catch (exception: Throwable) {
             Result.Failure("Exception: ${exception.message}")
         }
@@ -417,27 +425,28 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOn(row: Row, flagsBased: FlagsBased): Sequence<ReturnValue<Scenario>> {
+    fun newBasedOn(row: Row, flagsBased: FlagsBased): Sequence<ReturnValue<Scenario>> {
         val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
-        val resolver =
-            Resolver(expectedFacts, false, patterns)
-            .copy(
-                mismatchMessages = ContractAndRowValueMismatch
-            ).let { flagsBased.update(it) }
+
+        val resolver = resolver.copy(
+            factStore = CheckFacts(expectedFacts), mockMode = false, mismatchMessages = ContractAndRowValueMismatch
+        ).let { flagsBased.update(it) }
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
 
         return scenarioBreadCrumb(this) {
             attempt {
-                val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withResponseExampleValue(row, resolver)
-
-                val resolvedRow = try { ExampleProcessor.resolve(row, ExampleProcessor::defaultIfNotExits) } catch (e: Throwable) {
-                    return@attempt sequenceOf(HasException<Scenario>(e, message = row.name, breadCrumb = ""))
+                val rowValue =  when(val resolvedRow = fillInTheBlanksAndResolvePatterns(row, resolver)) {
+                    is HasValue -> resolvedRow.value
+                    is HasException -> return@attempt sequenceOf(resolvedRow.cast())
+                    is HasFailure -> return@attempt sequenceOf(resolvedRow.cast())
                 }
 
+                val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withResponseExampleValue(rowValue, resolver)
+
                 val (newRequestPatterns: Sequence<ReturnValue<HttpRequestPattern>>, generativePrefix: String) = when (isNegative) {
-                    false -> Pair(httpRequestPattern.newBasedOn(resolvedRow, resolver, httpResponsePattern.status), flagsBased.positivePrefix)
-                    else -> Pair(httpRequestPattern.negativeBasedOn(resolvedRow, resolver.copy(isNegative = true)), flagsBased.negativePrefix)
+                    false -> Pair(httpRequestPattern.newBasedOn(rowValue, resolver, httpResponsePattern.status), flagsBased.positivePrefix)
+                    else -> Pair(httpRequestPattern.negativeBasedOn(rowValue, resolver.copy(isNegative = isNegative)), flagsBased.negativePrefix)
                 }
 
                 newRequestPatterns.map { newHttpRequestPattern ->
@@ -461,6 +470,27 @@ data class Scenario(
                 }
             }
         }
+    }
+
+    fun fillInTheBlanksAndResolvePatterns(row: Row, resolver: Resolver): ReturnValue<Row> {
+        if (row.requestExample == null) return HasValue(row)
+
+        return runCatching {
+            fillInTheBlanksAndResolvePatterns(row.requestExample, resolver)
+        }.mapCatching { filledInResolvedRequest ->
+            row.updateRequest(filledInResolvedRequest, httpRequestPattern, resolver)
+        }.map(::HasValue).getOrElse { e ->
+            when(e) {
+                is ContractException -> HasFailure(e.failure(), message = row.name)
+                else -> HasException(e, message = row.name, breadCrumb = "")
+            }
+        }
+    }
+
+    fun fillInTheBlanksAndResolvePatterns(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
+        val resolvedRequest = ExampleProcessor.resolve(httpRequest, ExampleProcessor::defaultIfNotExits)
+        val updatedResolver = resolver.copy(isNegative = httpResponsePattern.status in invalidRequestStatuses)
+        return httpRequestPattern.fillInTheBlanks(resolvedRequest, updatedResolver)
     }
 
     private fun newBasedOnBackwardCompatibility(row: Row): Sequence<Scenario> {
@@ -531,6 +561,7 @@ data class Scenario(
                 return "The $keyLabel $keyName in the specification was missing in example ${row.name}"
             }
         },
+        findKeyErrorCheck = if (row.isPartial) PARTIAL_KEYCHECK else updatedResolver.findKeyErrorCheck,
         mockMode = true
     )
 
@@ -548,7 +579,7 @@ data class Scenario(
 
         if (responseExample != null) {
             val responseMatchResult =
-                httpResponsePatternBasedOnAttributeSelection.matches(responseExample, updatedResolver)
+                httpResponsePatternBasedOnAttributeSelection.matchesResponse(responseExample, updatedResolver)
 
             return responseMatchResult
         }
@@ -663,8 +694,10 @@ data class Scenario(
             )
 
             val requestMatchResult = attempt(breadCrumb = "REQUEST") {
-                if(response.status == 400) httpRequestPattern.matchesPathAndMethod(request, resolver)
-                else httpRequestPattern.matches(request, resolver)
+                if (response.status !in invalidRequestStatuses) return@attempt httpRequestPattern.matches(request, resolver)
+                httpRequestPattern.matchesPathAndMethod(request, resolver).takeUnless {
+                    it is Result.Failure && it.hasReason(FailureReason.URLPathParamMismatchButSameStructure)
+                } ?: Result.Success()
             }
 
             if (requestMatchResult is Result.Failure)
@@ -697,7 +730,7 @@ data class Scenario(
     fun resolverAndResponseForExpectation(response: HttpResponse): Pair<Resolver, HttpResponse> =
         scenarioBreadCrumb(this) {
             attempt(breadCrumb = "RESPONSE") {
-                Pair(this.resolver, httpResponsePattern.fromResponseExpectation(response, resolver).generateResponse(this.resolver))
+                Pair(this.resolver, httpResponsePattern.fromResponseExpectation(response, resolver).fillInTheBlanks(this.resolver))
             }
         }
 
@@ -775,7 +808,9 @@ data class Scenario(
         return externalisedJSONExamples.filter { (operationId, rows) ->
             operationId.requestMethod.equals(method, ignoreCase = true)
                     && operationId.responseStatus == status
-                    && httpRequestPattern.matchesPath(operationId.requestPath, patternMatchingResolver).isSuccess()
+                    && httpRequestPattern.matchesPath(operationId.requestPath, patternMatchingResolver).let {
+                        it.isSuccess() || (it as? Result.Failure)?.failureReason == FailureReason.URLPathParamMismatchButSameStructure
+                    }
                     && matchesRequestContentType(operationId)
                     && matchesResponseContentType(operationId)
         }
@@ -808,9 +843,18 @@ data class Scenario(
     fun matchesPartial(template: ScenarioStub): Result {
         val updatedResolver = resolver.copy(findKeyErrorCheck = PARTIAL_KEYCHECK, mockMode = true)
 
-        val requestMatch = httpRequestPattern.matches(template.request, updatedResolver, updatedResolver)
+        val requestMatch = attempt(breadCrumb = "REQUEST") {
+            if (template.response.status !in invalidRequestStatuses) {
+                return@attempt httpRequestPattern.matches(template.request, updatedResolver, updatedResolver)
+            }
+            httpRequestPattern.matchesPathAndMethod(template.request, updatedResolver).takeUnless {
+                it is Result.Failure && it.hasReason(FailureReason.URLPathParamMismatchButSameStructure)
+            } ?: Result.Success()
+        }
 
-        val responseMatch = httpResponsePattern.matchesMock(template.response, updatedResolver)
+        val responseMatch = attempt(breadCrumb = "RESPONSE") {
+            httpResponsePattern.matchesMock(template.response, updatedResolver)
+        }
 
         return Result.fromResults(listOf(requestMatch, responseMatch))
     }
@@ -825,7 +869,7 @@ data class Scenario(
         }
     }
 
-    fun toScenarioMetadata(): ScenarioMetadata {
+    override fun toScenarioMetadata(): ScenarioMetadata {
         return ScenarioMetadata(
             method = this.method,
             path = this.path,

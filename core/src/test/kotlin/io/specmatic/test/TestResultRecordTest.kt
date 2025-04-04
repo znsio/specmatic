@@ -1,6 +1,7 @@
 package io.specmatic.test
 
 import io.specmatic.core.TestResult
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -57,5 +58,24 @@ class TestResultRecordTest {
             )
             assertFalse(record.isCovered, "Record should not be considered covered for result $it")
         }
+    }
+
+    @Test
+    fun `should return scenario metadata`() {
+        val record = TestResultRecord(
+            path = "/example/path",
+            method = "GET",
+            responseStatus = 200,
+            result = TestResult.Success
+        )
+
+        val scenarioMetadata = record.toScenarioMetadata()
+
+        assertThat(scenarioMetadata.method).isEqualTo("GET")
+        assertThat(scenarioMetadata.path).isEqualTo("/example/path")
+        assertThat(scenarioMetadata.statusCode).isEqualTo(200)
+        assertThat(scenarioMetadata.header).isEmpty()
+        assertThat(scenarioMetadata.query).isEmpty()
+        assertThat(scenarioMetadata.exampleName).isEmpty()
     }
 }

@@ -2,13 +2,33 @@ package io.specmatic.core
 
 import io.mockk.every
 import io.mockk.mockk
+import io.specmatic.conversions.*
 import io.specmatic.core.pattern.*
+import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import java.util.function.Consumer
+import java.util.stream.Stream
 
 class ScenarioTest {
+
+    companion object {
+        @JvmStatic
+        fun securitySchemaProvider(): Stream<OpenAPISecurityScheme> {
+            return Stream.of(
+                APIKeyInHeaderSecurityScheme(name = "API-KEY", apiKey = "1234"),
+                APIKeyInQueryParamSecurityScheme(name = "API-KEY", apiKey = "1234"),
+                BasicAuthSecurityScheme(),
+                BearerSecurityScheme()
+            )
+        }
+    }
+
     @Test
     fun `should validate and reject an invalid response in an example row`() {
         val responseExample = HttpResponse(200, """{"id": "abc123"}""")
@@ -287,6 +307,55 @@ class ScenarioTest {
         assertThat(scenarioMetadata.header).isEqualTo(setOf("Authorization", "X-Request-ID"))
         assertThat(scenarioMetadata.statusCode).isEqualTo(200)
         assertThat(scenarioMetadata.exampleName).isEqualTo("example")
+    }
+
+    @ParameterizedTest
+    @MethodSource("securitySchemaProvider")
+    fun `should load examples with security schemas missing`(securitySchema: OpenAPISecurityScheme) {
+        val scenario = Scenario(
+            name = "SIMPLE POST",
+            httpRequestPattern = HttpRequestPattern(
+                httpPathPattern = buildHttpPathPattern("/"), method = "POST",
+                securitySchemes = listOf(securitySchema)
+            ),
+            httpResponsePattern = HttpResponsePattern(status = 200),
+            examples = listOf(
+                Examples(
+                    emptyList(),
+                    listOf(Row(requestExample = HttpRequest(path = "/", method = "POST")))
+                )
+            )
+        )
+
+        assertDoesNotThrow { scenario.validExamplesOrException(DefaultStrategies) }
+    }
+
+    @Test
+    fun `should throw an exception when security schema defined in the example is invalid`() {
+        val scenario = Scenario(
+            name = "SIMPLE POST",
+            httpRequestPattern = HttpRequestPattern(
+                httpPathPattern = buildHttpPathPattern("/"), method = "POST",
+                securitySchemes = listOf(BasicAuthSecurityScheme())
+            ),
+            httpResponsePattern = HttpResponsePattern(status = 200),
+            examples = listOf(
+                Examples(
+                    emptyList(),
+                    listOf(Row(requestExample = HttpRequest(
+                        path = "/", method = "POST",
+                        headers = mapOf(AUTHORIZATION to "Invalid")
+                    )))
+                )
+            )
+        )
+
+        val exception = assertThrows<ContractException> { scenario.validExamplesOrException(DefaultStrategies) }
+        assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+        Error loading example named  for POST / -> 200
+        >> REQUEST.HEADERS.Authorization
+        Authorization header must be prefixed with "Basic"
+        """.trimIndent())
     }
 
     @Nested

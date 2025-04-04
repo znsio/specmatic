@@ -110,7 +110,7 @@ fun parseContractFileToFeature(
     baseURL: String = "",
     serverURLIndex: Int? = null
 ): Feature {
-    logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
+    logger.debug("Parsing spec file ${file.path}, absolute path ${file.canonicalPath}")
     return when (file.extension) {
         in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(
             hook.readContract(file.path),
@@ -211,9 +211,10 @@ data class Feature(
     }
 
     fun generateDiscriminatorBasedRequestResponseList(
-        scenario: Scenario,
+        scenarioValue: HasValue<Scenario>,
         allowOnlyMandatoryKeysInJSONObject: Boolean = false
     ): List<DiscriminatorBasedRequestResponse> {
+        val scenario = scenarioValue.value
         try {
             val requests = scenario.generateHttpRequestV2(
                 allowOnlyMandatoryKeysInJSONObject = allowOnlyMandatoryKeysInJSONObject
@@ -233,7 +234,8 @@ data class Feature(
                         request = request,
                         response = response,
                         requestDiscriminator = requestDiscriminator,
-                        responseDiscriminator = responseDiscriminator
+                        responseDiscriminator = responseDiscriminator,
+                        scenarioValue = scenarioValue
                     )
                 }
             } else {
@@ -245,7 +247,8 @@ data class Feature(
                         request = request,
                         response = response,
                         requestDiscriminator = requestDiscriminator,
-                        responseDiscriminator = responseDiscriminator
+                        responseDiscriminator = responseDiscriminator,
+                        scenarioValue = scenarioValue
                     )
                 }
             }
@@ -515,21 +518,40 @@ data class Feature(
     }
 
     fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {
-        return matchResultFlagBased(scenarioStub.request, scenarioStub.response, mismatchMessages)
+        return matchResultFlagBased(scenarioStub.requestElsePartialRequest(), scenarioStub.response(), mismatchMessages, scenarioStub.isPartial())
     }
 
-    fun matchResultFlagBased(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages): Results {
+    fun negativeScenariosFor(originalScenario: Scenario): Sequence<ReturnValue<Scenario>> {
+        return negativeScenarioFor(originalScenario).newBasedOn(
+            originalScenario.exampleRow ?: Row(),
+            flagsBased
+        ).filterNot {
+            val scenario = it.value
+            originalScenario.httpRequestPattern.matches(
+                scenario.generateHttpRequest(flagsBased),
+                scenario.resolver
+            ).isSuccess()
+        }
+    }
+
+    fun matchResultFlagBased(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages, isPartial: Boolean): Results {
         val results = scenarios.map {
-            it.matches(request, response, mismatchMessages, flagsBased)
+            it.matches(request, response, mismatchMessages, flagsBased, isPartial)
         }
 
         if(results.any { it.isSuccess() })
             return Results(results).withoutFluff()
 
-        val deepErrors = results.filterNot { it.isFluffy(0) }
+        val deepErrors: List<Result> = results.filterNot {
+            it.isFluffy()
+        }.ifEmpty {
+            results.filter {
+                it is Result.Failure && it.hasReason(FailureReason.URLPathParamMismatchButSameStructure)
+            }
+        }
 
         if(deepErrors.isNotEmpty())
-            return Results(deepErrors)
+            return Results(deepErrors).distinct()
 
         return Results(listOf(Result.Failure("No matching specification found for this example")))
     }
@@ -641,16 +663,10 @@ data class Feature(
         return generateContractTestScenarios(suggestions, fn).map { (originalScenario, returnValue) ->
             returnValue.realise(
                 hasValue = { concreteTestScenario, comment ->
-                    scenarioAsTest(
-                        concreteTestScenario,
-                        comment,
-                        workflow,
-                        originalScenario,
-                        originalScenarios
-                    )
+                    scenarioAsTest(concreteTestScenario, comment, workflow, originalScenario, originalScenarios)
                 },
                 orFailure = {
-                    ScenarioTestGenerationFailure(originalScenario, it.failure, baseURL)
+                    ScenarioTestGenerationFailure(originalScenario, it.failure, it.message, baseURL)
                 },
                 orException = {
                     ScenarioTestGenerationException(originalScenario, it.t, it.message, it.breadCrumb, baseURL)
@@ -660,21 +676,36 @@ data class Feature(
     }
 
     fun createContractTestFromExampleFile(filePath: String): ReturnValue<ContractTest> {
-        val scenarioStub = ScenarioStub.readFromFile(File(filePath))
+        val example = ExampleFromFile(File(filePath))
+        val isBadRequest = (example.responseStatus ?: 0) in invalidRequestStatuses
 
         val originalScenario = scenarios.firstOrNull { scenario ->
-            scenario.matches(scenarioStub.request, scenarioStub.response, DefaultMismatchMessages, flagsBased) is Result.Success
+            val matchResult = scenario.matches(
+                httpRequest = example.request,
+                httpResponse = example.response,
+                mismatchMessages = DefaultMismatchMessages,
+                flagsBased = flagsBased,
+                isPartial = example.isPartial()
+            )
+            matchResult.isSuccess() || (matchResult as Result.Failure).hasReason(FailureReason.URLPathParamMismatchButSameStructure) && isBadRequest
         } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
 
-        val concreteTestScenario = Scenario(
-            name = "",
-            httpRequestPattern = scenarioStub.request.toPattern(),
-            httpResponsePattern = HttpResponsePattern(scenarioStub.response)
-        ).let {
-            it.copy(name = it.apiIdentifier)
+        return runCatching {
+            originalScenario.fillInTheBlanksAndResolvePatterns(example.request, originalScenario.resolver)
+        }.mapCatching { resolvedRequest ->
+            scenarioAsTest(
+                concreteTestScenario =  Scenario(
+                    name = originalScenario.apiIdentifier,
+                    httpRequestPattern = resolvedRequest.toPattern(),
+                    httpResponsePattern = HttpResponsePattern(example.response)
+                ),
+                comment = null,
+                workflow = Workflow(),
+                originalScenario = originalScenario
+            )
+        }.map(::HasValue).getOrElse { e ->
+            e.asReturnValue(example.testName)
         }
-
-        return HasValue(scenarioAsTest(concreteTestScenario, null, Workflow(), originalScenario))
     }
 
     private fun scenarioAsTest(
@@ -683,7 +714,7 @@ data class Feature(
         workflow: Workflow,
         originalScenario: Scenario,
         originalScenarios: List<Scenario> = emptyList()
-    ) = ScenarioAsTest(
+    ): ContractTest = ScenarioAsTest(
         scenario = adjustTestDescription(concreteTestScenario, originalScenarios),
         feature = this.copy(scenarios = originalScenarios),
         flagsBased,
@@ -792,6 +823,10 @@ data class Feature(
         }
     }
 
+    fun negativeScenarioFor(scenario: Scenario): Scenario {
+        return scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
+    }
+
     fun generateBackwardCompatibilityTestScenarios(): List<Scenario> =
         scenarios.flatMap { scenario ->
             scenario.copy(examples = emptyList()).generateBackwardCompatibilityScenarios()
@@ -850,6 +885,7 @@ data class Feature(
             examplePath = scenarioStub.filePath,
             scenario = matchingScenario,
             data = scenarioStub.data,
+            contractPath = this.path,
             partial = scenarioStub.partial.copy(response = scenarioStub.partial.response)
         )
     }
@@ -1690,7 +1726,7 @@ data class Feature(
             pattern is NumberPattern || (pattern is DeferredPattern && pattern.pattern == "(number)") -> NumberSchema()
             pattern is BooleanPattern || (pattern is DeferredPattern && pattern.pattern == "(boolean)") -> BooleanSchema()
             pattern is DateTimePattern || (pattern is DeferredPattern && pattern.pattern == "(datetime)") -> StringSchema()
-            pattern is StringPattern || pattern is EmptyStringPattern || (pattern is DeferredPattern && pattern.pattern == "(string)") || (pattern is DeferredPattern && pattern.pattern == "(nothing)") -> StringSchema()
+            pattern is StringPattern || pattern is EmptyStringPattern || (pattern is DeferredPattern && pattern.pattern == "(string)") || (pattern is DeferredPattern && pattern.pattern == "(emptystring)") -> StringSchema()
             pattern is NullPattern || (pattern is DeferredPattern && pattern.pattern == "(null)") -> Schema<Any>().apply {
                 this.nullable = true
             }
@@ -1849,11 +1885,11 @@ data class Feature(
             try {
                 with(exampleFromFile) {
                     OpenApiSpecification.OperationIdentifier(
-                        requestMethod.orEmpty(),
-                        requestPath.orEmpty(),
-                        responseStatus ?: 0,
-                        exampleFromFile.headers.filter { it.key.lowercase() == "content-type" }.values.firstOrNull(),
-                        exampleFromFile.responseHeaders?.let { it.jsonObject.filter { it.key.lowercase() == "content-type" }.values.firstOrNull()?.toStringLiteral() }
+                        requestMethod = requestMethod.orEmpty(),
+                        requestPath = requestPath.orEmpty(),
+                        responseStatus = responseStatus ?: 0,
+                        requestContentType = exampleFromFile.requestContentType,
+                        responseContentType = exampleFromFile.responseContentType
                     ) to exampleFromFile.toRow(specmaticConfig)
                 }
             } catch (e: Throwable) {
@@ -2548,5 +2584,6 @@ data class DiscriminatorBasedRequestResponse(
     val request: HttpRequest,
     val response: HttpResponse,
     val requestDiscriminator: DiscriminatorMetadata,
-    val responseDiscriminator: DiscriminatorMetadata
+    val responseDiscriminator: DiscriminatorMetadata,
+    val scenarioValue: HasValue<Scenario>
 )

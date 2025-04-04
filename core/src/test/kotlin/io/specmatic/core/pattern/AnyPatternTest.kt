@@ -1,6 +1,7 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.*
+import io.specmatic.core.PARTIAL_KEYCHECK
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.utilities.withNullPattern
@@ -398,6 +399,36 @@ internal class AnyPatternTest {
         assertThat(result.reportString()).contains("Expected json object")
     }
 
+    @Test
+    fun `should include info breadcrumbs when value does not match any discriminator patterns and key check is partial`() {
+        val pattern = AnyPattern(
+            listOf(
+                JSONObjectPattern(mapOf("type" to "sub1".toDiscriminator(), "prop" to StringPattern(), "extra" to StringPattern()), typeAlias = "(Sub1)"),
+                JSONObjectPattern(mapOf("type" to "sub2".toDiscriminator(), "prop" to NumberPattern()), typeAlias = "(Sub2)")
+            ), typeAlias = "(Base)",
+            discriminator = Discriminator(
+                property = "type",
+                values = setOf("sub1", "sub2"),
+                mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
+            )
+        )
+        val invalidValue = JSONObjectValue(mapOf("newKey" to StringValue("value"), "prop" to BooleanValue(true)))
+        val result = pattern.matches(invalidValue, Resolver(findKeyErrorCheck = PARTIAL_KEYCHECK))
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""    
+        >> (when Sub1 object).newKey
+        Key named "newKey" was unexpected 
+        >> (when Sub1 object).prop
+        Expected string, actual was true (boolean)
+
+        >> (when Sub2 object).newKey 
+        Key named "newKey" was unexpected
+        >> (when Sub2 object).prop
+        Expected number, actual was true (boolean)
+        """.trimIndent())
+    }
+
     @Nested
     inner class GenerateForEveryDiscriminatorDetailsValueTests {
         @Test
@@ -658,6 +689,142 @@ internal class AnyPatternTest {
                 println(fixedValue.toStringLiteral())
                 assertThat(fixedValue).isNotEqualTo(it).isInstanceOf(JSONObjectValue::class.java)
             }
+        }
+    }
+
+    @Nested
+    inner class FillInTheBlanksTests {
+        @Test
+        fun `should be able to fill in the blanks using correct pattern when discriminator is present`() {
+            val pattern = AnyPattern(
+                listOf(
+                    JSONObjectPattern(mapOf("type" to "sub1".toDiscriminator(), "prop" to StringPattern(), "extra" to StringPattern()), typeAlias = "(Sub1)"),
+                    JSONObjectPattern(mapOf("type" to "sub2".toDiscriminator(), "prop" to NumberPattern()), typeAlias = "(Sub2)")
+                ), typeAlias = "(Base)",
+                discriminator = Discriminator(
+                    property = "type",
+                    values = setOf("sub1", "sub2"),
+                    mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
+                )
+            )
+            val dictionary = mapOf("Sub2.prop" to NumberValue(999))
+            val resolver = Resolver(dictionary = dictionary)
+            val partialValue = JSONObjectValue(mapOf("type" to StringValue("sub2")))
+            val filledInValue = pattern.fillInTheBlanks(partialValue, resolver).value
+
+            assertThat(filledInValue).isEqualTo(JSONObjectValue(mapOf("type" to StringValue("sub2"), "prop" to NumberValue(999))))
+        }
+
+        @Test
+        fun `should be able to fill in the blanks when there is only pattern token`() {
+            val patternSub1 = JSONObjectPattern(mapOf("type" to "sub1".toDiscriminator(), "prop" to StringPattern(), "extra" to StringPattern()), typeAlias = "(Sub1)")
+            val patternSub2 = JSONObjectPattern(mapOf("type" to "sub2".toDiscriminator(), "prop" to NumberPattern()), typeAlias = "(Sub2)")
+            val pattern = AnyPattern(
+                listOf(patternSub1, patternSub2), typeAlias = "(Base)",
+                discriminator = Discriminator(
+                    property = "type",
+                    values = setOf("sub1", "sub2"),
+                    mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
+                )
+            )
+
+            val dictionary = mapOf("Sub2.prop" to NumberValue(999))
+            val resolver = Resolver(dictionary = dictionary, newPatterns = mapOf("(Sub1)" to patternSub1, "(Sub2)" to patternSub2))
+            val partialValue = StringValue("(Sub2)")
+            val filledInValue = pattern.fillInTheBlanks(partialValue, resolver).value
+
+            assertThat(filledInValue).isEqualTo(JSONObjectValue(mapOf("type" to StringValue("sub2"), "prop" to NumberValue(999))))
+        }
+
+        @Test
+        fun `should be able to fill in when discriminator is missing from the partial value`() {
+            val pattern = AnyPattern(
+                listOf(
+                    JSONObjectPattern(mapOf("type" to "sub1".toDiscriminator(), "prop" to StringPattern(), "extra" to StringPattern()), typeAlias = "(Sub1)"),
+                    JSONObjectPattern(mapOf("type" to "sub2".toDiscriminator(), "prop" to NumberPattern()), typeAlias = "(Sub2)")
+                ), typeAlias = "(Base)",
+                discriminator = Discriminator(
+                    property = "type",
+                    values = setOf("sub1", "sub2"),
+                    mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
+                )
+            )
+
+            val dictionary = mapOf("Sub2.prop" to NumberValue(999))
+            val resolver = Resolver(dictionary = dictionary)
+            val partialValue = JSONObjectValue(mapOf("prop" to StringValue("(number)")))
+            val filledInValue = pattern.fillInTheBlanks(partialValue, resolver).value
+
+            assertThat(filledInValue).isEqualTo(JSONObjectValue(mapOf("type" to StringValue("sub2"), "prop" to NumberValue(999))))
+        }
+
+        @Test
+        fun `should be able to fill in when pattern token refers to self`() {
+            val pattern = AnyPattern(
+                listOf(
+                    JSONObjectPattern(mapOf("type" to "sub1".toDiscriminator(), "prop" to StringPattern(), "extra" to StringPattern()), typeAlias = "(Sub1)"),
+                    JSONObjectPattern(mapOf("type" to "sub2".toDiscriminator(), "prop" to NumberPattern()), typeAlias = "(Sub2)")
+                ), typeAlias = "(Base)",
+                discriminator = Discriminator(
+                    property = "type",
+                    values = setOf("sub1", "sub2"),
+                    mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
+                )
+            )
+
+            val dictionary = mapOf("Sub1.prop" to StringValue("TODO"), "Sub1.extra" to StringValue("TODO"),)
+            val resolver = Resolver(newPatterns = mapOf("(Base)" to pattern), dictionary = dictionary)
+            val partialValue = StringValue("(Base)")
+            val filledInValue = pattern.fillInTheBlanks(partialValue, resolver).value
+
+            assertThat(filledInValue).isEqualTo(JSONObjectValue(mapOf(
+                "type" to StringValue("sub1"), "prop" to StringValue("TODO"), "extra" to StringValue("TODO")
+            )))
+        }
+
+        @Test
+        fun `should work for negative test for invalid values or pattern tokens`() {
+            val pattern = AnyPattern(
+                listOf(
+                    JSONObjectPattern(mapOf("type" to "sub1".toDiscriminator(), "prop" to StringPattern(), "extra" to StringPattern()), typeAlias = "(Sub1)"),
+                    JSONObjectPattern(mapOf("type" to "sub2".toDiscriminator(), "prop" to NumberPattern()), typeAlias = "(Sub2)")
+                ), typeAlias = "(Base)",
+                discriminator = Discriminator(
+                    property = "type",
+                    values = setOf("sub1", "sub2"),
+                    mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
+                )
+            )
+
+            val resolver = Resolver(newPatterns = mapOf("(Base)" to pattern), isNegative = true, dictionary = mapOf("(number)" to NumberValue(999)))
+            val partialValue = JSONObjectValue(mapOf(
+                "type" to StringValue("sub1"), "prop" to BooleanValue(false), "extra" to StringValue("(number)")
+            ))
+            val filledInValue = pattern.fillInTheBlanks(partialValue, resolver).value
+
+            assertThat(filledInValue).isEqualTo(JSONObjectValue(mapOf(
+                "type" to StringValue("sub1"), "prop" to BooleanValue(false), "extra" to NumberValue(999)
+            )))
+        }
+
+        @Test
+        fun `should work for negative test when partial is a pattern token`() {
+            val pattern = AnyPattern(
+                listOf(
+                    JSONObjectPattern(mapOf("type" to "sub1".toDiscriminator(), "prop" to StringPattern(), "extra" to StringPattern()), typeAlias = "(Sub1)"),
+                    JSONObjectPattern(mapOf("type" to "sub2".toDiscriminator(), "prop" to NumberPattern()), typeAlias = "(Sub2)")
+                ), typeAlias = "(Base)",
+                discriminator = Discriminator(
+                    property = "type",
+                    values = setOf("sub1", "sub2"),
+                    mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
+                )
+            )
+            val resolver = Resolver(newPatterns = mapOf("(Base)" to pattern), isNegative = true)
+            val partialValue = StringValue("(boolean)")
+            val filledInValue = pattern.fillInTheBlanks(partialValue, resolver).value
+
+            assertThat(filledInValue).isInstanceOf(BooleanValue::class.java)
         }
     }
 

@@ -12,6 +12,9 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.util.function.Consumer
 import kotlin.collections.HashMap
 
@@ -712,5 +715,167 @@ internal class HttpHeadersPatternTest {
             assertThat(fixedValue).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
         }
     }
-}
 
+    @ParameterizedTest
+    @CsvSource(
+        "Content-Type Header, Generated Content Type",
+        "application/json, application/json",
+        "application/json; charset=utf-8, application/json; charset=utf-8",
+        "none, application/json",
+        "present, application/json",
+        useHeadersInDisplayName = true,
+    )
+    fun `content type header with specific value should override media type when generating headers`(contentTypeHeader: String, expectedContentType: String) {
+        val mediaType = "application/json"
+
+        val headersPattern = when(contentTypeHeader) {
+            "none" -> HttpHeadersPattern(emptyMap(), contentType = mediaType)
+            "present" -> HttpHeadersPattern(mapOf("Content-Type" to StringPattern()), contentType = mediaType)
+            else -> HttpHeadersPattern(mapOf("Content-Type" to StringPattern(regex = contentTypeHeader)), contentType = mediaType)
+        }
+
+        val headers = headersPattern.generate(Resolver())
+
+        assertThat(headers).containsEntry("Content-Type", expectedContentType)
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "Content-Type Header In Spec, Actual Content Type, Matches",
+        "application/json, application/json, true",
+        "application/json; charset=utf-8, application/json; charset=utf-8, true",
+        "none, application/json, true",
+        "present, application/json, true",
+        "application/json; charset=utf-8, application/json, false",
+        useHeadersInDisplayName = true,
+    )
+    fun `content type header with specific value should override media type when matching headers`(contentTypeHeaderInSpec: String, actualContentType: String, matches: String) {
+        val mediaType = "application/json"
+
+        val headersPattern = when(contentTypeHeaderInSpec) {
+            "none" -> HttpHeadersPattern(emptyMap(), contentType = mediaType)
+            "present" -> HttpHeadersPattern(mapOf("Content-Type" to StringPattern()), contentType = mediaType)
+            else -> HttpHeadersPattern(mapOf("Content-Type" to StringPattern(regex = contentTypeHeaderInSpec)), contentType = mediaType)
+        }
+
+        val actualHeaders = mapOf("Content-Type" to actualContentType)
+
+        val matchResult = headersPattern.matches(actualHeaders, Resolver())
+
+        if(matches == "true") {
+            assertThat(matchResult).isInstanceOf(Result.Success::class.java)
+        } else {
+            assertThat(matchResult).isInstanceOf(Result.Failure::class.java)
+        }
+    }
+
+    @Nested
+    inner class FillInTheBlanksTests {
+        @Test
+        fun `should generate values for missing mandatory keys and pattern tokens`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val headers = mapOf("number" to "(number)")
+            val dictionary = mapOf(
+                "HEADERS.number" to NumberValue(999), "HEADERS.boolean" to BooleanValue(true)
+            )
+            val filledHeaders = httpHeaders.fillInTheBlanks(headers, Resolver(dictionary = dictionary)).value
+
+            assertThat(filledHeaders).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
+        }
+
+        @Test
+        fun `should not generate missing optional keys`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean?" to BooleanPattern()))
+            val headers = mapOf("number" to "999")
+            val dictionary = mapOf("HEADERS.boolean" to BooleanValue(true))
+            val filledHeaders = httpHeaders.fillInTheBlanks(headers, Resolver(dictionary = dictionary)).value
+
+            assertThat(filledHeaders).isEqualTo(mapOf("number" to "999"))
+        }
+
+        @Test
+        fun `should handle any-value pattern token as a special case`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val headers = mapOf("number" to "(anyvalue)")
+            val dictionary = mapOf(
+                "HEADERS.number" to NumberValue(999), "HEADERS.boolean" to BooleanValue(true)
+            )
+            val filledHeaders = httpHeaders.fillInTheBlanks(headers, Resolver(dictionary = dictionary)).value
+
+            assertThat(filledHeaders).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
+        }
+
+        @Test
+        fun `should complain when pattern-token does not match the underlying pattern`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
+            val headers = mapOf("number" to "(string)")
+            val exception = assertThrows<ContractException> {
+                httpHeaders.fillInTheBlanks(headers, Resolver()).value
+            }
+
+            assertThat(exception.failure().reportString()).isEqualToNormalizingWhitespace("""
+            >> number
+            Expected number, actual was string
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should generate missing optional keys when allPatternsMandatory is set`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean?" to BooleanPattern()))
+            val headers = mapOf("number" to "999")
+            val dictionary = mapOf("HEADERS.boolean" to BooleanValue(true))
+            val filledHeaders = httpHeaders.fillInTheBlanks(
+                headers, Resolver(dictionary = dictionary).withAllPatternsAsMandatory()
+            ).value
+
+            assertThat(filledHeaders).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
+        }
+
+        @Test
+        fun `should not generate missing mandatory keys when resolver is set to negative`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean?" to BooleanPattern()))
+            val headers = mapOf("boolean" to "true")
+            val filledHeaders = httpHeaders.fillInTheBlanks(headers, Resolver(isNegative = true)).value
+
+            assertThat(filledHeaders).isEqualTo(mapOf("boolean" to "true"))
+        }
+
+        @Test
+        fun `should allow extra keys when extensible-schema or resolver is negative`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern()))
+            val headers = mapOf("number" to "(number)", "extraKey" to "(string)")
+            val dictionary = mapOf("HEADERS.number" to NumberValue(999), "(string)" to StringValue("ExtraValue"))
+            val resolvers = listOf(
+                Resolver(dictionary = dictionary, isNegative = true),
+                Resolver(dictionary = dictionary).withUnexpectedKeyCheck(IgnoreUnexpectedKeys)
+            )
+
+            assertThat(resolvers).allSatisfy {
+                val filledJsonObject = httpHeaders.fillInTheBlanks(headers, it).value
+                assertThat(filledJsonObject).isEqualTo(
+                    mapOf("number" to "999", "extraKey" to "ExtraValue")
+                )
+            }
+        }
+
+        @Test
+        fun `should allow invalid pattern tokens when resolver is negative`() {
+            val httpHeaders = HttpHeadersPattern(mapOf("test" to StringPattern()))
+            val invalidPatterns = listOf(
+                ListPattern(StringPattern()),
+                BooleanPattern(),
+                NullPattern,
+            )
+
+
+            assertThat(invalidPatterns).allSatisfy {
+                val resolver = Resolver(newPatterns = mapOf("(Test)" to it), isNegative = true)
+                val value = mapOf("test" to "(Test)")
+                val result = httpHeaders.fillInTheBlanks(value, resolver)
+
+                assertThat(result).isInstanceOf(HasValue::class.java); result as HasValue
+                println(result.value)
+            }
+        }
+    }
+}

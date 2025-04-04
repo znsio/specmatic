@@ -85,7 +85,7 @@ class BackwardCompatibilityCheckCommandV2Test {
                 File("file2.yaml").apply { writeText("file4.yaml") }
             )
             val result = command.getSpecsReferringTo(setOf("file3.yaml"))
-            assertEquals(setOf("file1.yaml"), result)
+            assertEquals(setOf(File("file1.yaml").canonicalPath), result)
         }
 
         @Test
@@ -97,7 +97,9 @@ class BackwardCompatibilityCheckCommandV2Test {
                 File("file2.yaml").apply { referTo("schema_file2.yaml") }
             )
             val result = command.getSpecsReferringTo(setOf("schema_file1.yaml"))
-            assertEquals(setOf("file1.yaml", "schema_file2.yaml", "file2.yaml"), result)
+            assertEquals(
+                setOf("file1.yaml", "schema_file2.yaml", "file2.yaml").map { File(it).canonicalPath }.toSet(), result
+            )
         }
 
         @Test
@@ -109,9 +111,9 @@ class BackwardCompatibilityCheckCommandV2Test {
                 File("c.yaml").apply { referTo("a.yaml") }
             )
 
-            assertThat(command.getSpecsReferringTo(setOf("a.yaml"))).isEqualTo(setOf("b.yaml", "c.yaml"))
-            assertThat(command.getSpecsReferringTo(setOf("b.yaml"))).isEqualTo(setOf("c.yaml", "a.yaml"))
-            assertThat(command.getSpecsReferringTo(setOf("c.yaml"))).isEqualTo(setOf("a.yaml", "b.yaml"))
+            assertThat(command.getSpecsReferringTo(setOf("a.yaml"))).isEqualTo(setOf("b.yaml", "c.yaml").map { File(it).canonicalPath }.toSet())
+            assertThat(command.getSpecsReferringTo(setOf("b.yaml"))).isEqualTo(setOf("c.yaml", "a.yaml").map { File(it).canonicalPath }.toSet())
+            assertThat(command.getSpecsReferringTo(setOf("c.yaml"))).isEqualTo(setOf("a.yaml", "b.yaml").map { File(it).canonicalPath }.toSet())
         }
     }
 

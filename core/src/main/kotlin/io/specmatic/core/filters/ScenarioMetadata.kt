@@ -9,8 +9,8 @@ data class ScenarioMetadata(
     val header: Set<String>,
     val query: Set<String>,
     val exampleName: String
-) : FilterableExpression {
-    override fun populateExpressionData(expression: Expression): Expression {
+) {
+    fun populateExpressionData(expression: Expression): Expression {
         return expression
             .with(ScenarioFilterTags.METHOD.key, method)
             .with(ScenarioFilterTags.PATH.key, path)
@@ -19,5 +19,4 @@ data class ScenarioMetadata(
             .with(ScenarioFilterTags.QUERY.name, query.joinToString(","))
             .with(ScenarioFilterTags.EXAMPLE_NAME.name, exampleName)
     }
-
 }

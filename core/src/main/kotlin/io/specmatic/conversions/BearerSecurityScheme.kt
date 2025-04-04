@@ -6,17 +6,22 @@ import io.specmatic.core.pattern.StringPattern
 import org.apache.http.HttpHeaders.AUTHORIZATION
 
 data class BearerSecurityScheme(private val configuredToken: String? = null) : OpenAPISecurityScheme {
-    override fun matches(httpRequest: HttpRequest): Result {
-        val authHeaderValue: String? = httpRequest.headers.entries.find {
-            it.key.equals(AUTHORIZATION.lowercase(), ignoreCase = true)
-        }?.value
-
-        if (authHeaderValue == null) {
-            return Result.Failure("$AUTHORIZATION header is missing in request")
+    override fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
+        val authHeaderValue = httpRequest.headers.entries.find {
+            it.key.equals(AUTHORIZATION, ignoreCase = true)
+        } ?: return when(resolver.mockMode) {
+            true -> Result.Success()
+            else -> Result.Failure(
+                breadCrumb = "HEADERS.$AUTHORIZATION",
+                message = resolver.mismatchMessages.expectedKeyWasMissing("Header", AUTHORIZATION)
+            )
         }
 
-        if (!authHeaderValue.lowercase().startsWith("bearer")) {
-            return Result.Failure("$AUTHORIZATION header must be prefixed with \"Bearer\"")
+        if (!authHeaderValue.value.lowercase().startsWith("bearer")) {
+            return Result.Failure(
+                breadCrumb = "HEADERS.$AUTHORIZATION",
+                message = "$AUTHORIZATION header must be prefixed with \"Bearer\""
+            )
         }
 
         return Result.Success()
@@ -41,5 +46,10 @@ data class BearerSecurityScheme(private val configuredToken: String? = null) : O
 
     private fun getAuthorizationHeaderValue(resolver: Resolver): String {
         return "Bearer " + (configuredToken ?: resolver.generate("HEADERS", AUTHORIZATION, StringPattern()).toStringLiteral())
+    }
+
+    override fun copyFromTo(originalRequest: HttpRequest, newHttpRequest: HttpRequest): HttpRequest {
+        if (!originalRequest.headers.containsKey(AUTHORIZATION)) return newHttpRequest
+        return newHttpRequest.addSecurityHeader(AUTHORIZATION, originalRequest.headers.getValue(AUTHORIZATION))
     }
 }

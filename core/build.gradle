@@ -19,7 +19,7 @@ def junit_version = "5.11.4"
 dependencies {
     // TODO Fix to eliminate vulnerabilities, remove when the enclosing library supports it
     implementation 'io.netty:netty-codec-http:4.1.118.Final' // used by ktor-server-netty-jvm 2.3.13 in core (last checked on Feb 13 2025)
-    implementation 'joda-time:joda-time:2.13.0' // used by swagger-parser 2.1.22
+    implementation 'joda-time:joda-time:2.13.1' // used by swagger-parser 2.1.22
     implementation 'net.minidev:json-smart:2.5.2' // used by json-path 2.9.0 (last checked on Feb 13 2025)
 
     implementation 'com.ezylang:EvalEx:3.4.0'
@@ -33,20 +33,20 @@ dependencies {
     implementation("io.ktor:ktor-server-double-receive:$ktor_version")
     implementation("io.ktor:ktor-server-content-negotiation:$ktor_version")
     implementation "io.ktor:ktor-serialization-jackson:$ktor_version"
-    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.18.2'
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.18.3'
     implementation 'com.jayway.jsonpath:json-path:2.9.0'
 
 
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.3"
-    implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.24"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.25"
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
-    implementation 'com.fasterxml.jackson.core:jackson-core:2.15.0'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.18.3'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.3'
 
     implementation 'com.flipkart.zjsonpatch:zjsonpatch:0.4.16'
 
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.3'
 
     implementation 'io.swagger.parser.v3:swagger-parser:2.1.24'
 
@@ -54,13 +54,13 @@ dependencies {
     implementation 'com.github.mifmif:generex:1.0.2'
     implementation 'dk.brics:automaton:1.12-1'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
-    testImplementation 'org.assertj:assertj-core:3.26.3'
+    testImplementation 'org.assertj:assertj-core:3.27.3'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
-    testImplementation 'org.json:json:20240303'
+    testImplementation 'org.json:json:20250107'
     testImplementation 'org.springframework:spring-web:6.1.12'
-    testImplementation 'io.mockk:mockk:1.13.13'
-    testImplementation 'org.assertj:assertj-core:3.26.3'
+    testImplementation 'io.mockk:mockk:1.13.11'
+    testImplementation 'org.assertj:assertj-core:3.27.3'
     testImplementation "io.ktor:ktor-client-mock-jvm:$ktor_version"
     implementation 'org.thymeleaf:thymeleaf:3.1.3.RELEASE'
 }

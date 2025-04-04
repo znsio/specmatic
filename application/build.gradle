@@ -33,15 +33,16 @@ def jgit_version = "7.0.0.202409031743-r"
 
 dependencies {
     // TODO Put library reference overrides here to eliminate vulnerabilities, and remove the override when no longer needed
-    implementation 'io.netty:netty-codec-http:4.1.118.Final' // used by ktor-server-netty-jvm 2.3.13 in core (last checked on Feb 13 2025)
-    implementation 'joda-time:joda-time:2.13.0' // used by swagger-parser 2.1.22
+    implementation 'io.netty:netty-codec-http:4.1.118.Final'
+    // used by ktor-server-netty-jvm 2.3.13 in core (last checked on Feb 13 2025)
+    implementation 'joda-time:joda-time:2.13.1' // used by swagger-parser 2.1.22
     implementation 'net.minidev:json-smart:2.5.2' // used by json-path 2.9.0 (last checked on Feb 13 2025)
 
 
     implementation 'com.arakelian:java-jq:2.0.0'
     testImplementation 'com.arakelian:java-jq:2.0.0'
 
-    implementation 'org.assertj:assertj-core:3.26.3'
+    implementation 'org.assertj:assertj-core:3.27.3'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.11.4'
 
     implementation('info.picocli:picocli-spring-boot-starter:4.7.6') {
@@ -62,7 +63,7 @@ dependencies {
     implementation "io.ktor:ktor-network-tls:$ktor_version"
     implementation "io.ktor:ktor-network-tls-certificates:$ktor_version"
 
-    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.18.2'
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.18.3'
 
     implementation 'org.junit.platform:junit-platform-launcher:1.11.4'
     implementation 'org.junit.platform:junit-platform-reporting:1.11.4'
@@ -70,7 +71,7 @@ dependencies {
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 
-    implementation 'org.slf4j:slf4j-nop:2.0.16'
+    implementation 'org.slf4j:slf4j-nop:2.0.17'
 
     implementation 'org.apache.ant:ant-junit:1.10.15'
 
@@ -78,8 +79,10 @@ dependencies {
     implementation(project(':junit5-support'))
 
     implementation "io.ktor:ktor-client-cio:$ktor_version"
-    implementation 'io.swagger.parser.v3:swagger-parser:2.1.24'
-
+    implementation('io.swagger.parser.v3:swagger-parser:2.1.24') {
+        exclude group: 'org.mozilla', module: 'rhino'
+    }
+    implementation 'org.mozilla:rhino:1.7.15'
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.3"
 
     implementation "org.jetbrains.kotlin:kotlin-reflect"
@@ -90,11 +93,11 @@ dependencies {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude module: 'mockito-core'
     }
-    testImplementation 'io.mockk:mockk:1.13.13'
+    testImplementation 'io.mockk:mockk:1.13.11'
     testImplementation('com.ninja-squad:springmockk:3.1.1') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
     }
-    testImplementation 'org.assertj:assertj-core:3.26.3'
+    testImplementation 'org.assertj:assertj-core:3.27.3'
     testImplementation 'com.ginsberg:junit5-system-exit:2.0.2'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"

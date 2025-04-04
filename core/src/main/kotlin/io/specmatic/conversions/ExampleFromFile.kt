@@ -72,9 +72,8 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         return  findFirstChildByPath("partial.$path") ?: findFirstChildByPath(path)
     }
 
-    private fun isPartial(): Boolean {
-        // TODO: Review
-        return json.findByPath("partial") != null
+    fun isPartial(): Boolean {
+        return json.findFirstChildByPath("partial") != null
     }
 
     fun isInvalid(): Boolean {
@@ -147,7 +146,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         return URI(requestPath).path ?: ""
     }
 
-    private val testName: String = attempt("Error reading expectation name in file ${file.canonicalPath}") {
+    val testName: String = attempt("Error reading expectation name in file ${file.canonicalPath}") {
         json.findByPath("name")?.toStringLiteral() ?: file.nameWithoutExtension
     }
 

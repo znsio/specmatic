@@ -346,6 +346,12 @@ data class HttpPathPattern(
 
         return true
     }
+
+    companion object {
+        fun from(path: String): HttpPathPattern {
+            return buildHttpPathPattern(path)
+        }
+    }
 }
 
 fun buildHttpPathPattern(

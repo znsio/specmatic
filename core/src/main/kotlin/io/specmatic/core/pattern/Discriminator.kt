@@ -78,8 +78,17 @@ class Discriminator(
         val matchResult = matchResults.find { it.result is Result.Success }
         if(matchResult != null) return matchResult.result
 
-        val failures = matchResults.map { it.result }.filterIsInstance<Result.Failure>()
-        return Result.Failure.fromFailures(failures)
+        val failuresWithUpdatedBreadcrumbs = matchResults.mapIndexedNotNull { index, match ->
+            val failure = match.result as? Result.Failure ?: return@mapIndexedNotNull null
+            val breadcrumb = when (val typeAlias = match.pattern.typeAlias) {
+                null -> return@mapIndexedNotNull failure
+                "()" -> "(~~~object ${index + 1})"
+                else -> "(~~~${withoutPatternDelimiters(typeAlias)} object)"
+            }
+            failure.breadCrumb(breadcrumb)
+        }
+
+        return Result.Failure.fromFailures(failuresWithUpdatedBreadcrumbs)
     }
 
     private fun _matches(sampleData: Value?, pattern: List<Pattern>, key: String?, resolver: Resolver): Result {

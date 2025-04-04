@@ -150,3 +150,10 @@ fun <T> exception(fn: () -> T): Throwable? {
         t
     }
 }
+
+fun <T> Throwable.asReturnValue(
+    message: String
+): ReturnValue<T> = when (this) {
+    is ContractException -> HasFailure(this.failure(), message = message)
+    else -> HasException(this, message = message, breadCrumb = "")
+}

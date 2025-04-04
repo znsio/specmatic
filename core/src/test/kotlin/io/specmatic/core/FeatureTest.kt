@@ -1,15 +1,13 @@
 package io.specmatic.core
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.mockk.every
 import io.mockk.mockk
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.HasValue
-import io.specmatic.core.pattern.NumberPattern
-import io.specmatic.core.pattern.StringPattern
-import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
 import io.specmatic.stub.captureStandardOutput
@@ -2604,6 +2602,104 @@ paths:
         assertThat(results.isSuccess()).isTrue()
     }
 
+    @Test
+    fun `should be able to create contract test from an partial example`(@TempDir tempDir: File) {
+        val apiSpecification = """
+        openapi: 3.0.0
+        info:
+          title: Simple API
+          version: 1.0.0
+        paths:
+          /test:
+            post:
+              summary: Test Example
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      ${"$"}ref: '#/components/schemas/ExampleRequest'
+              responses:
+                '200':
+                  description: Successful response
+                  content:
+                    application/json:
+                      schema:
+                        ${"$"}ref: '#/components/schemas/ExampleResponse'
+        components:
+          schemas:
+            ExampleRequest:
+              type: object
+              required:
+                - name
+                - age
+              properties:
+                name:
+                  type: string
+                age:
+                  type: integer
+                isEligible:
+                  type: boolean
+            ExampleResponse:
+              allOf:
+                - ${"$"}ref: '#/components/schemas/ExampleRequest'
+                - type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: string
+        """.trimIndent()
+        val example = """
+        {
+          "partial": {
+            "http-request": {
+              "method": "POST",
+              "path": "/test",
+              "body": {
+                "name": "(string)",
+                "isEligible": true
+              }
+            },
+            "http-response": {
+              "status": 200,
+              "body": {
+                "id": "(string)"
+              }
+            }
+          }
+        }
+        """.trimIndent()
+        val dictionary = """
+        {
+            "ExampleRequest.name": "John Doe",
+            "ExampleRequest.age": 999,
+            "ExampleRequest.isEligible": false
+        }
+        """.trimIndent()
+
+        val apiSpecFile = tempDir.resolve("api.yaml").apply { writeText(apiSpecification) }
+        val examplesDir = tempDir.resolve("api_examples").apply { mkdirs() }
+        val exampleFile = examplesDir.resolve("example.json").apply { writeText(example) }
+        tempDir.resolve("api_dictionary.json").apply { writeText(dictionary) }
+
+        val feature = parseContractFileToFeature(apiSpecFile)
+        val contractTest = feature.createContractTestFromExampleFile(exampleFile.canonicalPath).value
+
+        val results = contractTest.runTest(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.body).isEqualTo(parsedJSONObject("""{"name" : "John Doe", "isEligible" : true, "age" : 999}"""))
+                return HttpResponse.ok(parsedJSONObject("""{"id": "10"}""")).also {
+                    println(request.toLogString())
+                    println()
+                    println(it.toLogString())
+                }
+            }
+        }).first
+
+        assertThat(results.isSuccess()).isTrue()
+    }
+
     @Nested
     inner class GenerateDiscriminatorDetailsBasedRequestResponsePairsTest {
         private val feature = Feature(name = "feature")
@@ -2699,6 +2795,27 @@ paths:
 
             assertTrue(pairs.isEmpty())
         }
+    }
+
+    @Test
+    fun `EmptyStringPattern in request should result in no request body`() {
+        val httpRequestPattern = HttpRequestPattern(
+            method = "POST",
+            httpPathPattern = HttpPathPattern.from("/data"),
+            body = EmptyStringPattern
+        )
+
+        val scenario = Scenario(
+            "",
+            httpRequestPattern,
+            HttpResponsePattern(status = 200),
+            exampleName = "example"
+        )
+
+        val feature = Feature(name = "", scenarios = listOf(scenario))
+
+        val openAPI = feature.toOpenApi()
+        assertThat(openAPI.paths["/data"]?.post?.requestBody).isNull()
     }
 
     companion object {

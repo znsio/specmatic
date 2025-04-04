@@ -378,11 +378,11 @@ ${matchResult.reportString()}
         return defaultExampleResolver.resolveExample(example, pattern, this)
     }
 
-    fun generateHttpRequestbodies(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<ReturnValue<Pattern>> {
-        return generation.generateHttpRequestBodies(this, body, row, requestBodyAsIs, value)
+    fun generateHttpRequestBodies(body: Pattern, row: Row, requestBodyAsIs: Pattern): Sequence<ReturnValue<Pattern>> {
+        return generation.generateHttpRequestBodies(this, body, row, requestBodyAsIs)
     }
 
-    fun generateHttpRequestbodies(body: Pattern, row: Row): Sequence<ReturnValue<Pattern>> {
+    fun generateHttpRequestBodies(body: Pattern, row: Row): Sequence<ReturnValue<Pattern>> {
         return generation.generateHttpRequestBodies(this, body, row)
     }
 

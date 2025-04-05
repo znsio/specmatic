@@ -27,10 +27,6 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "2.3.13"
-def junit_version = "5.11.4"
-def jgit_version = "7.0.0.202409031743-r"
-
 dependencies {
     // TODO Put library reference overrides here to eliminate vulnerabilities, and remove the override when no longer needed
     implementation("io.netty:netty-codec-http:4.1.118.Final")
@@ -59,17 +55,17 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-autoconfigure:3.4.1")
     implementation("org.springframework:spring-core:6.1.14")
     implementation("info.picocli:picocli:4.7.6")
-    implementation("io.ktor:ktor-client-core-jvm:${ktor_version}")
-    implementation("io.ktor:ktor-network-tls:$ktor_version")
-    implementation("io.ktor:ktor-network-tls-certificates:$ktor_version")
+    implementation("io.ktor:ktor-client-core-jvm:${"2.3.13"}")
+    implementation("io.ktor:ktor-network-tls:2.3.13")
+    implementation("io.ktor:ktor-network-tls-certificates:2.3.13")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.3")
 
     implementation("org.junit.platform:junit-platform-launcher:1.11.4")
     implementation("org.junit.platform:junit-platform-reporting:1.11.4")
 
-    implementation("org.eclipse.jgit:org.eclipse.jgit:$jgit_version")
-    implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version")
+    implementation("org.eclipse.jgit:org.eclipse.jgit:7.0.0.202409031743-r")
+    implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.apache:7.0.0.202409031743-r")
 
     implementation("org.slf4j:slf4j-nop:2.0.17")
 
@@ -78,7 +74,7 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":junit5-support"))
 
-    implementation("io.ktor:ktor-client-cio:$ktor_version")
+    implementation("io.ktor:ktor-client-cio:2.3.13")
     implementation("io.swagger.parser.v3:swagger-parser:2.1.24") {
         exclude(group: "org.mozilla", module: "rhino")
     }
@@ -87,7 +83,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junit_version")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.4")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test:3.4.2") {
         exclude(group: "ch.qos.logback", module: "logback-classic")
@@ -99,8 +95,8 @@ dependencies {
     }
     testImplementation("org.assertj:assertj-core:3.27.3")
     testImplementation("com.ginsberg:junit5-system-exit:2.0.2")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:$junit_version")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:$junit_version")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.11.4")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.11.4")
     testImplementation("io.kotest:kotest-assertions-core-jvm:5.9.1")
 }
 

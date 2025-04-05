@@ -31,7 +31,7 @@ class ScenarioTestGenerationExceptionTest {
         )
 
         val testGenerationException =
-            ScenarioTestGenerationException(scenario, ContractException(), "", null)
+            ScenarioTestGenerationException(scenario, ContractException(), "", null, baseURL = "")
         val scenarioMetadata = testGenerationException.toScenarioMetadata()
 
         assertThat(scenarioMetadata.method).isEqualTo("POST")

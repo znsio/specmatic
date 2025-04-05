@@ -29,7 +29,7 @@ class ScenarioAsTestTest {
             exampleName = "example"
         )
 
-        val scenarioAsTest = ScenarioAsTest(scenario, Feature(name = ""), flagsBased = DefaultStrategies, originalScenario = scenario)
+        val scenarioAsTest = ScenarioAsTest(scenario, Feature(name = ""), flagsBased = DefaultStrategies, originalScenario = scenario, baseURL = "")
         val scenarioMetadata = scenarioAsTest.toScenarioMetadata()
 
         assertThat(scenarioMetadata.method).isEqualTo("POST")

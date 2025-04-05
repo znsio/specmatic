@@ -35,7 +35,7 @@ class ScenarioTestGenerationFailureTest {
         )
 
         val testGenerationFailure =
-            ScenarioTestGenerationFailure(scenario, Result.Failure("error"), "error")
+            ScenarioTestGenerationFailure(scenario, Result.Failure("error"), "error", baseURL = "")
         val scenarioMetadata = testGenerationFailure.toScenarioMetadata()
 
         assertThat(scenarioMetadata.method).isEqualTo("POST")

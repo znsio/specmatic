@@ -1692,7 +1692,7 @@ components:
         val contractTest = contractTests.single()
         assertThat(contractTest).isInstanceOf(ScenarioTestGenerationException::class.java)
 
-        val (result, httpResponse) = contractTest.runTest("", 0)
+        val (result, httpResponse) = contractTest.runTest(0)
         assertThat(httpResponse).isNull()
         assertThat(result).isInstanceOf(Result.Failure::class.java)
     }
@@ -1749,7 +1749,7 @@ components:
         val contractTest = contractTests.single()
         assertThat(contractTest).isInstanceOf(ScenarioTestGenerationFailure::class.java)
 
-        val (result, httpResponse) = contractTest.runTest("", 0)
+        val (result, httpResponse) = contractTest.runTest(0)
         assertThat(httpResponse).isNull()
         assertThat(result).isInstanceOf(Result.Failure::class.java)
     }

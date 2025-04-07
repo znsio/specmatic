@@ -48,12 +48,8 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--data", "--examples"], description = ["Directories containing JSON examples"], required = false)
     var exampleDirs: List<String> = mutableListOf()
 
-    @Option(
-        names = ["--baseURL"],
-        description = ["Base URL for the http stub in the format 'http(s)://host:port'"],
-        defaultValue = "http://$DEFAULT_HTTP_STUB_HOST:$DEFAULT_HTTP_STUB_PORT"
-    )
-    lateinit var baseURL: String
+    @Option(names = ["--baseURL"], description = ["Base URL for the http stub in the format 'http(s)://host:port'"])
+    var baseURL: String? = null
 
     @Deprecated("Use the --baseURL option instead.")
     @Option(names = ["--host"], description = ["Host for the http stub"], defaultValue = DEFAULT_HTTP_STUB_HOST)
@@ -210,13 +206,9 @@ class StubCommand : Callable<Unit> {
             false -> port
         }
 
-        if (baseURL.isBlank()) {
-            baseURL = "$host:$port"
-        }
-
         httpStub = httpStubEngine.runHTTPStub(
             stubs = stubData,
-            baseURL = baseURL,
+            baseURL = baseURL ?: "$host:$port",
             certInfo = certInfo,
             strictMode = strictMode,
             passThroughTargetBase = passThroughTargetBase,

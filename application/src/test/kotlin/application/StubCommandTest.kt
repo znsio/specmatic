@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -56,6 +57,7 @@ internal class StubCommandTest {
     fun `clean up stub command`() {
         stubCommand.contractPaths = arrayListOf()
         stubCommand.specmaticConfigPath = null
+        stubCommand.baseURL = null
     }
 
     @Test
@@ -251,7 +253,7 @@ internal class StubCommandTest {
             verify(exactly = 1) {
                 httpStubEngine.runHTTPStub(
                     stubInfo,
-                    "http://$baseURL",
+                    baseURL,
                     certInfo,
                     strictMode,
                     any(),
@@ -263,6 +265,41 @@ internal class StubCommandTest {
             }
         } finally {
             file.delete()
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "          ,      ,              , 0.0.0.0:9000",
+        "localhost , 8080 ,              , localhost:8080",
+        "localhost ,      ,              , localhost:9000",
+        "          , 8080 ,              , 0.0.0.0:8080",
+        "          ,      , 0.0.0.0:3000 , 0.0.0.0:3000",
+        "localhost , 8080 , 0.0.0.0:3000 , 0.0.0.0:3000",
+        "localhost ,      , 0.0.0.0:3000 , 0.0.0.0:3000",
+        "          , 8080 , 0.0.0.0:3000 , 0.0.0.0:3000"
+    )
+    fun `should prioritise baseURL over passed through port and host args`(host: String?, port: String?, baseURL: String?, expected: String) {
+        every { stubLoaderEngine.loadStubs(any(), any(), any(), any()) } returns emptyList()
+        every { watchMaker.make(any()) } returns watcher
+        every { specmaticConfig.contractStubPaths() } returns emptyList()
+        every { specmaticConfig.contractStubPathData() } returns emptyList()
+        every {
+            httpStubEngine.runHTTPStub(any(), expected, any(), any(), any(), any(), any(), any(), any(), any())
+        } returns mockk { every { close() } returns Unit }
+
+        val args = buildList {
+            baseURL?.let { add("--baseURL=$it") }
+            host?.let { add("--host=$it") }
+            port?.let { add("--port=$it") }
+        }
+        val exitStatus = CommandLine(stubCommand, factory).execute(*args.toTypedArray())
+
+        assertThat(exitStatus).isZero()
+        verify(exactly = 1) {
+            httpStubEngine.runHTTPStub(
+                any(), expected, any(), any(), any(), any(), any(), any(), any(), any()
+            )
         }
     }
 }

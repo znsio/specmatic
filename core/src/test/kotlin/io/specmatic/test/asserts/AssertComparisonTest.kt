@@ -169,4 +169,16 @@ class AssertComparisonTest {
         Could not resolve "REQUEST.BODY" in current fact store
         """.trimIndent())
     }
+
+    @Test
+    fun `should not combine key if key is empty with prefix`() {
+        val assert = AssertComparison(prefix = "REQUEST.BODY", key = "", lookupKey = "ENTITY.name", isEqualityCheck = true)
+        val actualStore = mapOf("ENTITY.name" to StringValue("John"))
+        val bodyValue = StringValue("John")
+        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+
+        val result = assert.assert(currentStore, actualStore)
+        println(result.reportString())
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
 }

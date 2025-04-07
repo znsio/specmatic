@@ -467,7 +467,7 @@ data class Feature(
     }
 
     fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {
-        return matchResultFlagBased(scenarioStub.request, scenarioStub.response, mismatchMessages)
+        return matchResultFlagBased(scenarioStub.requestElsePartialRequest(), scenarioStub.response(), mismatchMessages, scenarioStub.isPartial())
     }
 
     fun negativeScenariosFor(originalScenario: Scenario): Sequence<ReturnValue<Scenario>> {
@@ -483,19 +483,10 @@ data class Feature(
         }
     }
 
-    fun matchResultFlagBased(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages): Results {
-        val isBadRequest = (response.status == 400)
-
-        val scenarios = if(isBadRequest) {
-            scenarios.asSequence().filter {
-                it.isA4xxScenario() && it.httpRequestPattern.matchesPathAndMethod(request, it.resolver).isSuccess()
-            }
-        } else this.scenarios.asSequence()
-
+    fun matchResultFlagBased(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages, isPartial: Boolean): Results {
         val results = scenarios.map {
-            if(isBadRequest) it.matchesResponse(request, response, mismatchMessages)
-            else it.matches(request, response, mismatchMessages, flagsBased)
-        }.toList()
+            it.matches(request, response, mismatchMessages, flagsBased, isPartial)
+        }
 
         if(results.any { it.isSuccess() })
             return Results(results).withoutFluff()
@@ -634,21 +625,36 @@ data class Feature(
     }
 
     fun createContractTestFromExampleFile(filePath: String): ReturnValue<ContractTest> {
-        val scenarioStub = ScenarioStub.readFromFile(File(filePath))
+        val example = ExampleFromFile(File(filePath))
+        val isBadRequest = (example.responseStatus ?: 0) in invalidRequestStatuses
 
         val originalScenario = scenarios.firstOrNull { scenario ->
-            scenario.matches(scenarioStub.request, scenarioStub.response, DefaultMismatchMessages, flagsBased) is Result.Success
+            val matchResult = scenario.matches(
+                httpRequest = example.request,
+                httpResponse = example.response,
+                mismatchMessages = DefaultMismatchMessages,
+                flagsBased = flagsBased,
+                isPartial = example.isPartial()
+            )
+            matchResult.isSuccess() || (matchResult as Result.Failure).hasReason(FailureReason.URLPathParamMismatchButSameStructure) && isBadRequest
         } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
 
-        val concreteTestScenario = Scenario(
-            name = "",
-            httpRequestPattern = scenarioStub.request.toPattern(),
-            httpResponsePattern = HttpResponsePattern(scenarioStub.response)
-        ).let {
-            it.copy(name = it.apiIdentifier)
+        return runCatching {
+            originalScenario.fillInTheBlanksAndResolvePatterns(example.request, originalScenario.resolver)
+        }.mapCatching { resolvedRequest ->
+            scenarioAsTest(
+                concreteTestScenario =  Scenario(
+                    name = originalScenario.apiIdentifier,
+                    httpRequestPattern = resolvedRequest.toPattern(),
+                    httpResponsePattern = HttpResponsePattern(example.response)
+                ),
+                comment = null,
+                workflow = Workflow(),
+                originalScenario = originalScenario
+            )
+        }.map(::HasValue).getOrElse { e ->
+            e.asReturnValue(example.testName)
         }
-
-        return HasValue(scenarioAsTest(concreteTestScenario, null, Workflow(), originalScenario))
     }
 
     private fun scenarioAsTest(
@@ -657,7 +663,7 @@ data class Feature(
         workflow: Workflow,
         originalScenario: Scenario,
         originalScenarios: List<Scenario> = emptyList()
-    ) = ScenarioAsTest(
+    ): ContractTest = ScenarioAsTest(
         scenario = adjustTestDescription(concreteTestScenario, originalScenarios),
         feature = this.copy(scenarios = originalScenarios),
         flagsBased,
@@ -827,6 +833,7 @@ data class Feature(
             examplePath = scenarioStub.filePath,
             scenario = matchingScenario,
             data = scenarioStub.data,
+            contractPath = this.path,
             partial = scenarioStub.partial.copy(response = scenarioStub.partial.response)
         )
     }
@@ -1667,7 +1674,7 @@ data class Feature(
             pattern is NumberPattern || (pattern is DeferredPattern && pattern.pattern == "(number)") -> NumberSchema()
             pattern is BooleanPattern || (pattern is DeferredPattern && pattern.pattern == "(boolean)") -> BooleanSchema()
             pattern is DateTimePattern || (pattern is DeferredPattern && pattern.pattern == "(datetime)") -> StringSchema()
-            pattern is StringPattern || pattern is EmptyStringPattern || (pattern is DeferredPattern && pattern.pattern == "(string)") || (pattern is DeferredPattern && pattern.pattern == "(nothing)") -> StringSchema()
+            pattern is StringPattern || pattern is EmptyStringPattern || (pattern is DeferredPattern && pattern.pattern == "(string)") || (pattern is DeferredPattern && pattern.pattern == "(emptystring)") -> StringSchema()
             pattern is NullPattern || (pattern is DeferredPattern && pattern.pattern == "(null)") -> Schema<Any>().apply {
                 this.nullable = true
             }

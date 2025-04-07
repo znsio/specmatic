@@ -17,10 +17,9 @@ object NonGenerativeTests : GenerationStrategies {
         resolver: Resolver,
         body: Pattern,
         row: Row,
-        requestBodyAsIs: Pattern,
-        value: Value
+        requestBodyAsIs: Pattern
     ): Sequence<ReturnValue<Pattern>> {
-        return sequenceOf(HasValue(ExactValuePattern(value)))
+        return sequenceOf(HasValue(requestBodyAsIs))
     }
 
     override fun generateHttpRequestBodies(

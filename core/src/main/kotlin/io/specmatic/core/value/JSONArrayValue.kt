@@ -69,8 +69,8 @@ data class JSONArrayValue(override val list: List<Value>) : Value, ListValue, JS
         if(list.all { it is JSONObjectValue }.not()) return Result.Success()
 
         return Result.fromResults(
-            results = list.map {
-                (it as JSONObjectValue).checkIfAllRootLevelKeysAreAttributeSelected(attributeSelectedFields, resolver)
+            results = list.mapIndexed { index, it ->
+                (it as JSONObjectValue).checkIfAllRootLevelKeysAreAttributeSelected(attributeSelectedFields, resolver).breadCrumb("[$index]")
             }
         )
     }

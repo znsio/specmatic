@@ -1,6 +1,7 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.*
+import io.specmatic.core.PARTIAL_KEYCHECK
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.utilities.withNullPattern
@@ -396,6 +397,36 @@ internal class AnyPatternTest {
         val result = pattern.matches(StringValue(""), Resolver())
 
         assertThat(result.reportString()).contains("Expected json object")
+    }
+
+    @Test
+    fun `should include info breadcrumbs when value does not match any discriminator patterns and key check is partial`() {
+        val pattern = AnyPattern(
+            listOf(
+                JSONObjectPattern(mapOf("type" to "sub1".toDiscriminator(), "prop" to StringPattern(), "extra" to StringPattern()), typeAlias = "(Sub1)"),
+                JSONObjectPattern(mapOf("type" to "sub2".toDiscriminator(), "prop" to NumberPattern()), typeAlias = "(Sub2)")
+            ), typeAlias = "(Base)",
+            discriminator = Discriminator(
+                property = "type",
+                values = setOf("sub1", "sub2"),
+                mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
+            )
+        )
+        val invalidValue = JSONObjectValue(mapOf("newKey" to StringValue("value"), "prop" to BooleanValue(true)))
+        val result = pattern.matches(invalidValue, Resolver(findKeyErrorCheck = PARTIAL_KEYCHECK))
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""    
+        >> (when Sub1 object).newKey
+        Key named "newKey" was unexpected 
+        >> (when Sub1 object).prop
+        Expected string, actual was true (boolean)
+
+        >> (when Sub2 object).newKey 
+        Key named "newKey" was unexpected
+        >> (when Sub2 object).prop
+        Expected number, actual was true (boolean)
+        """.trimIndent())
     }
 
     @Nested

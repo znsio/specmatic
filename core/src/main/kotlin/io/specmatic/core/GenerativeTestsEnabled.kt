@@ -22,8 +22,7 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean) : Generatio
         resolver: Resolver,
         body: Pattern,
         row: Row,
-        requestBodyAsIs: Pattern,
-        value: Value
+        requestBodyAsIs: Pattern
     ): Sequence<ReturnValue<Pattern>> {
         // TODO generate value outside
         val requestsFromFlattenedRow: Sequence<ReturnValue<Pattern>> =

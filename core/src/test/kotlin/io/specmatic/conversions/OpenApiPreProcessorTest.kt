@@ -7,6 +7,8 @@ import io.specmatic.core.pattern.DeferredPattern
 import io.specmatic.core.pattern.EnumPattern
 import io.specmatic.core.pattern.JSONObjectPattern
 import io.specmatic.core.value.StringValue
+import io.swagger.v3.parser.OpenAPIV3Parser
+import io.swagger.v3.parser.core.models.ParseOptions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -179,6 +181,22 @@ class OpenApiPreProcessorTest {
         val processedOpenApiYamlContent = preProcessor.inlinePathReferences().toYAML()
 
         assertYamlEquals(openApiContent, processedOpenApiYamlContent)
+    }
+
+    @Test
+    fun `should fail while swagger parser relative references issues are not resolved`() {
+        // Remove this test when relative references handling are resolved in swagger parser
+        val openApiFile = File("src/test/resources/openapi/has_referenced_paths/api/v1/order.yaml")
+        val parseOptions = ParseOptions().also {
+            it.isResolve = true
+            it.isResolveRequestBody = true
+            it.isResolveResponses = true
+        }
+        val result = OpenAPIV3Parser().readContents(openApiFile.readText(), null, parseOptions, openApiFile.canonicalPath)
+
+        assertThat(result.messages).hasSize(1).containsExactly("""
+        Unable to load RELATIVE ref: ../commons/components/schemas/products/enums/ProductType.yaml path: ${openApiFile.parentFile.canonicalPath}
+        """.trimIndent())
     }
 
     private fun convertYamlToJsonRecursively(file: File, deleteOnConversion: Boolean = true) {

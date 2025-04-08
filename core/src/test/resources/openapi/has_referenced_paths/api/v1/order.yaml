@@ -1,0 +1,7 @@
+openapi: 3.0.3
+info:
+  version: 1.0.0
+  title: Products API
+paths:
+  /v1/products:
+    $ref: ./paths/products.yaml

@@ -58,7 +58,7 @@ data class OpenApiPreProcessor (
 
     private fun relativizePaths(ref: String, from: String): String {
         val to = openApiFilePath.parent ?: return ref
-        val base = Paths.get(from).normalizeAndAbsolute().parent ?: return ref
+        val base = to.resolve(from).normalizeAndAbsolute().parent ?: return ref
         val target = base.resolve(ref).normalizeAndAbsolute()
 
         return to.relativize(target).toString().replace(File.separatorChar, '/')

@@ -1,0 +1,4 @@
+Product: object
+properties:
+  category:
+    $ref: ./enums/ProductType.yaml

@@ -1,0 +1,5 @@
+type: string
+enum:
+  - FOOD
+  - GADGET
+  - OTHER

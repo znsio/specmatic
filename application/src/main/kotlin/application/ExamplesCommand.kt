@@ -353,9 +353,7 @@ For example, to filter by HTTP methods:
         private fun Map<String, Result>.containsFailuresOrPartialFailures(): Boolean {
             return this.any { it.value is Result.Failure }
         }
-
     }
-
 }
 
 private fun configureLogger(verbose: Boolean) {

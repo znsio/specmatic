@@ -73,17 +73,17 @@ For example, to filter by HTTP methods:
         val exampleFile: File? = null
 
         @Option(names = ["--examples-dir"], description = ["External examples directory path for a single API specification (If you are not following the default naming convention for external examples directory)"], required = false)
-        val examplesDir: File? = null
+        var examplesDir: File? = null
 
         @Option(names = ["--specs-dir"], description = ["Directory with the API specification files"], required = false)
-        val specsDir: File? = null
+        var specsDir: File? = null
 
         @Option(
             names = ["--examples-base-dir"],
             description = ["Base directory which contains multiple external examples directories each named as per the Specmatic naming convention to associate them with the corresponding API specification"],
             required = false
         )
-        val examplesBaseDir: File? = null
+        var examplesBaseDir: File? = null
 
         @Option(names = ["--debug"], description = ["Debug logs"])
         var verbose = false
@@ -128,7 +128,7 @@ For example, to filter by HTTP methods:
             if (contractFile != null && exampleFile != null) return validateExampleFile(contractFile!!, exampleFile)
 
             if (contractFile != null && examplesDir != null) {
-                val (exitCode, validationResults) = validateExamplesDir(contractFile!!, examplesDir)
+                val (exitCode, validationResults) = validateExamplesDir(contractFile!!, examplesDir!!)
 
                 printValidationResult(validationResults, "Example directory")
                 if (exitCode == 1) return FAILURE_EXIT_CODE
@@ -136,7 +136,7 @@ For example, to filter by HTTP methods:
 
                 callLifecycleHook(
                     parseContractFileToFeature(contractFile!!),
-                    ExampleModule().getExamplesFromDir(examplesDir)
+                    ExampleModule().getExamplesFromDir(examplesDir!!)
                 )
                 return SUCCESS_EXIT_CODE
             }
@@ -144,14 +144,14 @@ For example, to filter by HTTP methods:
             if (contractFile != null) return validateImplicitExamplesFrom(contractFile!!)
 
             if (specsDir != null && examplesBaseDir != null) {
-                logger.log("- Validating associated examples in the directory: ${examplesBaseDir.path}")
+                logger.log("- Validating associated examples in the directory: ${examplesBaseDir!!.path}")
                 logger.newLine()
-                val externalExampleValidationResults = validateAllExamplesAssociatedToEachSpecIn(specsDir, examplesBaseDir)
+                val externalExampleValidationResults = validateAllExamplesAssociatedToEachSpecIn(specsDir!!, examplesBaseDir!!)
 
                 logger.newLine()
-                logger.log("- Validating associated examples in the directory: ${specsDir.path}")
+                logger.log("- Validating associated examples in the directory: ${specsDir!!.path}")
                 logger.newLine()
-                val implicitExampleValidationResults = validateAllExamplesAssociatedToEachSpecIn(specsDir, specsDir)
+                val implicitExampleValidationResults = validateAllExamplesAssociatedToEachSpecIn(specsDir!!, specsDir!!)
 
                 logger.newLine()
                 val summaryTitle = "- Validation summary across all example directories:"
@@ -169,7 +169,7 @@ For example, to filter by HTTP methods:
             }
 
             if (specsDir != null) {
-                return validateAllExamplesAssociatedToEachSpecIn(specsDir, specsDir).exitCode()
+                return validateAllExamplesAssociatedToEachSpecIn(specsDir!!, specsDir!!).exitCode()
             }
 
             logger.log("Invalid combination of CLI options. Please refer to the help section using --help command to understand how to use this command")

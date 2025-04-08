@@ -25,7 +25,7 @@ data class OpenApiPreProcessor (
     fun inlinePathReferences(): OpenApiPreProcessor {
         val pathsMap = parsedYamlContent["paths"] as? Map<*, *> ?: return this
         val updatedPaths = pathsMap.mapValues { (path, pathValue) ->
-            if (path !is String || pathValue !is Map<*, *> || !pathValue.isRefValue()) return@mapValues pathValue
+            if (path !is String || pathValue !is Map<*, *> || !pathValue.containsNonHttpRef()) return@mapValues pathValue
             val ref = pathValue["\$ref"] as? String ?: return@mapValues pathValue
             readFromRef(ref).relativizeRefs(from = ref)
         }
@@ -34,8 +34,9 @@ data class OpenApiPreProcessor (
         return this.copy(parsedYamlContent = updatedYamlContent)
     }
 
-    private fun Any?.isRefValue(): Boolean {
-        return this is Map<*, *> && this.containsKey(REF_KEY)
+    private fun Any?.containsNonHttpRef(): Boolean {
+        val ref = (this as? Map<*, *>)?.get(REF_KEY) as? String ?: return false
+        return !ref.isHttpRef()
     }
 
     private fun readFromRef(ref: String): Map<*, *> {
@@ -57,11 +58,21 @@ data class OpenApiPreProcessor (
     }
 
     private fun relativizePaths(ref: String, from: String): String {
+        if (ref.isHttpOrAbsolute()) return ref
+
         val to = openApiFilePath.parent ?: return ref
         val base = to.resolve(from).normalizeAndAbsolute().parent ?: return ref
         val target = base.resolve(ref).normalizeAndAbsolute()
 
         return to.relativize(target).toString().replace(File.separatorChar, '/')
+    }
+
+    private fun String.isHttpOrAbsolute(): Boolean {
+        return this.isHttpRef() || Paths.get(this).isAbsolute
+    }
+
+    private fun String.isHttpRef(): Boolean {
+        return this.startsWith("http://") || this.startsWith("https://")
     }
 
     private fun Path.normalizeAndAbsolute(): Path = this.normalize().toAbsolutePath()

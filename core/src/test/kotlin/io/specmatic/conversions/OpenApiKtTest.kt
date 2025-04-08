@@ -642,12 +642,12 @@ Background:
 
     @Test
     fun `should not throw errors while parsing file with no paths`() {
-        OpenApiSpecification.fromFile("openapi/common.yaml").toFeature()
+        OpenApiSpecification.fromFile("src/test/resources/openapi/common.yaml").toFeature()
     }
 
     @Test
     fun `should run zero tests when the file has no paths`() {
-        val feature = OpenApiSpecification.fromFile("openapi/common.yaml").toFeature()
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/common.yaml").toFeature()
         val results = feature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse = HttpResponse(200)
@@ -1154,7 +1154,7 @@ Background:
                   | testing |
         """.trimIndent(), sourceSpecPath
         )
-        val openapiSpec = OpenApiSpecification.fromFile("openapi/petstore-expanded.yaml")
+        val openapiSpec = OpenApiSpecification.fromFile("src/test/resources/openapi/petstore-expanded.yaml")
 
         val (expectedScenarios, _) = openapiSpec.toScenarioInfos()
         assertThat(feature.scenarios).hasSameSizeAs(expectedScenarios)
@@ -2498,7 +2498,7 @@ components:
 
     @Test
     fun `should work with password and email formats while generating tests`() {
-        val feature = OpenApiSpecification.fromFile("openapi/spec_with_password_and_email_format_strings.yaml").toFeature()
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_password_and_email_format_strings.yaml").toFeature()
         var emailDataType: Pattern? = null
         var emailValue: String? = null
         var passwordDataType: Pattern? = null
@@ -2521,7 +2521,7 @@ components:
 
     @Test
     fun `should work with password and email formats while generating stub`() {
-        val feature = OpenApiSpecification.fromFile("openapi/spec_with_password_and_email_format_strings.yaml").toFeature()
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_password_and_email_format_strings.yaml").toFeature()
 
         val response = HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -2537,7 +2537,7 @@ components:
 
     @Test
     fun `stub should not match email value in request that does not adhere to email format`() {
-        val feature = OpenApiSpecification.fromFile("openapi/spec_with_password_and_email_format_strings.yaml").toFeature()
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_password_and_email_format_strings.yaml").toFeature()
 
         val exception = Assertions.assertThrows(HttpClientErrorException::class.java) {
             HttpStub(feature).use {

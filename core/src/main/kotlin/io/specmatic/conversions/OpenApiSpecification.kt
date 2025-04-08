@@ -101,7 +101,7 @@ class OpenApiSpecification(
         }
 
         fun getParsedOpenApi(openApiFilePath: String): OpenAPI {
-            return OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences())
+            return fromYAML(yamlContent = File(openApiFilePath).readText(), openApiFilePath = openApiFilePath).parsedOpenApi
         }
 
         fun isParsable(openApiFilePath: String): Boolean {
@@ -134,10 +134,11 @@ class OpenApiSpecification(
             strictMode: Boolean = false
         ): OpenApiSpecification {
             val implicitOverlayFile = getImplicitOverlayContent(openApiFilePath)
+            val processOpenApiYaml = inlinePathReferences(yamlContent, openApiFilePath)
 
             val parseResult: SwaggerParseResult =
                 OpenAPIV3Parser().readContents(
-                    yamlContent.applyOverlay(overlayContent).applyOverlay(implicitOverlayFile),
+                    processOpenApiYaml.applyOverlay(overlayContent).applyOverlay(implicitOverlayFile),
                     null,
                     resolveExternalReferences(),
                     openApiFilePath
@@ -167,6 +168,12 @@ class OpenApiSpecification(
                 specmaticConfig,
                 strictMode = strictMode
             )
+        }
+
+        private fun inlinePathReferences(yamlContent: String, openApiFilePath: String): String {
+            return runCatching {
+                OpenApiPreProcessor(yamlContent, openApiFilePath).inlinePathReferences().toYAML()
+            }.getOrDefault(yamlContent)
         }
 
         fun loadDictionary(openApiFilePath: String, dictionaryPathFromConfig: String?): Map<String, Value> {

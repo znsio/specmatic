@@ -2,8 +2,6 @@ package application
 
 import io.specmatic.core.Feature
 import io.specmatic.core.getConfigFilePath
-import io.specmatic.core.lifecycle.ExamplesUsedFor
-import io.specmatic.core.lifecycle.LifecycleHooks
 import io.specmatic.core.loadSpecmaticConfigOrDefault
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.ContractPathData
@@ -34,8 +32,6 @@ class StubLoaderEngine {
                 loadContractStubsFromFiles(contractPathDataList, dataDirs, specmaticConfig, strictMode, withImplicitStubs = true)
             }
             else -> loadContractStubsFromImplicitPaths(contractPathDataList, specmaticConfig, dataDirs)
-        }.also {
-            LifecycleHooks.afterLoadingStaticExamples.call(ExamplesUsedFor.Stub, it)
         }
     }
 }

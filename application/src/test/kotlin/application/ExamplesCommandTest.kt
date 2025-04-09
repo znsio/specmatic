@@ -364,9 +364,11 @@ paths:
             registerTestHook()
             val runner = SpecmaticApplicationRunner(SpecmaticCommand(), CommandLine.defaultFactory())
             val (stdOut, _) = captureStandardOutput {
+                val non_implicit_examples_dir = "src/test/resources/examples/only_examples/persons/persons_examples"
                 runner.run("examples",  "validate",
                     "--spec-file", "src/test/resources/examples/only_specs/persons/persons.yaml",
-                    "--examples-dir", "src/test/resources/examples/only_examples/persons/persons_examples")
+                    "--examples-dir", non_implicit_examples_dir
+                )
             }
 
             assertThat(runner.exitCode).isEqualTo(0)

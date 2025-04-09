@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import picocli.CommandLine
 import java.io.File
 
 class ExamplesCommandTest {
@@ -344,12 +345,12 @@ paths:
         @Test
         fun `should call the life cycle hook for validate if only spec file is provided`() {
             registerTestHook()
-            val command = ExamplesCommand.Validate().also {
-                it.contractFile = File("src/test/resources/examples/single/persons.yaml")
+            val runner = SpecmaticApplicationRunner(SpecmaticCommand(), CommandLine.defaultFactory())
+            val (stdOut, _) = captureStandardOutput {
+                runner.run("examples",  "validate", "--spec-file", "src/test/resources/examples/single/persons.yaml")
             }
-            val (stdOut, exitCode) = captureStandardOutput { command.call() }
 
-            assertThat(exitCode).isEqualTo(0)
+            assertThat(runner.exitCode).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
             life cycle hook called for 'Validation'
             spec: 'persons.yaml'
@@ -361,13 +362,14 @@ paths:
         @Test
         fun `should call the life cycle hook for validate if both spec file and examples dir is provided`() {
             registerTestHook()
-            val command = ExamplesCommand.Validate().also {
-                it.contractFile = File("src/test/resources/examples/only_specs/persons/persons.yaml")
-                it.examplesDir = File("src/test/resources/examples/only_examples/persons/persons_examples")
+            val runner = SpecmaticApplicationRunner(SpecmaticCommand(), CommandLine.defaultFactory())
+            val (stdOut, _) = captureStandardOutput {
+                runner.run("examples",  "validate",
+                    "--spec-file", "src/test/resources/examples/only_specs/persons/persons.yaml",
+                    "--examples-dir", "src/test/resources/examples/only_examples/persons/persons_examples")
             }
-            val (stdOut, exitCode) = captureStandardOutput { command.call() }
 
-            assertThat(exitCode).isEqualTo(0)
+            assertThat(runner.exitCode).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
             life cycle hook called for 'Validation'
             spec: 'persons.yaml'
@@ -379,12 +381,12 @@ paths:
         @Test
         fun `should call the life cycle hook for validate if spec dir is provided`() {
             registerTestHook()
-            val command = ExamplesCommand.Validate().also {
-                it.specsDir = File("src/test/resources/examples/multiple")
+            val runner = SpecmaticApplicationRunner(SpecmaticCommand(), CommandLine.defaultFactory())
+            val (stdOut, _) = captureStandardOutput {
+                runner.run("examples",  "validate", "--specs-dir", "src/test/resources/examples/multiple")
             }
-            val (stdOut, exitCode) = captureStandardOutput { command.call() }
 
-            assertThat(exitCode).isEqualTo(0)
+            assertThat(runner.exitCode).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
             life cycle hook called for 'Validation'
             spec: 'persons.yaml'
@@ -402,13 +404,14 @@ paths:
         @Test
         fun `should call the life cycle hook for validate if both spec dir and examples dir is provided`() {
             registerTestHook()
-            val command = ExamplesCommand.Validate().also {
-                it.specsDir = File("src/test/resources/examples/only_specs")
-                it.examplesBaseDir = File("src/test/resources/examples/only_examples")
+            val runner = SpecmaticApplicationRunner(SpecmaticCommand(), CommandLine.defaultFactory())
+            val (stdOut, _) = captureStandardOutput {
+                runner.run("examples",  "validate",
+                    "--specs-dir", "src/test/resources/examples/only_specs",
+                    "--examples-base-dir", "src/test/resources/examples/only_examples")
             }
-            val (stdOut, exitCode) = captureStandardOutput { command.call() }
 
-            assertThat(exitCode).isEqualTo(0)
+            assertThat(runner.exitCode).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
             life cycle hook called for 'Validation'
             spec: 'persons.yaml'

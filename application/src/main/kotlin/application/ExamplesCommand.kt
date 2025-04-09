@@ -1,6 +1,9 @@
 package application
 
-import io.specmatic.core.*
+import io.specmatic.core.CONTRACT_EXTENSIONS
+import io.specmatic.core.Feature
+import io.specmatic.core.Result
+import io.specmatic.core.Results
 import io.specmatic.core.examples.module.ExampleModule
 import io.specmatic.core.examples.module.ExampleValidationModule
 import io.specmatic.core.examples.server.ScenarioFilter
@@ -9,6 +12,7 @@ import io.specmatic.core.log.ConsolePrinter
 import io.specmatic.core.log.NonVerbose
 import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.logger
+import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.exceptionCauseMessage
@@ -256,7 +260,6 @@ For example, to filter by HTTP methods:
             printValidationResult(externalExampleValidationResults, "Example file")
 
             if (hasFailures) return FAILURE_EXIT_CODE
-
             return SUCCESS_EXIT_CODE
         }
 
@@ -327,7 +330,9 @@ For example, to filter by HTTP methods:
         private fun Map<String, Result>.containsFailuresOrPartialFailures(): Boolean {
             return this.any { it.value is Result.Failure }
         }
+
     }
+
 }
 
 private fun configureLogger(verbose: Boolean) {

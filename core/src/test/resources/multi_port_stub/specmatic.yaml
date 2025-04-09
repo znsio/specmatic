@@ -6,9 +6,9 @@ contracts:
       - baseUrl: http://localhost:9001
         specs:
           - imported_product/imported_product.yaml
-      - baseUrl: http://localhost:9002
+      - baseUrl: http://0.0.0.0:9002
         specs:
           - exported_product/exported_product.yaml
-      - baseUrl: http://localhost:9003
+      - baseUrl: http://127.0.0.1:9003
         specs:
           - another_exported_product/exported_product.yaml

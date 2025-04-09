@@ -2757,6 +2757,39 @@ Then status 200
             }
         }
 
+        @Test
+        fun `stub bound to loop-back or wildcard interface should be able to serve requests sent to any loop-back address`() {
+            val specmaticConfigFile = File("src/test/resources/multi_port_stub/specmatic.yaml")
+            val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+            val contractPathData = contractStubPaths(specmaticConfigFile.absolutePath)
+            val scenarioStubs = scenarioStubsFrom(specmaticConfigFile, contractPathData, specmaticConfig)
+
+            val loopBackAndWildcardHostnames = setOf("127.0.0.1","localhost", "0.0.0.0")
+            val portToExpectedId = mapOf(9001 to "100", 9002 to "200", 9003 to "300")
+            val hostPortIdCombos = portToExpectedId.flatMap { (port, expectedId) ->
+                loopBackAndWildcardHostnames.map { host -> Triple(host, port, expectedId) }
+            }
+
+            HttpStub(
+                features = scenarioStubs.features(),
+                rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+                specmaticConfigPath = specmaticConfigFile.canonicalPath,
+                specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
+            ).use {
+                assertThat(hostPortIdCombos).allSatisfy { (host, port, expectedId) ->
+                    val request = HttpRequest(
+                        method = "POST", path = "/products",
+                        body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
+                    )
+                    val client = HttpClient(endPointFromHostAndPort(host, port, null))
+                    val response = client.execute(request)
+                    val actualId = (response.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+
+                    assertThat(actualId).isEqualTo(expectedId)
+                }
+            }
+        }
+
         @Nested
         inner class FeaturesAssociatedToTests {
 

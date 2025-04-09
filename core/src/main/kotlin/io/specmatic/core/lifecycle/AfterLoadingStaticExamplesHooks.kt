@@ -4,7 +4,7 @@ import io.specmatic.core.Feature
 import io.specmatic.mock.ScenarioStub
 
 class AfterLoadingStaticExamplesHooks : AfterLoadingStaticExamples {
-    private var afterLoadingStaticExamples: MutableList<AfterLoadingStaticExamples> = mutableListOf()
+    private val afterLoadingStaticExamples: MutableList<AfterLoadingStaticExamples> = mutableListOf()
 
     fun register(hook: AfterLoadingStaticExamples) {
         afterLoadingStaticExamples.add(hook)

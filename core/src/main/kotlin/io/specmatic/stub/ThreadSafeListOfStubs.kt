@@ -7,6 +7,7 @@ import io.specmatic.core.invalidRequestStatuses
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 import io.specmatic.mock.ScenarioStub
+import java.net.URI
 
 class ThreadSafeListOfStubs(
     private val httpStubs: MutableList<HttpStubData>,
@@ -19,15 +20,13 @@ class ThreadSafeListOfStubs(
 
     fun stubAssociatedTo(baseUrl: String, defaultBaseUrl: String, urlPath: String): ThreadSafeListOfStubs {
         val resolvedBaseUrls = resolveLocalhostIfPresent(baseUrl, urlPath) + resolveLocalhostIfPresent(defaultBaseUrl, urlPath)
-        val baseUrlToListOfStubsMap = baseUrlToListOfStubsMap(defaultBaseUrl)
+        val baseUrlToListOfStubsMap = baseUrlToListOfStubsMap(defaultBaseUrl).mapKeys { URI(it.key) }
 
-        return resolvedBaseUrls
-            .firstNotNullOfOrNull { resolvedUrl ->
-                baseUrlToListOfStubsMap.entries.firstOrNull {
-                    resolvedUrl.startsWith(it.key)
-                }?.value
-            }
-            ?: emptyStubs()
+        return resolvedBaseUrls.map(::URI).firstNotNullOfOrNull { resolvedUrl ->
+            baseUrlToListOfStubsMap.entries.firstOrNull { (stubBaseUrl, _) ->
+                stubBaseUrl.scheme == resolvedUrl.scheme && stubBaseUrl.port == resolvedUrl.port && resolvedUrl.path.startsWith(stubBaseUrl.path)
+            }?.value
+        } ?: emptyStubs()
     }
 
     fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {

@@ -456,22 +456,17 @@ class HttpStub(
     internal fun featuresAssociatedTo(
         baseUrl: String,
         features: List<Feature>,
-        specToStubBaseUrlMap: Map<String, String>,
+        specToBaseUrlMap: Map<String, String>,
         urlPath: String
     ): List<Feature> {
-        val resolvedBaseUrls = resolveLocalhostIfPresent(baseUrl, urlPath)
-
-        val specsForGivenBaseUrl = specToStubBaseUrlMap.entries
-            .filter { (_, stubBaseUrl) ->
-                resolvedBaseUrls.any { url ->
-                    url.startsWith(stubBaseUrl)
-                }
+        val resolvedBaseUrls = resolveLocalhostIfPresent(baseUrl, urlPath).map(::URI)
+        val specsForGivenBaseUrl = specToBaseUrlMap.mapValues { URI(it.value) }.filterValues { stubBaseUrl ->
+            resolvedBaseUrls.any { url ->
+                url.scheme == stubBaseUrl.scheme && url.port == stubBaseUrl.port && url.path.startsWith(stubBaseUrl.path)
             }
-            .map { it.key }
-            .toSet()
-        return features.filter { feature ->
-            feature.path in specsForGivenBaseUrl
         }
+
+        return features.filter { feature -> feature.path in specsForGivenBaseUrl }
     }
 
     private fun handleFlushTransientStubsRequest(httpRequest: HttpRequest): HttpStubResponse {

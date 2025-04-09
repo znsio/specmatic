@@ -323,9 +323,10 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun stubBaseUrlPathAssociatedTo(url: String, defaultBaseUrl: String): String {
-        return stubBaseUrls(defaultBaseUrl).firstOrNull { stubBaseUrl ->
-            url.startsWith(stubBaseUrl)
-        }?.let { URI(it).path }.orEmpty()
+        val parsedUrl = URI(url)
+        return stubBaseUrls(defaultBaseUrl).map(::URI).firstOrNull {
+            it.scheme == parsedUrl.scheme && it.port == parsedUrl.port && parsedUrl.path.startsWith(it.path)
+        }?.path.orEmpty()
     }
 
     @JsonIgnore

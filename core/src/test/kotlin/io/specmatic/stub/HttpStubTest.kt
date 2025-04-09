@@ -2736,7 +2736,7 @@ Then status 200
                 features = scenarioStubs.features(),
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
-                specToStubPortMap = contractPathData.specToPortMap()
+                specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use { _ ->
                 val request = HttpRequest(
                     method = "POST",

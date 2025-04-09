@@ -1,12 +1,9 @@
 package application
 
-import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.*
 import io.specmatic.core.examples.module.ExampleModule
 import io.specmatic.core.examples.module.ExampleValidationModule
 import io.specmatic.core.examples.server.ScenarioFilter
-import io.specmatic.core.lifecycle.ExamplesUsedFor
-import io.specmatic.core.lifecycle.LifecycleHooks
 import io.specmatic.core.log.CompositePrinter
 import io.specmatic.core.log.ConsolePrinter
 import io.specmatic.core.log.NonVerbose
@@ -134,10 +131,6 @@ For example, to filter by HTTP methods:
                 if (exitCode == 1) return FAILURE_EXIT_CODE
                 if (validationResults.containsOnlyCompleteFailures()) return FAILURE_EXIT_CODE
 
-                callLifecycleHook(
-                    parseContractFileToFeature(contractFile!!),
-                    ExampleModule().getExamplesFromDir(examplesDir!!)
-                )
                 return SUCCESS_EXIT_CODE
             }
 
@@ -228,12 +221,6 @@ For example, to filter by HTTP methods:
 
                 printValidationResult(results.toMap(), "")
                 logger.log(System.lineSeparator())
-                if (results.toMap().exitCode() != FAILURE_EXIT_CODE) {
-                    callLifecycleHook(
-                        parseContractFileToFeature(specFile),
-                        ExampleModule().getExamplesFromDir(associatedExamplesDir)
-                    )
-                }
                 results
             }.toMap()
 
@@ -271,19 +258,7 @@ For example, to filter by HTTP methods:
 
             if (hasFailures) return FAILURE_EXIT_CODE
 
-            callLifecycleHook(
-                feature,
-                ExampleModule().getExamplesFromDir(ExampleModule().defaultExternalExampleDirFrom(contractFile))
-            )
             return SUCCESS_EXIT_CODE
-        }
-
-        private fun callLifecycleHook(feature: Feature, examples: List<ExampleFromFile>) {
-            val scenarioStubs = examples.map { ScenarioStub(request = it.request, filePath = it.file.path) }
-            LifecycleHooks.afterLoadingStaticExamples.call(
-                ExamplesUsedFor.Validation,
-                listOf(Pair(feature, scenarioStubs))
-            )
         }
 
         private fun validateInlineExamples(feature: Feature): Map<String, Result> {

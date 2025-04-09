@@ -45,7 +45,11 @@ class ExampleModule {
     }
 
     fun getExamplesFromDir(dir: File): List<ExampleFromFile> {
-        return dir.listFiles().orEmpty().filter { it.extension == "json" }.mapNotNull {
+        return getExamplesFromFiles(dir.listFiles().orEmpty().filter { it.extension == "json" })
+    }
+
+    fun getExamplesFromFiles(files: List<File>): List<ExampleFromFile> {
+        return files.mapNotNull {
             ExampleFromFile.fromFile(it).realise(
                 hasValue = { example, _ -> example },
                 orException = { err -> consoleDebug(exceptionCauseMessage(err.t)); null },

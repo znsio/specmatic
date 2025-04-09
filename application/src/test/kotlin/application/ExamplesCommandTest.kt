@@ -354,8 +354,8 @@ paths:
             assertThat(stdOut).containsIgnoringWhitespaces("""
             life cycle hook called for 'Validation'
             spec: 'persons.yaml'
-            implicit example: 'person-example-11,person-example-01'
-            external stub: 'create_person-02.json,create_person-01.json'
+            implicit example: 'person-example-01,person-example-11'
+            external stub: 'create_person-01.json,create_person-02.json'
             """.trimIndent())
         }
 
@@ -373,8 +373,8 @@ paths:
             assertThat(stdOut).containsIgnoringWhitespaces("""
             life cycle hook called for 'Validation'
             spec: 'persons.yaml'
-            implicit example: 'person-example-11,person-example-01'
-            external stub: 'create_person-02.json,create_person-01.json'
+            implicit example: 'person-example-01,person-example-11'
+            external stub: 'create_person-01.json,create_person-02.json'
             """.trimIndent())
         }
 
@@ -391,8 +391,8 @@ paths:
             assertThat(stdOut).containsIgnoringWhitespaces("""
             life cycle hook called for 'Validation'
             spec: 'persons.yaml'
-            implicit example: 'person-example-11,person-example-01'
-            external stub: 'create_person-02.json,create_person-01.json'
+            implicit example: 'person-example-01,person-example-11'
+            external stub: 'create_person-01.json,create_person-02.json'
             """.trimIndent())
             assertThat(stdOut).containsIgnoringWhitespaces("""
             life cycle hook called for 'Validation'
@@ -416,8 +416,8 @@ paths:
             assertThat(stdOut).containsIgnoringWhitespaces("""
             life cycle hook called for 'Validation'
             spec: 'persons.yaml'
-            implicit example: 'person-example-11,person-example-01'
-            external stub: 'create_person-02.json,create_person-01.json'
+            implicit example: 'person-example-01,person-example-11'
+            external stub: 'create_person-01.json,create_person-02.json'
             """.trimIndent())
             assertThat(stdOut).containsIgnoringWhitespaces("""
             life cycle hook called for 'Validation'
@@ -432,8 +432,8 @@ paths:
                 logger.log("life cycle hook called for '$examplesUsedFor'")
                 examples.forEach { (feature, stubs) ->
                     logger.log("spec: '${File(feature.path).name}'")
-                    logger.log("implicit example: '${feature.stubsFromExamples.map { (k, _) -> k }.joinToString(",")}'")
-                    logger.log("external stub: '${stubs.joinToString(",") { File(it.filePath!!).name }}'")
+                    logger.log("implicit example: '${feature.stubsFromExamples.map { (k, _) -> k }.sorted().joinToString(",")}'")
+                    logger.log("external stub: '${stubs.map { File(it.filePath!!).name }.sorted().joinToString(",") }'")
                 }
             }
         }

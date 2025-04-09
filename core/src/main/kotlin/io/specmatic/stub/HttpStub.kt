@@ -438,9 +438,9 @@ class HttpStub(
 
         return getHttpResponse(
             httpRequest = httpRequest.trimBaseUrlPath(stubBaseUrlPath),
-            features = featuresAssociatedTo(baseUrl, features, specToBaseUrlMap, urlPath),
-            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(baseUrl, defaultBaseUrl, urlPath),
-            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(baseUrl, defaultBaseUrl, urlPath),
+            features = featuresAssociatedTo(baseUrl, features, specToBaseUrlMap),
+            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(baseUrl, defaultBaseUrl),
+            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(baseUrl, defaultBaseUrl),
             strictMode = strictMode,
             passThroughTargetBase = passThroughTargetBase,
             httpClientFactory = httpClientFactory,
@@ -456,14 +456,11 @@ class HttpStub(
     internal fun featuresAssociatedTo(
         baseUrl: String,
         features: List<Feature>,
-        specToBaseUrlMap: Map<String, String>,
-        urlPath: String
+        specToBaseUrlMap: Map<String, String>
     ): List<Feature> {
-        val resolvedBaseUrls = resolveLocalhostIfPresent(baseUrl, urlPath).map(::URI)
+        val parsedBaseUrl = URI(baseUrl)
         val specsForGivenBaseUrl = specToBaseUrlMap.mapValues { URI(it.value) }.filterValues { stubBaseUrl ->
-            resolvedBaseUrls.any { url ->
-                url.scheme == stubBaseUrl.scheme && url.port == stubBaseUrl.port && url.path.startsWith(stubBaseUrl.path)
-            }
+            isSameBaseIgnoringHost(parsedBaseUrl, stubBaseUrl)
         }
 
         return features.filter { feature -> feature.path in specsForGivenBaseUrl }
@@ -1267,34 +1264,16 @@ fun extractPort(url: String): Int? {
     return URI(url).port.takeIf { it != -1 }
 }
 
-fun resolveLocalhostIfPresent(
-    url: String,
-    urlPath: String = ""
-): List<String> {
-    val uri = URI(url)
-    val host = uri.host
-
-    if (host != "localhost") return listOf(url)
-
-    val port = when {
-        uri.port != -1 -> uri.port
-        uri.scheme == "https" -> 443
-        else -> 80
-    }
-
-    return InetAddress.getAllByName(host).map { inetAddress ->
-        val ip = inetAddress.hostAddress
-        val bracketedIp = if (ip.contains(":")) "[$ip]" else ip
-        "${uri.scheme}://$bracketedIp:$port"
-    }.plus("${uri.scheme}://$host:$port").map { it.plus(urlPath) }
-}
-
 fun normalizeHost(host: String): String {
     return try {
         InetAddress.getByName(host).hostAddress
     } catch (e: Exception) {
         host
     }
+}
+
+fun isSameBaseIgnoringHost(base: URI, other: URI): Boolean {
+    return base.scheme == other.scheme && base.port == other.port && base.path.startsWith(other.path)
 }
 
 internal fun isPath(path: String?, lastPart: String): Boolean {

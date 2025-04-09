@@ -42,7 +42,7 @@ import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
-import io.specmatic.stub.resolveLocalhostIfPresent
+import io.specmatic.stub.isSameBaseIgnoringHost
 import java.io.File
 import java.net.URI
 
@@ -314,18 +314,14 @@ data class SpecmaticConfig(
                     is Consumes.ObjectValue -> consumes.baseUrl
                 }
             }
-        }.plus(defaultBaseUrl).flatMap { stubBaseUrl ->
-            resolveLocalhostIfPresent(stubBaseUrl).map { resolvedBaseUrl ->
-                "$resolvedBaseUrl${URI(stubBaseUrl).path}"
-            }
-        }.distinct()
+        }.plus(defaultBaseUrl).distinct()
     }
 
     @JsonIgnore
     fun stubBaseUrlPathAssociatedTo(url: String, defaultBaseUrl: String): String {
         val parsedUrl = URI(url)
-        return stubBaseUrls(defaultBaseUrl).map(::URI).firstOrNull {
-            it.scheme == parsedUrl.scheme && it.port == parsedUrl.port && parsedUrl.path.startsWith(it.path)
+        return stubBaseUrls(defaultBaseUrl).map(::URI).firstOrNull { stubBaseUrl ->
+            isSameBaseIgnoringHost(parsedUrl, stubBaseUrl)
         }?.path.orEmpty()
     }
 

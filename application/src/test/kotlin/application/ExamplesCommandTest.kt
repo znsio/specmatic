@@ -348,7 +348,6 @@ paths:
                 it.contractFile = File("src/test/resources/examples/single/persons.yaml")
             }
             val (stdOut, exitCode) = captureStandardOutput { command.call() }
-            println(stdOut)
 
             assertThat(exitCode).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
@@ -367,7 +366,6 @@ paths:
                 it.examplesDir = File("src/test/resources/examples/only_examples/persons/persons_examples")
             }
             val (stdOut, exitCode) = captureStandardOutput { command.call() }
-            println(stdOut)
 
             assertThat(exitCode).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
@@ -385,7 +383,6 @@ paths:
                 it.specsDir = File("src/test/resources/examples/multiple")
             }
             val (stdOut, exitCode) = captureStandardOutput { command.call() }
-            println(stdOut)
 
             assertThat(exitCode).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
@@ -410,7 +407,6 @@ paths:
                 it.examplesBaseDir = File("src/test/resources/examples/only_examples")
             }
             val (stdOut, exitCode) = captureStandardOutput { command.call() }
-            println(stdOut)
 
             assertThat(exitCode).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""

@@ -438,9 +438,9 @@ class HttpStub(
 
         return getHttpResponse(
             httpRequest = httpRequest.trimBaseUrlPath(stubBaseUrlPath),
-            features = featuresAssociatedTo(baseUrl, features, specToBaseUrlMap),
-            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(baseUrl, defaultBaseUrl),
-            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(baseUrl, defaultBaseUrl),
+            features = featuresAssociatedTo(baseUrl, features, specToBaseUrlMap, urlPath),
+            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(baseUrl, defaultBaseUrl, urlPath),
+            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(baseUrl, defaultBaseUrl, urlPath),
             strictMode = strictMode,
             passThroughTargetBase = passThroughTargetBase,
             httpClientFactory = httpClientFactory,
@@ -456,9 +456,10 @@ class HttpStub(
     internal fun featuresAssociatedTo(
         baseUrl: String,
         features: List<Feature>,
-        specToBaseUrlMap: Map<String, String>
+        specToBaseUrlMap: Map<String, String>,
+        urlPath: String
     ): List<Feature> {
-        val parsedBaseUrl = URI(baseUrl)
+        val parsedBaseUrl = URI(baseUrl + urlPath)
         val specsForGivenBaseUrl = specToBaseUrlMap.mapValues { URI(it.value) }.filterValues { stubBaseUrl ->
             isSameBaseIgnoringHost(parsedBaseUrl, stubBaseUrl)
         }

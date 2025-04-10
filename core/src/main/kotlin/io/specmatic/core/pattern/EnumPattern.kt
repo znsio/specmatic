@@ -81,7 +81,7 @@ data class EnumPattern(
     }
 
     override fun fixValue(value: Value, resolver: Resolver): Value {
-        return value.takeIf { this.matches(value, resolver).isSuccess() } ?: resolver.generate(this)
+        return fixValue(value, this, resolver)
     }
 
     override fun equals(other: Any?): Boolean = other is EnumPattern && other.pattern == this.pattern

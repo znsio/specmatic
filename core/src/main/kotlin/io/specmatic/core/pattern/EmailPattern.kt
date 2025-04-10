@@ -40,7 +40,7 @@ class EmailPattern (private val stringPatternDelegate: StringPattern) :
     }
 
     override fun fixValue(value: Value, resolver: Resolver): Value {
-        return value.takeIf { this.matches(value, resolver).isSuccess() } ?: resolver.generate(this)
+        return fixValue(value, this, resolver)
     }
 
     override fun generate(resolver: Resolver): Value {

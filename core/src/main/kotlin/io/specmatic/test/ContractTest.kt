@@ -20,8 +20,10 @@ interface ResponseValidator {
 interface ContractTest : HasScenarioMetadata {
     fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord?
     fun testDescription(): String
-    fun runTest(testBaseURL: String, timeoutInMilliseconds: Long): Pair<Result, HttpResponse?>
+    fun runTest(timeoutInMilliseconds: Long): Pair<Result, HttpResponse?>
     fun runTest(testExecutor: TestExecutor): Pair<Result, HttpResponse?>
 
     fun plusValidator(validator: ResponseValidator): ContractTest
+
+    fun getBaseURL(): String
 }

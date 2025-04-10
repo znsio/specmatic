@@ -14,7 +14,8 @@ class ScenarioTestGenerationException(
     var scenario: Scenario,
     val e: Throwable,
     val message: String,
-    val breadCrumb: String?
+    val breadCrumb: String?,
+    private val baseURL: String,
 ) : ContractTest {
 
     init {
@@ -50,9 +51,9 @@ class ScenarioTestGenerationException(
         return scenario.testDescription()
     }
 
-    override fun runTest(testBaseURL: String, timeoutInMilliseconds: Long): Pair<Result, HttpResponse?> {
+    override fun runTest(timeoutInMilliseconds: Long): Pair<Result, HttpResponse?> {
         val log: (LogMessage) -> Unit = { logMessage -> logger.log(logMessage) }
-        val httpClient = HttpClient(testBaseURL, log = log, timeoutInMilliseconds = timeoutInMilliseconds)
+        val httpClient = HttpClient(baseURL, log = log, timeoutInMilliseconds = timeoutInMilliseconds)
         return runTest(httpClient)
     }
 
@@ -64,6 +65,8 @@ class ScenarioTestGenerationException(
     override fun plusValidator(validator: ResponseValidator): ContractTest {
         return this
     }
+
+    override fun getBaseURL(): String = baseURL
 
     fun error(): Pair<Result, HttpResponse?> {
         val result: Result = when(e) {

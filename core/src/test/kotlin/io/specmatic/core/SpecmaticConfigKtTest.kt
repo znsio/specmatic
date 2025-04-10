@@ -2,8 +2,8 @@ package io.specmatic.core
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import io.specmatic.core.config.v3.Consumes
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import io.specmatic.core.config.v3.Consumes
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import java.io.File
 
 internal class SpecmaticConfigKtTest {
 
@@ -31,7 +30,7 @@ internal class SpecmaticConfigKtTest {
     fun `parse specmatic config file with all values`(configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
 
-        val sources = SpecmaticConfig.getSources(config)
+        val sources = SpecmaticConfig.getSources(config).orEmpty()
         assertThat(sources).isNotEmpty
 
         assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
@@ -126,8 +125,8 @@ internal class SpecmaticConfigKtTest {
         val sources = SpecmaticConfig.getSources(config)
         assertThat(sources).isNotEmpty
 
-        assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
-        assertThat(sources.first().test).isEqualTo(listOf("path/to/contract.spec"))
+        assertThat(sources?.first()?.provider).isEqualTo(SourceProvider.git)
+        assertThat(sources?.first()?.test).isEqualTo(listOf("path/to/contract.spec"))
     }
 
     @CsvSource(
@@ -142,10 +141,10 @@ internal class SpecmaticConfigKtTest {
         val sources = SpecmaticConfig.getSources(config)
         assertThat(sources).isNotEmpty
 
-        assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
-        assertThat(sources.first().repository).isEqualTo("https://contracts")
-        assertThat(sources.first().test).isEqualTo(listOf("com/petstore/1.yaml"))
-        assertThat(sources.first().specsUsedAsStub()).isEqualTo(listOf("com/petstore/payment.yaml"))
+        assertThat(sources?.first()?.provider).isEqualTo(SourceProvider.git)
+        assertThat(sources?.first()?.repository).isEqualTo("https://contracts")
+        assertThat(sources?.first()?.test).isEqualTo(listOf("com/petstore/1.yaml"))
+        assertThat(sources?.first()?.specsUsedAsStub()).isEqualTo(listOf("com/petstore/payment.yaml"))
 
         assertThat(config.getAuthBearerFile()).isEqualTo("bearer.txt")
         assertThat(config.getAuthBearerEnvironmentVariable()).isNull()
@@ -338,7 +337,7 @@ internal class SpecmaticConfigKtTest {
             )
 
             assertThat(
-                specmaticConfig.stubContracts().map { it.substringAfterLast(File.separator) }
+                specmaticConfig.loadSources().flatMap { sources -> sources.stubContracts.map { stub -> stub.path } }
             ).isEqualTo(
                 listOf(
                     "9000_first.yaml",

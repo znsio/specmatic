@@ -452,7 +452,7 @@ internal class AnyPatternTest {
         )
 
         assertThat(scalarBasedPatterns).allSatisfy {
-            assertThat(it.isScalarBasedPattern()).isTrue()
+            assertThat(it.isNullableScalarPattern()).isTrue()
         }
     }
 

@@ -454,7 +454,7 @@ data class AnyPattern(
     }
 
     @Suppress("unused") // Being used in openapi
-    fun isScalarBasedPattern(): Boolean {
+    fun isNullableScalarPattern(): Boolean {
         return pattern.size == 2 && pattern.count { it is NullPattern } == 1 && pattern.count { it is ScalarType } == 2
     }
 

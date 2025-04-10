@@ -341,7 +341,7 @@ data class JSONObjectPattern(
         data class ResultWithDiscriminatorStatus(val result: Result, val isDiscriminator: Boolean)
 
         val resultsWithDiscriminator: List<ResultWithDiscriminatorStatus> =
-            mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
+            mapZip(adjustedPattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
                 val result = updatedResolver.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
 
                 val isDiscrimintor = patternValue.isDiscriminator()

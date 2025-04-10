@@ -2789,6 +2789,31 @@ Then status 200
             }
         }
 
+        @Test
+        fun `stub should warn when a single spec is mounted on multiple baseUrls`() {
+            val specmaticConfigFile = File("src/test/resources/multi_port_stub_with_duplicated_spec/specmatic.yaml")
+            val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+            val contractPathData = contractStubPaths(specmaticConfigFile.absolutePath)
+            val scenarioStubs = scenarioStubsFrom(specmaticConfigFile, contractPathData, specmaticConfig)
+
+            val consoleOutput = captureStandardOutput {
+                HttpStub(
+                    features = scenarioStubs.features(),
+                    rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+                    specmaticConfigPath = specmaticConfigFile.canonicalPath,
+                    specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
+                ).close()
+            }
+
+            assertThat(consoleOutput.first).containsIgnoringWhitespaces("""
+            WARNING: Some specs are associated with multiple base URLs, This may lead to unexpected behavior
+            OAS "product_with_category.yaml" is linked to the following base URLs:
+            >> http://localhost:9001
+            >> http://0.0.0.0:9002
+            >> http://127.0.0.1:9000
+            """.trimIndent())
+        }
+
         @Nested
         inner class FeaturesAssociatedToTests {
 

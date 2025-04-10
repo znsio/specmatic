@@ -400,7 +400,10 @@ class ScenarioTest {
 
             println(result.reportString())
             assertThat(result).isInstanceOf(Result.Failure::class.java)
-            assertThat(result.reportString()).containsIgnoringWhitespaces("""
+            assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+            In scenario ""
+            API: GET /test -> 200
+
             >> RESPONSE.BODY.extraKey 
             Key named "extraKey" was unexpected
             """.trimIndent())
@@ -451,7 +454,10 @@ class ScenarioTest {
 
             println(nonExtensibleResult.reportString())
             assertThat(nonExtensibleResult).isInstanceOf(Result.Failure::class.java)
-            assertThat(nonExtensibleResult.reportString()).containsIgnoringWhitespaces("""
+            assertThat(nonExtensibleResult.reportString()).isEqualToNormalizingWhitespace("""
+            In scenario ""
+            API: GET /test -> 200
+
             >> RESPONSE.BODY.extraKey 
             Key named "extraKey" was unexpected
             """.trimIndent())

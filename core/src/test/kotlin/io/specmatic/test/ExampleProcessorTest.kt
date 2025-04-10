@@ -167,7 +167,7 @@ class ExampleProcessorTest {
 
             val exception = assertThrows<ContractException> { ExampleProcessor.resolve(httpRequest)  }
             println(exception.report())
-            assertThat(exception.report()).containsIgnoringWhitespaces("""
+            assertThat(exception.report()).isEqualToNormalizingWhitespace("""
             >> CONFIG.patch.Product.name  
             Couldn't pick a random value from "CONFIG.patch.Product.name" that was not equal to "productName"
             """.trimIndent())
@@ -192,7 +192,7 @@ class ExampleProcessorTest {
 
             val exception = assertThrows<ContractException> { ExampleProcessor.resolve(httpRequest)  }
             println(exception.report())
-            assertThat(exception.report()).containsIgnoringWhitespaces("""
+            assertThat(exception.report()).isEqualToNormalizingWhitespace("""
             >> CONFIG.patch.Product.description  
             "CONFIG.patch.Product.description" is not an array in fact store
             """.trimIndent())
@@ -367,7 +367,7 @@ class ExampleProcessorTest {
 
         val exception = assertThrows<ContractException> { ExampleProcessor.resolve(request) }
         println(exception.report())
-        assertThat(exception.report()).containsIgnoringWhitespaces("""
+        assertThat(exception.report()).isEqualToNormalizingWhitespace("""
         >> CONFIG.post.Person  
         Could not resolve "CONFIG.post.Person", key does not exist in fact store
         """.trimIndent())
@@ -384,7 +384,7 @@ class ExampleProcessorTest {
 
         val exception = assertThrows<ContractException> { ExampleProcessor.store(row, request, response) }
         println(exception.report())
-        assertThat(exception.report()).containsIgnoringWhitespaces("""
+        assertThat(exception.report()).isEqualToNormalizingWhitespace("""
         >> test  
        Could not save http response body as ENTITY for example "test"
         """.trimIndent())
@@ -401,7 +401,7 @@ class ExampleProcessorTest {
 
         val exception = assertThrows<ContractException> { ExampleProcessor.store(row, request, response) }
         println(exception.report())
-        assertThat(exception.report()).containsIgnoringWhitespaces("""
+        assertThat(exception.report()).isEqualToNormalizingWhitespace("""
         >> test  
         Could not merge http response body with ENTITY for example "test"
         """.trimIndent())
@@ -411,7 +411,7 @@ class ExampleProcessorTest {
     fun `should throw an exception when defined config is not found`() {
         Flags.using(ADDITIONAL_EXAMPLE_PARAMS_FILE to "/does/not/exist") {
             val exception = assertThrows<ContractException> { ExampleProcessor.cleanStores() }
-            assertThat(exception.report()).containsIgnoringWhitespaces("""
+            assertThat(exception.report()).isEqualToNormalizingWhitespace("""
             >> /does/not/exist 
             Could not find the CONFIG at path ${File("/does/not/exist").canonicalPath}
             """.trimIndent())
@@ -424,7 +424,7 @@ class ExampleProcessorTest {
         configFile.writeText("10")
         Flags.using(ADDITIONAL_EXAMPLE_PARAMS_FILE to configFile.canonicalPath) {
             val exception = assertThrows<ContractException> { ExampleProcessor.cleanStores() }
-            assertThat(exception.report()).containsIgnoringWhitespaces("""
+            assertThat(exception.report()).isEqualToNormalizingWhitespace("""
             >> ${configFile.canonicalPath}  
             Could not parse the CONFIG at path ${configFile.canonicalPath}: Expected json object, actual was 10
             """.trimIndent())

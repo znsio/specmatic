@@ -105,7 +105,7 @@ internal class FailureReportTest {
         val report = FailureReport(null, null, null, listOf(personAddressDetails, personNameDetails, personIdDetails))
 
         println(report.toText())
-        assertThat(report.toText()).containsIgnoringWhitespaces("""
+        assertThat(report.toText()).isEqualToNormalizingWhitespace("""
         >> person.id
         error
         >> person.address

@@ -43,6 +43,7 @@ import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.stub.isSameBaseIgnoringHost
+import io.specmatic.stub.validateAndFillInStubUrl
 import java.io.File
 import java.net.URI
 
@@ -311,10 +312,10 @@ data class SpecmaticConfig(
             it.stub.orEmpty().map { consumes ->
                 when(consumes) {
                     is Consumes.StringValue -> defaultBaseUrl
-                    is Consumes.ObjectValue -> consumes.baseUrl
+                    is Consumes.ObjectValue -> validateAndFillInStubUrl(consumes.baseUrl, defaultBaseUrl)
                 }
             }
-        }.plus(defaultBaseUrl).distinct()
+        }.distinct()
     }
 
     @JsonIgnore

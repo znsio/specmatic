@@ -34,12 +34,17 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.condition.DisabledOnOs
 import org.junit.jupiter.api.condition.OS
 import org.junit.jupiter.api.fail
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.security.KeyStore
 import java.util.*
 import java.util.function.Consumer
+import java.util.stream.Stream
 
 internal class HttpStubKtTest {
 
@@ -995,6 +1000,47 @@ paths:
 
             assertThat(response.status).isEqualTo(200)
             assertThat(response.body.toString()).isNotEmpty
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("incompleteBaseUrlsProvider")
+    fun `should be able to fill in missing scheme or host or port values in a baseURL`(url: String, expected: String, default: String) {
+        val filledInUrl = validateAndFillInStubUrl(url, default)
+        assertThat(filledInUrl).isEqualTo(expected)
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidBaseUrlsProvider")
+    fun `should throw when invalid baseUrls are provided`(url: String, default: String) {
+        try { println(validateAndFillInStubUrl(url, default)) } catch (e: ContractException) { println(e.report()) }
+        assertThrows<ContractException> { validateAndFillInStubUrl(url, default) }
+    }
+
+    companion object {
+        @JvmStatic
+        fun incompleteBaseUrlsProvider(): Stream<Arguments> {
+            val defaultBaseUrl = "http://0.0.0.0:9000"
+            return Stream.of(
+                Arguments.of("http://localhost", "http://localhost:9000", defaultBaseUrl),
+                Arguments.of("http://localhost/api", "http://localhost:9000/api", defaultBaseUrl),
+                Arguments.of("http://:9000", "http://0.0.0.0:9000", defaultBaseUrl),
+                Arguments.of("localhost/api", "http://localhost:9000/api", defaultBaseUrl),
+                Arguments.of("/api", "http://0.0.0.0:9000/api", defaultBaseUrl)
+            )
+        }
+
+        @JvmStatic
+        fun invalidBaseUrlsProvider(): Stream<Arguments> {
+            val defaultBaseUrl = "http://0.0.0.0:9000"
+            return Stream.of(
+                Arguments.of("httd://localhost", defaultBaseUrl),
+                Arguments.of("http://localhost:0", defaultBaseUrl),
+                Arguments.of("http://localhost:99999", defaultBaseUrl),
+                Arguments.of("http://localhost:not_a_port", defaultBaseUrl),
+                Arguments.of("://api", defaultBaseUrl),
+                Arguments.of("", defaultBaseUrl)
+            )
         }
     }
 }

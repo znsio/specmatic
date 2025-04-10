@@ -189,8 +189,10 @@ For example, to filter by HTTP methods:
             }
         }
 
-        private fun validateExamplesDir(contractFile: File, examplesDir: File): Pair<Int, Map<String, Result>> {
-            val feature = parseContractFileToFeature(contractFile)
+        private fun validateExamplesDir(contractFile: File, examplesDir: File): Pair<Int, Map<String, Result>> =
+            validateExamplesDir(parseContractFileToFeature(contractFile), examplesDir)
+
+        private fun validateExamplesDir(feature: Feature, examplesDir: File): Pair<Int, Map<String, Result>> {
             val (externalExampleDir, externalExamples) = ExampleModule().loadExternalExamples(examplesDir = examplesDir)
             if (!externalExampleDir.exists()) {
                 logger.log("$externalExampleDir does not exist, did not find any files to validate")
@@ -248,7 +250,7 @@ For example, to filter by HTTP methods:
             val externalExampleValidationResults = if (!validateExternal) emptyMap()
             else {
                 val (exitCode, validationResults)
-                        = validateExamplesDir(contractFile, ExampleModule().defaultExternalExampleDirFrom(contractFile))
+                        = validateExamplesDir(feature, ExampleModule().defaultExternalExampleDirFrom(contractFile))
                 if(exitCode == 1) exitProcess(1)
                 validationResults
             }

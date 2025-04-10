@@ -8,6 +8,7 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.pattern.*
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
 import io.specmatic.stub.captureStandardOutput
@@ -2683,22 +2684,26 @@ paths:
         val exampleFile = examplesDir.resolve("example.json").apply { writeText(example) }
         tempDir.resolve("api_dictionary.json").apply { writeText(dictionary) }
 
-        val feature = parseContractFileToFeature(apiSpecFile)
-        val contractTest = feature.createContractTestFromExampleFile(exampleFile.canonicalPath).value
+        Flags.using(
+            Flags.SPECMATIC_GENERATIVE_TESTS to "true"
+        ) {
+            val feature = parseContractFileToFeature(apiSpecFile)
+            val contractTest = feature.createContractTestFromExampleFile(exampleFile.canonicalPath).value
 
-        val expectedRequestBody = parsedJSONObject("""{"name" : "John Doe", "isEligible" : true, "age" : 999}""")
-        val result = contractTest.runTest(object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                assertThat(request.body).isEqualTo(expectedRequestBody)
-                return HttpResponse.ok(expectedRequestBody.addEntry("id", "10")).also {
-                    println(request.toLogString())
-                    println()
-                    println(it.toLogString())
+            val expectedRequestBody = parsedJSONObject("""{"name" : "John Doe", "isEligible" : true, "age" : 999}""")
+            val result = contractTest.runTest(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.body).isEqualTo(expectedRequestBody)
+                    return HttpResponse.ok(expectedRequestBody.addEntry("id", "10")).also {
+                        println(request.toLogString())
+                        println()
+                        println(it.toLogString())
+                    }
                 }
-            }
-        }).first
+            }).first
 
-        assertThat(result.isSuccess()).withFailMessage(result.reportString()).isTrue()
+            assertThat(result.isSuccess()).withFailMessage(result.reportString()).isTrue()
+        }
     }
 
     @Test

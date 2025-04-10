@@ -640,7 +640,7 @@ data class Feature(
         } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
 
         val exampleRow = example.toRow(specmaticConfig)
-        return originalScenario.newBasedOn(exampleRow, flagsBased).map {
+        return originalScenario.newBasedOn(exampleRow, flagsBased.withoutGenerativeTests()).map {
             it.ifHasValue { rValue ->
                 HasValue(scenarioAsTest(rValue.value, rValue.comments(), Workflow(), originalScenario, scenarios))
             }

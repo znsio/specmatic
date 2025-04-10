@@ -15,6 +15,7 @@ import io.specmatic.core.azure.AzureAuthCredentials
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.loadSpecmaticConfig
+import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.nativeString
@@ -36,6 +37,9 @@ import org.xml.sax.InputSource
 import java.io.File
 import java.io.StringReader
 import java.io.StringWriter
+import java.net.MalformedURLException
+import java.net.URISyntaxException
+import java.net.URL
 import java.util.concurrent.*
 import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
@@ -390,5 +394,33 @@ fun <T> runWithTimeout(timeout: Long, task: Callable<T>): T {
         throw e.cause ?: e
     } finally {
         executor.shutdown() // Shut down the executor
+    }
+}
+
+enum class URIValidationResult(val message: String) {
+    URIParsingError("Please specify a valid URL"),
+    InvalidURLSchemeError("Please specify a valid scheme / protocol (http or https)"),
+    InvalidPortError("Please specify a valid port number"),
+    Success("This URL is valid");
+}
+
+fun validateURI(uri: String): URIValidationResult {
+    val parsedURI = try {
+        URL(uri).toURI()
+    } catch (e: URISyntaxException) {
+        consoleDebug(e)
+        return URIValidationResult.URIParsingError
+    } catch(e: MalformedURLException) {
+        consoleDebug(e)
+        return URIValidationResult.URIParsingError
+    }
+
+    val validProtocols = listOf("http", "https")
+    val validPorts = 1..65535
+
+    return when {
+        !validProtocols.contains(parsedURI.scheme) -> URIValidationResult.InvalidURLSchemeError
+        parsedURI.port != -1 && !validPorts.contains(parsedURI.port) -> URIValidationResult.InvalidPortError
+        else -> URIValidationResult.Success
     }
 }

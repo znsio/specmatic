@@ -404,7 +404,7 @@ enum class URIValidationResult(val message: String) {
     Success("This URL is valid");
 }
 
-fun validateURI(uri: String): URIValidationResult {
+fun validateTestOrStubUri(uri: String): URIValidationResult {
     val parsedURI = try {
         URL(uri).toURI()
     } catch (e: URISyntaxException) {

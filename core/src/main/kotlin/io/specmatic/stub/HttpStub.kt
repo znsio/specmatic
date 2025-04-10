@@ -1258,25 +1258,26 @@ fun endPointFromHostAndPort(host: String, port: Int?, keyData: KeyData?): String
 }
 
 fun validateAndFillInStubUrl(url: String, defaultBaseUrl: String): String {
-    val hasScheme = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(url)
-    val normalizedUrl = if (hasScheme) url else "$DEFAULT_HTTP_STUB_SCHEME://$url"
+    val hasScheme = Regex("^[a-zA-Z]?[a-zA-Z0-9+.-]*://").containsMatchIn(url)
+    val defaultScheme = URI(defaultBaseUrl).scheme ?: DEFAULT_HTTP_STUB_SCHEME
+    val normalizedUrl = if (hasScheme) url else "$defaultScheme://$url"
+
+    val validationResult = validateTestOrStubUri(normalizedUrl)
+    if (validationResult != URIValidationResult.Success) {
+        throw ContractException(breadCrumb = url, errorMessage = validationResult.message)
+    }
 
     val baseUri = URI(defaultBaseUrl)
     val uri = URI(normalizedUrl)
-    val filledUri = URI(
+    return URI(
         uri.scheme,
         uri.userInfo,
         uri.host ?: baseUri.host ?: DEFAULT_HTTP_STUB_HOST,
-        setOf(uri.port, baseUri.port).filterNot { it == -1 }.firstOrNull() ?: DEFAULT_HTTP_STUB_PORT.toInt(),
+        setOf(uri.port, baseUri.port).firstOrNull { it != -1 } ?: DEFAULT_HTTP_STUB_PORT.toInt(),
         uri.path,
         uri.query,
         uri.fragment
     ).toString()
-
-    return when (val validationResult = validateURI(filledUri)) {
-        URIValidationResult.Success -> filledUri
-        else -> throw ContractException(breadCrumb = filledUri, errorMessage = validationResult.message)
-    }
 }
 
 fun extractHost(url: String): String? {

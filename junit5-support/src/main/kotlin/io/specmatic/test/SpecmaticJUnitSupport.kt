@@ -381,7 +381,7 @@ open class SpecmaticJUnitSupport {
     fun constructTestBaseURL(): String {
         val testBaseURL = System.getProperty(TEST_BASE_URL)
         if (testBaseURL != null) {
-            when (val validationResult = validateURI(testBaseURL)) {
+            when (val validationResult = validateTestOrStubUri(testBaseURL)) {
                 URIValidationResult.Success -> return testBaseURL
                 else -> throw TestAbortedException("${validationResult.message} in $TEST_BASE_URL environment variable")
             }
@@ -403,7 +403,7 @@ open class SpecmaticJUnitSupport {
 
         val urlConstructedFromProtocolHostAndPort = "$protocol://$host:$port"
 
-        return when (validateURI(urlConstructedFromProtocolHostAndPort)) {
+        return when (validateTestOrStubUri(urlConstructedFromProtocolHostAndPort)) {
             URIValidationResult.Success -> urlConstructedFromProtocolHostAndPort
             else -> throw TestAbortedException("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
         }

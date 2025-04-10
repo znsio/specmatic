@@ -56,7 +56,9 @@ class ExampleValidationModule {
 
     fun validateExample(contractFile: File, exampleFile: File): Result {
         val feature = parseContractFileToFeature(contractFile)
-        return validateExample(feature, exampleFile)
+        val result = validateExample(feature, exampleFile)
+        callLifecycleHook(feature, ExampleModule().getExamplesFromFiles(listOf(exampleFile)))
+        return result
     }
 
     fun validateExample(feature: Feature, scenarioStub: ScenarioStub): Results {

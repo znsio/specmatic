@@ -9,27 +9,28 @@ import io.specmatic.test.asserts.parsedAssert
 object ExamplePostValidator: ResponseValidator {
 
     override fun postValidate(scenario: Scenario, httpRequest: HttpRequest, httpResponse: HttpResponse): Result? {
-        val asserts  = scenario.exampleRow?.toAsserts()?.takeIf { it.isNotEmpty() } ?: return null
+        if (scenario.isNegative) return null
+        val asserts  = scenario.exampleRow?.toAsserts(scenario)?.takeIf { it.isNotEmpty() } ?: return null
 
         val actualFactStore = httpRequest.toFactStore() + ExampleProcessor.getFactStore()
         val currentFactStore = httpResponse.toFactStore()
 
         val results = asserts.map { it.assert(currentFactStore, actualFactStore) }
 
-        val finalResults = results.filterIsInstance<Result.Failure>().ifEmpty { return Result.Success() }
+        val finalResults = results.filterIsInstance<Result.Failure>().ifEmpty { return null }
         return Result.fromFailures(finalResults)
     }
 
-    private fun Row.toAsserts(): List<Assert> {
+    private fun Row.toAsserts(scenario: Scenario): List<Assert> {
         val responseExampleBody = this.responseExampleForAssertion ?: return emptyList()
 
         val headerAsserts = responseExampleBody.headers.map {
-            parsedAssert("RESPONSE.HEADERS", it.key, StringValue(it.value))
+            parsedAssert("RESPONSE.HEADERS", it.key, StringValue(it.value), scenario.resolver)
         }.filterNotNull()
 
         return responseExampleBody.body.traverse(
-            onScalar = { value, key -> mapOf(key to parsedAssert("RESPONSE.BODY", key, value)) },
-            onAssert = { value, key -> mapOf(key to parsedAssert("RESPONSE.BODY", key, value)) }
+            onScalar = { value, key -> mapOf(key to parsedAssert("RESPONSE.BODY", key, value, scenario.resolver)) },
+            onAssert = { value, key -> mapOf(key to parsedAssert("RESPONSE.BODY", key, value, scenario.resolver)) }
         ).values.filterNotNull() + headerAsserts
     }
 

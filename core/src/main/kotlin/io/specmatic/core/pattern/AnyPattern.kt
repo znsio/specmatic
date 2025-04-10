@@ -6,10 +6,7 @@ import io.specmatic.core.Result.Failure
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
-import io.specmatic.core.value.EmptyString
-import io.specmatic.core.value.NullValue
-import io.specmatic.core.value.ScalarValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 
 data class AnyPattern(
     override val pattern: List<Pattern>,
@@ -32,6 +29,44 @@ data class AnyPattern(
     ))
 
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
+
+    fun fixValue(
+        value: Value, resolver: Resolver, discriminatorValue: String,
+        onValidDiscValue: () -> Value?, onInvalidDiscValue: (Failure) -> Value?
+    ): Value? {
+        return getDiscriminatorPattern(discriminatorValue, resolver).realise(
+            hasValue = { it, _ -> it.fixValue(value, resolver) },
+            orException = { _ -> onValidDiscValue() },
+            orFailure = { f ->
+                if (f.failure.failureReason == FailureReason.DiscriminatorMismatch) {
+                    onInvalidDiscValue(f.failure)
+                } else onValidDiscValue()
+            }
+        )
+    }
+
+    override fun fixValue(value: Value, resolver: Resolver): Value {
+        if (resolver.matchesPattern(null, this, value).isSuccess()) return value
+        val discBasedFixedValue = if (discriminator != null && value is JSONObjectValue && discriminator.property in value.jsonObject) {
+            val discriminatorValue = value.jsonObject.getValue(discriminator.property).toStringLiteral()
+            fixValue(
+                value = value, resolver = resolver, discriminatorValue = discriminatorValue,
+                onValidDiscValue = { generateValue(resolver, discriminatorValue) },
+                onInvalidDiscValue = { null }
+            )
+        } else null
+
+        if (discBasedFixedValue != null) return discBasedFixedValue
+
+        val updatedPatterns = getUpdatedPattern(resolver).sortedBy { it is NullPattern }
+        val patternMatches = updatedPatterns.map { pattern ->
+            AnyPatternMatch(pattern, pattern.matches(value, resolver))
+        }
+
+        val matchingPatternNew = patternMatches.minBy { (it.result as? Failure)?.failureCount() ?: 0 }
+        val updatedResolver = resolver.updateLookupPath(this.typeAlias, "")
+        return matchingPatternNew.pattern.fixValue(value, updatedResolver)
+    }
 
     override fun removeKeysNotPresentIn(keys: Set<String>, resolver: Resolver): Pattern {
         if(keys.isEmpty()) return this
@@ -67,17 +102,22 @@ data class AnyPattern(
     }
 
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        val results = pattern.asSequence().map {
-            it.fillInTheBlanks(value, resolver)
+        val patternToConsider = when (val resolvedPattern = resolveToPattern(value, resolver, this)) {
+            is ReturnFailure -> return resolvedPattern.cast()
+            else -> resolvedPattern.value
         }
+        if (isPatternToken(value) && patternToConsider == this) return HasValue(resolver.generate(this))
 
+        val updatedPatterns = getUpdatedPattern(resolver)
+        val newPatterns = updatedPatterns.filter { it.typeAlias != null }.associateBy { it.typeAlias.orEmpty() }
+        val updatedResolver = resolver.copy(newPatterns = resolver.newPatterns.plus(newPatterns) )
+
+        val results = updatedPatterns.asSequence().map { it.fillInTheBlanks(value, updatedResolver) }
         val successfulGeneration = results.firstOrNull { it is HasValue }
+        if(successfulGeneration != null) return successfulGeneration
 
-        if(successfulGeneration != null)
-            return successfulGeneration
-
-        val failures = results.toList().filterIsInstance<Failure>()
-
+        val resultList = results.toList()
+        val failures = resultList.filterIsInstance<ReturnFailure>().map { it.toFailure() }
         return HasFailure(Failure.fromFailures(failures))
     }
 
@@ -123,7 +163,7 @@ data class AnyPattern(
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        if(discriminator != null) {
+        if (discriminator != null) {
             return discriminator.matches(sampleData, pattern, key, resolver)
         }
 
@@ -162,6 +202,11 @@ data class AnyPattern(
         val failuresWithUpdatedBreadcrumbs = addTypeInfoBreadCrumbs(matchResults)
 
         return Result.fromFailures(failuresWithUpdatedBreadcrumbs)
+    }
+
+    @Suppress("MemberVisibilityCanBePrivate") // Being used in openapi
+    fun getUpdatedPattern(resolver: Resolver): List<Pattern> {
+        return discriminator?.updatePatternsWithDiscriminator(pattern, resolver)?.listFold()?.value ?: pattern
     }
 
     override fun generate(resolver: Resolver): Value {
@@ -323,56 +368,62 @@ data class AnyPattern(
         }
     }
 
-    fun matchesValue(sampleData: Value?, resolver: Resolver, discriminatorValue: String, discMisMatchBreadCrumb: String? = null): Result {
-        if (discriminator == null) return matches(sampleData, resolver)
+    private fun getDiscriminatorPattern(discriminatorValue: String, resolver: Resolver): ReturnValue<Pattern> {
+        if (discriminator == null) return HasFailure(
+            Failure(
+                "Pattern is not discriminator based",
+                failureReason = FailureReason.DiscriminatorMismatch
+            )
+        )
 
         val discriminatorCsvClause = if(discriminator.values.size == 1) {
             discriminator.values.first()
         } else "one of ${discriminator.values.joinToString(", ")}"
 
         if (discriminatorValue !in discriminator.values) {
-            return Failure(
-                breadCrumb = discMisMatchBreadCrumb ?: discriminator.property,
-                message = "Expected the value of discriminator to be $discriminatorCsvClause but it was ${discriminatorValue.quote()}",
-                failureReason = FailureReason.DiscriminatorMismatch
+            return HasFailure(
+                Failure(
+                    message = "Expected the value of discriminator to be $discriminatorCsvClause but it was ${discriminatorValue.quote()}",
+                    failureReason = FailureReason.DiscriminatorMismatch
+                )
             )
         }
 
         return discriminator.updatePatternsWithDiscriminator(pattern, resolver).listFold().realise(
             hasValue = { updatedPatterns, _ ->
-                val chosenPattern = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue) ?: return@realise Failure(
-                    breadCrumb = discMisMatchBreadCrumb ?: discriminator.property,
-                    message = "Could not find pattern with discriminator value ${discriminatorValue.quote()}",
-                    failureReason = FailureReason.DiscriminatorMismatch
+                val chosenPattern = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue, resolver) ?: return@realise HasFailure(
+                    Failure(
+                        message = "Could not find pattern with discriminator value ${discriminatorValue.quote()}",
+                        failureReason = FailureReason.DiscriminatorMismatch
+                    )
                 )
-                chosenPattern.matches(sampleData, resolver)
+                HasValue(chosenPattern)
             },
-            orFailure = { failure ->  failure.failure },
-            orException = { exception -> exception.toHasFailure().failure }
+            orFailure = { failure -> failure.cast() },
+            orException = { exception -> exception.cast() }
+        )
+    }
+
+    fun matchesValue(sampleData: Value?, resolver: Resolver, discriminatorValue: String, discMisMatchBreadCrumb: String? = null): Result {
+        if (discriminator == null) return matches(sampleData, resolver)
+
+        return getDiscriminatorPattern(discriminatorValue, resolver).realise(
+            hasValue = { it, _ -> it.matches(sampleData, resolver) },
+            orFailure = { it.failure.breadCrumb(discMisMatchBreadCrumb ?: discriminator.property) },
+            orException = { it.toHasFailure().failure.breadCrumb(discMisMatchBreadCrumb ?: discriminator.property) }
         )
     }
 
     fun generateValue(resolver: Resolver, discriminatorValue: String = ""): Value {
-        if (this.isScalarBasedPattern()) {
-            return this.pattern.filterNot { it is NullPattern }.let { discriminator?.updatePatternsWithDiscriminator(pattern, resolver)?.listFold()?.value ?: pattern }.first { it is ScalarType }
-                .generate(resolver)
-        }
-
-        val updatedPatterns =
-            if(discriminator != null)
-                discriminator.updatePatternsWithDiscriminator(pattern, resolver).listFold().value
-            else
-                pattern
-
-        val chosenByDiscriminator = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue)
-        if(chosenByDiscriminator != null)
-            return generate(resolver, chosenByDiscriminator)
-
         data class GenerationResult(val value: Value? = null, val exception: Throwable? = null) {
             val isCycle = exception is ContractException && exception.isCycle
         }
 
-        val generationResults = updatedPatterns.asSequence().map { chosenPattern ->
+        val updatedPatterns = getUpdatedPattern(resolver)
+        val chosenByDiscriminator = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue, resolver)
+        if (chosenByDiscriminator != null) return generate(resolver, chosenByDiscriminator)
+
+        val generationResults = updatedPatterns.sortedBy { it is NullPattern }.asSequence().map { chosenPattern ->
             try {
                 GenerationResult(value = generate(resolver, chosenPattern))
             } catch (e: Throwable) {
@@ -380,14 +431,11 @@ data class AnyPattern(
             }
         }
 
-        val successfulGeneration = generationResults.map { it.value }.filterNotNull().firstOrNull()
+        val successfulGeneration = generationResults.firstNotNullOfOrNull { it.value }
+        if(successfulGeneration != null) return successfulGeneration
 
-        if(successfulGeneration != null)
-            return successfulGeneration
-
-        val cycle = generationResults.filter { it.isCycle }.map { it.exception }.firstOrNull()
-        if(cycle != null)
-            throw cycle
+        val cycle = generationResults.firstOrNull { it.isCycle }?.exception
+        if(cycle != null) throw cycle
 
         throw generationResults.firstOrNull { it.exception != null }?.exception ?: ContractException("Could not generate value")
     }
@@ -405,24 +453,27 @@ data class AnyPattern(
         } ?: NullValue // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
     }
 
-    private fun isScalarBasedPattern(): Boolean {
-        return pattern.size == 2 &&
-                pattern.any { it is NullPattern} &&
-                pattern.filterNot { it is NullPattern }.filter { it is ScalarType }.size == 1
+    @Suppress("unused") // Being used in openapi
+    fun isNullableScalarPattern(): Boolean {
+        return pattern.size == 2 && pattern.count { it is NullPattern } == 1 && pattern.count { it is ScalarType } == 2
     }
 
-    private fun getDiscriminatorBasedPattern(
-        updatedPatterns: List<Pattern>,
-        discriminatorValue: String,
-    ): JSONObjectPattern? {
-        return updatedPatterns.filterIsInstance<JSONObjectPattern>().firstOrNull {
-            if(it.pattern.containsKey(discriminator?.property.orEmpty()).not()) {
-                return@firstOrNull false
+    private fun getDiscriminatorBasedPattern(updatedPatterns: List<Pattern>, discriminatorValue: String, resolver: Resolver): JSONObjectPattern? {
+        return updatedPatterns.firstNotNullOfOrNull {
+            when (it) {
+                is AnyPattern -> it.getDiscriminatorBasedPattern(
+                    it.discriminator?.updatePatternsWithDiscriminator(it.pattern, resolver)?.listFold()?.value ?: it.pattern,
+                    discriminatorValue = discriminatorValue, resolver = resolver
+                )
+                is JSONObjectPattern -> {
+                    val discriminatorKey = discriminator?.property ?: return@firstNotNullOfOrNull null
+                    val keyPattern = it.patternForKey(discriminatorKey) ?: return@firstNotNullOfOrNull null
+                    it.takeIf {
+                        keyPattern is ExactValuePattern && keyPattern.discriminator && keyPattern.pattern.toStringLiteral() == discriminatorValue
+                    }
+                }
+                else -> null
             }
-            val discriminatorPattern = it.pattern[discriminator?.property.orEmpty()]
-            if(discriminatorPattern !is ExactValuePattern) return@firstOrNull false
-            discriminatorPattern.discriminator
-                    && discriminatorPattern.pattern.toStringLiteral() == discriminatorValue
         }
     }
 

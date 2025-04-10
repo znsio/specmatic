@@ -9,8 +9,6 @@ import io.specmatic.core.value.Value
 
 data class ExactValuePattern(override val pattern: Value, override val typeAlias: String? = null, val discriminator: Boolean = false) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        if (isPatternToken(sampleData)) return Result.Success()
-
         return when (pattern == sampleData) {
             true -> Result.Success()
             else -> {

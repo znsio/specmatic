@@ -1,3 +1,8 @@
 package io.specmatic.core.value
 
-sealed interface JSONComposite
+import io.specmatic.core.Resolver
+import io.specmatic.core.Result
+
+sealed interface JSONComposite {
+    fun checkIfAllRootLevelKeysAreAttributeSelected(attributeSelectedFields: Set<String>, resolver: Resolver): Result
+}

@@ -13,6 +13,8 @@ import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.util.concurrent.Callable
 
+private const val AZURE = "azure"
+
 @CommandLine.Command(name = "graph",
     mixinStandardHelpOptions = true,
     description = ["Dependency graph"])
@@ -32,7 +34,7 @@ class GraphCommand: Callable<Unit> {
         if (verbose)
             logger = Verbose(CompositePrinter())
 
-        val configJson = loadSpecmaticConfig()
+        val specmaticConfig = loadSpecmaticConfig()
 
         val azureAuthToken = PersonalAccessToken(
             getPersonalAccessToken() ?: throw ContractException(
@@ -44,7 +46,21 @@ class GraphCommand: Callable<Unit> {
             )
         )
 
-        val repository = configJson.repository
+        val exitMessage = """specmatic.json needs to contain a the repository information, as below:
+                    |{
+                    |  "repository": {
+                    |    "provider": "azure"
+                    |    "collectionName": "NameOfTheCollectionContainingThisProject"
+                    |  }
+                    |}
+                """.trimMargin()
+
+        val repositoryProvider = specmaticConfig.getRepositoryProvider() ?: exitWithMessage(exitMessage)
+        if(repositoryProvider != AZURE) {
+            exitWithMessage(exitMessage)
+        }
+
+        val collection = specmaticConfig.getRepositoryCollectionName()
             ?: exitWithMessage(
                 """specmatic.json needs to contain a the repository information, as below:
                     |{
@@ -56,30 +72,9 @@ class GraphCommand: Callable<Unit> {
                 """.trimMargin()
             )
 
-        val collection = repository.collectionName
         val azure = AzureAPI(azureAuthToken, azureBaseURL, collection)
 
-        logger.log("Dependency projects")
-        logger.log("-------------------")
-
-        configJson.sources.forEach { source ->
-            logger.log("In central repo ${source.repository}")
-
-            source.test?.forEach { relativeContractPath ->
-                logger.log("  Consumers of $relativeContractPath")
-                val consumers = azure.referencesToContract(relativeContractPath)
-
-                if (consumers.isEmpty()) {
-                    logger.log("    ** no consumers found **")
-                } else {
-                    consumers.forEach {
-                        logger.log("  - ${it.description}")
-                    }
-                }
-
-                logger.newLine()
-            }
-        }
+        specmaticConfig.logDependencyProjects(azure)
     }
 
     override fun call() {

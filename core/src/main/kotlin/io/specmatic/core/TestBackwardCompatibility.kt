@@ -110,7 +110,7 @@ fun findDifferences(
                 val newerResponsePattern = newerScenario.httpResponsePattern
                 val newerResponse = newerResponsePattern.generateResponseWithAll(newerScenario.resolver)
 
-                val responseResult = oldScenario.httpResponsePattern.matches(newerResponse, oldScenario.resolver.copy(mismatchMessages = ContractResponseComparisonMismatches))
+                val responseResult = oldScenario.httpResponsePattern.matchesResponse(newerResponse, oldScenario.resolver.copy(mismatchMessages = ContractResponseComparisonMismatches))
 
                 if (responseResult.isFluffy())
                     null

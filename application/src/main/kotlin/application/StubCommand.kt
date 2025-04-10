@@ -5,6 +5,7 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.core.utilities.ContractPathData.Companion.specToPortMap
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.exitIfAnyDoNotExist
 import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
@@ -35,7 +36,7 @@ class StubCommand : Callable<Unit> {
     @Autowired
     private var specmaticConfig: SpecmaticConfig = SpecmaticConfig()
 
-    @Parameters(arity = "0..*", description = ["Contract file paths"])
+    @Parameters(arity = "0..*", description = ["Contract file paths", "Spec file paths"])
     var contractPaths: List<String> = mutableListOf()
 
     @Option(names = ["--data", "--examples"], description = ["Directories containing JSON examples"], required = false)
@@ -129,8 +130,9 @@ class StubCommand : Callable<Unit> {
         try {
             contractSources = when (contractPaths.isEmpty()) {
                 true -> {
-                    logger.debug("No contractPaths specified. Using configuration file named $configFileName")
                     specmaticConfigPath = File(Configuration.configFilePath).canonicalPath
+
+                    logger.debug("Using the spec paths configured for stubs in the configuration file '$specmaticConfigPath'")
                     specmaticConfig.contractStubPathData()
                 }
                 else -> contractPaths.map {
@@ -192,7 +194,19 @@ class StubCommand : Callable<Unit> {
             true -> if (portIsInUse(host, port)) findRandomFreePort() else port
             false -> port
         }
-        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, specmaticConfigPath, httpClientFactory, workingDirectory, gracefulRestartTimeoutInMs)
+        httpStub = httpStubEngine.runHTTPStub(
+            stubs = stubData,
+            host = host,
+            port = port,
+            certInfo = certInfo,
+            strictMode = strictMode,
+            passThroughTargetBase = passThroughTargetBase,
+            specmaticConfigPath = specmaticConfigPath,
+            httpClientFactory = httpClientFactory,
+            workingDirectory = workingDirectory,
+            gracefulRestartTimeoutInMs = gracefulRestartTimeoutInMs,
+            specToPortMap = contractSources.specToPortMap()
+        )
 
         LogTail.storeSnapshot()
     }

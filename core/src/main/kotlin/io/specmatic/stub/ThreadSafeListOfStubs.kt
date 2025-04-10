@@ -3,15 +3,23 @@ package io.specmatic.stub
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.KeyCheck
 import io.specmatic.core.Result
+import io.specmatic.core.invalidRequestStatuses
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 import io.specmatic.mock.ScenarioStub
 
-class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
+class ThreadSafeListOfStubs(
+    private val httpStubs: MutableList<HttpStubData>,
+    private val specToPortMap: Map<String, Int>
+) {
     val size: Int
         get() {
             return httpStubs.size
         }
+
+    fun stubAssociatedTo(port: Int, defaultPort: Int): ThreadSafeListOfStubs {
+        return portToListOfStubsMap(defaultPort)[port] ?: emptyStubs()
+    }
 
     fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {
         synchronized(this) {
@@ -45,21 +53,35 @@ class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
     }
 
     fun matchingTransientStub(httpRequest: HttpRequest): Pair<HttpStubData, List<Pair<Result, HttpStubData>>>? {
+        val expectedResponseCode = httpRequest.expectedResponseCode()
+
         val queueMatchResults: List<Pair<Result, HttpStubData>> = matchResults { stubs ->
-            stubs.map { Pair(it.matches(httpRequest), it) }
+            stubs.filter {
+                hasExpectedResponseCode(it, expectedResponseCode)
+            }.map {
+                Pair(it.matches(httpRequest), it)
+            }
         }
 
         val (_, queueMock) = queueMatchResults.findLast { (result, _) ->
             result is Result.Success
         } ?: return null
 
-        this.remove(queueMock)
         return Pair(queueMock, queueMatchResults)
     }
 
+    private fun hasExpectedResponseCode(httpStubData: HttpStubData, expectedResponseCode: Int?): Boolean {
+        expectedResponseCode ?: return true
+        return httpStubData.responsePattern.status == expectedResponseCode
+    }
+
     fun matchingNonTransientStub(httpRequest: HttpRequest): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
+        val expectedResponseCode = httpRequest.expectedResponseCode()
+
         val listMatchResults: List<Pair<Result, HttpStubData>> = matchResults { httpStubData ->
-             httpStubData.filter { it.partial == null }.map {
+             httpStubData.filter {
+                 hasExpectedResponseCode(it, expectedResponseCode)
+             }.filter { it.partial == null }.map {
                  Pair(it.matches(httpRequest), it)
              }.plus(partialMatchResults(httpStubData, httpRequest))
         }
@@ -68,7 +90,7 @@ class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
             if (result !is Result.Success) return@map Pair(result, stubData)
 
             val response = if (stubData.partial == null) stubData.response
-            else stubData.responsePattern.generateResponse(stubData.partial.response, stubData.resolver)
+            else stubData.responsePattern.fillInTheBlanks(stubData.partial.response, stubData.resolver)
 
             val stubResponse = HttpStubResponse(
                 response,
@@ -99,12 +121,26 @@ class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
         return Pair(mock?.second, listMatchResults)
     }
 
+    private fun portToListOfStubsMap(defaultPort: Int): Map<Int, ThreadSafeListOfStubs> {
+        synchronized(this) {
+            return httpStubs.groupBy {
+                specToPortMap[it.contractPath] ?: defaultPort
+            }.mapValues { (_, stubs) ->
+                ThreadSafeListOfStubs(stubs as MutableList<HttpStubData>, specToPortMap)
+            }
+        }
+    }
+
     private fun partialMatchResults(
         httpStubData: List<HttpStubData>,
         httpRequest: HttpRequest
     ): List<Pair<Result, HttpStubData>> {
+        val expectedResponseCode = httpRequest.expectedResponseCode()
+
         return httpStubData.mapNotNull { it.partial?.let { partial -> it to partial } }
-            .map { (stubData, partial) ->
+            .filter {
+                hasExpectedResponseCode(it.first, expectedResponseCode)
+            }.map { (stubData, partial) ->
                 val (requestPattern, _, resolver) = stubData
 
                 val partialResolver = resolver.copy(
@@ -114,9 +150,16 @@ class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
                 val partialResult = requestPattern.generate(partial.request, resolver)
                     .matches(httpRequest, partialResolver, partialResolver)
 
-                if (!partialResult.isSuccess()) partialResult to stubData
-                else Pair(stubData.matches(httpRequest), stubData)
+                if (!partialResult.isSuccess()) return@map partialResult to stubData
+                if (partial.response.status in invalidRequestStatuses) return@map partialResult to stubData
+                Pair(stubData.matches(httpRequest), stubData)
             }
+    }
+
+    companion object {
+        fun emptyStubs(): ThreadSafeListOfStubs {
+            return ThreadSafeListOfStubs(mutableListOf(), emptyMap())
+        }
     }
 }
 

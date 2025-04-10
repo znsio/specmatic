@@ -40,23 +40,56 @@ data class ScenarioStub(
 
     fun responseStatus() = response.status.takeIf { it != 0 } ?: partial?.response?.status
 
+    fun requestElsePartialRequest() = partial?.request ?: request
+
+    fun response() = getHttpResponse()
+
+    fun isPartial() = partial != null
+
     fun toJSON(): JSONObjectValue {
-        val mockInteraction = mutableMapOf<String, Value>()
+        val requestResponse: Map<String, Value> =
+            if (partial != null) {
+                mapOf(
+                    PARTIAL to JSONObjectValue(serializeRequestResponse(partial))
+                )
+            } else {
+                serializeRequestResponse(this)
+            }
 
-        mockInteraction[MOCK_HTTP_REQUEST] = request.toJSON()
-        mockInteraction[MOCK_HTTP_RESPONSE] = response.toJSON()
-
-        return JSONObjectValue(mockInteraction)
+        return JSONObjectValue(requestResponse + data.jsonObject)
     }
 
-    private fun getHttpRequest(): HttpRequest {
-        return this.partial?.request ?: this.request
+    private fun serializeRequestResponse(scenarioStub: ScenarioStub): Map<String, Value> {
+        return mapOf(
+            MOCK_HTTP_REQUEST to scenarioStub.request.toJSON(),
+            MOCK_HTTP_RESPONSE to scenarioStub.response.toJSON()
+        )
+    }
+
+    private fun getHttpResponse(): HttpResponse {
+        return this.partial?.response ?: this.response
+    }
+
+    fun updateRequest(request: HttpRequest): ScenarioStub {
+        if (partial != null) {
+            return this.copy(partial = this.partial.updateRequest(request))
+        }
+
+        return this.copy(request = request)
+    }
+
+    fun updateResponse(response: HttpResponse): ScenarioStub {
+        if (partial != null) {
+            return this.copy(partial = this.partial.updateResponse(response))
+        }
+
+        return this.copy(response = response)
     }
 
     fun getRequestWithAdditionalParamsIfAny(additionalExampleParamsFilePath: String?): HttpRequest {
-        val request = getHttpRequest()
+        val request = requestElsePartialRequest()
 
-        if(additionalExampleParamsFilePath == null)
+        if (additionalExampleParamsFilePath == null)
             return request
 
         val additionalExampleParamsFile = File(additionalExampleParamsFilePath)
@@ -71,7 +104,7 @@ data class ScenarioStub(
                 Map::class.java
             ) as? Map<String, Any>
 
-            if(additionalExampleParams == null) {
+            if (additionalExampleParams == null) {
                 logger.log("WARNING: The content of $additionalExampleParamsFilePath is not a valid JSON object")
                 return request
             }
@@ -83,7 +116,7 @@ data class ScenarioStub(
                         ?: emptyMap()
                     ) as? Map<String, String>
 
-            if(additionalHeaders == null) {
+            if (additionalHeaders == null) {
                 logger.log("WARNING: The content of \"headers\" in $additionalExampleParamsFilePath is not a valid JSON object")
                 return request
             }
@@ -110,7 +143,12 @@ data class ScenarioStub(
         return listOf(this)
     }
 
-    private fun replaceInRequestBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>, requestTemplatePatterns: Map<String, Pattern>, resolver: Resolver): Value {
+    private fun replaceInRequestBody(
+        value: JSONObjectValue,
+        substitutions: Map<String, Map<String, Map<String, Value>>>,
+        requestTemplatePatterns: Map<String, Pattern>,
+        resolver: Resolver
+    ): Value {
         return value.copy(
             jsonObject = value.jsonObject.mapValues {
                 replaceInRequestBody(it.key, it.value, substitutions, requestTemplatePatterns, resolver)
@@ -118,7 +156,12 @@ data class ScenarioStub(
         )
     }
 
-    private fun replaceInRequestBody(value: JSONArrayValue, substitutions: Map<String, Map<String, Map<String, Value>>>, requestTemplatePatterns: Map<String, Pattern>, resolver: Resolver): Value {
+    private fun replaceInRequestBody(
+        value: JSONArrayValue,
+        substitutions: Map<String, Map<String, Map<String, Value>>>,
+        requestTemplatePatterns: Map<String, Pattern>,
+        resolver: Resolver
+    ): Value {
         return value.copy(
             list = value.list.map {
                 replaceInRequestBody(value, substitutions, requestTemplatePatterns, resolver)
@@ -126,24 +169,36 @@ data class ScenarioStub(
         )
     }
 
-    private fun substituteStringInRequest(value: String, substitutions: Map<String, Map<String, Map<String, Value>>>): String {
-        return if(value.hasDataTemplate()) {
+    private fun substituteStringInRequest(
+        value: String,
+        substitutions: Map<String, Map<String, Map<String, Value>>>
+    ): String {
+        return if (value.hasDataTemplate()) {
             val substitutionSetName = value.removeSurrounding("{{", "}}")
-            val substitutionSet = substitutions[substitutionSetName] ?: throw ContractException("$substitutionSetName does not exist in the data")
+            val substitutionSet = substitutions[substitutionSetName]
+                ?: throw ContractException("$substitutionSetName does not exist in the data")
 
             substitutionSet.keys.firstOrNull() ?: throw ContractException("$substitutionSetName in data is empty")
         } else
             value
     }
 
-    private fun replaceInRequestBody(key: String, value: Value, substitutions: Map<String, Map<String, Map<String, Value>>>, requestTemplatePatterns: Map<String, Pattern>, resolver: Resolver): Value {
-        return when(value) {
+    private fun replaceInRequestBody(
+        key: String,
+        value: Value,
+        substitutions: Map<String, Map<String, Map<String, Value>>>,
+        requestTemplatePatterns: Map<String, Pattern>,
+        resolver: Resolver
+    ): Value {
+        return when (value) {
             is StringValue -> {
-                if(value.hasDataTemplate()) {
+                if (value.hasDataTemplate()) {
                     val substitutionSetName = value.string.removeSurrounding("{{", "}}")
-                    val substitutionSet = substitutions[substitutionSetName] ?: throw ContractException("$substitutionSetName does not exist in the data")
+                    val substitutionSet = substitutions[substitutionSetName]
+                        ?: throw ContractException("$substitutionSetName does not exist in the data")
 
-                    val substitutionKey = substitutionSet.keys.firstOrNull() ?: throw ContractException("$substitutionSetName in data is empty")
+                    val substitutionKey = substitutionSet.keys.firstOrNull()
+                        ?: throw ContractException("$substitutionSetName in data is empty")
 
                     val pattern = requestTemplatePatterns.getValue(key)
 
@@ -151,21 +206,25 @@ data class ScenarioStub(
                 } else
                     value
             }
+
             is JSONObjectValue -> {
                 replaceInRequestBody(value, substitutions, requestTemplatePatterns, resolver)
             }
+
             is JSONArrayValue -> {
                 replaceInRequestBody(value, substitutions, requestTemplatePatterns, resolver)
             }
+
             else -> value
         }
     }
 
     private fun replaceInPath(path: String, substitutions: Map<String, Map<String, Map<String, Value>>>): String {
         val rawPathSegments = path.split("/")
-        val pathSegments = rawPathSegments.let { if(it.firstOrNull() == "") it.drop(1) else it }
-        val updatedSegments = pathSegments.map { if(it.hasDataTemplate()) substituteStringInRequest(it, substitutions) else it }
-        val prefix = if(pathSegments.size != rawPathSegments.size) listOf("") else emptyList()
+        val pathSegments = rawPathSegments.let { if (it.firstOrNull() == "") it.drop(1) else it }
+        val updatedSegments =
+            pathSegments.map { if (it.hasDataTemplate()) substituteStringInRequest(it, substitutions) else it }
+        val prefix = if (pathSegments.size != rawPathSegments.size) listOf("") else emptyList()
 
         return (prefix + updatedSegments).joinToString("/")
     }
@@ -188,13 +247,19 @@ data class ScenarioStub(
         }
     }
 
-    private fun replaceInRequestHeaders(headers: Map<String, String>, substitutions: Map<String, Map<String, Map<String, Value>>>): Map<String, String> {
+    private fun replaceInRequestHeaders(
+        headers: Map<String, String>,
+        substitutions: Map<String, Map<String, Map<String, Value>>>
+    ): Map<String, String> {
         return headers.mapValues { (key, value) ->
             substituteStringInRequest(value, substitutions)
         }
     }
 
-    private fun replaceInResponseBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
+    private fun replaceInResponseBody(
+        value: JSONObjectValue,
+        substitutions: Map<String, Map<String, Map<String, Value>>>
+    ): Value {
         return value.copy(
             jsonObject = value.jsonObject.mapValues {
                 replaceInResponseBody(it.value, substitutions, it.key)
@@ -202,7 +267,10 @@ data class ScenarioStub(
         )
     }
 
-    private fun replaceInResponseBody(value: JSONArrayValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
+    private fun replaceInResponseBody(
+        value: JSONArrayValue,
+        substitutions: Map<String, Map<String, Map<String, Value>>>
+    ): Value {
         return value.copy(
             list = value.list.map { item: Value ->
                 replaceInResponseBody(item, substitutions, "")
@@ -210,13 +278,19 @@ data class ScenarioStub(
         )
     }
 
-    private fun substituteStringInResponse(value: String, substitutions: Map<String, Map<String, Map<String, Value>>>, key: String): String {
-        return if(value.hasDataTemplate()) {
+    private fun substituteStringInResponse(
+        value: String,
+        substitutions: Map<String, Map<String, Map<String, Value>>>,
+        key: String
+    ): String {
+        return if (value.hasDataTemplate()) {
             val dataSetIdentifiers = DataSetIdentifiers(value, key)
 
-            val substitutionSet = substitutions[dataSetIdentifiers.name] ?: throw ContractException("${dataSetIdentifiers.name} does not exist in the data")
+            val substitutionSet = substitutions[dataSetIdentifiers.name]
+                ?: throw ContractException("${dataSetIdentifiers.name} does not exist in the data")
 
-            val substitutionValue = substitutionSet.values.first()[dataSetIdentifiers.key] ?: throw ContractException("${dataSetIdentifiers.name} does not contain a value for ${dataSetIdentifiers.key}")
+            val substitutionValue = substitutionSet.values.first()[dataSetIdentifiers.key]
+                ?: throw ContractException("${dataSetIdentifiers.name} does not contain a value for ${dataSetIdentifiers.key}")
 
             substitutionValue.toStringLiteral()
         } else
@@ -235,26 +309,35 @@ data class ScenarioStub(
         }
     }
 
-    private fun replaceInResponseBody(value: Value, substitutions: Map<String, Map<String, Map<String, Value>>>, key: String): Value {
-        return when(value) {
+    private fun replaceInResponseBody(
+        value: Value,
+        substitutions: Map<String, Map<String, Map<String, Value>>>,
+        key: String
+    ): Value {
+        return when (value) {
             is StringValue -> {
-                if(value.hasDataTemplate()) {
+                if (value.hasDataTemplate()) {
                     val dataSetIdentifiers = DataSetIdentifiers(value.string, key)
 
-                    val substitutionSet = substitutions[dataSetIdentifiers.name] ?: throw ContractException("${dataSetIdentifiers.name} does not exist in the data")
+                    val substitutionSet = substitutions[dataSetIdentifiers.name]
+                        ?: throw ContractException("${dataSetIdentifiers.name} does not exist in the data")
 
-                    val substitutionValue = substitutionSet.values.first()[dataSetIdentifiers.key] ?: throw ContractException("${dataSetIdentifiers.name} does not contain a value for ${dataSetIdentifiers.key}")
+                    val substitutionValue = substitutionSet.values.first()[dataSetIdentifiers.key]
+                        ?: throw ContractException("${dataSetIdentifiers.name} does not contain a value for ${dataSetIdentifiers.key}")
 
                     substitutionValue
                 } else
                     value
             }
+
             is JSONObjectValue -> {
                 replaceInResponseBody(value, substitutions)
             }
+
             is JSONArrayValue -> {
                 replaceInResponseBody(value, substitutions)
             }
+
             else -> value
         }
     }

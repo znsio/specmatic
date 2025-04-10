@@ -13,8 +13,8 @@ interface GitSource
 data class GitRepo(
     val gitRepositoryURL: String,
     val branchName: String?,
-    override val testContracts: List<String>,
-    override val stubContracts: List<String>,
+    override val testContracts: List<ContractSourceEntry>,
+    override val stubContracts: List<ContractSourceEntry>,
     override val type: String?
 ) : ContractSource, GitSource {
     private val repoName = gitRepositoryURL.split("/").last().removeSuffix(".git")
@@ -81,7 +81,25 @@ data class GitRepo(
         }
 
         return selector.select(this).map {
-            ContractPathData(repoDir.path, repoDir.resolve(it).path, type, gitRepositoryURL, branchName, it)
+            ContractPathData(
+                repoDir.path,
+                repoDir.resolve(it.path).path,
+                type,
+                gitRepositoryURL,
+                branchName,
+                it.path,
+                it.port
+            )
+        }
+    }
+
+    override fun stubDirectoryToContractPath(contractPathDataList: List<ContractPathData>): List<Pair<String, String>> {
+        return stubContracts.mapNotNull { contractSourceEntry ->
+            val directory = contractPathDataList.firstOrNull {
+                it.specificationPath.orEmpty() == contractSourceEntry.path
+            }?.baseDir ?: return@mapNotNull null
+
+            directory to contractSourceEntry.path
         }
     }
 

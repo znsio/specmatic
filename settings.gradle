@@ -1,5 +1,5 @@
-rootProject.name = 'specmatic'
+rootProject.name = "specmatic"
 
-include 'application'
-include 'core'
-include 'junit5-support'
+include("application")
+include("core")
+include("junit5-support")

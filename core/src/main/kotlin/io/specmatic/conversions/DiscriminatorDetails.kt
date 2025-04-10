@@ -15,6 +15,11 @@ data class DiscriminatorDetails(private val discriminatorData: DiscriminatorData
         return discriminatorData.isNotEmpty()
     }
 
+    val schemaNames: List<String>
+        get() {
+            return discriminatorData.entries.firstOrNull()?.value?.values?.map { it.first }.orEmpty()
+        }
+
     val values: List<String>
         get() {
             return discriminatorData.entries.firstOrNull()?.value?.keys?.toList() ?: emptyList()

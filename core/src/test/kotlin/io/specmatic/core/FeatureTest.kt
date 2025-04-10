@@ -1,13 +1,14 @@
 package io.specmatic.core
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.mockk.every
 import io.mockk.mockk
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
-import io.specmatic.core.pattern.NumberPattern
-import io.specmatic.core.pattern.StringPattern
-import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.pattern.*
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
 import io.specmatic.stub.captureStandardOutput
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.fail
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -2424,6 +2426,47 @@ paths:
     }
 
     @Test
+    fun `should throw an error if an example was ignored when loading it for test in strict mode`() {
+        val feature = OpenApiSpecification.fromFile(
+            "src/test/resources/openapi/has_irrelevant_externalized_test.yaml",
+        ).toFeature().copy(strictMode = true)
+
+        val error = assertThrows<ContractException> {
+            feature.loadExternalisedExamples()
+        }
+
+        assertThat(error.message)
+            .contains("POST /order_action_figure -> 200 does not match any operation in the specification")
+    }
+
+    @Test
+    fun `should throw an error if a partial example was ignored when loading it for test in strict mode`() {
+        val feature = OpenApiSpecification.fromFile(
+            "src/test/resources/openapi/has_irrelevant_externalized_test.yaml",
+        ).toFeature().copy(strictMode = true)
+
+        val error = assertThrows<ContractException> {
+            feature.loadExternalisedExamples()
+        }
+
+        assertThat(error.message)
+            .contains("POST /order_partial -> 200 does not match any operation in the specification")
+    }
+
+    @Test
+    fun `should throw an error if the example to be loaded is invalid, in strict mode`() {
+        val feature = OpenApiSpecification.fromFile(
+            "src/test/resources/openapi/hello_with_invalid_externalised_example.yaml",
+        ).toFeature().copy(strictMode = true)
+
+        val error = assertThrows<ContractException> {
+            feature.loadExternalisedExamples()
+        }
+
+        assertThat(error.message).isEqualTo("Error loading example from file 'invalid.json' as it is in invalid format. Please fix the example format to load this example.")
+    }
+
+    @Test
     fun `validate an invalid query param in the path of an externalised example`() {
         val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_invalid_external_query_in_url.yaml").toFeature().loadExternalisedExamples()
 
@@ -2475,7 +2518,7 @@ paths:
     }
 
     @Test
-    fun `shoudl be able to create a contract test based on an example`(@TempDir tempDir: File) {
+    fun `should be able to create a contract test based on an example`(@TempDir tempDir: File) {
         val feature = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.0
@@ -2560,6 +2603,223 @@ paths:
         assertThat(results.isSuccess()).isTrue()
     }
 
+    @Test
+    fun `should be able to create contract test from an partial example`(@TempDir tempDir: File) {
+        val apiSpecification = """
+        openapi: 3.0.0
+        info:
+          title: Simple API
+          version: 1.0.0
+        paths:
+          /test:
+            post:
+              summary: Test Example
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      ${"$"}ref: '#/components/schemas/ExampleRequest'
+              responses:
+                '200':
+                  description: Successful response
+                  content:
+                    application/json:
+                      schema:
+                        ${"$"}ref: '#/components/schemas/ExampleResponse'
+        components:
+          schemas:
+            ExampleRequest:
+              type: object
+              required:
+                - name
+                - age
+              properties:
+                name:
+                  type: string
+                age:
+                  type: integer
+                isEligible:
+                  type: boolean
+            ExampleResponse:
+              allOf:
+                - ${"$"}ref: '#/components/schemas/ExampleRequest'
+                - type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: string
+        """.trimIndent()
+        val example = """
+        {
+          "partial": {
+            "http-request": {
+              "method": "POST",
+              "path": "/test",
+              "body": {
+                "name": "(string)",
+                "isEligible": true
+              }
+            },
+            "http-response": {
+              "status": 200,
+              "body": {
+                "id": "(string)"
+              }
+            }
+          }
+        }
+        """.trimIndent()
+        val dictionary = """
+        {
+            "ExampleRequest.name": "John Doe",
+            "ExampleRequest.age": 999,
+            "ExampleRequest.isEligible": false
+        }
+        """.trimIndent()
+
+        val apiSpecFile = tempDir.resolve("api.yaml").apply { writeText(apiSpecification) }
+        val examplesDir = tempDir.resolve("api_examples").apply { mkdirs() }
+        val exampleFile = examplesDir.resolve("example.json").apply { writeText(example) }
+        tempDir.resolve("api_dictionary.json").apply { writeText(dictionary) }
+
+        Flags.using(
+            Flags.SPECMATIC_GENERATIVE_TESTS to "true"
+        ) {
+            val feature = parseContractFileToFeature(apiSpecFile)
+            val contractTest = feature.createContractTestFromExampleFile(exampleFile.canonicalPath).value
+
+            val expectedRequestBody = parsedJSONObject("""{"name" : "John Doe", "isEligible" : true, "age" : 999}""")
+            val result = contractTest.runTest(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.body).isEqualTo(expectedRequestBody)
+                    return HttpResponse.ok(expectedRequestBody.addEntry("id", "10")).also {
+                        println(request.toLogString())
+                        println()
+                        println(it.toLogString())
+                    }
+                }
+            }).first
+
+            assertThat(result.isSuccess()).withFailMessage(result.reportString()).isTrue()
+        }
+    }
+
+    @Test
+    fun `should perform assertions on the response for test created from example file`(@TempDir tempDir: File) {
+        val apiSpecification = """
+        openapi: 3.0.0
+        info:
+          title: Simple API
+          version: 1.0.0
+        paths:
+          /test:
+            post:
+              summary: Test Example
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      ${"$"}ref: '#/components/schemas/ExampleRequest'
+              responses:
+                '200':
+                  description: Successful response
+                  content:
+                    application/json:
+                      schema:
+                        ${"$"}ref: '#/components/schemas/ExampleResponse'
+        components:
+          schemas:
+            ExampleRequest:
+              type: object
+              required:
+                - name
+                - age
+              properties:
+                name:
+                  type: string
+                age:
+                  type: integer
+                isEligible:
+                  type: boolean
+            ExampleResponse:
+              allOf:
+                - ${"$"}ref: '#/components/schemas/ExampleRequest'
+                - type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: string
+        """.trimIndent()
+        val example = """
+        {
+          "partial": {
+            "http-request": {
+              "method": "POST",
+              "path": "/test",
+              "body": {
+                "name": "(string)",
+                "isEligible": true
+              }
+            },
+            "http-response": {
+              "status": 200,
+              "body": {
+                "id": "(string)",
+                "name": "${"$"}eq(REQUEST.BODY.name)",
+                "age": "${"$"}eq(REQUEST.BODY.age)",
+                "isEligible": "${"$"}eq(REQUEST.BODY.isEligible)"
+              }
+            }
+          }
+        }
+        """.trimIndent()
+        val dictionary = """
+        {
+            "ExampleRequest.name": "John Doe",
+            "ExampleRequest.age": 999,
+            "ExampleRequest.isEligible": false
+        }
+        """.trimIndent()
+
+        val apiSpecFile = tempDir.resolve("api.yaml").apply { writeText(apiSpecification) }
+        val examplesDir = tempDir.resolve("api_examples").apply { mkdirs() }
+        val exampleFile = examplesDir.resolve("example.json").apply { writeText(example) }
+        tempDir.resolve("api_dictionary.json").apply { writeText(dictionary) }
+
+        val feature = parseContractFileToFeature(apiSpecFile)
+        val contractTest = feature.createContractTestFromExampleFile(exampleFile.canonicalPath).value
+
+        val expectedRequestBody = parsedJSONObject("""{"name" : "John Doe", "isEligible" : true, "age" : 999}""")
+        val result = contractTest.runTest(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.body).isEqualTo(expectedRequestBody)
+                return HttpResponse.ok(
+                    parsedJSONObject("""{"name" : "Jane Doe", "isEligible" : false, "age" : 123, "id": "10"}""")
+                ).also {
+                    println(request.toLogString())
+                    println()
+                    println(it.toLogString())
+                }
+            }
+        }).first
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        In scenario "Test Example. Response: Successful response"
+        API: POST /test -> 200
+        >> RESPONSE.BODY.name
+        Expected "Jane Doe" to equal "John Doe"
+        >> RESPONSE.BODY.age
+        Expected 123 to equal 999
+        >> RESPONSE.BODY.isEligible
+        Expected false to equal true
+        """.trimIndent())
+    }
+
     @Nested
     inner class GenerateDiscriminatorDetailsBasedRequestResponsePairsTest {
         private val feature = Feature(name = "feature")
@@ -2602,7 +2862,9 @@ paths:
 
             every { scenario.generateHttpResponseV2(any()) } returns responseList
 
-            val pairs = feature.generateDiscriminatorBasedRequestResponseList(scenario)
+            val pairs = feature.generateDiscriminatorBasedRequestResponseList(
+                HasValue(scenario)
+            )
 
             assertEquals(3, pairs.size)
             assertTrue(pairs.any { it.request == request1 && it.response == response1 })
@@ -2637,7 +2899,7 @@ paths:
 
             every { scenario.generateHttpResponseV2(any()) } returns responseList
 
-            val pairs = feature.generateDiscriminatorBasedRequestResponseList(scenario)
+            val pairs = feature.generateDiscriminatorBasedRequestResponseList(HasValue(scenario))
 
             assertEquals(2, pairs.size)
             assertTrue(pairs.any { it.request == request1 && it.response == response1 })
@@ -2649,10 +2911,31 @@ paths:
             every { scenario.generateHttpRequestV2() } returns emptyList()
             every { scenario.generateHttpResponseV2(any()) } returns emptyList()
 
-            val pairs = feature.generateDiscriminatorBasedRequestResponseList(scenario)
+            val pairs = feature.generateDiscriminatorBasedRequestResponseList(HasValue(scenario))
 
             assertTrue(pairs.isEmpty())
         }
+    }
+
+    @Test
+    fun `EmptyStringPattern in request should result in no request body`() {
+        val httpRequestPattern = HttpRequestPattern(
+            method = "POST",
+            httpPathPattern = HttpPathPattern.from("/data"),
+            body = EmptyStringPattern
+        )
+
+        val scenario = Scenario(
+            "",
+            httpRequestPattern,
+            HttpResponsePattern(status = 200),
+            exampleName = "example"
+        )
+
+        val feature = Feature(name = "", scenarios = listOf(scenario))
+
+        val openAPI = feature.toOpenApi()
+        assertThat(openAPI.paths["/data"]?.post?.requestBody).isNull()
     }
 
     companion object {

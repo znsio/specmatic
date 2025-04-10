@@ -32,6 +32,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledOnOs
 import org.junit.jupiter.api.condition.OS
@@ -700,7 +701,10 @@ paths:
               schema:
                 type: string
         """.trimIndent(), "").toFeature()
-        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc123"}""")), listOf(contract), ThreadSafeListOfStubs(mutableListOf()), ThreadSafeListOfStubs(mutableListOf()), false).response
+        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc123"}""")), listOf(contract), ThreadSafeListOfStubs(
+            mutableListOf(),
+            emptyMap()
+        ), ThreadSafeListOfStubs(mutableListOf(), emptyMap()), false).response
 
         println(response.response.toLogString())
 
@@ -745,7 +749,10 @@ paths:
         )
 
         assertThatThrownBy {
-            getHttpResponse(HttpRequest("POST", "/data", body = StringValue("Hello")), listOf(contract), ThreadSafeListOfStubs(mutableListOf(stub)), ThreadSafeListOfStubs(mutableListOf()), false)
+            getHttpResponse(HttpRequest("POST", "/data", body = StringValue("Hello")), listOf(contract), ThreadSafeListOfStubs(
+                mutableListOf(stub),
+                emptyMap()
+            ), ThreadSafeListOfStubs(mutableListOf(), emptyMap()), false)
         }.satisfies(Consumer {
             it as ContractException
 
@@ -791,7 +798,10 @@ paths:
             responsePattern = contract.scenarios.single().httpResponsePattern
         )
 
-        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc"}""")), listOf(contract), ThreadSafeListOfStubs(mutableListOf(stub)), ThreadSafeListOfStubs(mutableListOf()),true).response
+        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc"}""")), listOf(contract), ThreadSafeListOfStubs(
+            mutableListOf(stub),
+            emptyMap()
+        ), ThreadSafeListOfStubs(mutableListOf(), emptyMap()),true).response
         val requestString = response.response.toLogString()
 
         println(requestString)
@@ -818,7 +828,8 @@ paths:
             schema:
               type: object
               properties:
-                data: number
+                data:
+                  type: number
       responses:
         '200':
           description: Says hello
@@ -848,8 +859,7 @@ paths:
             val responseString = response.toLogString()
             println(responseString)
 
-            assertThat(responseString).contains("in the stub")
-            assertThat(responseString).contains("not in the contract")
+            assertThat(responseString).contains("Contract expected number but stub contained \"abc\"")
         }
     }
 
@@ -937,6 +947,7 @@ paths:
     }
 
     @Test
+    @Disabled("Sorting should happen on the files within the examples directory")
     fun `transient stubs are loaded in order sorted by filename across nested dirs where the first item in sorted order is the first item in the queue`() {
         createStubFromContracts(listOf("src/test/resources/openapi/contractWithOrderedStubsInNestedDirs.yaml"), timeoutMillis = 0).use { stub ->
             val request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}"""))

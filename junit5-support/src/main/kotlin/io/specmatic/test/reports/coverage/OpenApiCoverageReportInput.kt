@@ -1,15 +1,16 @@
 package io.specmatic.test.reports.coverage
 
 import io.specmatic.conversions.SERVICE_TYPE_HTTP
-import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.TestResult
+import io.specmatic.core.filters.ScenarioMetadataFilter
+import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.test.API
 import io.specmatic.test.TestResultRecord
+import io.specmatic.test.reports.coverage.console.GroupedTestResultRecords
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
 import io.specmatic.test.reports.coverage.console.Remarks
 import io.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport
-import kotlin.math.min
 import kotlin.math.roundToInt
 
 class OpenApiCoverageReportInput(
@@ -19,8 +20,9 @@ class OpenApiCoverageReportInput(
     private val excludedAPIs: MutableList<String> = mutableListOf(),
     private val allEndpoints: MutableList<Endpoint> = mutableListOf(),
     internal var endpointsAPISet: Boolean = false,
-    private var groupedTestResultRecords: MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>> = mutableMapOf(),
-    private var apiCoverageRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf()
+    private var groupedTestResultRecords: GroupedTestResultRecords = mutableMapOf(),
+    private var apiCoverageRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf(),
+    private val filterExpression: String = ""
 ) {
     fun addTestReportRecords(testResultRecord: TestResultRecord) {
         testResultRecords.add(testResultRecord)
@@ -42,6 +44,10 @@ class OpenApiCoverageReportInput(
         endpointsAPISet = isSet
     }
 
+    fun getApplicationAPIs(): List<API> {
+        return applicationAPIs
+    }
+
     fun generate(): OpenAPICoverageConsoleReport {
         val testResults = testResultRecords.filter { testResult -> excludedAPIs.none { it == testResult.path } }
         val testResultsWithNotImplementedEndpoints = identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults)
@@ -50,24 +56,24 @@ class OpenApiCoverageReportInput(
         allTests = identifyWipTestsAndUpdateResult(allTests)
         allTests = checkForInvalidTestsAndUpdateResult(allTests)
 
-        groupedTestResultRecords = groupTestsByPathMethodAndResponseStatus(allTests)
-        groupedTestResultRecords.forEach { (route, methodMap) ->
+        groupedTestResultRecords = allTests.groupRecords()
+        groupedTestResultRecords.forEach { (path, methodMap) ->
             val routeAPIRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf()
-            val topLevelCoverageRow = createTopLevelApiCoverageRow(route, methodMap)
-            methodMap.forEach { (method, responseCodeMap) ->
-                responseCodeMap.forEach { (responseStatus, testResults) ->
-                    if (routeAPIRows.isEmpty()) {
-                        routeAPIRows.add(topLevelCoverageRow)
-                    } else {
-                        val methodExists = routeAPIRows.any { it.method == method }
+            val totalCoveragePercentage = calculateTotalCoveragePercentage(methodMap)
+            methodMap.forEach { (method, contentTypeMap) ->
+                contentTypeMap.forEach { (requestContentType, responseCodeMap) ->
+                    responseCodeMap.forEach { (responseStatus, testResults) ->
                         routeAPIRows.add(
-                            topLevelCoverageRow.copy(
+                            OpenApiCoverageConsoleRow(
+                                path = path,
+                                showPath = routeAPIRows.isEmpty(),
                                 method = method,
-                                showMethod = !methodExists,
-                                showPath = false,
-                                responseStatus = responseStatus.toString(),
-                                count = testResults.count{it.isExercised}.toString(),
+                                showMethod = routeAPIRows.none { it.method == method },
+                                requestContentType = requestContentType,
+                                responseStatus = responseStatus,
+                                count = testResults.count { it.isExercised }.toString(),
                                 remarks = Remarks.resolve(testResults),
+                                coveragePercentage = totalCoveragePercentage
                             )
                         )
                     }
@@ -126,80 +132,53 @@ class OpenApiCoverageReportInput(
         return OpenApiCoverageJsonReport(configFilePath, allTests)
     }
 
-    private fun groupTestsByPathMethodAndResponseStatus(allAPITests: List<TestResultRecord>): MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>> {
-        return allAPITests.groupBy { it.path }
-            .mapValues { (_, pathResults) ->
-                pathResults.groupBy { it.method }
-                    .mapValues { (_, methodResults) ->
-                        methodResults.groupBy { it.responseStatus }
-                            .mapValues { (_, responseResults) ->
-                                responseResults.toMutableList()
-                            }.toMutableMap()
-                    }.toMutableMap()
-            }.toMutableMap()
-    }
-
-    private fun sortByPathMethodResponseStatus(testResultRecordList: List<TestResultRecord>): List<TestResultRecord> {
-        val recordsWithFixedURLs = testResultRecordList.map {
-            it.copy(path = convertPathParameterStyle(it.path))
-        }
-        return recordsWithFixedURLs.groupBy {
-            "${it.path}-${it.method}-${it.responseStatus}"
-        }.let { sortedRecords: Map<String, List<TestResultRecord>> ->
-            sortedRecords.keys.sorted().map { key ->
-                sortedRecords.getValue(key)
-            }
-        }.flatten()
-    }
-
-    private fun addTestResultsForMissingEndpoints(testResults: List<TestResultRecord>): List<TestResultRecord> {
-        val testReportRecordsIncludingMissingAPIs = testResults.toMutableList()
-        if(endpointsAPISet) {
-            applicationAPIs.forEach { api ->
-                if (allEndpoints.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it == api.path }) {
-                    testReportRecordsIncludingMissingAPIs.add(
-                        TestResultRecord(
-                            api.path,
-                            api.method,
-                            0,
-                            TestResult.MissingInSpec,
-                            serviceType = SERVICE_TYPE_HTTP
-                        )
-                    )
+    private fun List<TestResultRecord>.groupRecords(): GroupedTestResultRecords {
+        return groupBy { it.path }.mapValues { (_, pathMap) ->
+            pathMap.groupBy { it.method }.mapValues { (_, methodMap) ->
+                methodMap.groupBy { it.requestContentType }.mapValues { (_, contentTypeMap) ->
+                    contentTypeMap.groupBy { it.responseStatus.toString() }
                 }
             }
         }
-        return testReportRecordsIncludingMissingAPIs
     }
 
-    private fun createTopLevelApiCoverageRow(
-        route: String,
-        methodMap: MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>,
-    ): OpenApiCoverageConsoleRow {
-        val method = methodMap.keys.first()
-        val responseStatus = methodMap[method]?.keys?.first()
-        val remarks = Remarks.resolve(methodMap[method]?.get(responseStatus)!!)
-        val exercisedCount = methodMap[method]?.get(responseStatus)?.count { it.isExercised }
+    private fun addTestResultsForMissingEndpoints(testResults: List<TestResultRecord>): List<TestResultRecord> {
+        if(!endpointsAPISet)
+            return testResults
 
-        val totalMethodResponseCodeCount = methodMap.values.sumOf { it.keys.size }
-        var totalMethodResponseCodeCoveredCount = 0
-        methodMap.forEach { (_, responses) ->
-            responses.forEach { (_, testResults) ->
-                val increment = min(testResults.count { it.isCovered }, 1)
-                totalMethodResponseCodeCoveredCount += increment
-            }
+        val filter = ScenarioMetadataFilter.from(filterExpression)
+
+        val testResultsForMissingAPIs = applicationAPIs.filter { api ->
+            val noTestResultFoundForThisAPI = allEndpoints.none { it.path == api.path && it.method == api.method }
+            val isNotExcluded = api.path !in excludedAPIs
+
+            noTestResultFoundForThisAPI && isNotExcluded
+        }.map { api ->
+            TestResultRecord(
+                api.path,
+                api.method,
+                0,
+                TestResult.MissingInSpec,
+                serviceType = SERVICE_TYPE_HTTP
+            )
         }
 
-        val coveragePercentage =
-            ((totalMethodResponseCodeCoveredCount.toFloat() / totalMethodResponseCodeCount.toFloat()) * 100).roundToInt()
-        return OpenApiCoverageConsoleRow(
-            method,
-            route,
-            responseStatus!!,
-            exercisedCount!!,
-            coveragePercentage,
-            remarks
-        )
+        return filterUsing((testResults + testResultsForMissingAPIs).asSequence(), filter).toList()
+    }
+
+    private fun calculateTotalCoveragePercentage(methodMap: Map<String, Map<String?, Map<String, List<TestResultRecord>>>>): Int {
+        val (totalCount, coveredCount) = calculateCoverageCounts(methodMap)
+        return (coveredCount.toFloat() / totalCount * 100).roundToInt()
+    }
+
+    private fun calculateCoverageCounts(methodMap: Map<String, Map<String?, Map<String, List<TestResultRecord>>>>): Pair<Int, Int> {
+        val responseMaps = methodMap.values.flatMap { it.values }
+        val totalResponseGroupCount = responseMaps.sumOf { it.size }
+        val coveredResponseGroupCount = responseMaps.sumOf { responseMap ->
+            responseMap.values.count { testResults -> testResults.any { it.isCovered } }
+        }
+
+        return totalResponseGroupCount to coveredResponseGroupCount
     }
 
     private fun identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults: List<TestResultRecord>): List<TestResultRecord> {

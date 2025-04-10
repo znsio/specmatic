@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test
 import io.specmatic.shouldNotMatch
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.assertThrows
 
 internal class ListPatternTest {
     @Test
@@ -359,6 +360,441 @@ Feature: Recursive test
 
             println(result.reportString())
             assertThat(result).withFailMessage(result.reportString()).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
+    @Nested
+    inner class FixValueTests {
+        @Test
+        fun `should be able to fix simple invalid values in an json array`() {
+            val innerPattern = parsedPattern("""
+            {
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "nested": {
+                    "nestedKey": "(date)",
+                    "nestedOptionalKey?": "(boolean)"
+                }
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+            val pattern = ListPattern(innerPattern)
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.nested.nestedOptionalKey" to BooleanValue(booleanValue = true)
+            )
+
+            val invalidValue = parsedValue("""[
+                {
+                    "topLevelKey": 999,
+                    "topLevelOptionalKey": 10,
+                    "nested": {
+                        "nestedKey": "2025-01-01",
+                        "nestedOptionalKey": "false"
+                    }
+                }
+            ]
+            """.trimIndent())
+            val fixedValue = pattern.fixValue(invalidValue, Resolver(dictionary = patternDictionary)) as JSONArrayValue
+            println(fixedValue.toStringLiteral())
+
+            assertThat(fixedValue.list).allSatisfy {
+                it as JSONObjectValue
+                assertThat(it).isEqualTo(parsedJSONObject("""
+                {
+                    "topLevelKey": "Fixed",
+                    "nested": {
+                        "nestedKey": "2025-01-01",
+                        "nestedOptionalKey": true
+                    },
+                    "topLevelOptionalKey": 10
+                }
+                """.trimIndent()))
+            }
+        }
+
+        @Test
+        fun `should generate if the value does not match the type expected json-array`() {
+            val innerPattern = parsedPattern("""
+            {
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "nested": {
+                    "nestedKey": "(date)",
+                    "nestedOptionalKey?": "(boolean)"
+                }
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+            val pattern = ListPattern(innerPattern)
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.nested.nestedKey" to StringValue("2025-01-01"),
+            )
+
+            val invalidValue = JSONObjectValue()
+            val fixedValue = pattern.fixValue(invalidValue, Resolver(dictionary = patternDictionary))
+            println(fixedValue.toStringLiteral())
+
+            assertThat((fixedValue as JSONArrayValue).list).allSatisfy {
+                assertThat(it).isEqualTo(parsedJSONObject("""
+                {
+                    "topLevelKey": "Fixed",
+                    "nested": {
+                        "nestedKey": "2025-01-01"
+                    }
+                }
+                """.trimIndent()))
+            }
+        }
+
+        @Test
+        fun `should not generate when the pattern is avoidably cycling and value is missing`() {
+            val pattern = ListPattern(parsedPattern("""{
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "subList?": "(TestList)"
+            }
+            """.trimIndent(), typeAlias = "(Test)"), typeAlias = "(TestList)")
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.topLevelOptionalKey" to NumberValue(999)
+            )
+
+            val value = parsedValue("""
+            [
+                {
+                    "topLevelKey": 999,
+                    "topLevelOptionalKey": "Invalid"
+                }
+            ]
+            """.trimIndent())
+            val fixedValue = pattern.fixValue(value, Resolver(newPatterns = mapOf("(TestList)" to pattern), dictionary = patternDictionary))
+            println(fixedValue.toStringLiteral())
+
+            assertThat(fixedValue.toStringLiteral()).isEqualTo("""
+            [
+                {
+                    "topLevelKey": "Fixed",
+                    "topLevelOptionalKey": 999
+                }
+            ]
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should throw an exception when the pattern is unavoidably cycling and value is missing`() {
+            val pattern = ListPattern(parsedPattern("""{
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "subList": "(TestList)"
+            }
+            """.trimIndent(), typeAlias = "(Test)"), typeAlias = "(TestList)")
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.topLevelOptionalKey" to NumberValue(999)
+            )
+
+            val value = parsedValue("""
+            [
+                {
+                    "topLevelKey": 999,
+                    "topLevelOptionalKey": "Invalid"
+                }
+            ]
+            """.trimIndent())
+            val exception = assertThrows<ContractException> { pattern.fixValue(value, Resolver(newPatterns = mapOf("(TestList)" to pattern), dictionary = patternDictionary)) }
+
+            println(exception.report())
+            assertThat(exception.failure().reportString()).isEqualToNormalizingWhitespace("""
+            >> subList[0 (random)].subList[0 (random)].topLevelKey
+            Invalid pattern cycle: Test, Test, Test
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should generate new values if the list is empty and allPatternsAreMandatory is set`() {
+            val innerPattern = parsedPattern("""
+            {
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)"
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+            val pattern = ListPattern(innerPattern)
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.topLevelOptionalKey" to NumberValue(10)
+            )
+
+            val emptyList = parsedValue("[]")
+            val fixedValue = pattern.fixValue(emptyList, Resolver(dictionary = patternDictionary).withAllPatternsAsMandatory())
+            println(fixedValue.toStringLiteral())
+
+            assertThat((fixedValue as JSONArrayValue).list).isNotEmpty
+            assertThat(fixedValue.list).allSatisfy {
+                assertThat(it).isEqualTo(
+                    parsedValue(
+                        """
+                        {
+                            "topLevelKey": "Fixed",
+                            "topLevelOptionalKey": 10 
+                        }
+                        """.trimIndent()
+                    )
+                )
+            }
+        }
+
+        @Test
+        fun `should not generate when the pattern is avoidably cycling and value is missing even if allPatternsAreMandatory is set`() {
+            val pattern = ListPattern(parsedPattern("""{
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "subList?": "(TestList)"
+            }
+            """.trimIndent(), typeAlias = "(Test)"), typeAlias = "(TestList)")
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.topLevelOptionalKey" to NumberValue(999)
+            )
+
+            val value = parsedValue("""
+            [
+                {
+                    "topLevelKey": 999,
+                    "topLevelOptionalKey": "Invalid"
+                }
+            ]
+            """.trimIndent())
+            val fixedValue = pattern.fixValue(
+                value = value,
+                resolver = Resolver(newPatterns = mapOf("(TestList)" to pattern), dictionary = patternDictionary).withAllPatternsAsMandatory()
+            ) as JSONArrayValue
+            println(fixedValue.toStringLiteral())
+
+            assertThat(fixedValue.list).allSatisfy {
+                it as JSONObjectValue
+                assertThat(it.getString("topLevelKey")).isEqualTo("Fixed")
+                assertThat(it.getInt("topLevelOptionalKey")).isEqualTo(999)
+                assertThat(it.getJSONArray("subList")).allSatisfy { nested ->
+                    nested as JSONObjectValue
+                    assertThat(nested).isEqualTo(parsedJSONObject("""
+                     {
+                        "topLevelKey": "Fixed",
+                        "topLevelOptionalKey": 999
+                    }
+                    """.trimIndent()))
+                }
+            }
+        }
+
+        @Test
+        fun `should retain pattern token if it matches when resolver is in mock mode`() {
+            val innerPattern = JSONObjectPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()), typeAlias = "(Object)")
+            val pattern = ListPattern(innerPattern, typeAlias = "(List)")
+            val resolver = Resolver(newPatterns = mapOf("(List)" to pattern, "(Object)" to innerPattern), mockMode = true)
+            val validValues = listOf(
+                StringValue("(List)"),
+                JSONArrayValue(listOf(StringValue("(Object)"))),
+            )
+
+            assertThat(validValues).allSatisfy {
+                val fixedValue = pattern.fixValue(it, resolver)
+                println(fixedValue.toStringLiteral())
+                assertThat(fixedValue).isEqualTo(it)
+            }
+        }
+
+        @Test
+        fun `should generate value when pattern token does not match when resolver is in mock mode`() {
+            val innerPattern = JSONObjectPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()), typeAlias = "(Object)")
+            val pattern = ListPattern(innerPattern, typeAlias = "(List)")
+            val resolver = Resolver(newPatterns = mapOf("(List)" to pattern, "(Object)" to innerPattern), mockMode = true)
+            val invalidValues = listOf(
+                StringValue("(string)"),
+                JSONArrayValue(listOf(StringValue("(string)"))),
+            )
+
+            assertThat(invalidValues).allSatisfy {
+                val fixedValue = pattern.fixValue(it, resolver)
+                println(fixedValue.toStringLiteral())
+                assertThat(fixedValue).isNotEqualTo(it).isInstanceOf(JSONArrayValue::class.java)
+                assertThat((fixedValue as JSONArrayValue).list).hasOnlyElementsOfType(JSONObjectValue::class.java)
+            }
+        }
+
+        @Test
+        fun `should generate values even if pattern token matches but resolver is not in mock mode`() {
+            val innerPattern = JSONObjectPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()), typeAlias = "(Object)")
+            val pattern = ListPattern(innerPattern, typeAlias = "(List)")
+            val resolver = Resolver(newPatterns = mapOf("(List)" to pattern, "(Object)" to innerPattern), mockMode = false)
+            val validValues = listOf(
+                StringValue("(List)"),
+                JSONArrayValue(listOf(StringValue("(Object)"))),
+            )
+
+            assertThat(validValues).allSatisfy {
+                val fixedValue = pattern.fixValue(it, resolver)
+                println(fixedValue.toStringLiteral())
+                assertThat(fixedValue).isNotEqualTo(it).isInstanceOf(JSONArrayValue::class.java)
+                assertThat((fixedValue as JSONArrayValue).list).hasOnlyElementsOfType(JSONObjectValue::class.java)
+            }
+        }
+
+        @Test
+        fun `should not generate values when list is empty and resolver is partial`() {
+            val innerPattern = JSONObjectPattern(mapOf("number" to NumberPattern()), typeAlias = "(Object)")
+            val pattern = ListPattern(innerPattern, typeAlias = "(List)")
+            val resolver = Resolver(newPatterns = mapOf("(List)" to pattern, "(Object)" to innerPattern), findKeyErrorCheck = PARTIAL_KEYCHECK)
+            val partialValue = JSONArrayValue(listOf())
+
+            val fixedValue = pattern.fixValue(partialValue, resolver)
+            assertThat(fixedValue).isEqualTo(partialValue)
+        }
+    }
+
+    @Nested
+    inner class FillInTheBlanksTests {
+
+        @Test
+        fun `should fill in missing mandatory elements using dictionary`() {
+            val listPattern = ListPattern(StringPattern())
+            val jsonArray = JSONArrayValue(listOf(StringValue("(string)")))
+            val resolver = Resolver(dictionary = mapOf("(string)" to StringValue("Value")))
+
+            val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
+            assertThat(filledJsonArray.list).isEqualTo(listOf(StringValue("Value")))
+        }
+
+        @Test
+        fun `should complain if pattern token does not match the underlying pattern`() {
+            val listPattern = ListPattern(NumberPattern())
+            val jsonArray = JSONArrayValue(listOf(StringValue("(string)")))
+            val resolver = Resolver()
+
+            val result = listPattern.fillInTheBlanks(jsonArray, resolver)
+            assertThat(result).isInstanceOf(HasFailure::class.java); result as HasFailure
+            assertThat(result.failure.reportString()).isEqualToNormalizingWhitespace("""
+            >> [0]
+            Expected number, actual was string
+            """.trimIndent()
+            )
+        }
+
+        @Test
+        fun `should handle any-value pattern token as a special case`() {
+            val listPattern = ListPattern(StringPattern())
+            val jsonArray = JSONArrayValue(listOf(StringValue("(anyvalue)")))
+            val dictionary = mapOf("(string)" to StringValue("Value"))
+            val resolver = Resolver(dictionary = dictionary)
+
+            val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
+            assertThat(filledJsonArray.list).isEqualTo(listOf(StringValue("Value")))
+        }
+
+        @Test
+        fun `should generate a new value if supplied value is pattern token`() {
+            val listPattern = ListPattern(NumberPattern(), typeAlias = "(Test)")
+            val jsonArray = StringValue("(Test)")
+
+            val dictionary = mapOf("(number)" to NumberValue(999))
+            val resolver = Resolver(dictionary = dictionary, newPatterns = mapOf("(Test)" to listPattern))
+            val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
+
+            assertThat(filledJsonArray.list).allSatisfy {
+                assertThat(it).isEqualTo(NumberValue(999))
+            }
+        }
+
+        @Test
+        fun `should result in failure when pattern token does not match pattern itself`() {
+            val listPattern = ListPattern(StringPattern())
+            val invalidPatterns = listOf(
+                JSONObjectPattern(mapOf("key" to StringPattern())),
+                ListPattern(BooleanPattern()),
+                NumberPattern()
+            )
+
+            assertThat(invalidPatterns).allSatisfy {
+                val resolver = Resolver(newPatterns = mapOf("(Test)" to it))
+                val value = StringValue("(Test)")
+                val result = listPattern.fillInTheBlanks(value, resolver)
+
+                assertThat(result).isInstanceOf(HasFailure::class.java); result as HasFailure
+                assertThat(result.failure.reportString()).satisfiesAnyOf(
+                    { report -> assertThat(report).containsIgnoringWhitespaces("Expected array or list type") },
+                    { report -> assertThat(report).containsIgnoringWhitespaces("Expected string, actual was boolean") },
+                )
+            }
+        }
+
+        @Test
+        fun `should not generate if list is empty`() {
+            val listPattern = ListPattern(StringPattern())
+            val jsonArray = JSONArrayValue(emptyList())
+            val resolver = Resolver()
+
+            val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
+            assertThat(filledJsonArray.list).isEmpty()
+        }
+
+        @Test
+        fun `should generate if list is empty when allPatternsMandatory is set`() {
+            val listPattern = ListPattern(StringPattern())
+            val jsonArray = JSONArrayValue(emptyList())
+            val resolver = Resolver(dictionary = mapOf("(string)" to StringValue("Value"))).withAllPatternsAsMandatory()
+
+            val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
+            assertThat(filledJsonArray.list).allSatisfy {
+                assertThat(it).isEqualTo(StringValue("Value"))
+            }
+        }
+
+        @Test
+        fun `should return value as is if not json-array or empty when resolver is negative`() {
+            val listPattern = ListPattern(StringPattern())
+            val resolver = Resolver(isNegative = true)
+            val values = listOf(
+                NullValue,
+                StringValue("Value"),
+                JSONArrayValue(emptyList())
+            )
+
+            assertThat(values).allSatisfy {
+                val result = listPattern.fillInTheBlanks(it, resolver)
+                assertThat(result).isEqualTo(HasValue(it))
+            }
+        }
+
+        @Test
+        fun `should generate if value is patternToken even when resolver is negative`() {
+            val listPattern = ListPattern(NumberPattern(), typeAlias = "(Test)")
+            val jsonArray = StringValue("(Test)")
+
+            val dictionary = mapOf("(number)" to NumberValue(999))
+            val resolver = Resolver(dictionary = dictionary, newPatterns = mapOf("(Test)" to listPattern), isNegative = true)
+            val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
+
+            assertThat(filledJsonArray.list).allSatisfy {
+                assertThat(it).isEqualTo(NumberValue(999))
+            }
+        }
+
+        @Test
+        fun `should allow invalid pattern tokens when resolver is negative`() {
+            val listPattern = ListPattern(StringPattern())
+            val invalidPatterns = listOf(
+                JSONObjectPattern(mapOf("key" to StringPattern())),
+                ListPattern(BooleanPattern()),
+                NumberPattern()
+            )
+
+            assertThat(invalidPatterns).allSatisfy {
+                val resolver = Resolver(newPatterns = mapOf("(Test)" to it), isNegative = true)
+                val value = StringValue("(Test)")
+                val result = listPattern.fillInTheBlanks(value, resolver)
+
+                assertThat(result).isInstanceOf(HasValue::class.java); result as HasValue
+                println(result.value)
+            }
         }
     }
 }

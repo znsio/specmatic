@@ -8,9 +8,16 @@ import io.specmatic.mock.ScenarioStub
 import io.specmatic.test.TestExecutor
 import io.mockk.every
 import io.mockk.mockk
+import io.specmatic.conversions.APIKeyInHeaderSecurityScheme
+import io.specmatic.conversions.APIKeyInQueryParamSecurityScheme
+import io.specmatic.conversions.OpenAPISecurityScheme
+import io.specmatic.test.ScenarioAsTest
+import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import java.util.*
 import java.util.function.Consumer
 
@@ -51,7 +58,7 @@ internal class RunContractTestsUsingScenario {
     @Test
     fun `should not match when there is an Exception`() {
         val httpResponsePattern = mockk<HttpResponsePattern>(relaxed = true)
-        every { httpResponsePattern.matches(any(), any()) }.throws(ContractException("message"))
+        every { httpResponsePattern.matchesResponse(any(), any()) }.throws(ContractException("message"))
         val scenario = Scenario(
             "test",
             HttpRequestPattern(),
@@ -527,5 +534,292 @@ paths:
 
         assertThat(result.reportString()).contains("Contract expected")
         assertThat(result.reportString()).contains("response contained")
+    }
+
+    @Test
+    fun `should follow the monitor link in the response header on accepted status code`() {
+        val postScenario = Scenario(ScenarioInfo(
+            httpRequestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/"), method = "POST"),
+            httpResponsePattern = HttpResponsePattern(
+                status = 201,
+                body = JSONObjectPattern(mapOf("name" to StringPattern(), "age" to NumberPattern()))
+            )
+        ))
+        val acceptedScenario = Scenario(ScenarioInfo(
+            httpRequestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/"), method = "POST"),
+            httpResponsePattern = HttpResponsePattern(
+                status = 202,
+                headersPattern = HttpHeadersPattern(mapOf("Link" to StringPattern()))
+            )
+        ))
+        val monitorScenario = Scenario(ScenarioInfo(
+            httpRequestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/monitor/(id:number)"), method = "GET"),
+            httpResponsePattern = HttpResponsePattern(
+                status = 200,
+                body = JSONObjectPattern(mapOf("request" to AnyNonNullJSONValue(), "response?" to AnyNonNullJSONValue()))
+            )
+        ))
+
+        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
+        val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario)
+
+        val (result, response) = contractTest.runTest(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                if (request.method == "POST") {
+                    return HttpResponse(202, headers = mapOf("Link" to "</monitor/123>;rel=related;title=monitor"))
+                }
+
+                return HttpResponse(
+                    200,
+                    body = parsedJSONObject("""
+                        {
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    { "name": "Content-Type", "value": "application/json" }
+                                ]
+                            },
+                            "response": {
+                                "statusCode": 201,
+                                "header": [
+                                    { "name": "Content-Type", "value": "application/json" }
+                                ],
+                                "body": { "name": "John", "age": 20 }
+                            }
+                        }
+                        """.trimIndent())
+                )
+            }
+        })
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should return failure when the monitor link returns invalid response`() {
+        val postScenario = Scenario(ScenarioInfo(
+            httpRequestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/"), method = "POST"),
+            httpResponsePattern = HttpResponsePattern(
+                status = 201,
+                body = JSONObjectPattern(mapOf("name" to StringPattern(), "age" to NumberPattern()))
+            )
+        ))
+        val acceptedScenario = Scenario(ScenarioInfo(
+            httpRequestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/"), method = "POST"),
+            httpResponsePattern = HttpResponsePattern(
+                status = 202,
+                headersPattern = HttpHeadersPattern(mapOf("Link" to StringPattern()))
+            )
+        ))
+        val monitorScenario = Scenario(ScenarioInfo(
+            httpRequestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/monitor/(id:number)"), method = "GET"),
+            httpResponsePattern = HttpResponsePattern(
+                status = 200,
+                body = JSONObjectPattern(mapOf("request" to AnyNonNullJSONValue(), "response?" to AnyNonNullJSONValue()))
+            )
+        ))
+
+        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
+        val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario)
+
+        val (result, response) = contractTest.runTest(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                if (request.method == "POST") {
+                    return HttpResponse(202, headers = mapOf("Link" to "</monitor/123>;rel=related;title=monitor"))
+                }
+
+                return HttpResponse(
+                    200,
+                    body = parsedJSONObject("""
+                        {
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    { "name": "Content-Type", "value": "application/json" }
+                                ]
+                            },
+                            "response": {
+                                "statusCode": 201,
+                                "header": [
+                                    { "name": "Content-Type", "value": "application/json" }
+                                ],
+                                "body": { "name": 20, "age": "John" }
+                            }
+                        }
+                        """.trimIndent())
+                )
+            }
+        })
+        println(result.reportString())
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        In scenario ""
+        API: POST / -> 201
+        >> MONITOR.RESPONSE.BODY.name
+        Expected string, actual was 20 (number)
+        >> MONITOR.RESPONSE.BODY.age
+        Expected number, actual was "John"
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should return failure when the monitor scenario doesn't exist`() {
+        val postScenario = Scenario(ScenarioInfo(
+            httpRequestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/"), method = "POST"),
+            httpResponsePattern = HttpResponsePattern(
+                status = 201,
+                body = JSONObjectPattern(mapOf("name" to StringPattern(), "age" to NumberPattern()))
+            )
+        ))
+        val acceptedScenario = Scenario(ScenarioInfo(
+            httpRequestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/"), method = "POST"),
+            httpResponsePattern = HttpResponsePattern(
+                status = 202,
+                headersPattern = HttpHeadersPattern(mapOf("Link" to StringPattern()))
+            )
+        ))
+
+        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario))
+        val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario)
+
+        val (result, response) = contractTest.runTest(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse(202, headers = mapOf("Link" to "</monitor/123>;rel=related;title=monitor"))
+            }
+        })
+        println(result.reportString())
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        In scenario ""
+        API: POST / -> 201
+        No monitor scenario found matching link: Link(url=/monitor/123, rel=related, title=monitor)
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should return the original failure when no monitor link is provided in the response headers`() {
+        val postScenario = Scenario(ScenarioInfo(
+            httpRequestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/"), method = "POST"),
+            httpResponsePattern = HttpResponsePattern(
+                status = 201,
+                body = JSONObjectPattern(mapOf("name" to StringPattern(), "age" to NumberPattern()))
+            )
+        ))
+        val acceptedScenario = Scenario(ScenarioInfo(
+            httpRequestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/"), method = "POST"),
+            httpResponsePattern = HttpResponsePattern(status = 202)
+        ))
+
+        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario))
+        val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario)
+
+        val (result, response) = contractTest.runTest(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse(202)
+            }
+        })
+        println(result.reportString())
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        In scenario ""
+        API: POST / -> 201
+        >> RESPONSE.STATUS
+        Expected status 201, actual was status 202
+        """.trimIndent())
+    }
+
+    @ParameterizedTest
+    @MethodSource("io.specmatic.core.ScenarioTest#securitySchemaProvider")
+    fun `should use security schema values from examples when provided`(securitySchema: OpenAPISecurityScheme) {
+        val request = securitySchema.addTo(HttpRequest("POST", "/"))
+        val scenario = Scenario(
+            name = "SIMPLE POST",
+            httpRequestPattern = HttpRequestPattern(
+                httpPathPattern = buildHttpPathPattern("/"), method = "POST",
+                securitySchemes = listOf(securitySchema)
+            ),
+            httpResponsePattern = HttpResponsePattern(status = 200),
+            examples = listOf(
+                Examples(
+                    emptyList(),
+                    listOf(Row(requestExample = request))
+                )
+            )
+        )
+        val feature = Feature(name = "", scenarios = listOf(scenario))
+
+        val extractValue: (HttpRequest) -> String = { it ->
+            when(securitySchema) {
+                is APIKeyInHeaderSecurityScheme -> it.headers.getValue(securitySchema.name)
+                is APIKeyInQueryParamSecurityScheme -> it.queryParams.getValues(securitySchema.name).first()
+                else -> it.headers.getValue(AUTHORIZATION)
+            }
+        }
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK.also {
+                    val logs = listOf(request.toLogString(), it.toLogString())
+                    println(logs.joinToString(separator = "\n\n"))
+
+                    val result = securitySchema.matches(request, Resolver())
+                    assertThat(result).isInstanceOf(Result.Success::class.java)
+
+                    val actualValue = extractValue(request)
+                    val expectedValue = extractValue(request)
+                    assertThat(actualValue).isEqualTo(expectedValue)
+                }
+            }
+        })
+
+        assertThat(results.results).allSatisfy { assertThat(it).isInstanceOf(Result.Success::class.java) }
+    }
+
+    @ParameterizedTest
+    @MethodSource("io.specmatic.core.ScenarioTest#securitySchemaProvider")
+    fun `should generate security schema values if missing from examples`(securitySchema: OpenAPISecurityScheme) {
+        val scenario = Scenario(
+            name = "SIMPLE POST",
+            httpRequestPattern = HttpRequestPattern(
+                httpPathPattern = buildHttpPathPattern("/"), method = "POST",
+                securitySchemes = listOf(securitySchema)
+            ),
+            httpResponsePattern = HttpResponsePattern(status = 200),
+            examples = listOf(
+                Examples(
+                    emptyList(),
+                    listOf(Row(requestExample = HttpRequest("POST", "/")))
+                )
+            )
+        )
+        val feature = Feature(name = "", scenarios = listOf(scenario))
+
+        val extractValue: (HttpRequest) -> String = { it ->
+            when(securitySchema) {
+                is APIKeyInHeaderSecurityScheme -> it.headers.getValue(securitySchema.name)
+                is APIKeyInQueryParamSecurityScheme -> it.queryParams.getValues(securitySchema.name).first()
+                else -> it.headers.getValue(AUTHORIZATION)
+            }
+        }
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK.also {
+                    val logs = listOf(request.toLogString(), it.toLogString())
+                    println(logs.joinToString(separator = "\n\n"))
+
+                    val result = securitySchema.matches(request, Resolver())
+                    assertThat(result).isInstanceOf(Result.Success::class.java)
+
+                    val actualValue = extractValue(request)
+                    assertThat(actualValue).isNotEmpty()
+                }
+            }
+        })
+
+        assertThat(results.results).allSatisfy { assertThat(it).isInstanceOf(Result.Success::class.java) }
     }
 }

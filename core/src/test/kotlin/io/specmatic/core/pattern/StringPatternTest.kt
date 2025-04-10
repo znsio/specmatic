@@ -2,22 +2,20 @@ package io.specmatic.core.pattern
 
 import io.specmatic.GENERATION
 import io.specmatic.core.Resolver
+import io.specmatic.core.Result
 import io.specmatic.core.UseDefaultExample
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
-import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.shouldNotMatch
 import org.apache.commons.lang3.RandomStringUtils
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import java.lang.Exception
-import io.specmatic.core.Result as Result
+
 
 internal class StringPatternTest {
     @Test
@@ -28,7 +26,7 @@ internal class StringPatternTest {
     @Test
     fun `should not allow maxLength less than minLength`() {
         val exception = assertThrows<IllegalArgumentException> { StringPattern(minLength = 6, maxLength = 4) }
-        assertThat(exception.message).isEqualTo("maxLength cannot be less than minLength")
+        assertThat(exception.message).isEqualTo("maxLength 4 cannot be less than minLength 6")
     }
 
     @Test
@@ -47,8 +45,55 @@ internal class StringPatternTest {
     }
 
     @Test
+    fun `should generate random string based on the regex and then it should match the regex`() {
+        val maxLength = 32
+        val pattern = StringPattern(maxLength = maxLength, regex = "[0-9a-f]{$maxLength}")
+        val generatedValue = pattern.generate(Resolver())
+        assertThat(generatedValue.toStringLiteral().length).isEqualTo(maxLength)
+        pattern.matches(generatedValue, Resolver()).let {
+            assertThat(it.isSuccess()).isTrue
+        }
+    }
+
+    @Test
+    fun `newBasedOn should generate random string based on the regex and then it should match the regex`() {
+        val maxLength = 32
+        val regex = "[0-9a-f]{$maxLength}"
+        val pattern = StringPattern(maxLength = maxLength, regex = regex)
+        val newBasedOn = pattern.newBasedOn(Row(), Resolver())
+        assertThat(newBasedOn.toList()).hasSize(2)
+        newBasedOn.forEach {
+            it.value.generate(Resolver()).let { generatedValue ->
+                assertThat(generatedValue.toStringLiteral().length).isEqualTo(maxLength)
+                pattern.matches(generatedValue, Resolver()).let { result ->
+                    assertThat(result.isSuccess()).withFailMessage("$generatedValue does not match the regex $regex").isTrue
+                }
+            }
+        }
+    }
+
+    @Test
     fun `should match empty string when min and max are not specified`() {
         assertThat(StringPattern().matches(StringValue(""), Resolver()).isSuccess()).isTrue
+    }
+
+    @Test
+    fun `should not match an invalid string`() {
+        val regex = "[0-9a-z]{32}"
+        val candidate = "VAKTIGOOIXJDKQWGBBAPFXRKIHLEONUP"
+        val result = StringPattern(regex = regex).matches(StringValue(candidate), Resolver())
+        assertThat(result.isSuccess()).isFalse
+        assertThat(result.reportString()).isEqualTo("""Expected string that matches regex $regex, actual was "$candidate"""")
+    }
+
+    @Test
+    fun `should match valid string when min is specified`() {
+        assertThat(StringPattern(regex = "[0-9A-Z]{32}", minLength = 32).matches(StringValue("VAKTIGOOIXJDKQWGBBAPFXRKIHLEONUP"), Resolver()).isSuccess()).isTrue
+    }
+
+    @Test
+    fun `should match valid string when max is specified`() {
+        assertThat(StringPattern(regex = "[0-9A-Z]{32}", maxLength = 32).matches(StringValue("VAKTIGOOIXJDKQWGBBAPFXRKIHLEONUP"), Resolver()).isSuccess()).isTrue
     }
 
     @Test
@@ -91,29 +136,36 @@ internal class StringPatternTest {
         maxLength?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
     }
 
-
     @ParameterizedTest
     @CsvSource(
-        "'^[a-z]*$', null, null, 5",
+        "'^\\w+(-\\w+)*$',null,10,1",
+        "'^[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$',1,10,1",
+        "'^[a-z]*$', null, null, 0",
+        "'^[a-z]*$', 5, null, 5",
         "'^[a-z0-9]{6,10}',6,10,6",
         "null, 1, 10, 1"
     )
     fun `generate string value as per regex in conjunction with minLength and maxLength`(
         regex: String?, min: String?, max: String?, expectedLength: Int
     ) {
-        val minLength = min?.toIntOrNull()
-        val maxLength = max?.toIntOrNull()
-        val patternRegex = if (regex == "null") null else regex
+        repeat(10) {
+            val minLength = min?.toIntOrNull()
+            val maxLength = max?.toIntOrNull()
+            val patternRegex = if (regex == "null") null else regex
 
-        val result = StringPattern(minLength = minLength, maxLength = maxLength, regex = patternRegex).generate(Resolver()) as StringValue
-        val generatedString = result.string
-        val generatedLength = generatedString.length
+            val result = StringPattern(
+                minLength = minLength,
+                maxLength = maxLength,
+                regex = patternRegex
+            ).generate(Resolver()) as StringValue
+            val generatedString = result.string
+            val generatedLength = generatedString.length
 
-        assertThat(generatedLength).isGreaterThanOrEqualTo(expectedLength)
-        maxLength?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
-        patternRegex?.let { assertThat(generatedString).matches(patternRegex) }
+            assertThat(generatedLength).isGreaterThanOrEqualTo(expectedLength)
+            maxLength?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
+            patternRegex?.let { assertThat(generatedString).matches(patternRegex) }
+        }
     }
-
 
     @Test
     fun `string should encompass enum of string`() {
@@ -265,32 +317,79 @@ internal class StringPatternTest {
         val exception = assertThrows<IllegalArgumentException> {
             StringPattern(minLength = 6, maxLength = 4)
         }
-        assertThat(exception.message).isEqualTo("maxLength cannot be less than minLength")
+        assertThat(exception.message).isEqualTo("maxLength 4 cannot be less than minLength 6")
     }
 
-    @Test
-    fun `should not allow construction of string with minLength is greater that what is possible with regex`() {
-        val tenOccurrencesOfAlphabetA = "^a{10}\$"
-        assertThrows<Exception> { StringPattern(minLength = 15, maxLength = 20, regex = tenOccurrencesOfAlphabetA) }
-            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - minLength cannot be greater than length of shortest possible string that matches regex") }
-    }
+    @ParameterizedTest
+    @CsvSource(
+        "'^[a-zA-Z0-9]{10,12}$';9;null;true;9;12",
+        "'^[a-zA-Z0-9]{10,12}$';10;null;true;10;12",
+        "'^[a-zA-Z0-9]{10,20}$';20;null;true;20;20",
+        "'^[a-zA-Z0-9]{10,20}$';21;null;false;0;0",
+        "'^[a-zA-Z0-9]{10,20}$';null;9;false;0;0",
+        "'^[a-zA-Z0-9]{10,20}$';null;10;true;10;10",
+        "'^[a-zA-Z0-9]{10,20}$';null;20;true;10;20",
+        "'^[a-zA-Z0-9]{10,20}$';null;21;true;10;20",
+        "'^[a-zA-Z0-9]{10,20}$';9;20;true;10;20",
+        "'^[a-zA-Z0-9]{10,20}$';8;9;false;0;0",
+        "'^[a-zA-Z0-9]{10,20}$';10;20;true;10;20",
+        "'^[a-zA-Z0-9]{10,20}$';11;19;true;11;19",
+        "'^[a-zA-Z0-9]{,20}$';0;null;true;0;20",
+        "'^[a-zA-Z0-9]{,20}$';20;null;true;20;20",
+        "'^[a-zA-Z0-9]{,20}$';21;null;false;0;0",
+        "'^[a-zA-Z0-9]{,20}$';null;20;true;0;20",
+        "'^[a-zA-Z0-9]{,20}$';null;21;true;0;20",
+        "'^[a-zA-Z0-9]{20}$';19;null;true;20;20",
+        "'^[a-zA-Z0-9]{20}$';20;null;true;20;20",
+        "'^[a-zA-Z0-9]{20}$';21;null;false;0;0",
+        "'^[a-zA-Z0-9]{20}$';null;19;false;0;0",
+        "'^[a-zA-Z0-9]{20}$';null;20;true;20;20",
+        "'^[a-zA-Z0-9]{20}$';null;21;true;20;20",
+        "'^[a-zA-Z0-9]{10,}$';9;null;true;9;99999999",
+        "'^[a-zA-Z0-9]{10,}$';10;null;true;10;99999999",
+        "'^[a-zA-Z0-9]{10,}$';101;null;true;101;99999999",
+        "'^[a-zA-Z0-9]{10,}$';null;9;false;0;0",
+        "'^[a-zA-Z0-9]{10,}$';null;10;true;10;10",
+        "'^[a-zA-Z0-9]{10,}$';null;21;true;10;21",
+        "'^\\d{6,}$';null;null;true;6;99999999",
+        "'^[a-zA-Z0-9]*$';0;null;true;0;99999999",
+        "'^[a-zA-Z0-9]*$';10;null;true;10;99999999",
+        "'^[a-zA-Z0-9]*$';null;0;true;0;0",
+        "'^[a-zA-Z0-9]*$';null;10;true;0;10",
+        "'^[a-zA-Z0-9]+$';0;null;true;1;99999999",
+        "'^[a-zA-Z0-9]+$';1;null;true;1;99999999",
+        "'^[a-zA-Z0-9]+$';10;null;true;10;99999999",
+        "'^[a-zA-Z0-9]+$';null;0;false;0;0",
+        "'^[a-zA-Z0-9]+$';null;1;true;1;1",
+        "'^[a-zA-Z0-9]+$';null;10;true;1;10",
+        delimiterString = ";"
+    )
+    fun `generate string value as per regex in conjunction with minimum and maximum`(
+        regex: String, minInput: String?, maxInput: String?, shouldBeValid:Boolean, expectedMinLen: Int, expectedMaxLen: Int
+    ) {
+        val min = minInput?.toIntOrNull()
+        val max = maxInput?.toIntOrNull()
 
-    @Test
-    fun `should not allow construction of string with maxLength is lesser that what is possible with regex`() {
-        val tenOccurrencesOfAlphabetA = "^a{10}\$"
-        assertThrows<Exception> { StringPattern(minLength = 5, maxLength = 8, regex = tenOccurrencesOfAlphabetA) }
-            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - maxLength cannot be less than length of shortest possible string that matches regex") }
-    }
+        try {
+            val stringPattern = StringPattern(
+                minLength = min,
+                maxLength = max,
+                regex = regex
+            )
+            val result = stringPattern.generate(Resolver()) as StringValue
+            if (shouldBeValid) {
+                val generatedString = result.string
 
-    @Test
-    fun `should not allow construction of string with maxLength is greater that what is possible with regex`() {
-        val fiveToElevenOccurrencesOfAlphabetA = "^a{5,11}\$"
-        assertThrows<Exception> { StringPattern(minLength = 5, maxLength = 10, regex = fiveToElevenOccurrencesOfAlphabetA) }
-            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - regex cannot generate / match string greater than maxLength") }
-    }
+                assertThat(generatedString.length)
+                    .isGreaterThanOrEqualTo(expectedMinLen)
+                    .isLessThanOrEqualTo(expectedMaxLen)
 
-    @Test
-    fun `should throw an exception with the regex parse failure from the regex library` () {
-        assertThatThrownBy { StringPattern(regex = "yes|no|") }.hasMessageContaining("unexpected end-of-string")
+                assertThat(generatedString).matches(RegExSpec(regex).toString())
+            } else {
+                fail("Expected an exception to be thrown")
+            }
+        } catch (e: Exception) {
+            if (shouldBeValid) throw e
+        }
     }
 }

@@ -1,0 +1,78 @@
+openapi: 3.0.3
+info:
+  title: Pet API
+  version: 1.0.0
+paths:
+  /pets:
+    post:
+      summary: Add a new pet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pet'
+      responses:
+        '201':
+          description: Pet added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetWithId'
+    get:
+      summary: List all pets
+      responses:
+        '200':
+          description: A list of pets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PetWithId'
+components:
+  schemas:
+    Pet:
+      oneOf:
+        - $ref: '#/components/schemas/Dog'
+        - $ref: '#/components/schemas/Cat'
+      discriminator:
+        propertyName: petType
+        mapping:
+          dog: '#/components/schemas/Dog'
+          cat: '#/components/schemas/Cat'
+      required:
+        - petType
+    PetWithId:
+      allOf:
+        - $ref: '#/components/schemas/Pet'
+        - type: object
+          properties:
+            id:
+              type: number
+          required:
+            - id
+    Dog:
+      type: object
+      properties:
+        petType:
+          type: string
+        breed:
+          type: string
+        barkVolume:
+          type: integer
+      required:
+        - petType
+        - breed
+    Cat:
+      type: object
+      properties:
+        petType:
+          type: string
+        color:
+          type: string
+        livesLeft:
+          type: integer
+      required:
+        - petType
+        - color

@@ -2,8 +2,10 @@ package integration_tests
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.AttributeSelectionPattern
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.SpecmaticConfig
@@ -24,7 +26,10 @@ class ValueAssertionsTest {
     fun `should validate exact header and body values in the response`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResponseValueValidationEnabled() } returns true
+            every { getWorkflowDetails() } returns null
         }
+        mockkObject(SpecmaticConfig.Companion)
+        every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
 
         val feature = OpenApiSpecification.fromYAML(
             """
@@ -79,7 +84,7 @@ paths:
         ).toFeature()
         feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                return HttpResponse(200, headers = mapOf("Header1" to "Header 1 value"), body = "Product added successfully")
+                return HttpResponse(200, headers = mapOf("Header1" to "Header 1 value", "Content-Type" to "text/plain"), body = "Product added successfully")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -106,7 +111,10 @@ paths:
     fun `should validate exact header values in the response`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResponseValueValidationEnabled() } returns true
+            every { getWorkflowDetails() } returns null
         }
+        mockkObject(SpecmaticConfig.Companion)
+        every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
 
         val feature = OpenApiSpecification.fromYAML(
             """
@@ -165,7 +173,10 @@ paths:
     fun `validation should fail if there are extra response headers`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResponseValueValidationEnabled() } returns true
+            every { getWorkflowDetails() } returns null
         }
+        mockkObject(SpecmaticConfig.Companion)
+        every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
 
         val feature = OpenApiSpecification.fromYAML(
             """
@@ -232,7 +243,10 @@ paths:
     fun `should validate exact body value in the response`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResponseValueValidationEnabled() } returns true
+            every { getWorkflowDetails() } returns null
         }
+        mockkObject(SpecmaticConfig.Companion)
+        every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
 
         val feature = OpenApiSpecification.fromYAML(
             """
@@ -307,7 +321,10 @@ paths:
     fun `breadcrumb for response value validation failure should not duplicate RESPONSE`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
             every { isResponseValueValidationEnabled() } returns true
+            every { getWorkflowDetails() } returns null
         }
+        mockkObject(SpecmaticConfig.Companion)
+        every { SpecmaticConfig.Companion.getAttributeSelectionPattern(any()) } returns AttributeSelectionPattern()
 
         val feature = OpenApiSpecification.fromYAML(
             """

@@ -2,10 +2,12 @@ package io.specmatic.stub.stateful
 
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
+import io.specmatic.core.SpecmaticConfig.Companion.getAttributeSelectionPattern
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.value.*
 import io.specmatic.stub.ContractStub
+import io.specmatic.stub.SPECMATIC_RESPONSE_CODE_HEADER
 import io.specmatic.stub.loadContractStubsFromImplicitPaths
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -16,6 +18,216 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+
+
+@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
+class StatefulHttpStubMonitorPatternForPOSTRequestTest {
+    companion object {
+        private lateinit var httpStub: ContractStub
+        private const val SPEC_DIR_PATH = "src/test/resources/stateful-stub-monitor-pattern"
+        private var resourceId = ""
+        private var monitorLink = ""
+
+        @JvmStatic
+        @BeforeAll
+        fun setup() {
+            val specPath = "$SPEC_DIR_PATH/monitor-pattern-spec.yaml"
+            val scenarioStubs = loadContractStubsFromImplicitPaths(
+                contractPathDataList = listOf(ContractPathData("", specPath)),
+                specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml"),
+                externalDataDirPaths = emptyList()
+            ).flatMap { it.second }
+
+            assertThat(scenarioStubs).withFailMessage(
+                "Failed while loading the monitor substitution based example"
+            ).isNotEmpty
+
+            httpStub = StatefulHttpStub(
+                specmaticConfigPath = "$SPEC_DIR_PATH/specmatic.yaml",
+                features = listOf(
+                    OpenApiSpecification.fromFile(specPath).toFeature()
+                ),
+                scenarioStubs = scenarioStubs
+            )
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun tearDown() {
+            httpStub.close()
+        }
+    }
+
+    @Test
+    @Order(1)
+    fun `should post a product and get 202`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "POST",
+                path = "/product",
+                headers = mapOf(
+                    SPECMATIC_RESPONSE_CODE_HEADER to "202"
+                ),
+                body = parsedJSONObject(
+                    """
+                    {
+                      "name": "Product A",
+                      "price": 19.99
+                    }
+                    """.trimIndent()
+                )
+            )
+        )
+
+        assertThat(response.status).isEqualTo(202)
+        assertThat(response.headers).containsKeys("Link")
+
+        monitorLink = response.headers.getValue("Link")
+        resourceId = monitorLink.split("/")[2].substringBefore(">")
+    }
+
+    @Test
+    @Order(2)
+    fun `should get the current status of previous post product request from monitor endpoint`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/monitor/$resourceId"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+
+        val responseBody = response.body as JSONObjectValue
+
+        assertThat(responseBody.findFirstChildByPath("response.status")?.toStringLiteral()).isEqualTo("201")
+
+        val requestBodyFromResponse = (responseBody.findFirstChildByPath("request.body") as JSONObjectValue)
+        assertThat(requestBodyFromResponse.getStringValue("name")).isEqualTo("Product A")
+        assertThat(requestBodyFromResponse.getStringValue("price")).isEqualTo("19.99")
+        assertThat(responseBody.findFirstChildByPath("request.method")?.toStringLiteral()).isEqualTo("POST")
+
+        val responseBodyFromResponse = responseBody.findFirstChildByPath("response.body") as JSONObjectValue
+        assertThat(responseBodyFromResponse.getStringValue("name")).isEqualTo("Product A")
+        assertThat(responseBodyFromResponse.getStringValue("price")).isEqualTo("19.99")
+        assertThat(responseBodyFromResponse.getStringValue("id")).isNotNull()
+    }
+}
+
+@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
+class StatefulHttpStubMonitorPatternForPATCHRequestTest {
+    companion object {
+        private lateinit var httpStub: ContractStub
+        private const val SPEC_DIR_PATH = "src/test/resources/stateful-stub-monitor-pattern"
+        private var resourceId = ""
+        private var monitorLink = ""
+
+        @JvmStatic
+        @BeforeAll
+        fun setup() {
+            val specPath = "$SPEC_DIR_PATH/monitor-pattern-spec.yaml"
+            val scenarioStubs = loadContractStubsFromImplicitPaths(
+                contractPathDataList = listOf(ContractPathData("", specPath)),
+                specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml"),
+                externalDataDirPaths = emptyList()
+            ).flatMap { it.second }
+
+            assertThat(scenarioStubs).withFailMessage(
+                "Failed while loading the monitor substitution based example"
+            ).isNotEmpty
+
+            httpStub = StatefulHttpStub(
+                specmaticConfigPath = "$SPEC_DIR_PATH/specmatic.yaml",
+                features = listOf(
+                    OpenApiSpecification.fromFile(specPath).toFeature()
+                ),
+                scenarioStubs = scenarioStubs
+            )
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun tearDown() {
+            httpStub.close()
+        }
+    }
+
+    @Test
+    @Order(1)
+    fun `should post a product and get 202`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "POST",
+                path = "/product",
+                body = parsedJSONObject(
+                    """
+                    {
+                      "name": "Product A",
+                      "price": 19.99
+                    }
+                    """.trimIndent()
+                )
+            )
+        )
+
+        assertThat(response.status).isEqualTo(201)
+
+        resourceId = (response.body as JSONObjectValue).getStringValue("id").orEmpty()
+    }
+
+    @Test
+    @Order(2)
+    fun `should patch a product and get 202`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "PATCH",
+                path = "/product/$resourceId",
+                headers = mapOf(
+                    SPECMATIC_RESPONSE_CODE_HEADER to "202"
+                ),
+                body = parsedJSONObject(
+                    """
+                    {
+                      "price": 40
+                    }
+                    """.trimIndent()
+                )
+            )
+        )
+
+        assertThat(response.status).isEqualTo(202)
+        assertThat(response.headers).containsKeys("Link")
+
+        monitorLink = response.headers.getValue("Link")
+        resourceId = monitorLink.split("/")[2].substringBefore(">")
+    }
+
+    @Test
+    @Order(3)
+    fun `should get the current status of previous patch product request from monitor endpoint`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/monitor/$resourceId"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+
+        val responseBody = response.body as JSONObjectValue
+
+        assertThat(responseBody.findFirstChildByPath("response.status")?.toStringLiteral()).isEqualTo("200")
+
+        val requestBodyFromResponse = (responseBody.findFirstChildByPath("request.body") as JSONObjectValue)
+        assertThat(requestBodyFromResponse.getStringValue("price")).isEqualTo("40")
+        assertThat(responseBody.findFirstChildByPath("request.method")?.toStringLiteral()).isEqualTo("PATCH")
+
+        val responseBodyFromResponse = responseBody.findFirstChildByPath("response.body") as JSONObjectValue
+        assertThat(responseBodyFromResponse.getStringValue("name")).isEqualTo("Product A")
+        assertThat(responseBodyFromResponse.getStringValue("price")).isEqualTo("40")
+        assertThat(responseBodyFromResponse.getStringValue("id")).isNotNull()
+    }
+}
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class StatefulHttpStubTest {
@@ -91,6 +303,8 @@ class StatefulHttpStubTest {
         assertThat(responseBody.getStringValue("description")).isEqualTo("A detailed description of Product A.")
         assertThat(responseBody.getStringValue("price")).isEqualTo("19.99")
         assertThat(responseBody.getStringValue("inStock")).isEqualTo("true")
+
+        assertThat(response.headers.containsKey("X-Specmatic-Type")).isFalse()
     }
 
     @Test
@@ -115,6 +329,8 @@ class StatefulHttpStubTest {
         assertThat(responseObjectFromResponseBody.getStringValue("description")).isEqualTo("A detailed description of Product A.")
         assertThat(responseObjectFromResponseBody.getStringValue("price")).isEqualTo("19.99")
         assertThat(responseObjectFromResponseBody.getStringValue("inStock")).isEqualTo("true")
+
+        assertThat(response.headers.containsKey("X-Specmatic-Type")).isFalse()
     }
 
     @Test
@@ -139,6 +355,8 @@ class StatefulHttpStubTest {
         assertThat(responseObjectFromResponseBody.getStringValue("description")).isEqualTo("A detailed description of Product A.")
         assertThat(responseObjectFromResponseBody.getStringValue("price")).isEqualTo("19.99")
         assertThat(responseObjectFromResponseBody.getStringValue("inStock")).isEqualTo("true")
+
+        assertThat(response.headers.containsKey("X-Specmatic-Type")).isFalse()
     }
 
     @Test
@@ -168,6 +386,8 @@ class StatefulHttpStubTest {
         assertThat(responseBody.getStringValue("price")).isEqualTo("100")
         assertThat(responseBody.getStringValue("description")).isEqualTo("A detailed description of Product A.")
         assertThat(responseBody.getStringValue("inStock")).isEqualTo("true")
+
+        assertThat(response.headers.containsKey("X-Specmatic-Type")).isFalse()
     }
 
     @Test
@@ -188,6 +408,8 @@ class StatefulHttpStubTest {
         assertThat(responseBody.getStringValue("price")).isEqualTo("100")
         assertThat(responseBody.getStringValue("description")).isEqualTo("A detailed description of Product A.")
         assertThat(responseBody.getStringValue("inStock")).isEqualTo("true")
+
+        assertThat(response.headers.containsKey("X-Specmatic-Type")).isFalse()
     }
 
     @Test
@@ -210,6 +432,8 @@ class StatefulHttpStubTest {
         )
 
         assertThat(getResponse.status).isEqualTo(404)
+
+        assertThat(response.headers.containsKey("X-Specmatic-Type")).isFalse()
     }
 
     @Test
@@ -241,6 +465,8 @@ class StatefulHttpStubTest {
         assertThat(responseBody.getStringValue("description")).isEqualTo("A detailed description of Product A.")
         assertThat(responseBody.getStringValue("price")).isEqualTo("19.99")
         assertThat(responseBody.getStringValue("inStock")).isEqualTo("true")
+
+        assertThat(response.headers.containsKey("X-Specmatic-Type")).isFalse()
     }
 
     @Test
@@ -268,6 +494,8 @@ class StatefulHttpStubTest {
         val error = responseBody.getStringValue("error")
         assertThat(error).contains(">> REQUEST.BODY.inStock")
         assertThat(error).contains("Contract expected boolean but request contained \"true\"")
+
+        assertThat(response.headers.containsKey("X-Specmatic-Type")).isFalse()
     }
 
     @Order(9)
@@ -285,6 +513,8 @@ class StatefulHttpStubTest {
         assertThat(responseBody).contains(">> REQUEST.PATH.id")
         assertThat(responseBody).contains("Contract expected number but request contained \"invalid-id\"")
         assertThat(responseBody).contains("WARNING: The response is in string format since no schema found in the specification for 400 response")
+
+        assertThat(response.headers.containsKey("X-Specmatic-Type")).isFalse()
     }
 
     @Test
@@ -301,6 +531,8 @@ class StatefulHttpStubTest {
         val responseBody = response.body as JSONObjectValue
         val message = responseBody.getStringValue("message")
         assertThat(message).isEqualTo("Resource with resourceId '0' not found")
+
+        assertThat(response.headers.containsKey("X-Specmatic-Type")).isFalse()
     }
 
     @Test
@@ -317,6 +549,8 @@ class StatefulHttpStubTest {
         val responseBody = response.body as StringValue
         assertThat(responseBody.toStringLiteral()).contains("Resource with resourceId '0' not found")
         assertThat(responseBody.toStringLiteral()).contains("WARNING: The response is in string format since no schema found in the specification for 404 response")
+
+        assertThat(response.headers.containsKey("X-Specmatic-Type")).isFalse()
     }
 }
 
@@ -335,7 +569,7 @@ class StatefulHttpStubWithAttributeSelectionTest {
             ).toFeature()
             val specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml")
             val scenarios = feature.scenarios.map {
-                it.copy(attributeSelectionPattern = specmaticConfig.attributeSelectionPattern)
+                it.copy(attributeSelectionPattern = getAttributeSelectionPattern(specmaticConfig))
             }
             httpStub = StatefulHttpStub(
                 specmaticConfigPath = "$SPEC_DIR_PATH/specmatic.yaml",
@@ -486,7 +720,8 @@ class StatefulHttpStubSeedDataFromExamplesTest {
 
             val scenarioStubs = loadContractStubsFromImplicitPaths(
                 contractPathDataList = listOf(ContractPathData("", specPath)),
-                specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml")
+                specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml"),
+                externalDataDirPaths = emptyList()
             ).flatMap { it.second }
 
             httpStub = StatefulHttpStub(
@@ -518,7 +753,7 @@ class StatefulHttpStubSeedDataFromExamplesTest {
         assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
 
         val responseBody = (response.body as JSONArrayValue)
-        assertThat(responseBody.list.size).isEqualTo(4)
+        assertThat(responseBody.list.size).isEqualTo(5)
 
         val responseObjectFromResponseBody = (response.body as JSONArrayValue)
             .list.filterIsInstance<JSONObjectValue>().first { it.getStringValue("id") == "300" }
@@ -529,7 +764,6 @@ class StatefulHttpStubSeedDataFromExamplesTest {
         assertThat(responseObjectFromResponseBody.getStringValue("price")).isEqualTo("942")
         assertThat(responseObjectFromResponseBody.getStringValue("inStock")).isEqualTo("true")
     }
-
 
     @Test
     fun `should get the product from seed data loaded from examples`() {
@@ -551,6 +785,25 @@ class StatefulHttpStubSeedDataFromExamplesTest {
     }
 
     @Test
+    fun `should get the Samsung Ultra product from seed data loaded from examples which is a merge of request and response bodies`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products/700"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        val responseBody = response.body as JSONObjectValue
+
+        assertThat(responseBody.getStringValue("id")).isEqualTo("700")
+        assertThat(responseBody.getStringValue("name")).isEqualTo("Samsung Ultra")
+        assertThat(responseBody.getStringValue("description")).isEqualTo("Samsung Ultra Description")
+        assertThat(responseBody.getStringValue("price")).isEqualTo("1000")
+        assertThat(responseBody.getStringValue("inStock")).isEqualTo("false")
+    }
+
+    @Test
     fun `should not load the xiaomi product from the seed data as it has the same id (300) as that of iphone example`() {
         val response = httpStub.client.execute(
             HttpRequest(
@@ -563,7 +816,7 @@ class StatefulHttpStubSeedDataFromExamplesTest {
         assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
 
         val responseBody = (response.body as JSONArrayValue)
-        assertThat(responseBody.list.size).isEqualTo(4)
+        assertThat(responseBody.list.size).isEqualTo(5)
 
         val responseObjectsFromResponseBody = (response.body as JSONArrayValue)
             .list.filterIsInstance<JSONObjectValue>().filter { it.getStringValue("id") == "300" }
@@ -588,7 +841,7 @@ class StatefulHttpStubSeedDataFromExamplesTest {
         assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
 
         val responseBody = (response.body as JSONArrayValue)
-        assertThat(responseBody.list.size).isEqualTo(4)
+        assertThat(responseBody.list.size).isEqualTo(5)
 
         val productsWithIds500And600 = (response.body as JSONArrayValue)
             .list.filterIsInstance<JSONObjectValue>().filter {
@@ -651,6 +904,11 @@ class StatefulHttpStubConcurrencyTest {
                             )
                         )
                     )
+                } catch(t: Throwable) {
+                    println("Thread index: $threadIndex")
+                    println(t.message ?: t.localizedMessage)
+                    t.printStackTrace()
+                    throw t
                 } finally {
                     latch.countDown()
                 }

@@ -38,6 +38,10 @@ data class HttpResponse(
                 else -> HttpStatusCode.fromValue(status).description
             }
 
+    fun withoutSpecmaticTypeHeader(): HttpResponse {
+        return this.copy(headers = this.headers.filterKeys { it != "X-Specmatic-Type" })
+    }
+
     fun specmaticResultHeaderValue(): String =
         this.headers.getOrDefault(SPECMATIC_RESULT_HEADER, "success")
 
@@ -111,6 +115,10 @@ data class HttpResponse(
         return this.copy(headers = withoutSpecmaticHeaders)
     }
 
+    fun withoutSpecmaticResultHeader(): HttpResponse {
+        return this.copy(headers = this.headers.minus(SPECMATIC_RESULT_HEADER))
+    }
+
     companion object {
         val ERROR_400 = HttpResponse(400, "This request did not match any scenario.", emptyMap())
         val OK = HttpResponse(200, emptyMap())
@@ -170,6 +178,17 @@ data class HttpResponse(
 
     private fun headersHasOnlyTextPlainContentTypeHeader() = headers.size == 1 && headers[CONTENT_TYPE] == "text/plain"
 
+    fun checkIfAllRootLevelKeysAreAttributeSelected(
+        attributeSelectedFields: Set<String>,
+        resolver: Resolver
+    ): Result {
+        if (body !is JSONComposite) return Result.Success()
+
+        return body.checkIfAllRootLevelKeysAreAttributeSelected(
+            attributeSelectedFields,
+            resolver
+        ).breadCrumb("RESPONSE.BODY")
+    }
 }
 
 fun isVanillaPatternToken(token: String) = isPatternToken(token) && token.indexOf(':') < 0

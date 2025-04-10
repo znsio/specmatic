@@ -65,7 +65,7 @@ reportTable.addEventListener("click", (event) => {
     responseSummary.replaceChildren(responseElement);
     const borderColor = `border-${selectedResponse.color}-300`;
     responseSummary.className = responseSummary.className.replace(/border-\w{3,}-300/, borderColor);
-    const scenarios = SCENARIOS[selectedResponse.firstGroup]?.[selectedResponse.secondGroup]?.[selectedResponse.thirdGroup] ?? [];
+    const scenarios = SCENARIOS[selectedResponse.firstGroup]?.[selectedResponse.secondGroup]?.[selectedResponse.contentType]?.[selectedResponse.thirdGroup] ?? [];
     addScenarios(scenarios);
     event.stopPropagation();
   }
@@ -100,6 +100,8 @@ function createResponseSummaryDetails(response) {
   const documentFragment = document.createDocumentFragment();
 
   for (const [key, value] of Object.entries(response)) {
+    if (!value) continue;
+
     const li = document.createElement("li");
     li.classList.add("flex-shrink-0");
 

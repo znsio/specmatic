@@ -19,12 +19,7 @@ data class QueryParameterScalarPattern(override val pattern: Pattern): Pattern b
         }
 
         return try {
-            val parsedValue = if(isPatternToken(sampleDataString)) {
-                StringValue(sampleDataString)
-            }
-            else {
-                pattern.parse(sampleDataString, resolver)
-            }
+            val parsedValue = runCatching { pattern.parse(sampleDataString, resolver) }.getOrDefault(StringValue(sampleDataString))
             resolver.matchesPattern(null, pattern, parsedValue)
         } catch (e: Throwable) {
             Result.Failure(exceptionCauseMessage(e))
@@ -37,6 +32,10 @@ data class QueryParameterScalarPattern(override val pattern: Pattern): Pattern b
 
     override fun parse(value: String, resolver: Resolver): Value {
         return  pattern.parse(value, resolver)
+    }
+
+    override fun fixValue(value: Value, resolver: Resolver): Value {
+        return fixValue(value, this, resolver)
     }
 
     override fun encompasses(

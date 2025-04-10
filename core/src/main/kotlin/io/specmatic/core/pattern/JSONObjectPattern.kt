@@ -20,13 +20,81 @@ fun toJSONObjectPattern(map: Map<String, Pattern>, typeAlias: String? = null): J
     return JSONObjectPattern(map.minus("..."), missingKeyStrategy, typeAlias)
 }
 
+sealed interface AdditionalProperties {
+    fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern>
+    fun encompasses(other: AdditionalProperties, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result
+    val description: String
+
+    data object NoAdditionalProperties : AdditionalProperties {
+        override fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern> {
+            return patternMap
+        }
+
+        override fun encompasses(other: AdditionalProperties, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+            return if (other is NoAdditionalProperties) Result.Success()
+            else Result.Failure("Expected $description, but updated schema allowed ${other.description}")
+        }
+
+        override val description: String
+            get() = "no additional properties"
+    }
+
+    data object FreeForm : AdditionalProperties {
+        override fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern> {
+            val extraKeys = valueMap.excludingPatternKeys(patternMap)
+            return patternMap + extraKeys.associateWith { AnyValuePattern }
+        }
+
+        override fun encompasses(other: AdditionalProperties, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+            return Result.Success()
+        }
+
+        override val description: String
+            get() = "a free form object"
+    }
+
+    data class PatternConstrained(val pattern: Pattern): AdditionalProperties {
+        override fun updatePatternMap(patternMap: Map<String, Pattern>, valueMap: Map<String, Value>): Map<String, Pattern> {
+            val extraKeys = valueMap.excludingPatternKeys(patternMap)
+            return patternMap + extraKeys.associateWith { pattern }
+        }
+
+        override fun encompasses(other: AdditionalProperties, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+            return when(other) {
+                is NoAdditionalProperties -> Result.Success()
+                is FreeForm -> Result.Failure("value constrained additional properties does not encompass free form")
+                is PatternConstrained -> this.pattern.encompasses(other.pattern, thisResolver, otherResolver, typeStack)
+            }
+        }
+
+        override val description: String
+            get() = "additional properties constrained by ${pattern.typeAlias?.let { withoutPatternDelimiters(it) } ?: "a schema"}"
+    }
+
+    fun Map<String, Value>.excludingPatternKeys(pattern: Map<String, Pattern>): Set<String> {
+        val patternKeys = pattern.keys.map(::withoutOptionality).toSet()
+        return keys.minus(patternKeys)
+    }
+}
+
 data class JSONObjectPattern(
     override val pattern: Map<String, Pattern> = emptyMap(),
     private val unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys,
     override val typeAlias: String? = null,
     val minProperties: Int? = null,
-    val maxProperties: Int? = null
+    val maxProperties: Int? = null,
+    val additionalProperties: AdditionalProperties = AdditionalProperties.NoAdditionalProperties
 ) : Pattern, PossibleJsonObjectPatternContainer {
+
+    override fun fixValue(value: Value, resolver: Resolver): Value {
+        if (resolver.matchesPattern(null, this, value).isSuccess()) return value
+        val valueMap = (value as? JSONObjectValue)?.jsonObject.orEmpty()
+        val adjustedPattern = additionalProperties.updatePatternMap(pattern, valueMap)
+
+        return JSONObjectValue(
+            fix(jsonPatternMap = adjustedPattern, jsonValueMap = valueMap, resolver = resolver, jsonPattern = this)
+        )
+    }
 
     override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
         if (value !is JSONObjectValue) return value
@@ -41,8 +109,8 @@ data class JSONObjectPattern(
     }
 
     override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {
-        if(concretePattern !is JSONObjectPattern)
-            throw ContractException("Expected json object type but got ${concretePattern.typeName}")
+        if (additionalProperties is AdditionalProperties.FreeForm && pattern.isEmpty()) return concretePattern
+        if (concretePattern !is JSONObjectPattern) throw ContractException("Expected json object type but got ${concretePattern.typeName}")
 
         val updatedPatternMapWithTypeAliases = concretePattern.pattern.mapValues { (key, concreteChildPattern) ->
             val originalChildPattern =
@@ -59,56 +127,30 @@ data class JSONObjectPattern(
     }
 
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
-
-        val mapWithKeysInPartial = jsonObject.jsonObject.mapValues { (name, value) ->
-            val valuePattern = pattern[name] ?: pattern["$name?"] ?: return@mapValues HasFailure<Value>(
-                Result.Failure(
-                    resolver.mismatchMessages.unexpectedKey("header", name)
-                )
-            ).breadCrumb(name)
-
-            val returnValue = if (value is StringValue && isPatternToken(value.string)) {
-                try {
-                    val generatedValue = resolver.generate(typeAlias, name, resolver.getPattern(value.string))
-                    val matchResult = valuePattern.matches(generatedValue, resolver)
-
-                    if (matchResult is Result.Failure)
-                        HasFailure(matchResult, "Could not generate value for key $name")
-                    else
-                        HasValue(generatedValue)
-                } catch(e: Throwable) {
-                    HasException(e)
-                }
-            } else if (value is ScalarValue) {
-                val matchResult = valuePattern.matches(value, resolver)
-
-                val returnValue: ReturnValue<Value> = if (matchResult is Result.Failure)
-                    HasFailure(matchResult)
-                else
-                    HasValue(value)
-
-                returnValue
-            } else {
-                valuePattern.fillInTheBlanks(value, resolver.plusDictionaryLookupDetails(typeAlias, name))
+        val patternToConsider = when (val resolvedPattern = resolveToPattern(value, resolver, this)) {
+            is ReturnFailure -> return resolvedPattern.cast()
+            else -> (resolvedPattern.value as? JSONObjectPattern) ?: return when(resolver.isNegative) {
+                true -> fillInIfPatternToken(value, resolvedPattern.value, resolver)
+                else -> HasFailure("Pattern is not a json object pattern")
             }
-
-            returnValue.breadCrumb(name)
-        }.mapFold()
-
-        val mapWithMissingKeysGenerated = pattern.filterKeys {
-            !it.endsWith("?") && it !in jsonObject.jsonObject
-        }.mapValues { (name, valuePattern) ->
-            try {
-                HasValue(resolver.generate(typeAlias, name, valuePattern))
-            } catch(e: Throwable) {
-                HasException(e)
-            }.breadCrumb(name)
-        }.mapFold()
-
-        return mapWithKeysInPartial.combine(mapWithMissingKeysGenerated) { entriesInPartial, missingEntries ->
-            jsonObject.copy(jsonObject = entriesInPartial + missingEntries)
         }
+
+        val valueToConsider = when {
+            value is JSONObjectValue -> value.jsonObject
+            value is StringValue && value.isPatternToken() -> {
+                patternToConsider.pattern.filterNot { isOptional(it.key) }.mapValues { StringValue("(anyvalue)") }
+            }
+            resolver.isNegative -> return HasValue(value)
+            else -> return HasFailure("Can't generate object value from type ${value.displayableType()}")
+        }
+
+        return fill(
+            jsonPatternMap = patternToConsider.pattern, jsonValueMap = valueToConsider,
+            typeAlias = patternToConsider.typeAlias.orEmpty(), resolver = resolver
+        ).realise(
+            hasValue = { valuesMap, _ -> HasValue(JSONObjectValue(valuesMap)) },
+            orException = { e -> e.cast() }, orFailure = { f -> f.cast() }
+        )
     }
 
     override fun removeKeysNotPresentIn(keys: Set<String>, resolver: Resolver): Pattern {
@@ -138,12 +180,15 @@ data class JSONObjectPattern(
         if(value !is JSONObjectValue)
             return HasFailure(Result.Failure("Cannot resolve substitutions, expected object but got ${value.displayableType()}"))
 
+        if(pattern.isEmpty())
+            return HasValue(value)
+
         val updatedMap = value.jsonObject.mapValues { (key, value) ->
             val pattern = attempt("Could not find key in json object", key) { pattern[key] ?: pattern["$key?"] ?: throw MissingDataException("Could not find key $key") }
             pattern.resolveSubstitutions(substitution, value, resolver, key).breadCrumb(key)
         }
 
-        return updatedMap.mapFold().ifValue { value.copy(it) }
+        return updatedMap.mapFoldException().ifValue { value.copy(it) }
     }
 
     override fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {
@@ -191,7 +236,7 @@ data class JSONObjectPattern(
 
             is JSONObjectPattern -> {
                 val propertyLimitResults: List<Result.Failure> = olderPropertyLimitsEncompassNewer(this, otherPattern)
-                mapEncompassesMap(
+                val patternResult = mapEncompassesMap(
                     pattern,
                     otherPattern.pattern,
                     thisResolverWithNullType,
@@ -199,6 +244,14 @@ data class JSONObjectPattern(
                     typeStack,
                     propertyLimitResults
                 )
+
+                val additionalPropertiesResult = additionalProperties.encompasses(
+                    otherPattern.additionalProperties,
+                    thisResolverWithNullType,
+                    otherResolverWithNullType,
+                    typeStack
+                )
+                return Result.fromResults(listOf(patternResult, additionalPropertiesResult))
             }
 
             else -> Result.Failure("Expected json type, got ${otherPattern.typeName}")
@@ -275,7 +328,7 @@ data class JSONObjectPattern(
             if (shouldMakePropertyMandatory(it.value, resolver)) {
                 withoutOptionality(it.key)
             } else it.key
-        }
+        }.let { additionalProperties.updatePatternMap(it, sampleData.jsonObject) }
 
         val keyErrors: List<Result.Failure> = resolverWithNullType.findKeyErrorList(adjustedPattern, sampleData.jsonObject).map {
             if (pattern[it.name] != null) {
@@ -382,14 +435,13 @@ data class JSONObjectPattern(
             pattern.minus("..."),
             Row(),
             null,
-            null, returnValues { pattern: Map<String, Pattern> ->
-                newBasedOn(pattern, withNullPattern(resolver))
-            }).map { it.value }.map { toJSONObjectPattern(it) }
+            null, returnValues { pattern: Map<String, Pattern> -> newBasedOn(pattern, withNullPattern(resolver)) }
+        ).map { it.value }.map { toJSONObjectPattern(it, typeAlias) }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> =
         allOrNothingCombinationIn(pattern.minus("...")) { pattern ->
             AllNegativePatterns().negativeBasedOn(pattern, row, withNullPattern(resolver), config)
-        }.map { it.ifValue { toJSONObjectPattern(it) } }
+        }.map { it.ifValue { toJSONObjectPattern(it, typeAlias) } }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)
     override fun hashCode(): Int = pattern.hashCode()
@@ -470,6 +522,86 @@ fun generate(jsonPatternMap: Map<String, Pattern>, resolver: Resolver, jsonPatte
         }
         .filterValues { it.isPresent }
         .mapValues { (_, opt) -> opt.get() }
+}
+
+fun fix(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, resolver: Resolver, jsonPattern: JSONObjectPattern): Map<String, Value> {
+    val defaultKeyToPatternValuePair = adjustedPattern(jsonPatternMap, resolver)
+        .map { (key, pattern) -> key to Pair(pattern, NullValue) }
+        .toMap()
+
+    val keyToPatternValuePair = jsonValueMap.mapNotNull { (key, value) ->
+        val pattern = jsonPatternMap[key] ?: jsonPatternMap["$key?"]
+        if (pattern == null && resolver.findKeyErrorCheck.unexpectedKeyCheck is ValidateUnexpectedKeys) return@mapNotNull null
+        key to Pair(pattern, value)
+    }.toMap()
+
+    val finalMap = defaultKeyToPatternValuePair.plus(keyToPatternValuePair)
+    return finalMap.mapValues { (key, patternToValue) ->
+        val (pattern, value) = patternToValue
+        if (pattern == null) return@mapValues Optional.of(value)
+
+        attempt(breadCrumb = key) {
+            val returnNullOnCycle = jsonPatternMap.containsKey("$key?")
+            val fixedValue = Optional.ofNullable(
+                resolver.withCyclePrevention(jsonPattern, key, returnNullOnCycle) {
+                    it.fix(jsonPattern.typeAlias, key, pattern, value)
+                }
+            )
+
+            if (fixedValue.isPresent || resolver.hasSeenLookupPath(jsonPattern, key)) return@attempt fixedValue
+
+            val resolverWithCycleMarker = resolver.cyclePast(jsonPattern, key)
+            Optional.ofNullable(
+                resolverWithCycleMarker.withCyclePrevention(jsonPattern, key, returnNullOnCycle) {
+                    it.fix(jsonPattern.typeAlias, key, pattern, value)
+                }
+            )
+        }
+    }
+    .filterValues { it.isPresent }
+    .mapValues { (_, opt) -> opt.get() }
+}
+
+fun fill(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, resolver: Resolver, typeAlias: String): ReturnValue<Map<String, Value>> {
+    val resolvedValuesMap = jsonValueMap.mapValues { (key, value) ->
+        val updatedResolver = resolver.updateLookupPath(typeAlias, key)
+        val pattern = jsonPatternMap[key] ?: jsonPatternMap["$key?"] ?: return@mapValues when {
+            resolver.findKeyErrorCheck.unexpectedKeyCheck is IgnoreUnexpectedKeys -> generateIfPatternToken(value, updatedResolver)
+            resolver.isNegative -> generateIfPatternToken(value, updatedResolver)
+            else -> HasFailure<Value>(Result.Failure(resolver.mismatchMessages.unexpectedKey("key", key)))
+        }.breadCrumb(key)
+        pattern.fillInTheBlanks(value, updatedResolver).breadCrumb(key)
+    }.mapFold()
+
+    val remainingKeysToPattern = when {
+        resolver.isNegative -> emptyMap()
+        resolver.allPatternsAreMandatory -> jsonPatternMap.mapKeys { withoutOptionality(it.key) }.filterKeys { it !in jsonValueMap }
+        else -> jsonPatternMap.filterKeys { !isOptional(it) && it !in jsonValueMap }
+    }
+
+    val generatedValuesMap = remainingKeysToPattern.mapValues { (key, pattern) ->
+        // TODO: call fillInTheBlanks so nested patterns don't generate optional keys, Need to figure cyclePrevention for that to work
+        runCatching { resolver.generate(typeAlias, key, pattern) }.map(::HasValue).getOrElse(::HasException).breadCrumb(key)
+    }.mapFold()
+
+    return resolvedValuesMap.combine(generatedValuesMap) { resolvedEntries, generatedEntries ->
+        resolvedEntries + generatedEntries
+    }
+}
+
+private fun generateIfPatternToken(value: Value, resolver: Resolver): ReturnValue<Value> {
+    if (value !is StringValue || !value.isPatternToken()) return HasValue(value)
+    return runCatching {
+        val pattern = resolver.getPattern(value.string)
+        if (pattern is AnyValuePattern) return@runCatching resolver.generate(StringPattern())
+        resolver.generate(pattern)
+    }.map(::HasValue).getOrElse(::HasException)
+}
+
+private fun adjustedPattern(jsonPatternMap: Map<String, Pattern>, resolver: Resolver): Map<String, Pattern> {
+    if (resolver.isPartial()) return emptyMap()
+    if (!resolver.allPatternsAreMandatory) return jsonPatternMap.filterKeys { !isOptional(it) }
+    return jsonPatternMap.mapKeys { withoutOptionality(it.key) }
 }
 
 private fun selectPropertiesWithinMaxAndMin(

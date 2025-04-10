@@ -1,5 +1,6 @@
 package io.specmatic.test.asserts
 
+import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
@@ -220,7 +221,7 @@ class AssertConditionalTest {
             ))
         ))
 
-        val assert = AssertConditional.parse("REQUEST.BODY", "\$if", assertSyntax)
+        val assert = AssertConditional.parse("REQUEST.BODY", "\$if", assertSyntax, Resolver())
 
         assertThat(assert).isInstanceOf(AssertConditional::class.java)
         assert as AssertConditional

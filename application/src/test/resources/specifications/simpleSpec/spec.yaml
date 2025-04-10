@@ -1,0 +1,35 @@
+openapi: 3.0.0
+info:
+  title: Simple API
+  version: 1.0.0
+paths:
+  /greeting:
+    post:
+      summary: Accepts a name and returns a greeting message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+            examples:
+              JOHN:
+                value:
+                  name: John
+      responses:
+        '200':
+          description: A personalized greeting message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                JOHN:
+                  value:
+                    message: Hello John

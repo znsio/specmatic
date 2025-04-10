@@ -44,7 +44,7 @@ internal class SamplesCommandKtTest {
 
         val (data, _) = captureStandardOutput {
             val gherkin = specFile.readText().trim()
-            HttpStub(gherkin, emptyList(), "localhost", 9000).use { fake ->
+            HttpStub(gherkin, emptyList(), "localhost", 56789).use { fake ->
                 Contract.fromGherkin(gherkin).samples(fake)
             }
         }
@@ -62,7 +62,7 @@ internal class SamplesCommandKtTest {
             command.contractFile = specFile
 
             val gherkin = specFile.readText().trim()
-            HttpStub(gherkin, emptyList(), "localhost", 9000).use { fake ->
+            HttpStub(gherkin, emptyList(), "localhost", 56789).use { fake ->
                 Contract.fromGherkin(gherkin).samples(fake)
             }
         }

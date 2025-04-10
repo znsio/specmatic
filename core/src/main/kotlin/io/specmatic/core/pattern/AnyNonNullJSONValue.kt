@@ -24,4 +24,12 @@ data class AnyNonNullJSONValue(override val pattern: Pattern = AnythingPattern):
             else -> Result.Failure("Changing from anyType to ${otherPattern.typeName} is a breaking change.")
         }
     }
+
+    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
+        return fillInTheBlanksWithPattern(value, resolver, this)
+    }
+
+    override fun fixValue(value: Value, resolver: Resolver): Value {
+        return value.takeIf { this.matches(it, resolver).isSuccess() } ?: resolver.generate(pattern)
+    }
 }

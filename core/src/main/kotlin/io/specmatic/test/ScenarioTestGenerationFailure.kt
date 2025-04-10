@@ -10,13 +10,14 @@ import io.specmatic.core.log.logger
 
 class ScenarioTestGenerationFailure(
     var scenario: Scenario,
-    val failure: Result.Failure
+    val failure: Result.Failure,
+    val message: String,
 ): ContractTest {
 
     init {
-        val exampleRow = scenario.examples.flatMap { it.rows }.firstOrNull { it.name == failure.message }
+        val exampleRow = scenario.examples.flatMap { it.rows }.firstOrNull { it.name == message }
         if (exampleRow != null) {
-            scenario = scenario.copy(exampleRow = exampleRow, exampleName = failure.message)
+            scenario = scenario.copy(exampleRow = exampleRow, exampleName = message)
         }
     }
 
@@ -27,15 +28,16 @@ class ScenarioTestGenerationFailure(
 
     override fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord {
         return TestResultRecord(
-            convertPathParameterStyle(scenario.path),
-            scenario.method,
-            scenario.status,
-            result.testResult(),
-            scenario.sourceProvider,
-            scenario.sourceRepository,
-            scenario.sourceRepositoryBranch,
-            scenario.specification,
-            scenario.serviceType,
+            path = convertPathParameterStyle(scenario.path),
+            method = scenario.method,
+            requestContentType = scenario.requestContentType,
+            responseStatus = scenario.status,
+            result = result.testResult(),
+            sourceProvider = scenario.sourceProvider,
+            sourceRepository = scenario.sourceRepository,
+            sourceRepositoryBranch = scenario.sourceRepositoryBranch,
+            specification = scenario.specification,
+            serviceType = scenario.serviceType,
             actualResponseStatus = 0,
             scenarioResult = result
         )

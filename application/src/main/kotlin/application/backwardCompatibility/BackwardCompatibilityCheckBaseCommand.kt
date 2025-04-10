@@ -5,15 +5,16 @@ import io.specmatic.core.Results
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.logger
-import io.specmatic.core.utilities.exitWithMessage
 import picocli.CommandLine.Option
 import java.io.File
+import java.nio.file.Paths
 import java.util.concurrent.Callable
 import java.util.regex.Pattern
+import kotlin.io.path.absolutePathString
 import kotlin.system.exitProcess
 
 abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
-    private val gitCommand: GitCommand = SystemGit()
+    private lateinit var gitCommand: GitCommand
     private val newLine = System.lineSeparator()
     private var areLocalChangesStashed = false
 
@@ -34,7 +35,15 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     )
     var targetPath: String = ""
 
+    @Option(
+        names = ["--repo-dir"],
+        description = ["The directory of the repository in which to run the backward compatibility check. If not provided, the check will run in the current working directory."],
+        required = false
+    )
+    var repoDir: String = "."
+
     abstract fun checkBackwardCompatibility(oldFeature: IFeature, newFeature: IFeature): Results
+    abstract fun File.isValidFileFormat(): Boolean
     abstract fun File.isValidSpec(): Boolean
     abstract fun getFeatureFromSpecPath(path: String): IFeature
 
@@ -47,8 +56,9 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     open fun getUnusedExamples(feature: IFeature): Set<String> = emptySet()
 
     final override fun call() {
+        gitCommand = SystemGit(workingDirectory = Paths.get(repoDir).absolutePathString())
         addShutdownHook()
-        val filteredSpecs = getChangedSpecs(logSpecs = true)
+        val filteredSpecs = getChangedSpecs()
         val result = try {
             runBackwardCompatibilityCheckFor(
                 files = filteredSpecs,
@@ -65,32 +75,34 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         exitProcess(result.exitCode)
     }
 
-    fun getChangedSpecs(logSpecs: Boolean = false): Set<String> {
+    private fun getChangedSpecs(): Set<String> {
         val filesChangedInCurrentBranch = getChangedSpecsInCurrentBranch().filter {
             it.contains(targetPath)
         }.toSet()
+
         val filesReferringToChangedSchemaFiles = getSpecsReferringTo(filesChangedInCurrentBranch)
+
         val specificationsOfChangedExternalisedExamples =
             getSpecsOfChangedExternalisedExamples(filesChangedInCurrentBranch)
 
-        if(logSpecs) {
-            logFilesToBeCheckedForBackwardCompatibility(
-                filesChangedInCurrentBranch,
-                filesReferringToChangedSchemaFiles,
-                specificationsOfChangedExternalisedExamples
-            )
-        }
+        logFilesToBeCheckedForBackwardCompatibility(
+            filesChangedInCurrentBranch,
+            filesReferringToChangedSchemaFiles,
+            specificationsOfChangedExternalisedExamples
+        )
 
-        return filesChangedInCurrentBranch +
+        val collectedFiles = filesChangedInCurrentBranch +
                 filesReferringToChangedSchemaFiles +
                 specificationsOfChangedExternalisedExamples
+
+        return collectedFiles.map { path -> File(path).canonicalPath }.toSet()
     }
 
     private fun getChangedSpecsInCurrentBranch(): Set<String> {
         return gitCommand.getFilesChangedInCurrentBranch(
             baseBranch()
         ).filter {
-            File(it).exists() && File(it).isValidSpec()
+            File(it).exists() && File(it).isValidFileFormat()
         }.toSet().also {
             if (it.isEmpty()) {
                 logger.log("$newLine No specs were changed, skipping the check.$newLine")
@@ -99,29 +111,43 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         }
     }
 
-    open fun getSpecsReferringTo(schemaFiles: Set<String>): Set<String> {
-        if (schemaFiles.isEmpty()) return emptySet()
+    open fun getSpecsReferringTo(specFilePaths: Set<String>): Set<String> {
+        if (specFilePaths.isEmpty()) return emptySet()
+        val specFiles = specFilePaths.map { File(it) }
+        val allSpecFileContent = allSpecFiles().associateWith { it.readText() }
 
-        val inputFileNames = schemaFiles.map { File(it).name }
-        val result = allSpecFiles().filter {
-            it.readText().trim().let { specContent ->
-                inputFileNames.any { inputFileName ->
-                    val pattern = Pattern.compile("\\b${regexForMatchingReferred(inputFileName)}\\b")
-                    val matcher = pattern.matcher(specContent)
-                    matcher.find()
-                }
+        val referringSpecsSoFar = mutableSetOf<File>()
+        val queue = ArrayDeque(specFiles)
+
+        while (queue.isNotEmpty()) {
+            val combinedPattern = Pattern.compile(queue.toSet().joinToString(prefix = "\\b(?:", separator = "|", postfix = ")\\b") { specFile ->
+                regexForMatchingReferred(specFile.name).let { Regex.escape(it) }
+            })
+
+            queue.clear()
+
+            val referringSpecs = allSpecFileContent.entries.filter { (specFile, content) ->
+                specFile !in referringSpecsSoFar && combinedPattern.matcher(content).find()
+            }.map {
+                it.key
+            }.filter { referringSpecFile ->
+                referringSpecsSoFar.add(referringSpecFile)
             }
-        }.map { it.path }.toSet()
 
-        return result.flatMap {
-            getSpecsReferringTo(setOf(it)).ifEmpty { setOf(it) }
+            queue.addAll(referringSpecs)
+        }
+
+        return referringSpecsSoFar.filter {
+            it !in specFiles
+        }.map {
+            it.canonicalPath
         }.toSet()
     }
 
     internal fun allSpecFiles(): List<File> {
-        return File(".").walk().toList().filterNot {
+        return File(repoDir).walk().toList().filterNot {
             ".git" in it.path
-        }.filter { it.isFile && it.isValidSpec() }
+        }.filter { it.isFile && it.isValidFileFormat() }
     }
 
     private fun logFilesToBeCheckedForBackwardCompatibility(
@@ -161,6 +187,13 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
                 try {
                     logger.log("${index.inc()}. Running the check for $specFilePath:")
 
+                    if (with(File(specFilePath)) {
+                            exists() && isValidSpec().not()
+                        }) {
+                        logger.log("${ONE_INDENT}Skipping $specFilePath as it is not a valid spec file.$newLine")
+                        return@mapIndexed null
+                    }
+
                     // newer => the file with changes on the branch
                     val newer = getFeatureFromSpecPath(specFilePath)
                     val unusedExamples = getUnusedExamples(newer)
@@ -197,7 +230,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
                 }
             }
 
-            return CompatibilityReport(results)
+            return CompatibilityReport(results.filterNotNull())
         } finally {
             gitCommand.checkout(treeishWithChanges)
         }
@@ -282,7 +315,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     companion object {
         private const val HEAD = "HEAD"
         private const val MARGIN_SPACE = "  "
-        private const val ONE_INDENT = "  "
+        internal const val ONE_INDENT = "  "
         private const val TWO_INDENTS = "${ONE_INDENT}${ONE_INDENT}"
     }
 }

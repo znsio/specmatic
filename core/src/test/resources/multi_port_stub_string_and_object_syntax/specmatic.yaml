@@ -1,0 +1,10 @@
+version: 2
+contracts:
+  - filesystem:
+      directory: "."
+    consumes:
+      - ./product.yaml
+      - port: 9001
+        specs:
+          - ./order.yaml
+          - ./exported_product/exported_product.yaml

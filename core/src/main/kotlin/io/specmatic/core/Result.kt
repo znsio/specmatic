@@ -75,7 +75,7 @@ sealed class Result {
     abstract fun testResult(): TestResult
     abstract fun withFailureReason(urlPathMisMatch: FailureReason): Result
     abstract fun throwOnFailure(): Success
-    abstract fun <T> toReturnValue(returnValue: T, errorMessage: String): ReturnValue<T>
+    abstract fun <T> toReturnValue(returnValue: T, errorMessage: String? = null): ReturnValue<T>
     abstract fun <V> onSuccessElseNull(function: () -> V): V?
 
     data class FailureCause(val message: String="", var cause: Failure? = null) {
@@ -138,6 +138,17 @@ sealed class Result {
                 .plus("$prefix$breadCrumb")
         }
 
+        fun withResponseRelatedCauses(): Failure {
+            val responseRelatedCause = if (this.cause?.breadCrumb?.contains("RESPONSE") == true) {
+                this.cause
+            } else null
+
+            return this.copy(
+                causes = listOfNotNull(responseRelatedCause?.toFailureCause()) + this.causes.mapNotNull {
+                    it.cause?.withResponseRelatedCauses()?.toFailureCause()
+                }
+            )
+        }
 
         override fun ifSuccess(function: () -> Result) = this
         override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {
@@ -161,7 +172,7 @@ sealed class Result {
             return TestResult.Failed
         }
 
-        override fun withFailureReason(failureReason: FailureReason): Result {
+        override fun withFailureReason(failureReason: FailureReason): Failure {
             return copy(failureReason = failureReason)
         }
 
@@ -169,8 +180,8 @@ sealed class Result {
             throw ContractException(this.toFailureReport())
         }
 
-        override fun <T> toReturnValue(returnValue: T, errorMessage: String): ReturnValue<T> {
-            return HasFailure(this)
+        override fun <T> toReturnValue(returnValue: T, errorMessage: String?): ReturnValue<T> {
+            return HasFailure(this, errorMessage.orEmpty())
         }
 
         override fun <V> onSuccessElseNull(function: () -> V): V? {
@@ -307,7 +318,7 @@ sealed class Result {
             return this
         }
 
-        override fun <T> toReturnValue(returnValue: T, errorMessage: String): ReturnValue<T> {
+        override fun <T> toReturnValue(returnValue: T, errorMessage: String?): ReturnValue<T> {
             return HasValue(returnValue)
         }
 
@@ -334,6 +345,7 @@ enum class FailureReason(val fluffLevel: Int, val objectMatchOccurred: Boolean) 
     ContentTypeMismatch(1, false),
     RequestMismatchButStatusAlsoWrong(2, false),
     URLPathMisMatch(2, false),
+    URLPathParamMismatchButSameStructure(1, false),
     SOAPActionMismatch(2, false),
     DiscriminatorMismatch(0, true),
     FailedButDiscriminatorMatched(0, true),

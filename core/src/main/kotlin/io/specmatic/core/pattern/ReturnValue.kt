@@ -19,6 +19,7 @@ sealed interface ReturnValue<T> {
     fun update(fn: (T) -> T): ReturnValue<T>
     fun <U> assimilate(acc: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T>
     fun <U, V> combine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V>
+    fun <U, V> exceptionElseCombine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V>
     fun <U> realise(hasValue: (T, String?) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U
     fun addDetails(message: String, breadCrumb: String): ReturnValue<T>
 }
@@ -37,12 +38,32 @@ fun <ReturnType> returnValue(errorMessage: String = "", breadCrumb: String = "",
     }
 }
 
-fun <K, ValueType> Map<K, ReturnValue<ValueType>>.mapFold(): ReturnValue<Map<K, ValueType>> {
+fun <K, ValueType> Map<K, ReturnValue<out ValueType>>.mapFoldException(): ReturnValue<Map<K, ValueType>> {
     val initial: ReturnValue<Map<K, ValueType>> = HasValue(emptyMap())
 
-    return this.entries.fold(initial) { accR: ReturnValue<Map<K, ValueType>>, (key: K, valueR: ReturnValue<ValueType>) ->
-        accR.assimilate(valueR) { acc, value ->
+    return this.entries.fold(initial) { accR, (key, valueR) ->
+        accR.exceptionElseCombine(valueR) { acc, value ->
             acc.plus(key to value)
+        }
+    }
+}
+
+fun <K, ValueType> Map<K, ReturnValue<out ValueType>>.mapFold(): ReturnValue<Map<K, ValueType>> {
+    val initial: ReturnValue<Map<K, ValueType>> = HasValue(emptyMap())
+
+    return this.entries.fold(initial) { accR, (key, valueR) ->
+        accR.combine(valueR) { acc, value ->
+            acc.plus(key to value)
+        }
+    }
+}
+
+fun <ValueType> List<ReturnValue<ValueType>>.listFoldException(): ReturnValue<List<ValueType>> {
+    val initial: ReturnValue<List<ValueType>> = HasValue(emptyList())
+
+    return this.fold(initial) { accR: ReturnValue<List<ValueType>>, valueR: ReturnValue<ValueType> ->
+        accR.exceptionElseCombine(valueR) { acc, value ->
+            acc.plus(value)
         }
     }
 }
@@ -51,7 +72,7 @@ fun <ValueType> List<ReturnValue<ValueType>>.listFold(): ReturnValue<List<ValueT
     val initial: ReturnValue<List<ValueType>> = HasValue(emptyList())
 
     return this.fold(initial) { accR: ReturnValue<List<ValueType>>, valueR: ReturnValue<ValueType> ->
-        accR.assimilate(valueR) { acc, value ->
+        accR.combine(valueR) { acc, value ->
             acc.plus(value)
         }
     }
@@ -128,4 +149,11 @@ fun <T> exception(fn: () -> T): Throwable? {
     } catch(t: Throwable) {
         t
     }
+}
+
+fun <T> Throwable.asReturnValue(
+    message: String
+): ReturnValue<T> = when (this) {
+    is ContractException -> HasFailure(this.failure(), message = message)
+    else -> HasException(this, message = message, breadCrumb = "")
 }

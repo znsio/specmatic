@@ -1,5 +1,5 @@
 package io.specmatic.core.log
 
 interface LogPrinter {
-    fun print(msg: LogMessage)
+    fun print(msg: LogMessage, indentation: String = "")
 }

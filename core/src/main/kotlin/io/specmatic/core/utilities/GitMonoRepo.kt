@@ -3,7 +3,7 @@ package io.specmatic.core.utilities
 import io.specmatic.core.git.SystemGit
 import java.io.File
 
-data class GitMonoRepo(override val testContracts: List<String>, override val stubContracts: List<String>,
+data class GitMonoRepo(override val testContracts: List<ContractSourceEntry>, override val stubContracts: List<ContractSourceEntry>,
                        override val type: String?) : ContractSource, GitSource {
     override fun pathDescriptor(path: String): String = path
     override fun install(workingDirectory: File) {
@@ -11,10 +11,10 @@ data class GitMonoRepo(override val testContracts: List<String>, override val st
 
         val contracts = testContracts + stubContracts
 
-        for (path in contracts) {
+        for (contract in contracts) {
             val existenceMessage = when {
-                File(path).exists() -> "$path exists"
-                else -> "$path NOT FOUND!"
+                File(contract.path).exists() -> "${contract.path} exists"
+                else -> "${contract.path} NOT FOUND!"
             }
 
             println(existenceMessage)
@@ -38,10 +38,21 @@ data class GitMonoRepo(override val testContracts: List<String>, override val st
         return selector.select(this).map {
             ContractPathData(
                 monoRepoBaseDir.canonicalPath,
-                configFileLocation.resolve(it).canonicalPath,
+                configFileLocation.resolve(it.path).canonicalPath,
                 provider = type,
-                specificationPath = it
+                specificationPath = it.path,
+                port = it.port
             )
+        }
+    }
+
+    override fun stubDirectoryToContractPath(contractPathDataList: List<ContractPathData>): List<Pair<String, String>> {
+        return stubContracts.mapNotNull { contractSourceEntry ->
+            val directory = contractPathDataList.firstOrNull {
+                it.specificationPath.orEmpty() == contractSourceEntry.path
+            }?.baseDir ?: return@mapNotNull null
+
+            directory to contractSourceEntry.path
         }
     }
 }

@@ -5,16 +5,22 @@ import io.specmatic.core.git.SystemGit
 import io.specmatic.core.git.exitErrorMessageContains
 import java.io.File
 
+data class ContractSourceEntry(
+    val path: String,
+    val port: Int? = null
+)
+
 sealed interface ContractSource {
     val type:String?
-    val testContracts: List<String>
-    val stubContracts: List<String>
+    val testContracts: List<ContractSourceEntry>
+    val stubContracts: List<ContractSourceEntry>
     fun pathDescriptor(path: String): String
     fun install(workingDirectory: File)
     fun directoryRelativeTo(workingDirectory: File): File
     fun getLatest(sourceGit: SystemGit)
     fun pushUpdates(sourceGit: SystemGit)
     fun loadContracts(selector: ContractsSelectorPredicate, workingDirectory: String, configFilePath: String): List<ContractPathData>
+    fun stubDirectoryToContractPath(contractPathDataList: List<ContractPathData>): List<Pair<String, String>>
 }
 
 fun commitAndPush(sourceGit: SystemGit) {

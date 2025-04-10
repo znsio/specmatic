@@ -4,24 +4,36 @@ import integration_tests.testCount
 import io.ktor.util.reflect.*
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.specmatic.core.*
 import io.specmatic.core.log.CompositePrinter
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.LogStrategy
 import io.specmatic.core.pattern.*
-import io.specmatic.core.pattern.NumberPattern.Companion.BIG_DECIMAL_INC
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.value.*
+import io.specmatic.core.value.EmptyString
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NumberValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.stub.*
+import io.specmatic.stub.HttpStub
+import io.specmatic.stub.HttpStubData
+import io.specmatic.stub.captureStandardOutput
+import io.specmatic.stub.createStub
+import io.specmatic.stub.createStubFromContracts
+import io.specmatic.stub.stringToMockScenario
 import io.specmatic.test.ScenarioAsTest
 import io.specmatic.test.TestExecutor
 import io.specmatic.trimmedLinesString
 import io.swagger.v3.core.util.Yaml
 import io.swagger.v3.oas.models.OpenAPI
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatCode
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.condition.DisabledOnOs
@@ -42,6 +54,8 @@ fun openAPIToString(openAPI: OpenAPI): String {
 }
 
 internal class OpenApiSpecificationTest {
+    private val smallInc = BigDecimal("1")
+
     companion object {
         const val OPENAPI_FILE_WITH_YAML_EXTENSION = "openApiTest.yaml"
         const val OPENAPI_FILE_WITH_YML_EXTENSION = "openApiTest.yml"
@@ -335,10 +349,12 @@ Pet:
     @Test
     fun `scenarios should have examples of type ResponseValueExample leading to response value validation when VALIDATE_RESPONSE_VALUE flag is true and response is not empty`() {
         val openApiFile = "src/test/resources/openapi/response_schema_validation_including_optional_spec.yaml"
+        mockkObject(Flags)
+        every { Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES) } returns false
         val specmaticConfig = mockk<SpecmaticConfig> {
             every { isResponseValueValidationEnabled() } returns true
-            every { ignoreInlineExamples } returns false
-            every { stub.dictionary } returns null
+            every { getIgnoreInlineExamples() } returns false
+            every { getStubDictionary() } returns null
         }
         val openApiSpecification = OpenApiSpecification(
             openApiFilePath = openApiFile,
@@ -3309,38 +3325,6 @@ Scenario: Get product by id
     }
 
     @Test
-    fun `clone request pattern with example of body type should pick up the example`() {
-        val openAPI = openAPIToString(
-            parseGherkinStringToFeature(
-                """
-            Feature: API
-            
-            Scenario: API
-              Given type Data
-              | id | (number) |
-              When POST /data
-              And request-body (Data)
-              Then status 200
-            """.trimIndent()
-            ).toOpenApi()
-        )
-
-        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
-
-        val data = """{"id": 10}"""
-        val row = Row(columnNames = listOf("(Data)"), values = listOf(data))
-        val resolver = feature.scenarios.single().resolver
-
-        val newPatterns = feature.scenarios.single().httpRequestPattern.newBasedOn(row, resolver).map { it.value }
-
-        assertThat((newPatterns.single().body as ExactValuePattern).pattern as JSONObjectValue).isEqualTo(
-            parsedValue(
-                data
-            )
-        )
-    }
-
-    @Test
     fun `handle object inside array inside object correctly`() {
         val openAPI =
             """
@@ -4824,77 +4808,6 @@ paths:
             assertThat(testNamespaceAttribute.pattern.toStringLiteral()).isEqualTo("http://helloworld.com")
         }
 
-        @Test
-        fun `run contract tests from an OpenAPI XML spec`(@TempDir(cleanup = CleanupMode.ALWAYS) dir: File) {
-            val contractString = """
-                openapi: 3.0.3
-                info:
-                  title: test-xml
-                  version: '1.0'
-                paths:
-                  '/users':
-                    post:
-                      responses:
-                        '200':
-                          description: OK
-                      requestBody:
-                        content:
-                          application/xml:
-                            schema:
-                              ${'$'}ref: '#/components/schemas/user'
-                components:
-                  schemas:
-                    user:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                      required:
-                        - id
-            """.trimIndent()
-
-            val contractFile = dir.canonicalFile.resolve("contract.yaml")
-            contractFile.writeText(contractString)
-
-            val wrapperSpecString = """
-                Feature: Test
-                  Background:
-                    Given openapi ./contract.yaml
-                    
-                  Scenario Outline: Test
-                    When POST /users
-                    Then status 200
-                    
-                    Examples:
-                    | (user)                   |
-                    | <user><id>10</id></user> |
-            """.trimIndent()
-
-            val wrapperSpecFile = dir.canonicalFile.resolve("contract.spec")
-            wrapperSpecFile.writeText(wrapperSpecString)
-
-            val feature: Feature = parseContractFileToFeature(wrapperSpecFile.path)
-            var state = "not_called"
-
-            val result: Results = feature.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    println(request.body.toStringLiteral())
-                    assertThat(request.body.toStringLiteral()).isEqualTo("""<user><id>10</id></user>""")
-                    state = "called"
-                    return HttpResponse.OK
-                }
-
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
-
-            println(result.report())
-
-            assertThat(result.success()).isTrue()
-
-            assertThat(state).isEqualTo("called")
-        }
-
         private fun assertMatchesSnippet(xmlSnippet: String, xmlFeature: Feature) {
             assertMatchesSnippet("/users", xmlSnippet, xmlFeature)
         }
@@ -6279,6 +6192,13 @@ paths:
                 TODO("Not yet implemented")
             }
 
+            override fun <T> withIndentation(count: Int, block: () -> T): T {
+                return block()
+            }
+
+            override fun boundary() {
+                TODO("Not yet implemented")
+            }
         }
 
         ignoreButLogException {
@@ -6370,6 +6290,9 @@ paths:
                 TODO("Not yet implemented")
             }
 
+            override fun <T> withIndentation(count: Int, block: () -> T): T {
+                return block()
+            }
         }
 
         ignoreButLogException {
@@ -7730,7 +7653,7 @@ paths:
     }
 
     @Test
-    fun `minimum and maximum keywords in Number and Integer types get wired up`() {
+    fun `minimum maximum and exclusivity keywords in Number and Integer types get wired up`() {
         val minAge = BigDecimal(18.0)
         val maxAge = BigDecimal(120.0)
         val feature = OpenApiSpecification.fromYAML(
@@ -7790,11 +7713,18 @@ paths:
             override fun setServerState(serverState: Map<String, Value>) {
             }
         })
+
+        val exclusiveMin = minAge + smallInc
+        val exclusiveMax = maxAge - smallInc
+
+        val minOutsideBounds = exclusiveMin - smallInc
+        val maxOutsideBounds = exclusiveMax + smallInc
+
         assertThat(actualAges).contains(
-            minAge + BIG_DECIMAL_INC,
-            maxAge - BIG_DECIMAL_INC,
-            minAge - BIG_DECIMAL_INC,
-            maxAge + BIG_DECIMAL_INC
+            exclusiveMin,
+            exclusiveMax,
+            minOutsideBounds,
+            maxOutsideBounds
         )
 
         assertThat(results.results.size).isEqualTo(8)
@@ -8068,44 +7998,6 @@ paths:
                 assertThat(responseContentType).isEqualTo("text/something_else")
 
                 assertThat(response.body.toStringLiteral()).isEqualTo("world")
-            }
-        } finally {
-            Configuration.configFilePath = defaultSpecmaticConfig
-        }
-    }
-
-    @Test
-    fun `inline example should not be loaded as stub if there exists an externalised example with the same name`() {
-        val defaultSpecmaticConfig = Configuration.configFilePath
-
-        try {
-            Configuration.configFilePath = "src/test/resources/overriding_external_example_specmatic.yaml"
-
-            createStub(
-                host = "localhost",
-                port = 9000,
-                timeoutMillis = 1000,
-                strict = false,
-                givenConfigFileName = "src/test/resources/overriding_external_example_specmatic.yaml",
-                dataDirPaths = listOf("src/test/resources/openapi/has_overriding_external_examples_examples")
-            ).use { stub ->
-                // externalised stub data loads as expected
-                stub.client.execute(
-                    HttpRequest("GET", "/person/overriding_external_id")
-                ).also {
-                    val responseBody = (it.body as JSONObjectValue).jsonObject
-                    assertThat(responseBody["id"]).isEqualTo(NumberValue(789))
-                    assertThat(responseBody["name"]).isEqualTo(StringValue("John External Doe"))
-                }
-
-                // inline stub data does not load as expected
-                stub.client.execute(
-                    HttpRequest("GET", "/person/overridden_inline_id")
-                ).also {
-                    val responseBody = (it.body as JSONObjectValue).jsonObject
-                    assertThat(responseBody["id"]).isNotEqualTo(NumberValue(1000))
-                    assertThat(responseBody["name"]).isNotEqualTo(StringValue("Unknown"))
-                }
             }
         } finally {
             Configuration.configFilePath = defaultSpecmaticConfig
@@ -8854,8 +8746,8 @@ paths:
                                 type: "string"
             """.trimIndent()
 
-            val tests =
-                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+            val tests = feature.negativeTestScenarios().toList()
             val firstScenario = tests.first().second.value
             val secondScenario = tests.last().second.value
 
@@ -8863,11 +8755,13 @@ paths:
 
             val firstScenarioAsTest = ScenarioAsTest(
                 scenario = firstScenario,
+                feature = feature,
                 originalScenario = firstScenario,
                 flagsBased = DefaultStrategies
             )
             val secondScenarioAsTest = ScenarioAsTest(
                 scenario = secondScenario,
+                feature = feature,
                 originalScenario = secondScenario,
                 flagsBased = DefaultStrategies
             )
@@ -8921,14 +8815,15 @@ paths:
                                     type: "string"
             """.trimIndent()
 
-            val tests =
-                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+            val tests = feature.negativeTestScenarios().toList()
 
             assertThat(tests.size).isEqualTo(1)
 
             val firstScenario = tests.first().second.value
             val firstScenarioAsTest = ScenarioAsTest(
                 scenario = firstScenario,
+                feature = feature,
                 originalScenario = firstScenario,
                 flagsBased = DefaultStrategies
             )
@@ -8989,8 +8884,9 @@ paths:
                                   value: "response" 
 
             """.trimIndent()
-            val tests =
-                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+            val tests = feature.negativeTestScenarios().toList()
 
             assertThat(tests.size).isEqualTo(2)
 
@@ -8998,11 +8894,13 @@ paths:
             val secondScenario = tests.last().second.value
             val firstScenarioAsTest = ScenarioAsTest(
                 scenario = firstScenario,
+                feature = feature,
                 originalScenario = firstScenario,
                 flagsBased = DefaultStrategies
             )
             val secondScenarioAsTest = ScenarioAsTest(
                 scenario = secondScenario,
+                feature = feature,
                 originalScenario = secondScenario,
                 flagsBased = DefaultStrategies
             )
@@ -9061,8 +8959,9 @@ paths:
                               schema:
                                 type: "string"
             """.trimIndent()
-            val tests =
-                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+            val tests = feature.negativeTestScenarios().toList()
 
             assertThat(tests.size).isEqualTo(2)
 
@@ -9070,11 +8969,13 @@ paths:
             val secondScenario = tests.last().second.value
             val firstScenarioAsTest = ScenarioAsTest(
                 scenario = firstScenario,
+                feature = feature,
                 originalScenario = firstScenario,
                 flagsBased = DefaultStrategies
             )
             val secondScenarioAsTest = ScenarioAsTest(
                 scenario = secondScenario,
+                feature = feature,
                 originalScenario = secondScenario,
                 flagsBased = DefaultStrategies
             )
@@ -9149,8 +9050,9 @@ paths:
                                 EXAMPLE:
                                   value: "This is an error response"
             """.trimIndent()
-            val tests =
-                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+            val tests = feature.negativeTestScenarios().toList()
 
             assertThat(tests.size).isEqualTo(2)
 
@@ -9158,11 +9060,13 @@ paths:
             val secondScenario = tests.last().second.value
             val firstScenarioAsTest = ScenarioAsTest(
                 scenario = firstScenario,
+                feature = feature,
                 originalScenario = firstScenario,
                 flagsBased = DefaultStrategies
             )
             val secondScenarioAsTest = ScenarioAsTest(
                 scenario = secondScenario,
+                feature = feature,
                 originalScenario = secondScenario,
                 flagsBased = DefaultStrategies
             )
@@ -9869,6 +9773,996 @@ paths:
         )
     }
 
+    @Test
+    fun `the patterns in AnyPattern for a discriminated schema should have the correct type-aliases`() {
+        val specContent = """
+        openapi: 3.0.0
+        info:
+          title: Object API
+          version: "2.0"
+        paths:
+          /object:
+            get:
+              summary: Gets a object
+              responses:
+                '200':
+                  description: Success
+                  content:
+                    application/json:
+                      schema:
+                        ${'$'}ref: '#/components/schemas/Object'
+        components:
+          schemas:
+            Base:
+              type: object
+              required:
+                - objectType
+              properties:
+                id:
+                  type: number
+                objectType:
+                  type: string
+            Object:
+              allOf:
+                - ${'$'}ref: '#/components/schemas/Base'
+              discriminator:
+                propertyName: objectType
+                mapping:
+                  simple: '#/components/schemas/simpleObject'
+                  complex: '#/components/schemas/complexObject'
+            simpleObject:
+              allOf:
+                - ${'$'}ref: '#/components/schemas/Object'
+                - type: object
+                  required:
+                    - property1
+                  properties:
+                    property1:
+                      type: string
+            complexObject:
+              allOf:
+                - ${'$'}ref: '#/components/schemas/Object'
+                - type: object
+                  required:
+                    - property2
+                  properties:
+                    property2:
+                      type: string
+        """.trimIndent()
+        val apiSpec = OpenApiSpecification.fromYAML(specContent, "")
+        val feature = apiSpec.toFeature()
+        val scenario = feature.scenarios.first()
+        val resolver = scenario.resolver
+        val responseBodyPattern = resolvedHop(scenario.httpResponsePattern.body, resolver)
+
+        assertThat(responseBodyPattern).isInstanceOf(AnyPattern::class.java)
+        responseBodyPattern as AnyPattern
+        assertThat(responseBodyPattern.typeAlias).isEqualTo("(Object)")
+        assertThat(responseBodyPattern.pattern.map { it.typeAlias }).containsExactlyInAnyOrder(
+            "(simpleObject)", "(complexObject)"
+        )
+    }
+
+    @Test
+    fun `object schema with additional properties set to true should be converted to freeForm object pattern`() {
+        val specContent = """
+        openapi: '3.0.3'
+        info:
+          title: Simple API
+          version: '1.0'
+        paths:
+          /test:
+            get:
+              summary: A simple test
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        ${'$'}ref: '#/components/schemas/FreeFormObject'
+        components:
+          schemas:
+            FreeFormObject:
+              type: object
+              properties:
+                name:
+                  type: string
+                address:
+                  type: string
+              required:
+                - name
+              additionalProperties: true
+        """.trimIndent()
+        val specification = OpenApiSpecification.fromYAML(specContent, "")
+        val feature = specification.toFeature()
+        val scenario =  feature.scenarios.first()
+        val responseBodyPattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
+
+        assertThat(responseBodyPattern).isInstanceOf(JSONObjectPattern::class.java)
+        responseBodyPattern as JSONObjectPattern
+        assertThat(responseBodyPattern.typeAlias).isEqualTo("(FreeFormObject)")
+        assertThat(responseBodyPattern.pattern).isEqualTo(mapOf(
+            "name" to StringPattern(), "address?" to StringPattern()
+        ))
+
+        assertThat(responseBodyPattern.additionalProperties).isEqualTo(AdditionalProperties.FreeForm)
+    }
+
+    @Test
+    fun `object schema with empty object additionalProperties should be converted to to freeForm object pattern`() {
+        val specContent = """
+        openapi: '3.0.3'
+        info:
+          title: Simple API
+          version: '1.0'
+        paths:
+          /test:
+            get:
+              summary: A simple test
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        ${'$'}ref: '#/components/schemas/FreeFormObject'
+        components:
+          schemas:
+            FreeFormObject:
+              type: object
+              properties:
+                name:
+                  type: string
+                address:
+                  type: string
+              required:
+                - name
+              additionalProperties: {}
+        """.trimIndent()
+        val specification = OpenApiSpecification.fromYAML(specContent, "")
+        val feature = specification.toFeature()
+        val scenario =  feature.scenarios.first()
+        val responseBodyPattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
+
+        assertThat(responseBodyPattern).isInstanceOf(JSONObjectPattern::class.java)
+        responseBodyPattern as JSONObjectPattern
+        assertThat(responseBodyPattern.typeAlias).isEqualTo("(FreeFormObject)")
+        assertThat(responseBodyPattern.pattern).isEqualTo(mapOf(
+            "name" to StringPattern(), "address?" to StringPattern()
+        ))
+
+        assertThat(responseBodyPattern.additionalProperties).isEqualTo(AdditionalProperties.FreeForm)
+    }
+
+    @Test
+    fun `object schema with primitive schema as additional properties should be converted to patternConstrained object pattern`() {
+        val specContent = """
+        openapi: '3.0.3'
+        info:
+          title: Simple API
+          version: '1.0'
+        paths:
+          /test:
+            get:
+              summary: A simple test
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        ${'$'}ref: '#/components/schemas/ValueConstrained'
+        components:
+          schemas:
+            ValueConstrained:
+              type: object
+              properties:
+                name:
+                  type: string
+                address:
+                  type: string
+              required:
+                - name
+              additionalProperties:
+                type: string
+                minLength: 1
+                maxLength: 3
+        """.trimIndent()
+        val specification = OpenApiSpecification.fromYAML(specContent, "")
+        val feature = specification.toFeature()
+        val scenario =  feature.scenarios.first()
+        val responseBodyPattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
+
+        assertThat(responseBodyPattern).isInstanceOf(JSONObjectPattern::class.java)
+        responseBodyPattern as JSONObjectPattern
+        assertThat(responseBodyPattern.typeAlias).isEqualTo("(ValueConstrained)")
+        assertThat(responseBodyPattern.pattern).isEqualTo(mapOf(
+            "name" to StringPattern(), "address?" to StringPattern()
+        ))
+
+        val additionalProperties = responseBodyPattern.additionalProperties
+        assertThat(additionalProperties).isInstanceOf(AdditionalProperties.PatternConstrained::class.java)
+        additionalProperties as AdditionalProperties.PatternConstrained
+        assertThat(additionalProperties.pattern).isEqualTo(
+            StringPattern(maxLength = 3, minLength = 1)
+        )
+    }
+
+    @Test
+    fun `object schema with complex schema as additional properties should be converted to patternConstrained object pattern`() {
+        val specContent = """
+        openapi: '3.0.3'
+        info:
+          title: Simple API
+          version: '1.0'
+        paths:
+          /test:
+            get:
+              summary: A simple test
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        ${'$'}ref: '#/components/schemas/ValueConstrained'
+        components:
+          schemas:
+            ValueConstrained:
+              type: object
+              properties:
+                name:
+                  type: string
+                address:
+                  type: string
+              required:
+                - name
+              additionalProperties:
+                ${'$'}ref: '#/components/schemas/ComplexSchema'
+            ComplexSchema:
+              oneOf:
+                - type: object
+                  properties:
+                    property1:
+                      type: string
+                - type: object
+                  properties:
+                    property2:
+                      type: string
+        """.trimIndent()
+        val specification = OpenApiSpecification.fromYAML(specContent, "")
+        val feature = specification.toFeature()
+        val scenario = feature.scenarios.first()
+        val responseBodyPattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
+
+        assertThat(responseBodyPattern).isInstanceOf(JSONObjectPattern::class.java)
+        responseBodyPattern as JSONObjectPattern
+        assertThat(responseBodyPattern.typeAlias).isEqualTo("(ValueConstrained)")
+        assertThat(responseBodyPattern.pattern).isEqualTo(mapOf(
+            "name" to StringPattern(), "address?" to StringPattern()
+        ))
+
+        val additionalProperties = responseBodyPattern.additionalProperties
+        assertThat(additionalProperties).isInstanceOf(AdditionalProperties.PatternConstrained::class.java)
+        additionalProperties as AdditionalProperties.PatternConstrained
+        assertThat(resolvedHop(additionalProperties.pattern, scenario.resolver)).isEqualTo(AnyPattern(
+            pattern = listOf(
+                parsedPattern("{ \"property1?\": \"(string)\" }"),
+                parsedPattern("{ \"property2?\": \"(string)\" }")
+            ), typeAlias = "(ComplexSchema)"
+        ))
+    }
+
+    @Test
+    fun `when a content-type header with a specific value is given it should override the media-type`() {
+        val spec = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Add a new product
+                  parameters:
+                    - in: header
+                      name: Content-Type
+                      schema:
+                        type: string
+                        enum:
+                        - 'application/json; charset=utf-8'
+                      required: true
+                      description: Unneeded content type
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ProductDetails'
+                  responses:
+                    '201':
+                      description: Product created successfully
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Product'
+            components:
+              schemas:
+                ProductId:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: integer
+                ProductDetails:
+                  type: object
+                  required:
+                    - name
+                    - price
+                    - category
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    category:
+                      type: string
+                      enum:
+                        - Electronics
+                        - Clothing
+                        - Books
+                Product:
+                  allOf:
+                    - ${"$"}ref: '#/components/schemas/ProductId'
+                    - ${"$"}ref: '#/components/schemas/ProductDetails'
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.headers["Content-Type"]).isEqualTo("application/json; charset=utf-8")
+                return HttpResponse(201, parsedJSONObject("""{"id": 1, "name": "Phone", "price": 1000, "category": "Electronics"}"""))
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `should detect content type headers that conflict with media type at parse time`() {
+        val spec = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Add a new product
+                  parameters:
+                    - in: header
+                      name: Content-Type
+                      schema:
+                        type: string
+                        enum:
+                        - application/json; charset=utf-8
+                      required: true
+                      description: Unneeded content type
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ProductDetails'
+                  responses:
+                    '201':
+                      description: Product created successfully
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Product'
+            components:
+              schemas:
+                ProductId:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: integer
+                ProductDetails:
+                  type: object
+                  required:
+                    - name
+                    - price
+                    - category
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    category:
+                      type: string
+                      enum:
+                        - Electronics
+                        - Clothing
+                        - Books
+                Product:
+                  allOf:
+                    - ${"$"}ref: '#/components/schemas/ProductId'
+                    - ${"$"}ref: '#/components/schemas/ProductDetails'
+
+        """.trimIndent()
+
+        val (output, _) = captureStandardOutput {
+            OpenApiSpecification.fromYAML(spec, "").toFeature()
+        }
+
+        assertThat(output).contains("WARNING: Media type \"application/json\" in request of POST /products does not match the respective Content-Type header. Using the Content-Type header as an override.")
+    }
+
+    @Test
+    fun `inline examples should use the overridden request content type`() {
+        val spec = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Add a new product
+                  parameters:
+                    - in: header
+                      name: Content-Type
+                      schema:
+                        type: string
+                        enum:
+                        - application/json; charset=utf-8
+                      examples:
+                        SUCCESS:
+                          value: application/json; charset=utf-8
+                      required: true
+                      description: Unneeded content type
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ProductDetails'
+                        examples:
+                          SUCCESS:
+                            value:
+                              name: Phone
+                              price: 1000
+                              category: Electronics
+                  responses:
+                    '201':
+                      description: Product created successfully
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Product'
+                          examples:
+                            SUCCESS:
+                              value:
+                                id: 1
+                                name: Phone
+                                price: 1000
+                                category: Electronics
+            components:
+              schemas:
+                ProductId:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: integer
+                ProductDetails:
+                  type: object
+                  required:
+                    - name
+                    - price
+                    - category
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    category:
+                      type: string
+                      enum:
+                        - Electronics
+                        - Clothing
+                        - Books
+                Product:
+                  allOf:
+                    - ${"$"}ref: '#/components/schemas/ProductId'
+                    - ${"$"}ref: '#/components/schemas/ProductDetails'
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.headers["Content-Type"]).isEqualTo("application/json; charset=utf-8")
+                return HttpResponse(201, body = parsedJSONObject("""{"id": 10, "name": "Phone", "price": 1000, "category": "Electronics"}"""))
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `inline examples should use the overridden request content type when no example is given`() {
+        val spec = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Add a new product
+                  parameters:
+                    - in: header
+                      name: Content-Type
+                      schema:
+                        type: string
+                        enum:
+                        - application/json; charset=utf-8
+                      required: true
+                      description: Unneeded content type
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ProductDetails'
+                        examples:
+                          SUCCESS:
+                            value:
+                              name: Phone
+                              price: 1000
+                              category: Electronics
+                  responses:
+                    '201':
+                      description: Product created successfully
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Product'
+                          examples:
+                            SUCCESS:
+                              value:
+                                id: 1
+                                name: Phone
+                                price: 1000
+                                category: Electronics
+            components:
+              schemas:
+                ProductId:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: integer
+                ProductDetails:
+                  type: object
+                  required:
+                    - name
+                    - price
+                    - category
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    category:
+                      type: string
+                      enum:
+                        - Electronics
+                        - Clothing
+                        - Books
+                Product:
+                  allOf:
+                    - ${"$"}ref: '#/components/schemas/ProductId'
+                    - ${"$"}ref: '#/components/schemas/ProductDetails'
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.headers["Content-Type"]).isEqualTo("application/json; charset=utf-8")
+                return HttpResponse(201, body = parsedJSONObject("""{"id": 10, "name": "Phone", "price": 1000, "category": "Electronics"}"""))
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `if inline example of overridden request Content Type header is wrong then parse should error out`() {
+        val spec = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Add a new product
+                  parameters:
+                  - in: header
+                    name: Content-Type
+                    schema:
+                      type: string
+                      enum:
+                      - application/json; charset=utf-8
+                    examples:
+                      SUCCESS:
+                        value: application/json
+                    required: true
+                    description: Unneeded content type
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ProductDetails'
+                        examples:
+                          SUCCESS:
+                            value:
+                              name: Phone
+                              price: 1000
+                              category: Electronics
+                  responses:
+                    '201':
+                      description: Product created successfully
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Product'
+                          examples:
+                            SUCCESS:
+                              value:
+                                id: 1
+                                name: Phone
+                                price: 1000
+                                category: Electronics
+            components:
+              schemas:
+                ProductId:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: integer
+                ProductDetails:
+                  type: object
+                  required:
+                    - name
+                    - price
+                    - category
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    category:
+                      type: string
+                      enum:
+                        - Electronics
+                        - Clothing
+                        - Books
+                Product:
+                  allOf:
+                    - ${"$"}ref: '#/components/schemas/ProductId'
+                    - ${"$"}ref: '#/components/schemas/ProductDetails'
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.headers["Content-Type"]).isEqualTo("application/json; charset=utf-8")
+                return HttpResponse(201, body = parsedJSONObject("""{"id": 10, "name": "Phone", "price": 1000, "category": "Electronics"}"""))
+            }
+        })
+
+        assertThat(results.report()).contains("""expected "application/json; charset=utf-8" but found value "application/json"""")
+    }
+
+    @Test
+    fun `inline examples should use the overridden response content type`() {
+        val spec = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Add a new product
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ProductDetails'
+                        examples:
+                          SUCCESS:
+                            value:
+                              name: Phone
+                              price: 1000
+                              category: Electronics
+                  responses:
+                    '201':
+                      description: Product created successfully
+                      headers:
+                        Content-Type:
+                          schema:
+                            type: string
+                            enum:
+                            - application/json; charset=utf-8
+                          examples:
+                            SUCCESS:
+                              value: application/json; charset=utf-8
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Product'
+                          examples:
+                            SUCCESS:
+                              value:
+                                id: 1
+                                name: Phone
+                                price: 1000
+                                category: Electronics
+            components:
+              schemas:
+                ProductId:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: integer
+                ProductDetails:
+                  type: object
+                  required:
+                    - name
+                    - price
+                    - category
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    category:
+                      type: string
+                      enum:
+                        - Electronics
+                        - Clothing
+                        - Books
+                Product:
+                  allOf:
+                    - ${"$"}ref: '#/components/schemas/ProductId'
+                    - ${"$"}ref: '#/components/schemas/ProductDetails'
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        HttpStub(feature).use { stub ->
+            val response = stub.client.execute(HttpRequest("POST", "/products", headers = mapOf("Content-Type" to "application/json; charset=utf-8"), body = parsedJSONObject("""{"name": "Phone", "price": 1000, "category": "Electronics"}""")))
+            assertThat(response.headers["Content-Type"]).isEqualTo("application/json; charset=utf-8")
+        }
+    }
+
+    @Test
+    fun `inline examples should use the overridden response content type when no header example is given`() {
+        val spec = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Add a new product
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ProductDetails'
+                        examples:
+                          SUCCESS:
+                            value:
+                              name: Phone
+                              price: 1000
+                              category: Electronics
+                  responses:
+                    '201':
+                      description: Product created successfully
+                      headers:
+                        Content-Type:
+                          schema:
+                            type: string
+                            enum:
+                            - application/json; charset=utf-8
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Product'
+                          examples:
+                            SUCCESS:
+                              value:
+                                id: 1
+                                name: Phone
+                                price: 1000
+                                category: Electronics
+            components:
+              schemas:
+                ProductId:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: integer
+                ProductDetails:
+                  type: object
+                  required:
+                    - name
+                    - price
+                    - category
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    category:
+                      type: string
+                      enum:
+                        - Electronics
+                        - Clothing
+                        - Books
+                Product:
+                  allOf:
+                    - ${"$"}ref: '#/components/schemas/ProductId'
+                    - ${"$"}ref: '#/components/schemas/ProductDetails'
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val (output, _) = captureStandardOutput {
+            HttpStub(feature).use { stub ->
+                val response = stub.client.execute(
+                    HttpRequest(
+                        "POST",
+                        "/products",
+                        headers = mapOf("Content-Type" to "application/json; charset=utf-8"),
+                        body = parsedJSONObject("""{"name": "Phone", "price": 1000, "category": "Electronics"}""")
+                    )
+                )
+                assertThat(response.headers["Content-Type"]).isEqualTo("application/json; charset=utf-8")
+            }
+        }
+
+        assertThat(output).doesNotContain("does not match \"application/json; charset=utf-8\" in the spec")
+    }
+
+    @Test
+    fun `if inline of overridden response Content Type header is wrong then parse should error out`() {
+        val spec = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Add a new product
+                  parameters:
+                    - in: header
+                      name: Content-Type
+                      schema:
+                        type: string
+                        enum:
+                        - application/json; charset=utf-8
+                      examples:
+                        SUCCESS:
+                          value: application/json
+                      required: true
+                      description: Unneeded content type
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ProductDetails'
+                        examples:
+                          SUCCESS:
+                            value:
+                              name: Phone
+                              price: 1000
+                              category: Electronics
+                  responses:
+                    '201':
+                      description: Product created successfully
+                      headers:
+                        Content-Type:
+                          schema:
+                            type: string
+                            enum:
+                            - application/json; charset=utf-8
+                          examples:
+                            SUCCESS:
+                              value: application/json
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Product'
+                          examples:
+                            SUCCESS:
+                              value:
+                                id: 1
+                                name: Phone
+                                price: 1000
+                                category: Electronics
+            components:
+              schemas:
+                ProductId:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: integer
+                ProductDetails:
+                  type: object
+                  required:
+                    - name
+                    - price
+                    - category
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    category:
+                      type: string
+                      enum:
+                        - Electronics
+                        - Clothing
+                        - Books
+                Product:
+                  allOf:
+                    - ${"$"}ref: '#/components/schemas/ProductId'
+                    - ${"$"}ref: '#/components/schemas/ProductDetails'
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.headers["Content-Type"]).isEqualTo("application/json; charset=utf-8")
+                return HttpResponse(201, body = parsedJSONObject("""{"id": 10, "name": "Phone", "price": 1000, "category": "Electronics"}"""))
+            }
+        })
+
+        println(results.report())
+        assertThat(results.report()).contains("""expected "application/json; charset=utf-8" but found value "application/json"""")
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()
@@ -9877,4 +10771,3 @@ paths:
         }
     }
 }
-

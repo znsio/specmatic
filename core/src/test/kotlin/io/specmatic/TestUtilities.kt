@@ -2,6 +2,7 @@ package io.specmatic
 
 import io.specmatic.core.*
 import io.specmatic.core.pattern.*
+import io.specmatic.core.utilities.ContractSourceEntry
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
@@ -19,6 +20,10 @@ fun toReport(result: Result, scenarioMessage: String? = null): String {
         }
         else -> SuccessReport
     }.toString()
+}
+
+fun List<String>.toContractSourceEntries(): List<ContractSourceEntry> {
+    return this.map { ContractSourceEntry(it) }
 }
 
 object Utils {
@@ -69,8 +74,8 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeSt
     return io.specmatic.stub.getHttpResponse(
         httpRequest,
         features,
-        ThreadSafeListOfStubs(threadSafeStubs.toMutableList()),
-        ThreadSafeListOfStubs(mutableListOf()),
+        ThreadSafeListOfStubs(threadSafeStubs.toMutableList(), emptyMap()),
+        ThreadSafeListOfStubs(mutableListOf(), emptyMap()),
         strictMode
     ).response
 }

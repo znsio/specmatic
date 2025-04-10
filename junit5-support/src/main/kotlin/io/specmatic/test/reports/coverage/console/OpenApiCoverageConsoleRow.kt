@@ -9,6 +9,7 @@ data class OpenApiCoverageConsoleRow(
     val remarks: Remarks,
     val showPath: Boolean = true,
     val showMethod: Boolean = true,
+    val requestContentType: String? = null
 ): CoverageRow {
     constructor(
         method: String,
@@ -19,7 +20,8 @@ data class OpenApiCoverageConsoleRow(
         remarks: Remarks,
         showPath: Boolean = true,
         showMethod: Boolean = true,
-    ) : this(method, path, responseStatus.toString(), count.toString(), coveragePercentage, remarks, showPath, showMethod)
+        requestContentType: String? = null
+    ) : this(method, path, responseStatus.toString(), count.toString(), coveragePercentage, remarks, showPath, showMethod, requestContentType)
 
     private val formattedCoveragePercentage: String
         get() = if (showPath) "$coveragePercentage%" else ""

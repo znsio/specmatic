@@ -1,9 +1,20 @@
 package io.specmatic.conversions
 
-import io.specmatic.core.*
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
+import io.specmatic.core.NoBodyValue
+import io.specmatic.core.QueryParameters
+import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.examples.server.SchemaExample
 import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.*
+import io.specmatic.core.pattern.HasFailure
+import io.specmatic.core.pattern.HasValue
+import io.specmatic.core.pattern.ResponseExample
+import io.specmatic.core.pattern.ResponseValueExample
+import io.specmatic.core.pattern.ReturnValue
+import io.specmatic.core.pattern.Row
+import io.specmatic.core.pattern.attempt
+import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.URIUtils.parseQuery
 import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.JSONObjectValue
@@ -47,10 +58,10 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
             values,
             name = testName,
             fileSource = this.file.canonicalPath,
-            exactResponseExample = responseExample.takeUnless { this.isPartial() },
+            exactResponseExample = responseExample,
             responseExampleForAssertion = response,
-            requestExample = scenarioStub.getRequestWithAdditionalParamsIfAny(specmaticConfig.additionalExampleParamsFilePath),
-            responseExample = response.takeUnless { this.isPartial() },
+            requestExample = scenarioStub.getRequestWithAdditionalParamsIfAny(specmaticConfig.getAdditionalExampleParamsFilePath()),
+            responseExample = response,
             isPartial = scenarioStub.partial != null
         ).let { ExampleProcessor.resolve(it, ExampleProcessor::ifNotExitsToLookupPattern) }
     }
@@ -61,9 +72,8 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         return  findFirstChildByPath("partial.$path") ?: findFirstChildByPath(path)
     }
 
-    private fun isPartial(): Boolean {
-        // TODO: Review
-        return json.findByPath("partial") != null
+    fun isPartial(): Boolean {
+        return json.findFirstChildByPath("partial") != null
     }
 
     fun isInvalid(): Boolean {
@@ -119,6 +129,12 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         json.findByPath("http-request.method")?.toStringLiteral()
     }
 
+    val requestContentType: String?
+        get() {
+            val rawContentType = headers.filter { it.key.lowercase() == "content-type" }.values.firstOrNull()
+            return rawContentType?.split(";")?.firstOrNull()
+        }
+
     private val rawPath: String? =
         json.findByPath("http-request.path")?.toStringLiteral()
 
@@ -130,7 +146,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         return URI(requestPath).path ?: ""
     }
 
-    private val testName: String = attempt("Error reading expectation name in file ${file.canonicalPath}") {
+    val testName: String = attempt("Error reading expectation name in file ${file.canonicalPath}") {
         json.findByPath("name")?.toStringLiteral() ?: file.nameWithoutExtension
     }
 
@@ -161,4 +177,11 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
     val requestBody: Value? = attempt("Error reading request body in file ${file.canonicalPath}") {
         json.findByPath("http-request.body")
     }
+
+    val responseContentType: String?
+        get() {
+            return responseHeaders?.let {
+                it.jsonObject.filter { entry -> entry.key.lowercase() == "content-type" }.values.firstOrNull()?.toStringLiteral()
+            }
+        }
 }

@@ -2,10 +2,21 @@ package io.specmatic.test
 
 import io.ktor.http.*
 import io.ktor.util.*
-import io.specmatic.core.*
-import io.specmatic.core.pattern.*
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
+import io.specmatic.core.QueryParameters
+import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.loadSpecmaticConfig
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.Row
+import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.value.*
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.ScalarValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
 import io.specmatic.test.asserts.isKeyAssert
 import java.io.File
 
@@ -24,8 +35,8 @@ object ExampleProcessor {
 
     private fun loadConfig(): JSONObjectValue {
         val configFilePath = runCatching {
-            loadSpecmaticConfig().additionalExampleParamsFilePath
-        }.getOrElse { SpecmaticConfig().additionalExampleParamsFilePath } ?: return JSONObjectValue(emptyMap())
+            loadSpecmaticConfig().getAdditionalExampleParamsFilePath()
+        }.getOrElse { SpecmaticConfig().getAdditionalExampleParamsFilePath() } ?: return JSONObjectValue(emptyMap())
 
         val configFile = File(configFilePath)
         if (!configFile.exists()) {

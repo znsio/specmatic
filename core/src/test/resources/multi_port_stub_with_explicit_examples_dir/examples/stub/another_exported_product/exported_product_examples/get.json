@@ -1,0 +1,20 @@
+{
+    "http-request": {
+        "path": "/products",
+        "method": "GET"
+    },
+    "http-response": {
+        "status": 200,
+        "body": [
+            {
+                "id": "10",
+                "name": "Macbook Pro",
+                "destinationCountry": "India"
+            }
+        ],
+        "status-text": "OK",
+        "headers": {
+            "Content-Type": "application/json"
+        }
+    }
+}

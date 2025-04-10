@@ -4,6 +4,7 @@ import application.backwardCompatibility.BackwardCompatibilityCheckCommandV2
 import io.mockk.every
 import io.mockk.spyk
 import io.specmatic.core.git.SystemGit
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -56,45 +57,64 @@ class BackwardCompatibilityCheckCommandV2Test {
             .waitFor()
     }
 
-    @Test
-    fun `getSpecsReferringTo returns empty set when input is empty`() {
-        val command = BackwardCompatibilityCheckCommandV2()
-        val result = command.getSpecsReferringTo(emptySet())
-        assertTrue(result.isEmpty())
-    }
+    @Nested
+    inner class GetSpecsReferringToTests {
+        @Test
+        fun `getSpecsReferringTo returns empty set when input is empty`() {
+            val command = BackwardCompatibilityCheckCommandV2()
+            val result = command.getSpecsReferringTo(emptySet())
+            assertTrue(result.isEmpty())
+        }
 
-    @Test
-    fun `getSpecsReferringTo returns empty set when no files refer to changed schema files`() {
-        val command = spyk<BackwardCompatibilityCheckCommandV2>()
-        every { command.allSpecFiles() } returns listOf(
-            File("file1.yaml").apply { writeText("content1") },
-            File("file2.yaml").apply { writeText("content2") }
-        )
-        val result = command.getSpecsReferringTo(setOf("file3.yaml"))
-        assertTrue(result.isEmpty())
-    }
+        @Test
+        fun `getSpecsReferringTo returns empty set when no files refer to changed schema files`() {
+            val command = spyk<BackwardCompatibilityCheckCommandV2>()
+            every { command.allSpecFiles() } returns listOf(
+                File("file1.yaml").apply { writeText("content1") },
+                File("file2.yaml").apply { writeText("content2") }
+            )
+            val result = command.getSpecsReferringTo(setOf("file3.yaml"))
+            assertTrue(result.isEmpty())
+        }
 
-    @Test
-    fun `getSpecsReferringTo returns set of files that refer to changed schema files`() {
-        val command = spyk<BackwardCompatibilityCheckCommandV2>()
-        every { command.allSpecFiles() } returns listOf(
-            File("file1.yaml").apply { writeText("file3.yaml") },
-            File("file2.yaml").apply { writeText("file4.yaml") }
-        )
-        val result = command.getSpecsReferringTo(setOf("file3.yaml"))
-        assertEquals(setOf("file1.yaml"), result)
-    }
+        @Test
+        fun `getSpecsReferringTo returns set of files that refer to changed schema files`() {
+            val command = spyk<BackwardCompatibilityCheckCommandV2>()
+            every { command.allSpecFiles() } returns listOf(
+                File("file1.yaml").apply { writeText("file3.yaml") },
+                File("file2.yaml").apply { writeText("file4.yaml") }
+            )
+            val result = command.getSpecsReferringTo(setOf("file3.yaml"))
+            assertEquals(setOf(File("file1.yaml").canonicalPath), result)
+        }
 
-    @Test
-    fun `getSpecsReferringTo returns set of files which are referring to a changed schema that is one level down`() {
-        val command = spyk<BackwardCompatibilityCheckCommandV2>()
-        every { command.allSpecFiles() } returns listOf(
-            File("file1.yaml").apply { referTo("schema_file1.yaml") },
-            File("schema_file2.yaml").apply { referTo("schema_file1.yaml") }, // schema within a schema
-            File("file2.yaml").apply { referTo("schema_file2.yaml") }
-        )
-        val result = command.getSpecsReferringTo(setOf("schema_file1.yaml"))
-        assertEquals(setOf("file1.yaml", "file2.yaml"), result)
+        @Test
+        fun `getSpecsReferringTo returns set of files which are referring to a changed schema that is one level down`() {
+            val command = spyk<BackwardCompatibilityCheckCommandV2>()
+            every { command.allSpecFiles() } returns listOf(
+                File("file1.yaml").apply { referTo("schema_file1.yaml") },
+                File("schema_file2.yaml").apply { referTo("schema_file1.yaml") }, // schema within a schema
+                File("file2.yaml").apply { referTo("schema_file2.yaml") }
+            )
+            val result = command.getSpecsReferringTo(setOf("schema_file1.yaml"))
+            assertEquals(
+                setOf("file1.yaml", "schema_file2.yaml", "file2.yaml").map { File(it).canonicalPath }.toSet(), result
+            )
+        }
+
+        @Test
+        fun `getSpecsReferringTo should not hang if there is a circular dependency`() {
+            val command = spyk<BackwardCompatibilityCheckCommandV2>()
+            every { command.allSpecFiles() } returns listOf(
+                File("a.yaml").apply { referTo("b.yaml") },
+                File("b.yaml").apply { referTo("c.yaml") },
+                File("c.yaml").apply { referTo("a.yaml") }
+            )
+
+            assertThat(command.getSpecsReferringTo(setOf("a.yaml"))).isEqualTo(setOf("b.yaml", "c.yaml").map { File(it).canonicalPath }.toSet())
+            assertThat(command.getSpecsReferringTo(setOf("b.yaml"))).isEqualTo(setOf("c.yaml", "a.yaml").map { File(it).canonicalPath }.toSet())
+            assertThat(command.getSpecsReferringTo(setOf("c.yaml"))).isEqualTo(setOf("a.yaml", "b.yaml").map { File(it).canonicalPath }.toSet())
+        }
     }
 
     @Nested
@@ -126,7 +146,7 @@ class BackwardCompatibilityCheckCommandV2Test {
             val gitCommand = SystemGit(tempDir.absolutePath)
             val result = gitCommand.getFilesChangedInCurrentBranch(
                 gitCommand.currentRemoteBranch()
-            )
+            ).map { it.substringAfterLast(File.separator) }
 
             assert(result.contains("file1.txt"))
         }
@@ -163,7 +183,7 @@ class BackwardCompatibilityCheckCommandV2Test {
             val gitCommand = SystemGit(tempDir.absolutePath)
             val result = gitCommand.getFilesChangedInCurrentBranch(
                 gitCommand.currentRemoteBranch()
-            )
+            ).map { it.substringAfterLast(File.separator) }
 
             assert(result.contains("file1.txt"))
         }
@@ -171,7 +191,17 @@ class BackwardCompatibilityCheckCommandV2Test {
 
     @AfterEach
     fun `cleanup files`() {
-        listOf("file1.yaml", "file2.yaml", "file3.yaml", "file4.yaml", "schema_file1.yaml", "schema_file2.yaml").forEach {
+        listOf(
+            "file1.yaml",
+            "file2.yaml",
+            "file3.yaml",
+            "file4.yaml",
+            "schema_file1.yaml",
+            "schema_file2.yaml",
+            "a.yaml",
+            "b.yaml",
+            "c.yaml"
+        ).forEach {
             File(it).delete()
         }
         tempDir.deleteRecursively()

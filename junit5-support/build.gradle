@@ -1,9 +1,10 @@
 plugins {
-    id 'java-library'
-    id 'maven-publish'
-    id 'org.jetbrains.kotlin.jvm'
-    id 'org.jetbrains.kotlin.plugin.serialization'
-    id 'signing'
+    id("java-library")
+    id("maven-publish")
+    id("signing")
+    id("org.jetbrains.kotlin.jvm")
+    id("org.jetbrains.kotlin.plugin.serialization")
+    id("org.jreleaser")
 }
 
 repositories {
@@ -11,44 +12,33 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "2.3.12"
-def junit_version = "5.11.3"
-
 dependencies {
     // TODO Fix to eliminate vulnerabilities, remove when the enclosing library supports it
-    implementation 'io.netty:netty-codec-http:4.1.115.Final' // used by ktor-server-netty-jvm 2.3.9 in core
+    implementation("io.netty:netty-codec-http:4.1.118.Final")
+    // used by ktor-server-netty-jvm 2.3.13 in core (last checked on Feb 13 2025)
+    implementation("net.minidev:json-smart:2.5.2") // used by json-path 2.9.0 (last checked on Feb 13 2025)
 
-    api project(':core')
-    implementation "org.junit.jupiter:junit-jupiter-engine:${junit_version}"
-    implementation 'org.jetbrains.kotlin:kotlin-maven-serialization'
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
-    implementation 'org.assertj:assertj-core:3.26.3'
-    implementation 'org.junit.jupiter:junit-jupiter-api:5.11.3'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.0'
-    implementation 'org.thymeleaf:thymeleaf:3.1.2.RELEASE'
+    api(project(":core"))
+    implementation("org.junit.jupiter:junit-jupiter-engine:${"5.11.4"}")
+    implementation("org.jetbrains.kotlin:kotlin-maven-serialization")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("org.assertj:assertj-core:3.27.3")
+    implementation("org.junit.jupiter:junit-jupiter-api:5.11.4")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.3")
+    implementation("org.thymeleaf:thymeleaf:3.1.3.RELEASE")
 
-    implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
-    implementation "io.ktor:ktor-client-cio:${ktor_version}"
+    implementation("io.ktor:ktor-client-core-jvm:${"2.3.13"}")
+    implementation("io.ktor:ktor-client-cio:${"2.3.13"}")
 
-    testImplementation "org.junit.jupiter:junit-jupiter-params:${junit_version}"
-    implementation 'org.junit.platform:junit-platform-launcher:1.11.3'
-    implementation 'org.junit.platform:junit-platform-reporting:1.11.3'
-    implementation 'org.fusesource.jansi:jansi:2.4.1'
+    testImplementation("org.junit.jupiter:junit-jupiter-params:${"5.11.4"}")
+    implementation("org.junit.platform:junit-platform-launcher:1.11.4")
+    implementation("org.junit.platform:junit-platform-reporting:1.11.4")
+    implementation("org.fusesource.jansi:jansi:2.4.1")
 }
-
-test {
-    useJUnitPlatform()
-}
-
-group = 'io.specmatic'
 
 jar {
-    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
-    from '../version.properties'
-}
-
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
+    exclude "META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA"
+    from "../version.properties"
 }
 
 java {
@@ -59,42 +49,36 @@ java {
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            artifactId = 'junit5-support'
+            artifactId = "junit5-support"
             from components.java
             pom {
-                name = 'SpecmaticJUnit5Support'
-                description = 'Specmatic JUnit 5 Support'
-                url = 'https://specmatic.io'
+                name = "SpecmaticJUnit5Support"
+                description = "Specmatic JUnit 5 Support"
+                url = "https://specmatic.io"
                 licenses {
                     license {
-                        name = 'MIT'
-                        url = 'https://github.com/znsio/specmatic/blob/main/License.md'
+                        name = "MIT"
+                        url = "https://github.com/znsio/specmatic/blob/main/License.md"
                     }
                 }
                 developers {
                     developer {
-                        id = 'specmaticBuilders'
-                        name = 'Specmatic Builders'
-                        email = 'info@specmatic.io'
+                        id = "specmaticBuilders"
+                        name = "Specmatic Builders"
+                        email = "info@specmatic.io"
                     }
                 }
                 scm {
-                    connection = 'scm:git:git@github.com:znsio/specmatic.git'
-                    url = 'https://specmatic.io/'
+                    connection = "scm:git:git@github.com:znsio/specmatic.git"
+                    url = "https://specmatic.io/"
                 }
             }
         }
     }
     repositories {
         maven {
-            // change URLs to point to your repos, e.g. http://my.org/repo
-            def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2"
-            def snapshotsRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots"
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            credentials {
-                username = project.hasProperty("ossrhUsername") ? project.getProperty("ossrhUsername") : ""
-                password = project.hasProperty("ossrhPassword") ? project.getProperty("ossrhPassword") : ""
-            }
+            name = "stagingDeploy"
+            url = project.layout.buildDirectory.dir("staging-deploy")
         }
     }
 }
@@ -108,13 +92,56 @@ tasks.withType(Sign).configureEach {
 }
 
 javadoc {
-    if(JavaVersion.current().isJava9Compatible()) {
-        options.addBooleanOption('html5', true)
+    if (JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption("html5", true)
     }
 }
 
 compileKotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xjvm-default=all")
+    }
+}
+
+jreleaser {
+    gitRootSearch = true
+
+    release {
+        github {
+            enabled = false
+        }
+    }
+
+    signing {
+        active = "ALWAYS"
+        armored = true
+    }
+
+    deploy {
+        maven {
+            mavenCentral {
+                core {
+                    stage = "UPLOAD"
+                    active = project.version.get().endsWith("-SNAPSHOT") ? "SNAPSHOT" : "RELEASE"
+                    url = project.version.get().endsWith("-SNAPSHOT") ? "https://central.sonatype.com/repository/maven-snapshots" : "https://central.sonatype.com/api/v1/publisher"
+                    stagingRepositories.add("build/staging-deploy")
+
+                    snapshotSupported = true
+                    applyMavenCentralRules = true
+
+                    artifactOverride {
+                        artifactId = "specmatic-core"
+                        jar = true
+                        sourceJar = true
+                        javadocJar = true
+                        verifyPom = true
+                    }
+
+                    stagingRepository("build/staging-deploy")
+
+                    namespace = "io.specmatic"
+                }
+            }
+        }
     }
 }

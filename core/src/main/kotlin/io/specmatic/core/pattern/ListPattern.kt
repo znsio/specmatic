@@ -2,9 +2,7 @@ package io.specmatic.core.pattern
 
 import io.specmatic.core.*
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.ListValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 
 data class ListPattern(
     override val pattern: Pattern,
@@ -13,6 +11,18 @@ data class ListPattern(
 ) : Pattern, SequenceType, HasDefaultExample, PossibleJsonObjectPatternContainer {
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
+
+    override fun fixValue(value: Value, resolver: Resolver): Value {
+        if (resolver.matchesPattern(null, this, value).isSuccess()) return value
+        if (value !is JSONArrayValue || (value.list.isEmpty() && resolver.allPatternsAreMandatory && !resolver.isPartial())) {
+            return pattern.listOf(0.until(randomNumber(3)).mapIndexed { index, _ ->
+                attempt(breadCrumb = "[$index (random)]") { pattern.fixValue(NullValue, resolver) }
+            }, resolver)
+        }
+
+        val updatedResolver = resolver.addPatternAsSeen(this)
+        return JSONArrayValue(value.list.map { pattern.fixValue(it, updatedResolver) })
+    }
 
     override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
         if (value !is JSONArrayValue) return value
@@ -35,10 +45,26 @@ data class ListPattern(
     }
 
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        val listValue = value as? JSONArrayValue ?: return HasFailure("Cannot generate a list from partial of type ${value.displayableType()}")
-        val newList = listValue.list.map { pattern.fillInTheBlanks(it, resolver.plusDictionaryLookupDetails(null, "[*]")) }.listFold()
+        val patternToConsider = when (val resolvedPattern = resolveToPattern(value, resolver, this)) {
+            is ReturnFailure -> return resolvedPattern.cast()
+            else -> (resolvedPattern.value as? ListPattern) ?: return when(resolver.isNegative) {
+                true -> fillInIfPatternToken(value, resolvedPattern.value, resolver)
+                else -> HasFailure("Pattern is not a list pattern")
+            }
+        }.pattern
 
-        return newList.ifValue { listValue.copy(list = it) }
+        val fallbackAnyValueList = List(randomNumber(3)) { StringValue("(anyvalue)") }
+        val valueToConsider = when {
+            value is JSONArrayValue -> value.list.takeUnless { it.isEmpty() && resolver.allPatternsAreMandatory } ?: fallbackAnyValueList
+            isPatternToken(value) -> fallbackAnyValueList
+            resolver.isNegative -> return HasValue(value)
+            else -> return HasFailure("Cannot generate a list from type ${value.displayableType()}")
+        }
+
+        val updatedResolver = resolver.plusDictionaryLookupDetails(null, "[*]")
+        return valueToConsider.mapIndexed { index, item ->
+            patternToConsider.fillInTheBlanks(item, updatedResolver).breadCrumb("[$index]")
+        }.listFold().ifValue(::JSONArrayValue)
     }
 
     override fun resolveSubstitutions(
@@ -52,7 +78,7 @@ data class ListPattern(
 
         val updatedList = value.list.mapIndexed { index, listItem ->
             pattern.resolveSubstitutions(substitution, listItem, resolver).breadCrumb("[$index]")
-        }.listFold()
+        }.listFoldException()
 
         return updatedList.ifValue { value.copy(list = it) }
     }

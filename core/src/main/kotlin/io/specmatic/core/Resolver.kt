@@ -2,10 +2,7 @@ package io.specmatic.core
 
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.True
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 import io.specmatic.test.ExampleProcessor
 
 val actualMatch: (resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value) -> Result = { resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value ->
@@ -74,6 +71,10 @@ data class Resolver(
         return this.copy(allPatternsAreMandatory = true)
     }
 
+    fun withoutAllPatternsAsMandatory(): Resolver {
+        return this.copy(allPatternsAreMandatory = false)
+    }
+
     fun disableOverrideUnexpectedKeycheck(): Resolver {
         return this.copy(findKeyErrorCheck = this.findKeyErrorCheck.disableOverrideUnexpectedKeycheck())
     }
@@ -90,27 +91,27 @@ data class Resolver(
         return patternMatchStrategy(this, factKey, pattern, sampleValue)
     }
 
-    fun actualPatternMatch(factKey: String?, pattern: Pattern, sampleValue: Value): Result {
-        if (mockMode && ExampleProcessor.isSubstitutionToken(sampleValue)) return Result.Success()
+    private fun patternTokenMatch(pattern: Pattern, sampleData: Value): Result? {
+        if (!mockMode) return null
+        if (ExampleProcessor.isSubstitutionToken(sampleData)) return Result.Success()
 
-        val patternFromSampleValue = patternFromTokenBased(sampleValue)
-        if (mockMode
-            && patternFromSampleValue != null
-            && (patternFromSampleValue is AnyValuePattern ||
-                    pattern.encompasses(patternFromSampleValue, this, this).isSuccess())
-            ) {
-            return Result.Success()
-        }
+        val patternFromValue = patternFromTokenBased(sampleData) ?: return null
+        if (patternFromValue is AnyValuePattern) return Result.Success()
+
+        return pattern.encompasses(patternFromValue, this, this)
+    }
+
+    fun actualPatternMatch(factKey: String?, pattern: Pattern, sampleValue: Value): Result {
+        val tokenMatchResult = patternTokenMatch(pattern, sampleValue)
+        if (tokenMatchResult != null) return tokenMatchResult
 
         return pattern.matches(sampleValue, this).ifSuccess {
             if (factKey != null && factStore.has(factKey)) {
                 val result = factStore.match(sampleValue, factKey)
-
                 if(result is Result.Failure) {
                     result.reason("Resolver was not able to match fact $factKey with value $sampleValue.")
                 }
             }
-
             Result.Success()
         }
     }
@@ -201,13 +202,10 @@ data class Resolver(
     }
 
     fun generate(pattern: Pattern): Value {
-        if(dictionaryLookupPath.isBlank())
-            return pattern.generate(this)
-
         val value = dictionary[dictionaryLookupPath] ?: defaultPatternValueFromDictionary(pattern) ?: return pattern.generate(this)
 
         val dictionaryValueMatchResult = pattern.matches(value, this)
-
+        if (dictionaryValueMatchResult is Result.Failure && isNegative) return pattern.generate(this)
         dictionaryValueMatchResult.throwOnFailure()
 
         return value
@@ -236,6 +234,14 @@ data class Resolver(
         val updatedResolver = updateLookupPath(typeAlias, lookupKey)
 
         return updatedResolver.generate(pattern)
+    }
+
+    fun fix(typeAlias: String?, lookupKey: String, pattern: Pattern, value: Value): Value {
+        val resolvedPattern = resolvedHop(pattern, this)
+        if (resolvedPattern is ExactValuePattern) return resolvedPattern.generate(this)
+
+        val updatedResolver = updateLookupPath(typeAlias, lookupKey)
+        return pattern.fixValue(value, updatedResolver)
     }
 
     fun updateLookupPath(typeAlias: String?, lookupKey: String): Resolver {
@@ -369,11 +375,11 @@ ${matchResult.reportString()}
         return defaultExampleResolver.resolveExample(example, pattern, this)
     }
 
-    fun generateHttpRequestbodies(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<ReturnValue<Pattern>> {
-        return generation.generateHttpRequestBodies(this, body, row, requestBodyAsIs, value)
+    fun generateHttpRequestBodies(body: Pattern, row: Row, requestBodyAsIs: Pattern): Sequence<ReturnValue<Pattern>> {
+        return generation.generateHttpRequestBodies(this, body, row, requestBodyAsIs)
     }
 
-    fun generateHttpRequestbodies(body: Pattern, row: Row): Sequence<ReturnValue<Pattern>> {
+    fun generateHttpRequestBodies(body: Pattern, row: Row): Sequence<ReturnValue<Pattern>> {
         return generation.generateHttpRequestBodies(this, body, row)
     }
 
@@ -425,6 +431,10 @@ ${matchResult.reportString()}
 
     fun cyclePast(jsonPattern: Pattern, key: String): Resolver {
         return this.copy(cycleMarker = lookupPath(jsonPattern.typeAlias, key))
+    }
+
+    fun isPartial(): Boolean {
+        return this.findKeyErrorCheck.isPartial()
     }
 }
 

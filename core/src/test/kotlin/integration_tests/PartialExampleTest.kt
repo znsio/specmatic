@@ -3,6 +3,8 @@ package integration_tests
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
+import io.specmatic.core.log.DebugLogger
+import io.specmatic.core.log.withLogger
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
@@ -145,8 +147,10 @@ class PartialExampleTest {
     @Test
     fun `partial with invalid json value should get rejected` () {
         val (output, _) = captureStandardOutput {
-            val stub = createStubFromContracts(listOf(("src/test/resources/openapi/substitutions/spec_with_invalid_partial_json_value.yaml")), timeoutMillis = 0)
-            stub.close()
+            withLogger(DebugLogger) {
+                val stub = createStubFromContracts(listOf(("src/test/resources/openapi/substitutions/spec_with_invalid_partial_json_value.yaml")), timeoutMillis = 0)
+                stub.close()
+            }
         }
 
         println(output)
@@ -565,5 +569,43 @@ class PartialExampleTest {
                 assertThat(response.body.toStringLiteral()).contains("Invalid pattern cycle")
             }
         }
+    }
+
+    @Test
+    fun `should be able to load 400 partial example without errors and respond back`() {
+        val examplesDir = "src/test/resources/openapi/partial_example_tests/bad_request_valid_example"
+        val apiSpecification = "src/test/resources/openapi/partial_example_tests/simple.yaml"
+
+        createStubFromContracts(listOf(apiSpecification), listOf(examplesDir), timeoutMillis = 0).use { stub ->
+            val httpRequest = HttpRequest(
+                path = "/creators/abc/pets/def", method = "PATCH",
+                body = parsedJSONObject("""{"creatorId": "JohnDoe", "petId": 123}""")
+            )
+
+            stub.client.execute(httpRequest).let { response -> 
+                assertThat(response.status).isEqualTo(400)
+                assertThat(response.body).isEqualTo(parsedJSONObject("""
+                {"code": 400, "message": "Bad Request"}
+                """.trimIndent()))
+            }
+        }
+    }
+
+    @Test
+    fun `should result in failure when partial 400 example has invalid response`() {
+        val examplesDir = "src/test/resources/openapi/partial_example_tests/bad_request_invalid_example"
+        val apiSpecification ="src/test/resources/openapi/partial_example_tests/simple.yaml"
+
+        val (output, _) = captureStandardOutput { createStubFromContracts(listOf(apiSpecification), listOf(examplesDir)).also { it.close() } }
+        val exampleFile = osAgnosticPath("src/test/resources/openapi/partial_example_tests/bad_request_invalid_example/pets_post.json")
+
+        print(output)
+        assertThat(output).containsIgnoringWhitespaces("""
+        Could not load partial example $exampleFile
+        >> RESPONSE.BODY.code
+        Expected number, actual was "400"
+        >> RESPONSE.BODY.message
+        Expected string, actual was number
+        """.trimIndent())
     }
 }

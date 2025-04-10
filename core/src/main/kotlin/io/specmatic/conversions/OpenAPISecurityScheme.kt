@@ -8,10 +8,11 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.value.StringValue
 
 interface OpenAPISecurityScheme {
-    fun matches(httpRequest: HttpRequest): Result
+    fun matches(httpRequest: HttpRequest, resolver: Resolver): Result
     fun removeParam(httpRequest: HttpRequest): HttpRequest
     fun addTo(httpRequest: HttpRequest, resolver: Resolver = Resolver()): HttpRequest
     fun addTo(requestPattern: HttpRequestPattern, row: Row): HttpRequestPattern
+    fun copyFromTo(originalRequest: HttpRequest, newHttpRequest: HttpRequest): HttpRequest
     fun isInRow(row: Row): Boolean
 }
 

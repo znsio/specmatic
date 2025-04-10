@@ -351,7 +351,8 @@ paths:
                 override fun execute(request: HttpRequest): HttpResponse {
                     val headers = mapOf(
                         "X-Rate-Limit-Limit" to "10",
-                        "X-Rate-Limit-Remaining" to "200"
+                        "X-Rate-Limit-Remaining" to "200",
+                        "Content-Type" to "application/json"
                     )
 
                     return HttpResponse(200, headers, parsedJSONObject("""{"name": "Sherlock Holmes", "address": "221B Baker Street"}"""))

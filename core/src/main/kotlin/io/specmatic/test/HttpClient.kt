@@ -32,7 +32,7 @@ import java.util.zip.GZIPInputStream
 // API for non-Kotlin invokers
 fun createHttpClient(baseURL: String, timeoutInMilliseconds: Long) = HttpClient(baseURL, timeoutInMilliseconds)
 
-class HttpClient(
+data class HttpClient(
     val baseURL: String,
     private val timeoutInMilliseconds: Long = 6000,
     private val log: (event: LogMessage) -> Unit = ::consoleLog,

@@ -1,5 +1,7 @@
 package io.specmatic.test
 
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
 import io.specmatic.core.TestConfig
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
@@ -7,6 +9,7 @@ import io.specmatic.test.SpecmaticJUnitSupport.Companion.PROTOCOL
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import io.specmatic.test.listeners.ContractExecutionListener
 import io.specmatic.test.reports.coverage.Endpoint
+import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.AfterEach
@@ -149,6 +152,60 @@ class SpecmaticJunitSupportTest {
             .toMutableList()
 
         assertThat(registeredListeners).contains(ContractExecutionListener::class.java.name)
+    }
+
+    @Test
+    fun `should be able to get actuator endpoints from swaggerUI`() {
+        SpecmaticJUnitSupport.actuatorFromSwagger("", object: TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse(
+                    200,
+                    body = """
+                    openapi: 3.0.1
+                    info:
+                      title: Order BFF
+                      version: '1.0'
+                    paths:
+                      /orders:
+                        post:
+                          responses:
+                            '200':
+                              description: OK
+                      /products:
+                        post:
+                          responses:
+                            '200':
+                              description: OK
+                      /findAvailableProducts/{date_time}:
+                        get:
+                          parameters:
+                            - ${"$"}ref: '#/components/parameters/DateTimeParameter'
+                          responses:
+                            '200':
+                              description: OK
+                    components:
+                        schemas:
+                            DateTime:
+                                type: string
+                                format: date-time
+                        parameters:
+                            DateTimeParameter:
+                                name: date_time
+                                in: path
+                                required: true
+                                schema:
+                                    ${"$"}ref: '#/components/schemas/DateTime'
+                    """.trimIndent()
+                )
+            }
+        })
+
+        assertThat(SpecmaticJUnitSupport.openApiCoverageReportInput.endpointsAPISet).isTrue()
+        assertThat(SpecmaticJUnitSupport.openApiCoverageReportInput.getApplicationAPIs()).isEqualTo(listOf(
+            API("POST", "/orders"),
+            API("POST", "/products"),
+            API("GET", "/findAvailableProducts/{date_time}")
+        ))
     }
 
     @AfterEach

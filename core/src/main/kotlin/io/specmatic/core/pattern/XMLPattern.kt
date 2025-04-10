@@ -69,7 +69,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             matches(it, resolver) is Success
         }
 
-        return if (remainder.isNotEmpty() && remainder.first().let { it is XMLNode && it.name == this.pattern.name }) {
+        return if (remainder.isNotEmpty() && remainder.first().let { it is XMLNode && prefixLessComparison(it) }) {
             ConsumeResult(matches(remainder.first(), resolver), remainder)
         } else if (remainder.isNotEmpty()) {
             val provisionalError = ProvisionalError<Value>(
@@ -93,11 +93,14 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         when (val result = matches(xmlValue, resolver)) {
             is Success -> ConsumeResult(Success(), xmlValues.drop(1))
             is Failure -> when {
-                xmlValue is XMLNode && xmlValue.name == this.pattern.name -> ConsumeResult(result, xmlValues)
+                xmlValue is XMLNode && prefixLessComparison(xmlValue) -> ConsumeResult(result, xmlValues)
                 else -> ConsumeResult(Success(), xmlValues, ProvisionalError(result, this, xmlValue))
             }
         }
     }
+
+    private fun prefixLessComparison(xmlValue: XMLNode) =
+        xmlValue.name.substringAfter(":") == this.pattern.name
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if (sampleData !is XMLNode)
@@ -108,24 +111,51 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 return Success()
         }
 
+
         val matchingType = if (this.pattern.attributes.containsKey(TYPE_ATTRIBUTE_NAME)) {
             val typeName = this.pattern.getAttributeValue(TYPE_ATTRIBUTE_NAME)
-            val xmlType = (resolver.getPattern("($typeName)") as XMLPattern)
-            val attributesFromReferring = this.pattern.attributes.filterKeys { it != TYPE_ATTRIBUTE_NAME }
-            val attributesFromReferred = xmlType.pattern.attributes.filterKeys { it != TYPE_ATTRIBUTE_NAME }
-            val attributes = attributesFromReferred + attributesFromReferring
-            xmlType.copy(pattern = xmlType.pattern.copy(name = this.pattern.name, realName = this.pattern.realName, attributes = attributes))
+            val referredType = resolvedHop(resolver.getPattern("($typeName)"), resolver)
+
+            if(referredType is XMLPattern) {
+                val xmlType = (referredType.let {
+                    it as? XMLPattern
+                        ?: throw ContractException("Expected XMLPattern but got $it")
+                })
+                val attributesFromReferring = this.pattern.attributes.filterKeys { it != TYPE_ATTRIBUTE_NAME }
+                val attributesFromReferred = xmlType.pattern.attributes.filterKeys { it != TYPE_ATTRIBUTE_NAME }
+                val attributes = attributesFromReferred + attributesFromReferring
+                xmlType.copy(
+                    pattern = xmlType.pattern.copy(
+                        name = this.pattern.name,
+                        realName = this.pattern.realName,
+                        attributes = attributes
+                    )
+                )
+            } else {
+                referredType
+            }
         } else {
             this
         }
 
-        return matchName(sampleData, resolver).ifSuccess {
-            matchingType.matchNamespaces(sampleData)
-        }.ifSuccess {
-            matchingType.matchAttributes(sampleData, resolver)
-        }.ifSuccess {
-            matchingType.matchNodes(sampleData, resolver)
+        return when(matchingType) {
+            is XMLPattern -> {
+                matchName(sampleData, resolver).ifSuccess {
+                    matchingType.matchNamespaces(sampleData)
+                }.ifSuccess {
+                    matchingType.matchAttributes(sampleData, resolver)
+                }.ifSuccess {
+                    matchingType.matchNodes(sampleData, resolver)
+                }
+            }
+            else -> {
+                if(sampleData.childNodes.size != 1)
+                    return mismatchResult("single node", sampleData, resolver.mismatchMessages)
+                val valueToMatch = matchingType.parse(sampleData.firstChild().toStringLiteral(), resolver)
+                matchingType.matches(valueToMatch, resolver)
+            }
         }.breadCrumb(pattern.name)
+
     }
 
     private fun matchNodes(

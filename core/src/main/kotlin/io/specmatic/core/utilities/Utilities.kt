@@ -2,33 +2,41 @@
 
 package io.specmatic.core.utilities
 
+import io.specmatic.core.CONTENT_TYPE
+import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
+import io.specmatic.core.Configuration.Companion.configFilePath
+import io.specmatic.core.DEFAULT_WORKING_DIRECTORY
+import io.specmatic.core.EXAMPLES_DIR_SUFFIX
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.KeyData
+import io.specmatic.core.Resolver
+import io.specmatic.core.Result
+import io.specmatic.core.azure.AzureAuthCredentials
+import io.specmatic.core.git.GitCommand
+import io.specmatic.core.git.SystemGit
+import io.specmatic.core.loadSpecmaticConfig
+import io.specmatic.core.log.consoleLog
+import io.specmatic.core.log.logger
+import io.specmatic.core.nativeString
+import io.specmatic.core.pattern.*
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
 import org.eclipse.jgit.api.TransportConfigCallback
 import org.eclipse.jgit.transport.SshTransport
 import org.eclipse.jgit.transport.TransportHttp
 import org.eclipse.jgit.transport.sshd.SshdSessionFactory
 import org.w3c.dom.Document
 import org.w3c.dom.Node
+import org.w3c.dom.Node.COMMENT_NODE
+import org.w3c.dom.Node.ELEMENT_NODE
+import org.w3c.dom.Node.TEXT_NODE
 import org.xml.sax.InputSource
-import io.specmatic.core.log.consoleLog
-import io.specmatic.core.*
-import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
-import io.specmatic.core.Configuration.Companion.configFilePath
-import io.specmatic.core.azure.AzureAuthCredentials
-import io.specmatic.core.git.GitCommand
-import io.specmatic.core.git.SystemGit
-import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.NullPattern
-import io.specmatic.core.pattern.NumberPattern
-import io.specmatic.core.pattern.parsedJSON
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.Value
-import org.w3c.dom.Node.*
 import java.io.File
 import java.io.StringReader
 import java.io.StringWriter
+import java.util.concurrent.*
 import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
@@ -73,7 +81,7 @@ fun readFile(filePath: String): String {
 
 fun parseXML(xmlData: String): Document {
     val builder = newXMLBuilder()
-    return removeIrrelevantNodes(builder.parse(InputSource(StringReader(xmlData))))
+    return removeIrrelevantNodes(builder.parse(InputSource(StringReader(xmlData.removePrefix(UTF_BYTE_ORDER_MARK)))))
 }
 
 fun newXMLBuilder(): DocumentBuilder {
@@ -140,7 +148,7 @@ fun strings(list: List<Value>): List<String> {
     }
 }
 
-fun loadSources(configFilePath: String): List<ContractSource> = loadSources(loadSpecmaticConfig(configFilePath))
+fun loadSources(configFilePath: String): List<ContractSource> = loadSpecmaticConfig(configFilePath).loadSources()
 
 fun loadConfigJSON(configFile: File): JSONObjectValue {
     val configJson = try {
@@ -154,34 +162,6 @@ fun loadConfigJSON(configFile: File): JSONObjectValue {
         throw ContractException("The contents of $configFilePath must be a json object")
 
     return configJson
-}
-
-fun loadSources(specmaticConfig: SpecmaticConfig): List<ContractSource> {
-    return specmaticConfig.sources.map { source ->
-        when(source.provider) {
-            SourceProvider.git -> {
-                val stubPaths = source.stub ?: emptyList()
-                val testPaths = source.test ?: emptyList()
-
-                when (source.repository) {
-                    null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
-                    else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
-                }
-            }
-            SourceProvider.filesystem -> {
-                val stubPaths = source.stub ?: emptyList()
-                val testPaths = source.test ?: emptyList()
-
-                LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
-            }
-            SourceProvider.web -> {
-                val stubPaths = source.stub ?: emptyList()
-                val testPaths = source.test ?: emptyList()
-
-                WebSource(testPaths, stubPaths)
-            }
-        }
-    }
 }
 
 fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
@@ -205,8 +185,8 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
                 val testPaths = jsonArray(source, "test")
 
                 when (repositoryURL) {
-                    null -> GitMonoRepo(testPaths, stubPaths, type)
-                    else -> GitRepo(repositoryURL, branch, testPaths, stubPaths, type)
+                    null -> GitMonoRepo(testPaths.toContractSourceEntries(), stubPaths.toContractSourceEntries(), type)
+                    else -> GitRepo(repositoryURL, branch, testPaths.toContractSourceEntries(), stubPaths.toContractSourceEntries(), type)
                 }
             }
             "filesystem" -> {
@@ -214,16 +194,20 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
                 val stubPaths = jsonArray(source, "stub")
                 val testPaths = jsonArray(source, "test")
 
-                LocalFileSystemSource(directory, testPaths, stubPaths)
+                LocalFileSystemSource(directory, testPaths.toContractSourceEntries(), stubPaths.toContractSourceEntries())
             }
             "web" -> {
                 val stubPaths = jsonArray(source, "stub")
                 val testPaths = jsonArray(source, "test")
-                WebSource(testPaths, stubPaths)
+                WebSource(testPaths.toContractSourceEntries(), stubPaths.toContractSourceEntries())
             }
             else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $configFilePath")
         }
     }
+}
+
+private fun List<String>.toContractSourceEntries(): List<ContractSourceEntry> {
+    return this.map { ContractSourceEntry(it) }
 }
 
 internal fun jsonArray(source: JSONObjectValue, key: String): List<String> {
@@ -268,7 +252,7 @@ fun contractStubPaths(configFileName: String): List<ContractPathData> {
 }
 
 fun interface ContractsSelectorPredicate {
-    fun select(source: ContractSource): List<String>
+    fun select(source: ContractSource): List<ContractSourceEntry>
 }
 
 fun contractTestPathsFrom(configFilePath: String, workingDirectory: String): List<ContractPathData> {
@@ -286,8 +270,15 @@ data class ContractPathData(
     val provider: String? = null,
     val repository: String? = null,
     val branch: String? = null,
-    val specificationPath: String? = null
-)
+    val specificationPath: String? = null,
+    val port: Int? = null
+) {
+    companion object {
+        fun List<ContractPathData>.specToPortMap(): Map<String, Int?> {
+            return this.associate { File(it.path).path to it.port }
+        }
+    }
+}
 
 fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<ContractPathData> {
     logger.log("Loading config file $configFilePath")
@@ -297,8 +288,8 @@ fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, sele
         it.loadContracts(selector, workingDirectory, configFilePath)
     }
 
-    logger.debug("Contract file paths in $configFilePath:")
-    logger.debug(contractPathData.joinToString(System.lineSeparator()) { it.path }.prependIndent("  "))
+    logger.debug("Spec file paths in $configFilePath:")
+    logger.debug(contractPathData.joinToString(System.lineSeparator()) { "- ${it.path}" })
 
     return contractPathData
 }
@@ -382,4 +373,22 @@ fun consolePrintableURL(host: String, port: Int, keyStoreData: KeyData? = null):
     val protocol = keyStoreData?.let { "https" } ?: "http"
     val displayableHost = if (host == DEFAULT_HTTP_STUB_HOST) "localhost" else host
     return "$protocol://$displayableHost:$port"
+}
+
+fun <T> runWithTimeout(timeout: Long, task: Callable<T>): T {
+    val unit = TimeUnit.MILLISECONDS
+
+    val executor = Executors.newSingleThreadExecutor()
+    val future = executor.submit(task)
+
+    try {
+        return future.get(timeout, unit)
+    } catch (e: TimeoutException) {
+        future.cancel(true)
+        throw e
+    } catch (e: ExecutionException) {
+        throw e.cause ?: e
+    } finally {
+        executor.shutdown() // Shut down the executor
+    }
 }

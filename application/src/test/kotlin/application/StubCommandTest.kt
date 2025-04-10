@@ -10,6 +10,7 @@ import io.specmatic.core.utilities.StubServerWatcher
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpClientFactory
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -117,9 +118,14 @@ internal class StubCommandTest {
                     any(),
                     httpClientFactory = any(),
                     workingDirectory = any(),
-                    gracefulRestartTimeoutInMs = any()
+                    gracefulRestartTimeoutInMs = any(),
+                    specToPortMap = any()
                 )
-            }.returns(null)
+            }.returns(
+                mockk {
+                   every { close() } returns Unit
+                }
+            )
 
             every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
             every { fileOperations.isFile(contractPath) }.returns(true)
@@ -138,7 +144,8 @@ internal class StubCommandTest {
                     any(),
                     httpClientFactory = any(),
                     workingDirectory = any(),
-                    gracefulRestartTimeoutInMs = any()
+                    gracefulRestartTimeoutInMs = any(),
+                    specToPortMap = any()
                 )
             }
         } finally {
@@ -227,9 +234,14 @@ internal class StubCommandTest {
                     passThroughTargetBase,
                     httpClientFactory = any(),
                     workingDirectory = any(),
-                    gracefulRestartTimeoutInMs = any()
+                    gracefulRestartTimeoutInMs = any(),
+                    specToPortMap = any()
                 )
-            }.returns(null)
+            }.returns(
+                mockk {
+                    every { close() } returns Unit
+                }
+            )
 
             every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
             every { fileOperations.isFile(contractPath) }.returns(true)
@@ -251,7 +263,8 @@ internal class StubCommandTest {
                     any(),
                     httpClientFactory = any(),
                     workingDirectory = any(),
-                    gracefulRestartTimeoutInMs = any()
+                    gracefulRestartTimeoutInMs = any(),
+                    specToPortMap = any()
                 )
             }
         } finally {

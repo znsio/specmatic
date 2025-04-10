@@ -4,10 +4,10 @@ import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.logger
 import java.io.File
 
-class LocalFileSystemSource(
+data class LocalFileSystemSource(
     val directory: String = ".",
-    override val testContracts: List<String>,
-    override val stubContracts: List<String>
+    override val testContracts: List<ContractSourceEntry>,
+    override val stubContracts: List<ContractSourceEntry>
 ) : ContractSource {
     override val type = "filesystem"
 
@@ -38,14 +38,21 @@ class LocalFileSystemSource(
         configFilePath: String
     ): List<ContractPathData> {
         return selector.select(this).map {
-            val resolvedPath = File(directory).resolve(it)
+            val resolvedPath = File(directory).resolve(it.path)
 
             ContractPathData(
                 directory,
                 resolvedPath.path,
                 provider = type,
                 specificationPath = resolvedPath.canonicalPath,
+                port = it.port
             )
+        }
+    }
+
+    override fun stubDirectoryToContractPath(contractPathDataList: List<ContractPathData>): List<Pair<String, String>> {
+        return stubContracts.map { contractSourceEntry ->
+            directory to contractSourceEntry.path
         }
     }
 }

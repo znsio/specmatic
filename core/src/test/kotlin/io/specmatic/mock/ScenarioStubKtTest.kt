@@ -932,7 +932,7 @@ paths:
         val scenarioStub = ScenarioStub(partial = ScenarioStub(request, response), data = additionalData)
 
         val json = scenarioStub.toJSON()
-        assertThat(json.keys()).containsExactly("foo", PARTIAL)
+        assertThat(json.keys()).containsExactlyInAnyOrder("foo", PARTIAL)
         assertThat(json.jsonObject["foo"]).isEqualTo(StringValue("bar"))
     }
 

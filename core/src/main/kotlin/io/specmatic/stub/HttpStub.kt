@@ -18,11 +18,7 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_SCHEME
 import io.specmatic.core.loadSpecmaticConfig
-import io.specmatic.core.log.HttpLogMessage
-import io.specmatic.core.log.LogMessage
-import io.specmatic.core.log.LogTail
-import io.specmatic.core.log.dontPrintToConsole
-import io.specmatic.core.log.logger
+import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
@@ -373,13 +369,7 @@ class HttpStub(
     }
 
     private fun ApplicationEngineEnvironmentBuilder.configureHostPorts() {
-        val hostPortList = specmaticConfig.stubBaseUrls(
-            endPointFromHostAndPort(this@HttpStub.host, this@HttpStub.port, null)
-        ).map { stubBaseUrl ->
-            val host = extractHost(stubBaseUrl)?.let(::normalizeHost) ?: this@HttpStub.host
-            val port = extractPort(stubBaseUrl) ?: this@HttpStub.port
-            Pair(host, port)
-        }.distinct().ifEmpty { listOf(this@HttpStub.host to this@HttpStub.port) }
+        val hostPortList = getHostAndPortList()
 
         when (keyData) {
             null -> connectors.addAll(
@@ -425,6 +415,31 @@ class HttpStub(
 
             anyHost()
         }
+    }
+
+    private fun getHostAndPortList(): List<Pair<String, Int>> {
+        val defaultBaseUrl = endPointFromHostAndPort(this.host, this.port, null)
+        val specsWithMultipleBaseUrls = specmaticConfig.stubToBaseUrlList(defaultBaseUrl).groupBy(
+            keySelector = { it.first }, valueTransform = { it.second }
+        ).filterValues { it.size > 1 }
+
+        if (specsWithMultipleBaseUrls.isNotEmpty()) {
+            logger.log("WARNING: Some specs are associated with multiple base URLs, This may lead to unexpected behavior")
+            specsWithMultipleBaseUrls.forEach { (spec, baseUrls) ->
+                logger.log("OAS \"$spec\" is linked to the following base URLs:")
+                baseUrls.forEach { baseUrl ->
+                    logger.withIndentation(2) {
+                        logger.log(">> $baseUrl")
+                    }
+                }
+            }
+        }
+
+        return specmaticConfig.stubBaseUrls(defaultBaseUrl).map { stubBaseUrl ->
+            val host = extractHost(stubBaseUrl)?.let(::normalizeHost) ?: this.host
+            val port = extractPort(stubBaseUrl) ?: this.port
+            Pair(host, port)
+        }.distinct().ifEmpty { listOf(this.host to this.port) }
     }
 
     fun serveStubResponse(

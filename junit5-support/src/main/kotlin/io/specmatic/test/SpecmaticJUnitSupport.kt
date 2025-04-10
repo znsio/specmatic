@@ -17,7 +17,6 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.stub.hasOpenApiFileExtension
 import io.specmatic.stub.isOpenAPI
-import io.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.*
 import io.specmatic.test.reports.OpenApiCoverageReportProcessor
 import io.specmatic.test.reports.coverage.Endpoint
 import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
@@ -30,10 +29,7 @@ import org.junit.jupiter.api.parallel.ExecutionMode
 import org.opentest4j.TestAbortedException
 import java.io.File
 import java.lang.management.ManagementFactory
-import java.net.MalformedURLException
 import java.net.URI
-import java.net.URISyntaxException
-import java.net.URL
 import java.util.*
 import java.util.stream.Stream
 import javax.management.ObjectName
@@ -385,8 +381,8 @@ open class SpecmaticJUnitSupport {
     fun constructTestBaseURL(): String {
         val testBaseURL = System.getProperty(TEST_BASE_URL)
         if (testBaseURL != null) {
-            when (val validationResult = validateURI(testBaseURL)) {
-                Success -> return testBaseURL
+            when (val validationResult = validateTestOrStubUri(testBaseURL)) {
+                URIValidationResult.Success -> return testBaseURL
                 else -> throw TestAbortedException("${validationResult.message} in $TEST_BASE_URL environment variable")
             }
         }
@@ -407,41 +403,14 @@ open class SpecmaticJUnitSupport {
 
         val urlConstructedFromProtocolHostAndPort = "$protocol://$host:$port"
 
-        return when (validateURI(urlConstructedFromProtocolHostAndPort)) {
-            Success -> urlConstructedFromProtocolHostAndPort
+        return when (validateTestOrStubUri(urlConstructedFromProtocolHostAndPort)) {
+            URIValidationResult.Success -> urlConstructedFromProtocolHostAndPort
             else -> throw TestAbortedException("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
         }
     }
 
     private fun isNumeric(port: String?): Boolean {
         return port?.toIntOrNull() != null
-    }
-
-    enum class URIValidationResult(val message: String) {
-        URIParsingError("Please specify a valid URL"),
-        InvalidURLSchemeError("Please specify a valid scheme / protocol (http or https)"),
-        InvalidPortError("Please specify a valid port number"),
-        Success("This URL is valid");
-    }
-
-    private fun validateURI(uri: String): URIValidationResult {
-        val parsedURI = try {
-            URL(uri).toURI()
-        } catch (e: URISyntaxException) {
-            return URIParsingError
-        } catch(e: MalformedURLException) {
-            return URIParsingError
-        }
-
-        val validProtocols = listOf("http", "https")
-        val validPorts = 1..65535
-
-        return when {
-            !validProtocols.contains(parsedURI.scheme) -> InvalidURLSchemeError
-            parsedURI.port != -1 && !validPorts.contains(parsedURI.port) -> InvalidPortError
-
-            else -> Success
-        }
     }
 
     private fun portNotSpecified(parsedURI: URI) = parsedURI.port == -1

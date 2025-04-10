@@ -6,10 +6,7 @@ import io.specmatic.core.log.NewLineLogMessage
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleLog
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.stub.HttpClientFactory
-import io.specmatic.stub.HttpStub
-import io.specmatic.stub.contractInfoToHttpExpectations
-import io.specmatic.stub.endPointFromHostAndPort
+import io.specmatic.stub.*
 import org.springframework.stereotype.Component
 
 @Component
@@ -70,7 +67,7 @@ class HTTPStubEngine {
         baseUrlToSpecs.entries
             .sortedBy { it.key }
             .forEach { (baseUrl, specs) ->
-                messageBuilder.append("${newLine}- $baseUrl serving endpoints from specs:")
+                messageBuilder.append("${newLine}- ${validateAndFillInStubUrl(baseUrl, defaultBaseUrl)} serving endpoints from specs:")
                 specs.sorted().forEachIndexed { index, spec ->
                     messageBuilder.append("$newLine    ${index.inc()}. $spec")
                 }

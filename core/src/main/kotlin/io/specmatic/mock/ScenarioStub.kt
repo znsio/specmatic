@@ -47,28 +47,23 @@ data class ScenarioStub(
     fun isPartial() = partial != null
 
     fun toJSON(): JSONObjectValue {
-        if (partial != null) return this.toPartialJSON()
+        val requestResponse: Map<String, Value> =
+            if (partial != null) {
+                mapOf(
+                    PARTIAL to JSONObjectValue(serializeRequestResponse(partial))
+                )
+            } else {
+                serializeRequestResponse(this)
+            }
 
-        val mockInteraction = mutableMapOf<String, Value>()
-        mockInteraction.putAll(data.jsonObject)
-
-        mockInteraction[MOCK_HTTP_REQUEST] = request.toJSON()
-        mockInteraction[MOCK_HTTP_RESPONSE] = response.toJSON()
-
-        return JSONObjectValue(mockInteraction)
+        return JSONObjectValue(requestResponse + data.jsonObject)
     }
 
-    private fun toPartialJSON(): JSONObjectValue {
-        if (partial == null) return this.toJSON()
-        val exampleJson = JSONObjectValue(buildMap{
-            put(MOCK_HTTP_REQUEST, partial.request.toJSON())
-            put(MOCK_HTTP_RESPONSE, partial.response.toJSON())
-        })
-
-        return JSONObjectValue(buildMap {
-            putAll(data.jsonObject)
-            put(PARTIAL, exampleJson)
-        })
+    private fun serializeRequestResponse(scenarioStub: ScenarioStub): Map<String, Value> {
+        return mapOf(
+            MOCK_HTTP_REQUEST to scenarioStub.request.toJSON(),
+            MOCK_HTTP_RESPONSE to scenarioStub.response.toJSON()
+        )
     }
 
     private fun getHttpResponse(): HttpResponse {

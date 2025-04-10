@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 
 internal class AnyPatternTest {
     @Test
@@ -429,6 +430,32 @@ internal class AnyPatternTest {
         """.trimIndent())
     }
 
+    @Test
+    fun `should prioritise non-null pattern generation when its a nullable pattern`() {
+        val nullableScalarPatterns = listOf(
+            AnyPattern(listOf(NullPattern, StringPattern(), NullPattern)),
+            AnyPattern(listOf(StringPattern(), NullPattern)),
+            AnyPattern(listOf(NullPattern, StringPattern()))
+        )
+
+        assertThat(nullableScalarPatterns).allSatisfy {
+            val generatedValue = it.generate(Resolver())
+            assertThat(generatedValue).isInstanceOf(StringValue::class.java)
+        }
+    }
+
+    @Test
+    fun `should be able to determine if pattern is scalar based correctly`() {
+        val scalarBasedPatterns = listOf(
+            AnyPattern(listOf(StringPattern(), NullPattern)),
+            AnyPattern(listOf(NullPattern, StringPattern()))
+        )
+
+        assertThat(scalarBasedPatterns).allSatisfy {
+            assertThat(it.isNullableScalarPattern()).isTrue()
+        }
+    }
+
     @Nested
     inner class GenerateForEveryDiscriminatorDetailsValueTests {
         @Test
@@ -692,6 +719,40 @@ internal class AnyPatternTest {
         }
 
         @Test
+        fun `should work when pattern is scalar based of nullable type`() {
+            val pattern = AnyPattern(listOf(NullPattern, StringPattern()))
+            val resolver = Resolver(dictionary = mapOf("(string)" to StringValue("TODO")))
+            val invalidValue = NumberValue(999)
+            val fixedValue = pattern.fixValue(invalidValue, resolver)
+
+            assertThat(fixedValue).isInstanceOf(StringValue::class.java); fixedValue as StringValue
+            assertThat(fixedValue.string).isEqualTo("TODO")
+        }
+
+        @Test
+        fun `scalar value should be picked from dictionary when pattern has typeAlias and matching key in dictionary`() {
+            val pattern = AnyPattern(listOf(NullPattern, StringPattern()), typeAlias = "(StringOrEmpty)")
+            val resolver = Resolver(dictionary = mapOf("StringOrEmpty" to StringValue("TODO")))
+            val invalidValue = NumberValue(999)
+            val fixedValue = pattern.fixValue(invalidValue, resolver)
+
+            assertThat(fixedValue).isInstanceOf(StringValue::class.java); fixedValue as StringValue
+            assertThat(fixedValue.string).isEqualTo("TODO")
+        }
+
+        @Test
+        fun `nullable pattern dictionary lookup should not throw an exception`() {
+            val pattern = AnyPattern(listOf(NullPattern, NumberPattern()))
+            val jsonObjPattern = JSONObjectPattern(mapOf("id" to pattern), typeAlias = "(Test)")
+            val resolver = Resolver(dictionary = mapOf("Test.id" to NumberValue(999)))
+
+            val invalidValue = JSONObjectValue(mapOf("id" to StringValue("INVALID")))
+            val fixedValue = assertDoesNotThrow { jsonObjPattern.fixValue(invalidValue, resolver) }
+
+            assertThat(fixedValue).isInstanceOf(JSONObjectValue::class.java); fixedValue as JSONObjectValue
+            assertThat(fixedValue.jsonObject).isEqualTo(mapOf("id" to NumberValue(999)))
+        }
+
         fun `should be able to fix invalid values with a partial resolver`() {
             val pattern = AnyPattern(
                 listOf(

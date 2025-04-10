@@ -202,9 +202,6 @@ data class Resolver(
     }
 
     fun generate(pattern: Pattern): Value {
-        if(dictionaryLookupPath.isBlank())
-            return pattern.generate(this)
-
         val value = dictionary[dictionaryLookupPath] ?: defaultPatternValueFromDictionary(pattern) ?: return pattern.generate(this)
 
         val dictionaryValueMatchResult = pattern.matches(value, this)

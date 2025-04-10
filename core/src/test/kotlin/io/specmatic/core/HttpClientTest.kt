@@ -51,11 +51,9 @@ class HttpClientTest {
                 "    When request-body {name: \"(string)\", address: \"(string)\"}\n" +
                 "    Then status 200\n" +
                 "    And response-body {location-id: 10}"
-        val host = "localhost"
-        val port = 8080
-        val url = "http://localhost:$port"
+        val url = "http://localhost:8080"
         val client = HttpClient(url)
-        HttpStub(contractGherkin, emptyList(), host, port).use {
+        HttpStub(contractGherkin, emptyList(), url).use {
             val response = client.execute(request)
             Assertions.assertNotNull(response)
             Assertions.assertEquals(200, response.status)
@@ -76,12 +74,10 @@ class HttpClientTest {
                 "    And request-body {name: \"(string)\", address: \"(string)\"}\n" +
                 "    Then status 200\n" +
                 "    And response-body {location-id: 10}"
-        val host = "localhost"
-        val port = 8080
-        val url = "http://localhost:$port"
+        val url = "http://localhost:8080"
         val client = HttpClient(url)
 
-        HttpStub(contractGherkin, emptyList(), host, port).use {
+        HttpStub(contractGherkin, emptyList(), url).use {
             client.setServerState(mapOf("server" to StringValue("state")))
             val response = client.execute(request)
             Assertions.assertNotNull(response)

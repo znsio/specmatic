@@ -6,8 +6,6 @@ import io.ktor.server.engine.*
 import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.cors.*
-import io.ktor.server.plugins.cors.CORS
-import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -18,6 +16,7 @@ import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpRequestPattern
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.Resolver
+import io.specmatic.core.Result
 import io.specmatic.core.Scenario
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.loadSpecmaticConfig
@@ -38,7 +37,6 @@ import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
-import io.specmatic.core.Result
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.*
 import io.specmatic.stub.stateful.StubCache.Companion.idValueFor
@@ -148,7 +146,7 @@ class StatefulHttpStub(
         server.start()
     }
 
-    override val client = HttpClient(endPointFromHostAndPort(host, port, null))
+    override val client = HttpClient(endPointFromBaseURL("${host}:${port}", null))
 
     override fun setExpectation(json: String) {
         return

@@ -1,15 +1,16 @@
 package io.specmatic.proxy
 
+import io.ktor.http.*
+import io.specmatic.Waiter
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.YAML
 import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.stub.HttpStub
-import io.ktor.http.*
-import io.specmatic.Waiter
 import io.specmatic.mock.DELAY_IN_MILLISECONDS
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
+import io.specmatic.stub.HttpStub
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -70,7 +71,7 @@ internal class ProxyTest {
 
     @Test
     fun `basic test of the proxy`() {
-        HttpStub(simpleFeature).use {
+        HttpStub(simpleFeature, baseURL = DEFAULT_STUB_BASEURL).use {
             Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
                 val restProxy = java.net.Proxy(java.net.Proxy.Type.HTTP, InetSocketAddress("localhost", 9001))
                 val requestFactory = SimpleClientHttpRequestFactory()
@@ -96,7 +97,7 @@ internal class ProxyTest {
 
     @Test
     fun `basic test of the proxy with a request containing a path variable`() {
-        HttpStub(simpleFeature).use {
+        HttpStub(simpleFeature, baseURL = DEFAULT_STUB_BASEURL).use {
             Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
                 val restProxy = java.net.Proxy(java.net.Proxy.Type.HTTP, InetSocketAddress("localhost", 9001))
                 val requestFactory = SimpleClientHttpRequestFactory()
@@ -122,7 +123,7 @@ internal class ProxyTest {
 
     @Test
     fun `basic test of the reverse proxy`() {
-        HttpStub(simpleFeature).use {
+        HttpStub(simpleFeature, baseURL = DEFAULT_STUB_BASEURL).use {
             Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
                 val client = RestTemplate()
                 val response = client.postForEntity("http://localhost:9001/", "10", String::class.java)
@@ -163,7 +164,7 @@ internal class ProxyTest {
                             type: string
         """.trimIndent(), "").toFeature()
 
-        HttpStub(spec).use {
+        HttpStub(spec, baseURL = DEFAULT_STUB_BASEURL).use {
             Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
                 val client = RestTemplate()
                 val response = client.getForEntity("http://localhost:9001/da ta", String::class.java)
@@ -176,7 +177,7 @@ internal class ProxyTest {
 
     @Test
     fun `should not include standard http headers in the generated specification`() {
-        HttpStub(simpleFeature).use {
+        HttpStub(simpleFeature, baseURL = DEFAULT_STUB_BASEURL).use {
             Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
                 val client = RestTemplate()
                 val response = client.postForEntity("http://localhost:9001/", "10", String::class.java)
@@ -197,7 +198,7 @@ internal class ProxyTest {
 
     @Test
     fun `should not include a body for GET requests with no body`() {
-        HttpStub(simpleFeature).use {
+        HttpStub(simpleFeature, baseURL = DEFAULT_STUB_BASEURL).use {
             Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
                 val client = RestTemplate()
                 val response = client.getForEntity("http://localhost:9001/", String::class.java)
@@ -233,7 +234,7 @@ internal class ProxyTest {
                             type: string
         """.trimIndent(), "").toFeature()
 
-        HttpStub(featureWithHTMLResponse).use {
+        HttpStub(featureWithHTMLResponse, baseURL = DEFAULT_STUB_BASEURL).use {
             Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
                 val client = RestTemplate()
                 client.getForEntity("http://localhost:9001/", String::class.java)
@@ -243,14 +244,17 @@ internal class ProxyTest {
         assertThat(fakeFileWriter.receivedStub).withFailMessage(fakeFileWriter.receivedStub).contains("text/html")
         assertThat(fakeFileWriter.receivedContract).withFailMessage(fakeFileWriter.receivedStub).contains("text/html")
 
-        HttpStub(OpenApiSpecification.fromYAML(fakeFileWriter.receivedContract!!, "").toFeature()).use { stub ->
+        HttpStub(
+            OpenApiSpecification.fromYAML(fakeFileWriter.receivedContract!!, "").toFeature(),
+            baseURL = DEFAULT_STUB_BASEURL
+        ).use { stub ->
 
         }
     }
 
     @Test
     fun `should return health status as UP if the actuator health endpoint is hit`() {
-        HttpStub(simpleFeature).use {
+        HttpStub(simpleFeature, baseURL = DEFAULT_STUB_BASEURL).use {
             Proxy(host = "localhost", port = 9001, "http://localhost:9001", fakeFileWriter).use {
                 val client = RestTemplate()
                 val response = client.getForEntity("http://localhost:9001/actuator/health", Map::class.java)
@@ -263,7 +267,7 @@ internal class ProxyTest {
 
     @Test
     fun `should dump the examples and spec if the specmatic proxy dump endpoint is hit`() {
-        HttpStub(simpleFeature).use {
+        HttpStub(simpleFeature, baseURL = DEFAULT_STUB_BASEURL).use {
             Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
                 val restProxy = java.net.Proxy(java.net.Proxy.Type.HTTP, InetSocketAddress("localhost", 9001))
                 val requestFactory = SimpleClientHttpRequestFactory()
@@ -306,7 +310,7 @@ internal class ProxyTest {
 
     @Test
     fun `should not timeout if custom timeout is greater than backend service delay`() {
-        HttpStub(simpleFeature).use { fake ->
+        HttpStub(simpleFeature, baseURL = DEFAULT_STUB_BASEURL).use { fake ->
             val expectation = """ {
                 "http-request": {
                     "method": "POST",
@@ -338,7 +342,7 @@ internal class ProxyTest {
 
     @Test
     fun `should timeout if custom timeout is less than backend service delay`() {
-        HttpStub(simpleFeature).use { fake ->
+        HttpStub(simpleFeature, baseURL = DEFAULT_STUB_BASEURL).use { fake ->
             val expectation = """ {
                 "http-request": {
                     "method": "POST",

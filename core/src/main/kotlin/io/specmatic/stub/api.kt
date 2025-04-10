@@ -1,30 +1,14 @@
 @file:JvmName("API")
 package io.specmatic.stub
 
-import io.specmatic.core.CONTRACT_EXTENSION
-import io.specmatic.core.CONTRACT_EXTENSIONS
-import io.specmatic.core.CommandHook
-import io.specmatic.core.ContractAndStubMismatchMessages
-import io.specmatic.core.DATA_DIR_SUFFIX
-import io.specmatic.core.Feature
-import io.specmatic.core.HookName
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.MISSING_CONFIG_FILE_MESSAGE
-import io.specmatic.core.OPENAPI_FILE_EXTENSIONS
-import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.WorkingDirectory
-import io.specmatic.core.getConfigFilePath
+import io.specmatic.core.*
 import io.specmatic.core.git.SystemGit
-import io.specmatic.core.isContractFile
-import io.specmatic.core.loadSpecmaticConfigOrDefault
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
-import io.specmatic.core.parseContractFileToFeature
-import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.utilities.ContractPathData
-import io.specmatic.core.utilities.ContractPathData.Companion.specToPortMap
+import io.specmatic.core.utilities.ContractPathData.Companion.specToBaseUrlMap
 import io.specmatic.core.utilities.contractStubPaths
 import io.specmatic.core.utilities.examplesDirFor
 import io.specmatic.core.utilities.exitWithMessage
@@ -54,10 +38,14 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
     return HttpStub(
         contractBehaviour,
         mocks,
-        host,
-        port,
+        "${host}:${port}",
         ::consoleLog,
-        specToStubPortMap = mapOf(contractBehaviour.specification.orEmpty() to port)
+        specToStubBaseUrlMap = mapOf(
+            contractBehaviour.specification.orEmpty() to endPointFromBaseURL(
+                "${host}:${port}",
+                null
+            )
+        )
     )
 }
 
@@ -162,14 +150,13 @@ internal fun createStub(
     return HttpStub(
         stubValues.features,
         stubValues.expectations,
-        host,
-        port,
+        "${host}:${port}",
         log = ::consoleLog,
         workingDirectory = stubValues.workingDirectory,
         specmaticConfigPath = File(configFileName).canonicalPath,
         timeoutMillis = timeoutMillis,
         strictMode = strict,
-        specToStubPortMap = stubValues.contractStubPaths.specToPortMap()
+        specToStubBaseUrlMap = stubValues.contractStubPaths.specToBaseUrlMap()
     )
 }
 
@@ -208,12 +195,11 @@ internal fun createStubFromContracts(
     return HttpStub(
         features,
         httpExpectations,
-        host,
-        port,
+        "${host}:${port}",
         ::consoleLog,
         specmaticConfigPath = File(getConfigFilePath()).canonicalPath,
         timeoutMillis = timeoutMillis,
-        specToStubPortMap = contractPathData.specToPortMap()
+        specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
     )
 }
 

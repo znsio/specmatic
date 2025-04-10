@@ -1,19 +1,25 @@
 package application
 
-import io.specmatic.core.*
+import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.CONTRACT_EXTENSIONS
+import io.specmatic.core.Configuration
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
+import io.specmatic.core.WorkingDirectory
+import io.specmatic.core.getConfigFilePath
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
-import io.specmatic.core.utilities.ContractPathData.Companion.specToPortMap
+import io.specmatic.core.utilities.ContractPathData.Companion.specToBaseUrlMap
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.exitIfAnyDoNotExist
-import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
 import io.specmatic.core.utilities.exitWithMessage
+import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.HttpClientFactory
 import org.springframework.beans.factory.annotation.Autowired
-import picocli.CommandLine.*
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
 import java.io.File
 import java.util.concurrent.Callable
 
@@ -42,9 +48,14 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--data", "--examples"], description = ["Directories containing JSON examples"], required = false)
     var exampleDirs: List<String> = mutableListOf()
 
+    @Option(names = ["--baseURL"], description = ["Base URL for the http stub in the format 'http(s)://host:port'"])
+    var baseURL: String? = null
+
+    @Deprecated("Use the --baseURL option instead.")
     @Option(names = ["--host"], description = ["Host for the http stub"], defaultValue = DEFAULT_HTTP_STUB_HOST)
     lateinit var host: String
 
+    @Deprecated("Use the --baseURL option instead.")
     @Option(names = ["--port"], description = ["Port for the http stub"], defaultValue = DEFAULT_HTTP_STUB_PORT)
     var port: Int = 0
 
@@ -194,10 +205,10 @@ class StubCommand : Callable<Unit> {
             true -> if (portIsInUse(host, port)) findRandomFreePort() else port
             false -> port
         }
+
         httpStub = httpStubEngine.runHTTPStub(
             stubs = stubData,
-            host = host,
-            port = port,
+            baseURL = baseURL ?: "$host:$port",
             certInfo = certInfo,
             strictMode = strictMode,
             passThroughTargetBase = passThroughTargetBase,
@@ -205,7 +216,7 @@ class StubCommand : Callable<Unit> {
             httpClientFactory = httpClientFactory,
             workingDirectory = workingDirectory,
             gracefulRestartTimeoutInMs = gracefulRestartTimeoutInMs,
-            specToPortMap = contractSources.specToPortMap()
+            specToBaseUrlMap = contractSources.specToBaseUrlMap()
         )
 
         LogTail.storeSnapshot()

@@ -4,7 +4,7 @@ contracts:
       directory: "."
     consumes:
       - ./product.yaml
-      - port: 9001
+      - baseUrl: http://localhost:9001
         specs:
           - ./order.yaml
           - ./exported_product/exported_product.yaml

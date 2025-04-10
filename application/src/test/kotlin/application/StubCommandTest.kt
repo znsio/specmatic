@@ -2,6 +2,9 @@ package application
 
 import com.ginsberg.junit.exit.ExpectSystemExitWithStatus
 import com.ninjasquad.springmockk.MockkBean
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import io.specmatic.core.CONTRACT_EXTENSION
 import io.specmatic.core.CONTRACT_EXTENSIONS
 import io.specmatic.core.parseGherkinStringToFeature
@@ -9,14 +12,12 @@ import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.StubServerWatcher
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpClientFactory
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -56,6 +57,7 @@ internal class StubCommandTest {
     fun `clean up stub command`() {
         stubCommand.contractPaths = arrayListOf()
         stubCommand.specmaticConfigPath = null
+        stubCommand.baseURL = null
     }
 
     @Test
@@ -103,23 +105,21 @@ internal class StubCommandTest {
                 )
             }.returns(stubInfo)
 
-            val host = "0.0.0.0"
-            val port = 9000
+            val baseURL = "0.0.0.0:9000"
             val certInfo = CertInfo()
             val strictMode = false
 
             every {
                 httpStubEngine.runHTTPStub(
                     stubInfo,
-                    host,
-                    port,
+                    baseURL,
                     certInfo,
                     strictMode,
                     any(),
                     httpClientFactory = any(),
                     workingDirectory = any(),
                     gracefulRestartTimeoutInMs = any(),
-                    specToPortMap = any()
+                    specToBaseUrlMap = any()
                 )
             }.returns(
                 mockk {
@@ -138,14 +138,13 @@ internal class StubCommandTest {
                 httpStubEngine.runHTTPStub(
                     any(),
                     any(),
-                    any(),
                     certInfo,
                     strictMode,
                     any(),
                     httpClientFactory = any(),
                     workingDirectory = any(),
                     gracefulRestartTimeoutInMs = any(),
-                    specToPortMap = any()
+                    specToBaseUrlMap = any()
                 )
             }
         } finally {
@@ -218,8 +217,7 @@ internal class StubCommandTest {
                 )
             }.returns(stubInfo)
 
-            val host = "0.0.0.0"
-            val port = 9000
+            val baseURL = "0.0.0.0:9000"
             val certInfo = CertInfo()
             val strictMode = false
             val passThroughTargetBase = "http://passthroughTargetBase"
@@ -227,15 +225,14 @@ internal class StubCommandTest {
             every {
                 httpStubEngine.runHTTPStub(
                     stubInfo,
-                    host,
-                    port,
+                    baseURL,
                     certInfo,
                     strictMode,
                     passThroughTargetBase,
                     httpClientFactory = any(),
                     workingDirectory = any(),
                     gracefulRestartTimeoutInMs = any(),
-                    specToPortMap = any()
+                    specToBaseUrlMap = any()
                 )
             }.returns(
                 mockk {
@@ -256,19 +253,53 @@ internal class StubCommandTest {
             verify(exactly = 1) {
                 httpStubEngine.runHTTPStub(
                     stubInfo,
-                    host,
-                    any(),
+                    baseURL,
                     certInfo,
                     strictMode,
                     any(),
                     httpClientFactory = any(),
                     workingDirectory = any(),
                     gracefulRestartTimeoutInMs = any(),
-                    specToPortMap = any()
+                    specToBaseUrlMap = any()
                 )
             }
         } finally {
             file.delete()
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "          ,      ,              , 0.0.0.0:9000",
+        "localhost , 8080 ,              , localhost:8080",
+        "localhost ,      ,              , localhost:9000",
+        "          , 8080 ,              , 0.0.0.0:8080",
+        "          ,      , 0.0.0.0:3000 , 0.0.0.0:3000",
+        "localhost , 8080 , 0.0.0.0:3000 , 0.0.0.0:3000",
+        "localhost ,      , 0.0.0.0:3000 , 0.0.0.0:3000",
+        "          , 8080 , 0.0.0.0:3000 , 0.0.0.0:3000"
+    )
+    fun `should prioritise baseURL over passed through port and host args`(host: String?, port: String?, baseURL: String?, expected: String) {
+        every { stubLoaderEngine.loadStubs(any(), any(), any(), any()) } returns emptyList()
+        every { watchMaker.make(any()) } returns watcher
+        every { specmaticConfig.contractStubPaths() } returns emptyList()
+        every { specmaticConfig.contractStubPathData() } returns emptyList()
+        every {
+            httpStubEngine.runHTTPStub(any(), expected, any(), any(), any(), any(), any(), any(), any(), any())
+        } returns mockk { every { close() } returns Unit }
+
+        val args = buildList {
+            baseURL?.let { add("--baseURL=$it") }
+            host?.let { add("--host=$it") }
+            port?.let { add("--port=$it") }
+        }
+        val exitStatus = CommandLine(stubCommand, factory).execute(*args.toTypedArray())
+
+        assertThat(exitStatus).isZero()
+        verify(exactly = 1) {
+            httpStubEngine.runHTTPStub(
+                any(), expected, any(), any(), any(), any(), any(), any(), any(), any()
+            )
         }
     }
 }

@@ -8,6 +8,7 @@ import io.specmatic.core.Result.Success
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.DEFAULT_STUB_BASEURL
 import io.specmatic.stub.HttpStub
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
@@ -115,7 +116,7 @@ paths:
 
         assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Success::class.java)
 
-        HttpStub(listOf(contract), listOf(stub)).use {
+        HttpStub(listOf(contract), listOf(stub), DEFAULT_STUB_BASEURL).use {
             assertDoesNotThrow {
                 it.setExpectation(ScenarioStub(request, HttpResponse.OK))
             }

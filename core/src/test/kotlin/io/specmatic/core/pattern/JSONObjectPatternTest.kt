@@ -2327,10 +2327,7 @@ components:
         @Test
         fun `should not add missing mandatory keys when resolver is set to partial`() {
             val pattern = JSONObjectPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()), typeAlias = "(Test)")
-            val resolver = Resolver(
-                findKeyErrorCheck = PARTIAL_KEYCHECK,
-                dictionary = mapOf("(number)" to NumberValue(999), "(string)" to StringValue("TODO"))
-            )
+            val resolver = Resolver(dictionary = mapOf("(number)" to NumberValue(999), "(string)" to StringValue("TODO"))).toPartial()
             val partialInvalidValue = JSONObjectValue(mapOf("number" to StringValue("(string)")))
             val fixedValue = pattern.fixValue(partialInvalidValue, resolver)
 

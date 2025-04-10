@@ -436,6 +436,10 @@ ${matchResult.reportString()}
     fun isPartial(): Boolean {
         return this.findKeyErrorCheck.isPartial()
     }
+
+    fun toPartial(): Resolver {
+        return this.copy(findKeyErrorCheck = findKeyErrorCheck.toPartialKeyCheck())
+    }
 }
 
 private fun ExactValuePattern.hasPatternToken(): Boolean {

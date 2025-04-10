@@ -37,6 +37,10 @@ data class KeyCheck(val patternKeyCheck: KeyErrorCheck = CheckOnlyPatternKeys,
     fun isPartial(): Boolean {
         return patternKeyCheck == noPatternKeyCheck
     }
+
+    fun toPartialKeyCheck(): KeyCheck {
+        return this.copy(patternKeyCheck = noPatternKeyCheck)
+    }
 }
 
 private fun overrideUnexpectedKeyCheck(keyCheck: KeyCheck, unexpectedKeyCheck: UnexpectedKeyCheck): KeyCheck {

@@ -335,7 +335,7 @@ data class Scenario(
             resolver.copy(
                 mockMode = true,
                 mismatchMessages = mismatchMessages,
-                findKeyErrorCheck = if (isPartial) PARTIAL_KEYCHECK else resolver.findKeyErrorCheck
+                findKeyErrorCheck = if (isPartial) resolver.findKeyErrorCheck.toPartialKeyCheck() else resolver.findKeyErrorCheck
             )
         )
 
@@ -559,7 +559,7 @@ data class Scenario(
                 return "The $keyLabel $keyName in the specification was missing in example ${row.name}"
             }
         },
-        findKeyErrorCheck = if (row.isPartial) PARTIAL_KEYCHECK else updatedResolver.findKeyErrorCheck,
+        findKeyErrorCheck = if (row.isPartial) updatedResolver.findKeyErrorCheck.toPartialKeyCheck() else updatedResolver.findKeyErrorCheck,
         mockMode = true
     )
 
@@ -839,7 +839,7 @@ data class Scenario(
     }
 
     fun matchesPartial(template: ScenarioStub): Result {
-        val updatedResolver = resolver.copy(findKeyErrorCheck = PARTIAL_KEYCHECK, mockMode = true)
+        val updatedResolver = resolver.copy(mockMode = true).toPartial()
 
         val requestMatch = attempt(breadCrumb = "REQUEST") {
             if (template.response.status !in invalidRequestStatuses) {
@@ -901,7 +901,7 @@ data class Scenario(
         ).update(
             resolver.copy(
                 mockMode = true,
-                findKeyErrorCheck = if (isPartial) PARTIAL_KEYCHECK else resolver.findKeyErrorCheck
+                findKeyErrorCheck = if (isPartial) resolver.findKeyErrorCheck.toPartialKeyCheck() else resolver.findKeyErrorCheck
             )
         )
 
@@ -973,8 +973,3 @@ val noPatternKeyCheck = object : KeyErrorCheck {
         return emptyList()
     }
 }
-
-val PARTIAL_KEYCHECK = KeyCheck(
-    patternKeyCheck = noPatternKeyCheck,
-    unexpectedKeyCheck = ValidateUnexpectedKeys
-)

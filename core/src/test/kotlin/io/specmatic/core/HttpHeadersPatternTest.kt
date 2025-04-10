@@ -718,7 +718,7 @@ internal class HttpHeadersPatternTest {
         @Test
         fun `should not add missing mandatory keys when resolver is set to partial`() {
             val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()))
-            val resolver = Resolver(findKeyErrorCheck = PARTIAL_KEYCHECK, dictionary = mapOf("(number)" to NumberValue(999), "(string)" to StringValue("TODO")))
+            val resolver = Resolver(dictionary = mapOf("(number)" to NumberValue(999), "(string)" to StringValue("TODO"))).toPartial()
             val partialInvalidValue = mapOf("number" to "(string)")
             val fixedValue = httpHeaders.fixValue(partialInvalidValue, resolver)
 

@@ -7,18 +7,26 @@ import io.specmatic.core.invalidRequestStatuses
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 import io.specmatic.mock.ScenarioStub
+import java.net.URI
 
 class ThreadSafeListOfStubs(
     private val httpStubs: MutableList<HttpStubData>,
-    private val specToPortMap: Map<String, Int>
+    private val specToBaseUrlMap: Map<String, String>
 ) {
     val size: Int
         get() {
             return httpStubs.size
         }
 
-    fun stubAssociatedTo(port: Int, defaultPort: Int): ThreadSafeListOfStubs {
-        return portToListOfStubsMap(defaultPort)[port] ?: emptyStubs()
+    fun stubAssociatedTo(baseUrl: String, defaultBaseUrl: String, urlPath: String): ThreadSafeListOfStubs {
+        val baseUrlToListOfStubsMap = baseUrlToListOfStubsMap(defaultBaseUrl).mapKeys { URI(it.key) }
+        val resolvedUrls = setOf(baseUrl, defaultBaseUrl).map { it.plus(urlPath) }.map(::URI)
+
+        return resolvedUrls.firstNotNullOfOrNull { resolvedUrl ->
+            baseUrlToListOfStubsMap.entries.firstOrNull { (stubBaseUrl, _) ->
+                isSameBaseIgnoringHost(resolvedUrl, stubBaseUrl)
+            }?.value
+        } ?: emptyStubs()
     }
 
     fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {
@@ -121,12 +129,12 @@ class ThreadSafeListOfStubs(
         return Pair(mock?.second, listMatchResults)
     }
 
-    private fun portToListOfStubsMap(defaultPort: Int): Map<Int, ThreadSafeListOfStubs> {
+    private fun baseUrlToListOfStubsMap(defaultBaseUrl: String): Map<String, ThreadSafeListOfStubs> {
         synchronized(this) {
             return httpStubs.groupBy {
-                specToPortMap[it.contractPath] ?: defaultPort
+                specToBaseUrlMap[it.contractPath] ?: defaultBaseUrl
             }.mapValues { (_, stubs) ->
-                ThreadSafeListOfStubs(stubs as MutableList<HttpStubData>, specToPortMap)
+                ThreadSafeListOfStubs(stubs as MutableList<HttpStubData>, specToBaseUrlMap)
             }
         }
     }

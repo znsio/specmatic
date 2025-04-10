@@ -58,6 +58,8 @@ import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.Writer
+import java.net.InetAddress
+import java.net.URI
 import java.nio.charset.Charset
 import java.util.*
 import kotlin.text.toCharArray
@@ -77,7 +79,9 @@ class HttpStub(
     val workingDirectory: WorkingDirectory? = null,
     val specmaticConfigPath: String? = null,
     private val timeoutMillis: Long = 0,
-    private val specToStubPortMap: Map<String, Int?> = features.associate { it.path to port }
+    private val specToStubBaseUrlMap: Map<String, String?> = features.associate {
+        it.path to endPointFromHostAndPort(host, port, keyData)
+    }
 ) : ContractStub {
     constructor(
         feature: Feature,
@@ -85,14 +89,16 @@ class HttpStub(
         host: String = "localhost",
         port: Int = 9000,
         log: (event: LogMessage) -> Unit = dontPrintToConsole,
-        specToStubPortMap: Map<String, Int> = mapOf(feature.path to port)
+        specToStubBaseUrlMap: Map<String, String> = mapOf(
+            feature.path to endPointFromHostAndPort(host, port, null)
+        )
     ) : this(
         listOf(feature),
         contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))),
         host,
         port,
         log,
-        specToStubPortMap = specToStubPortMap
+        specToStubBaseUrlMap = specToStubBaseUrlMap
     )
 
     constructor(
@@ -107,7 +113,9 @@ class HttpStub(
         host,
         port,
         log,
-        specToStubPortMap = mapOf(parseGherkinStringToFeature(gherkinData).path to port)
+        specToStubBaseUrlMap = mapOf(
+            parseGherkinStringToFeature(gherkinData).path to endPointFromHostAndPort(host, port, null)
+        )
     )
 
     companion object {
@@ -150,11 +158,13 @@ class HttpStub(
         else
             SpecmaticConfig()
 
-    private val specToPortMap = specToStubPortMap.mapValues { (_, value) -> value ?: port }
+    private val specToBaseUrlMap = specToStubBaseUrlMap.mapValues { (_, value) ->
+        value ?: endPointFromHostAndPort(host, port, keyData)
+    }
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(
         httpStubs = staticHttpStubData(rawHttpStubs),
-        specToPortMap = specToPortMap
+        specToBaseUrlMap = specToBaseUrlMap
     )
 
     private val requestHandlers: MutableList<RequestHandler> = mutableListOf()
@@ -209,7 +219,7 @@ class HttpStub(
     private val threadSafeHttpStubQueue =
         ThreadSafeListOfStubs(
             httpStubs = rawHttpStubs.filter { it.stubToken != null }.reversed().toMutableList(),
-            specToPortMap = specToPortMap
+            specToBaseUrlMap = specToBaseUrlMap
         )
 
     private val _logs: MutableList<StubEndpoint> = Collections.synchronizedList(ArrayList())
@@ -279,7 +289,12 @@ class HttpStub(
                         isSseExpectationCreation(httpRequest) -> handleSseExpectationCreationRequest(httpRequest)
                         isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
                         isFlushTransientStubsRequest(httpRequest) -> handleFlushTransientStubsRequest(httpRequest)
-                        else -> serveStubResponse(httpRequest, port = call.request.local.localPort, defaultPort = port)
+                        else -> serveStubResponse(
+                            httpRequest,
+                            baseUrl = "${call.request.local.scheme}://${call.request.local.serverHost}:${call.request.local.localPort}",
+                            defaultBaseUrl = endPointFromHostAndPort(host, port, keyData),
+                            urlPath = call.request.path()
+                        )
                     }
 
                     val httpResponse = responseInterceptors.fold(httpStubResponse.response) { response, responseInterceptor ->
@@ -358,18 +373,26 @@ class HttpStub(
     }
 
     private fun ApplicationEngineEnvironmentBuilder.configureHostPorts() {
+        val hostPortList = specmaticConfig.stubBaseUrls(
+            endPointFromHostAndPort(this@HttpStub.host, this@HttpStub.port, null)
+        ).map { stubBaseUrl ->
+            val host = extractHost(stubBaseUrl)?.let { normalizeHost(it) } ?: this@HttpStub.host
+            val port = extractPort(stubBaseUrl) ?: this@HttpStub.port
+            Pair(host, port)
+        }.distinct()
+
         when (keyData) {
             null -> connectors.addAll(
-                specmaticConfig.stubPorts(this@HttpStub.port).map { stubPort ->
+                hostPortList.map { (host, port) ->
                     EngineConnectorBuilder().also {
                         it.host = host
-                        it.port = stubPort
+                        it.port = port
                     }
                 }
             )
 
             else -> connectors.addAll(
-                specmaticConfig.stubPorts(this@HttpStub.port).map { stubPort ->
+                hostPortList.map { (host, port) ->
                     EngineSSLConnectorBuilder(
                         keyStore = keyData.keyStore,
                         keyAlias = keyData.keyAlias,
@@ -377,7 +400,7 @@ class HttpStub(
                         keyStorePassword = { keyData.keyPassword.toCharArray() }
                     ).also {
                         it.host = host
-                        it.port = stubPort
+                        it.port = port
                     }
                 }
             )
@@ -406,14 +429,18 @@ class HttpStub(
 
     fun serveStubResponse(
         httpRequest: HttpRequest,
-        port: Int,
-        defaultPort: Int
+        baseUrl: String,
+        defaultBaseUrl: String,
+        urlPath: String
     ): HttpStubResponse {
+        val url = "$baseUrl$urlPath"
+        val stubBaseUrlPath = specmaticConfig.stubBaseUrlPathAssociatedTo(url, defaultBaseUrl)
+
         return getHttpResponse(
-            httpRequest = httpRequest,
-            features = featuresAssociatedTo(port, features, specToPortMap),
-            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(port, defaultPort),
-            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(port, defaultPort),
+            httpRequest = httpRequest.trimBaseUrlPath(stubBaseUrlPath),
+            features = featuresAssociatedTo(baseUrl, features, specToBaseUrlMap, urlPath),
+            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(baseUrl, defaultBaseUrl, urlPath),
+            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(baseUrl, defaultBaseUrl, urlPath),
             strictMode = strictMode,
             passThroughTargetBase = passThroughTargetBase,
             httpClientFactory = httpClientFactory,
@@ -427,17 +454,17 @@ class HttpStub(
     }
 
     internal fun featuresAssociatedTo(
-        port: Int,
+        baseUrl: String,
         features: List<Feature>,
-        specToStubPortMap: Map<String, Int>
+        specToBaseUrlMap: Map<String, String>,
+        urlPath: String
     ): List<Feature> {
-        val specsForGivenPort = specToStubPortMap.entries.groupBy(
-            { it.value }, { it.key }
-        )[port].orEmpty().toSet()
-
-        return features.filter { feature ->
-            feature.path in specsForGivenPort
+        val parsedBaseUrl = URI(baseUrl + urlPath)
+        val specsForGivenBaseUrl = specToBaseUrlMap.mapValues { URI(it.value) }.filterValues { stubBaseUrl ->
+            isSameBaseIgnoringHost(parsedBaseUrl, stubBaseUrl)
         }
+
+        return features.filter { feature -> feature.path in specsForGivenBaseUrl }
     }
 
     private fun handleFlushTransientStubsRequest(httpRequest: HttpRequest): HttpStubResponse {
@@ -1228,6 +1255,26 @@ fun endPointFromHostAndPort(host: String, port: Int?, keyData: KeyData?): String
     }
 
     return "$protocol://$host$computedPortString"
+}
+
+fun extractHost(url: String): String? {
+    return URI(url).host
+}
+
+fun extractPort(url: String): Int? {
+    return URI(url).port.takeIf { it != -1 }
+}
+
+fun normalizeHost(host: String): String {
+    return try {
+        InetAddress.getByName(host).hostAddress
+    } catch (e: Exception) {
+        host
+    }
+}
+
+fun isSameBaseIgnoringHost(base: URI, other: URI): Boolean {
+    return base.scheme == other.scheme && base.port == other.port && base.path.startsWith(other.path)
 }
 
 internal fun isPath(path: String?, lastPart: String): Boolean {

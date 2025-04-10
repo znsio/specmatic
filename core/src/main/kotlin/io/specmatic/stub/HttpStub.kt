@@ -14,6 +14,9 @@ import io.ktor.server.response.*
 import io.ktor.util.*
 import io.ktor.util.pipeline.*
 import io.specmatic.core.*
+import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
+import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
+import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_SCHEME
 import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.LogMessage
@@ -24,11 +27,7 @@ import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
-import io.specmatic.core.utilities.capitalizeFirstChar
-import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.utilities.jsonStringToValueMap
-import io.specmatic.core.utilities.saveJsonFile
-import io.specmatic.core.utilities.toMap
+import io.specmatic.core.utilities.*
 import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
@@ -159,7 +158,8 @@ class HttpStub(
             SpecmaticConfig()
 
     private val specToBaseUrlMap = specToStubBaseUrlMap.mapValues { (_, value) ->
-        value ?: endPointFromHostAndPort(host, port, keyData)
+        val defaultBaseUrl = endPointFromHostAndPort(host, port, keyData)
+        value?.let { validateAndFillInStubUrl(it, defaultBaseUrl) } ?: defaultBaseUrl
     }
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(
@@ -376,10 +376,10 @@ class HttpStub(
         val hostPortList = specmaticConfig.stubBaseUrls(
             endPointFromHostAndPort(this@HttpStub.host, this@HttpStub.port, null)
         ).map { stubBaseUrl ->
-            val host = extractHost(stubBaseUrl)?.let { normalizeHost(it) } ?: this@HttpStub.host
+            val host = extractHost(stubBaseUrl)?.let(::normalizeHost) ?: this@HttpStub.host
             val port = extractPort(stubBaseUrl) ?: this@HttpStub.port
             Pair(host, port)
-        }.distinct()
+        }.distinct().ifEmpty { listOf(this@HttpStub.host to this@HttpStub.port) }
 
         when (keyData) {
             null -> connectors.addAll(
@@ -1255,6 +1255,28 @@ fun endPointFromHostAndPort(host: String, port: Int?, keyData: KeyData?): String
     }
 
     return "$protocol://$host$computedPortString"
+}
+
+fun validateAndFillInStubUrl(url: String, defaultBaseUrl: String): String {
+    val hasScheme = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(url)
+    val normalizedUrl = if (hasScheme) url else "$DEFAULT_HTTP_STUB_SCHEME://$url"
+
+    val baseUri = URI(defaultBaseUrl)
+    val uri = URI(normalizedUrl)
+    val filledUri = URI(
+        uri.scheme,
+        uri.userInfo,
+        uri.host ?: baseUri.host ?: DEFAULT_HTTP_STUB_HOST,
+        setOf(uri.port, baseUri.port).filterNot { it == -1 }.firstOrNull() ?: DEFAULT_HTTP_STUB_PORT.toInt(),
+        uri.path,
+        uri.query,
+        uri.fragment
+    ).toString()
+
+    return when (val validationResult = validateURI(filledUri)) {
+        URIValidationResult.Success -> filledUri
+        else -> throw ContractException(breadCrumb = filledUri, errorMessage = validationResult.message)
+    }
 }
 
 fun extractHost(url: String): String? {

@@ -68,7 +68,7 @@ class HTTPStubEngine {
         baseUrlToSpecs.entries
             .sortedBy { it.key }
             .forEach { (baseUrl, specs) ->
-                messageBuilder.append("${newLine}- $baseUrl serving endpoints from specs:")
+                messageBuilder.append("${newLine}- ${validateAndFillInStubUrl(baseUrl, defaultBaseUrl)} serving endpoints from specs:")
                 specs.sorted().forEachIndexed { index, spec ->
                     messageBuilder.append("$newLine    ${index.inc()}. $spec")
                 }

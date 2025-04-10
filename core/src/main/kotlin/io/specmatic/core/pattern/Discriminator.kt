@@ -94,7 +94,7 @@ class Discriminator(
         if (sampleData !is JSONObjectValue)
             return jsonObjectMismatchError(resolver, sampleData)
 
-        if (!valueHasDiscriminator(sampleData) && resolver.isPartial()) {
+        if (!valueHasDiscriminator(sampleData) && resolver.hasPartialKeyCheck()) {
             return _matches_partial(sampleData, pattern, key, resolver)
         }
 

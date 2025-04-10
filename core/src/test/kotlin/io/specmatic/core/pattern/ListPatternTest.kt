@@ -563,7 +563,7 @@ Feature: Recursive test
         fun `should not generate values when list is empty and resolver is partial`() {
             val innerPattern = JSONObjectPattern(mapOf("number" to NumberPattern()), typeAlias = "(Object)")
             val pattern = ListPattern(innerPattern, typeAlias = "(List)")
-            val resolver = Resolver(newPatterns = mapOf("(List)" to pattern, "(Object)" to innerPattern)).toPartial()
+            val resolver = Resolver(newPatterns = mapOf("(List)" to pattern, "(Object)" to innerPattern)).partializeKeyCheck()
             val partialValue = JSONArrayValue(listOf())
 
             val fixedValue = pattern.fixValue(partialValue, resolver)

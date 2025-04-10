@@ -433,12 +433,16 @@ ${matchResult.reportString()}
         return this.copy(cycleMarker = lookupPath(jsonPattern.typeAlias, key))
     }
 
-    fun isPartial(): Boolean {
+    fun hasPartialKeyCheck(): Boolean {
         return this.findKeyErrorCheck.isPartial()
     }
 
-    fun toPartial(): Resolver {
+    fun partializeKeyCheck(): Resolver {
         return this.copy(findKeyErrorCheck = findKeyErrorCheck.toPartialKeyCheck())
+    }
+
+    fun getPartialKeyCheck(): KeyCheck {
+        return findKeyErrorCheck.toPartialKeyCheck()
     }
 }
 

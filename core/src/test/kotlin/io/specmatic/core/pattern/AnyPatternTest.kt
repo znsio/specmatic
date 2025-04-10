@@ -412,7 +412,7 @@ internal class AnyPatternTest {
             )
         )
         val invalidValue = JSONObjectValue(mapOf("newKey" to StringValue("value"), "prop" to BooleanValue(true)))
-        val result = pattern.matches(invalidValue, Resolver().toPartial())
+        val result = pattern.matches(invalidValue, Resolver().partializeKeyCheck())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).isEqualToNormalizingWhitespace("""    
@@ -443,7 +443,7 @@ internal class AnyPatternTest {
         )
 
         val partialResolvers = listOf(
-            Resolver().toPartial(),
+            Resolver().partializeKeyCheck(),
             Resolver(findKeyErrorCheck = KeyCheck(noPatternKeyCheck, IgnoreUnexpectedKeys)),
             Resolver(findKeyErrorCheck = KeyCheck(noPatternKeyCheck, ValidateUnexpectedKeys)),
         )
@@ -789,7 +789,7 @@ internal class AnyPatternTest {
                     mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
                 )
             )
-            val resolver = Resolver(dictionary = mapOf("(number)" to NumberValue(999))).toPartial()
+            val resolver = Resolver(dictionary = mapOf("(number)" to NumberValue(999))).partializeKeyCheck()
             val partialValue = JSONObjectValue(mapOf("extra" to StringValue("(string)")))
             val fixedValue = pattern.fixValue(partialValue, resolver)
 

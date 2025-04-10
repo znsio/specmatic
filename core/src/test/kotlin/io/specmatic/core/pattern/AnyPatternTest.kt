@@ -1,9 +1,7 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.*
-import io.specmatic.core.PARTIAL_KEYCHECK
-import io.specmatic.core.Resolver
-import io.specmatic.core.Result
+import io.specmatic.core.*
 import io.specmatic.core.utilities.withNullPattern
 import io.specmatic.core.value.*
 import org.assertj.core.api.Assertions.assertThat
@@ -414,7 +412,7 @@ internal class AnyPatternTest {
             )
         )
         val invalidValue = JSONObjectValue(mapOf("newKey" to StringValue("value"), "prop" to BooleanValue(true)))
-        val result = pattern.matches(invalidValue, Resolver(findKeyErrorCheck = PARTIAL_KEYCHECK))
+        val result = pattern.matches(invalidValue, Resolver().partializeKeyCheck())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).isEqualToNormalizingWhitespace("""    
@@ -428,6 +426,32 @@ internal class AnyPatternTest {
         >> (when Sub2 object).prop
         Expected number, actual was true (boolean)
         """.trimIndent())
+    }
+
+    @Test
+    fun `matches should allow missing discriminator key when keyCheck is partial`() {
+        val pattern = AnyPattern(
+            listOf(
+                JSONObjectPattern(mapOf("type" to "sub1".toDiscriminator(), "prop" to StringPattern(), "extra" to StringPattern()), typeAlias = "(Sub1)"),
+                JSONObjectPattern(mapOf("type" to "sub2".toDiscriminator(), "prop" to NumberPattern()), typeAlias = "(Sub2)")
+            ), typeAlias = "(Base)",
+            discriminator = Discriminator(
+                property = "type",
+                values = setOf("sub1", "sub2"),
+                mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
+            )
+        )
+
+        val partialResolvers = listOf(
+            Resolver().partializeKeyCheck(),
+            Resolver(findKeyErrorCheck = KeyCheck(noPatternKeyCheck, IgnoreUnexpectedKeys)),
+            Resolver(findKeyErrorCheck = KeyCheck(noPatternKeyCheck, ValidateUnexpectedKeys)),
+        )
+
+        assertThat(partialResolvers).allSatisfy {
+            val result = pattern.matches(JSONObjectValue(mapOf("prop" to StringValue("value"))), it)
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
     }
 
     @Test
@@ -765,7 +789,7 @@ internal class AnyPatternTest {
                     mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
                 )
             )
-            val resolver = Resolver(findKeyErrorCheck = PARTIAL_KEYCHECK, dictionary = mapOf("(number)" to NumberValue(999)))
+            val resolver = Resolver(dictionary = mapOf("(number)" to NumberValue(999))).partializeKeyCheck()
             val partialValue = JSONObjectValue(mapOf("extra" to StringValue("(string)")))
             val fixedValue = pattern.fixValue(partialValue, resolver)
 

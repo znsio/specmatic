@@ -13,6 +13,7 @@ import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.ADDITIONAL_EXAMPLE_PARAMS_FILE
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
+import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.value.*
 import io.specmatic.test.ExampleProcessor
 import io.specmatic.test.TestExecutor
@@ -1005,6 +1006,7 @@ class LoadTestsFromExternalisedFiles {
             private val exampleWithPatternToken = discriminatorSpecFile.parentFile.resolve("example_with_pattern_token")
             private val exampleWithInvalidDisc = discriminatorSpecFile.parentFile.resolve("example_with_invalid_disc")
             private val partialWithBodyToken = discriminatorSpecFile.parentFile.resolve("partial_with_body_token")
+            private val extendedPartialExample = discriminatorSpecFile.parentFile.resolve("extended_partial")
 
             @Test
             fun `should be able to load example with only discriminator in request`() {
@@ -1121,6 +1123,36 @@ class LoadTestsFromExternalisedFiles {
 
                     println(results.joinToString("\n\n") { it.reportString() })
                     assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(2)
+                }
+            }
+
+            @Test
+            fun `unexpected key check should not interfere with loading of partial example with no discriminator`() {
+                Flags.using(EXAMPLE_DIRECTORIES to exampleWithoutDisc.canonicalPath, EXTENSIBLE_SCHEMA to "true") {
+                    val feature = parseContractFileToFeature(discriminatorSpecFile).copy(strictMode = true).loadExternalisedExamples()
+                    assertDoesNotThrow { feature.validateExamplesOrException() }
+                }
+            }
+
+            @Test
+            fun `should allow extra keys in partial example when extensible schema is enabled`() {
+                Flags.using(EXAMPLE_DIRECTORIES to extendedPartialExample.canonicalPath, EXTENSIBLE_SCHEMA to "true") {
+                    val feature = parseContractFileToFeature(discriminatorSpecFile).copy(strictMode = true).loadExternalisedExamples()
+                    assertDoesNotThrow { feature.validateExamplesOrException() }
+
+                    val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "POST" })
+                    val results = filteredFeature.executeTests(object : TestExecutor {
+                        override fun execute(request: HttpRequest): HttpResponse {
+                            assertThat((request.body as JSONObjectValue).jsonObject).containsEntry("extraKey", StringValue("extraValue"))
+                            return HttpResponse(
+                                status = 201,
+                                body = parsedJSONObject("""{"id": 1, "petType": "cat", "color": "black"}""")
+                            ).also { println(listOf(request.toLogString(), it.toLogString()).joinToString(separator = "\n\n")) }
+                        }
+                    }).results
+
+                    println(results.joinToString("\n\n") { it.reportString() })
+                    assertThat(results).hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(1)
                 }
             }
         }

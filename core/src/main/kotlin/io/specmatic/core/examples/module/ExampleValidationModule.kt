@@ -52,7 +52,7 @@ class ExampleValidationModule {
     }
 
     fun validateExample(contractFile: File, exampleFile: File): Result {
-        val feature = parseContractFileToFeature(contractFile, specmaticConfig = EMPTY_SPECMATIC_CONFIG)
+        val feature = parseContractFileWithNoMissingConfigWarning(contractFile)
         val result = validateExample(feature, exampleFile)
         callLifecycleHook(feature, ExampleModule().getExamplesFromFiles(listOf(exampleFile)))
         return result

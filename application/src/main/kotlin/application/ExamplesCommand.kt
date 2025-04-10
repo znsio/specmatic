@@ -187,7 +187,7 @@ For example, to filter by HTTP methods:
         }
 
         private fun validateExamplesDir(contractFile: File, examplesDir: File): Pair<Int, Map<String, Result>> =
-            validateExamplesDir(parseContractFileToFeature(contractFile, specmaticConfig = EMPTY_SPECMATIC_CONFIG), examplesDir)
+            validateExamplesDir(parseContractFileWithNoMissingConfigWarning(contractFile), examplesDir)
 
         private fun validateExamplesDir(feature: Feature, examplesDir: File): Pair<Int, Map<String, Result>> {
             val (externalExampleDir, externalExamples) = ExampleModule().loadExternalExamples(examplesDir = examplesDir)
@@ -237,7 +237,7 @@ For example, to filter by HTTP methods:
         }
 
         private fun validateImplicitExamplesFrom(contractFile: File): Int {
-            val feature = parseContractFileToFeature(contractFile, specmaticConfig = EMPTY_SPECMATIC_CONFIG)
+            val feature = parseContractFileWithNoMissingConfigWarning(contractFile)
 
             val (validateInline, validateExternal) = getValidateInlineAndValidateExternalFlags()
 

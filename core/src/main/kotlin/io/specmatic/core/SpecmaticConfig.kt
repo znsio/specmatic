@@ -47,8 +47,6 @@ import java.io.File
 private const val excludedEndpointsWarning =
     "WARNING: excludedEndpoints is not supported in Specmatic config v2. . Refer to https://specmatic.io/documentation/configuration.html#report-configuration to see how to exclude endpoints."
 
-val EMPTY_SPECMATIC_CONFIG = SpecmaticConfig()
-
 const val APPLICATION_NAME = "Specmatic"
 const val APPLICATION_NAME_LOWER_CASE = "specmatic"
 const val CONFIG_FILE_NAME_WITHOUT_EXT = "specmatic"

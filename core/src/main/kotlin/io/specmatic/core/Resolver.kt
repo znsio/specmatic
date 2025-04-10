@@ -435,6 +435,10 @@ ${matchResult.reportString()}
     fun cyclePast(jsonPattern: Pattern, key: String): Resolver {
         return this.copy(cycleMarker = lookupPath(jsonPattern.typeAlias, key))
     }
+
+    fun isPartial(): Boolean {
+        return this.findKeyErrorCheck.isPartial()
+    }
 }
 
 private fun ExactValuePattern.hasPatternToken(): Boolean {

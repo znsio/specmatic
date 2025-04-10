@@ -60,6 +60,10 @@ fun checkExists(file: File) = file.also {
         throw ContractException("File ${file.path} does not exist (absolute path ${file.canonicalPath})")
 }
 
+fun parseContractFileWithNoMissingConfigWarning(contractFile: File): Feature {
+    return parseContractFileToFeature(contractFile, specmaticConfig = SpecmaticConfig())
+}
+
 fun parseContractFileToFeature(
     file: File,
     hook: Hook = PassThroughHook(),

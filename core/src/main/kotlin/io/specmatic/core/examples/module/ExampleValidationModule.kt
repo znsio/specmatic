@@ -1,16 +1,13 @@
 package io.specmatic.core.examples.module
 
 import io.specmatic.conversions.ExampleFromFile
-import io.specmatic.core.Feature
-import io.specmatic.core.Result
-import io.specmatic.core.Results
+import io.specmatic.core.*
 import io.specmatic.core.examples.server.InteractiveExamplesMismatchMessages
 import io.specmatic.core.examples.server.ScenarioFilter
 import io.specmatic.core.examples.server.SchemaExample
 import io.specmatic.core.lifecycle.ExamplesUsedFor
 import io.specmatic.core.lifecycle.LifecycleHooks
 import io.specmatic.core.log.logger
-import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.value.NullValue
 import io.specmatic.mock.ScenarioStub
 import java.io.File
@@ -55,7 +52,7 @@ class ExampleValidationModule {
     }
 
     fun validateExample(contractFile: File, exampleFile: File): Result {
-        val feature = parseContractFileToFeature(contractFile)
+        val feature = parseContractFileToFeature(contractFile, specmaticConfig = EMPTY_SPECMATIC_CONFIG)
         val result = validateExample(feature, exampleFile)
         callLifecycleHook(feature, ExampleModule().getExamplesFromFiles(listOf(exampleFile)))
         return result

@@ -1,9 +1,7 @@
 package application
 
-import io.specmatic.core.CONTRACT_EXTENSIONS
-import io.specmatic.core.Feature
-import io.specmatic.core.Result
-import io.specmatic.core.Results
+import io.specmatic.core.*
+import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.examples.module.ExampleModule
 import io.specmatic.core.examples.module.ExampleValidationModule
 import io.specmatic.core.examples.server.ScenarioFilter
@@ -12,7 +10,6 @@ import io.specmatic.core.log.ConsolePrinter
 import io.specmatic.core.log.NonVerbose
 import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.logger
-import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.exceptionCauseMessage
@@ -190,7 +187,7 @@ For example, to filter by HTTP methods:
         }
 
         private fun validateExamplesDir(contractFile: File, examplesDir: File): Pair<Int, Map<String, Result>> =
-            validateExamplesDir(parseContractFileToFeature(contractFile), examplesDir)
+            validateExamplesDir(parseContractFileToFeature(contractFile, specmaticConfig = EMPTY_SPECMATIC_CONFIG), examplesDir)
 
         private fun validateExamplesDir(feature: Feature, examplesDir: File): Pair<Int, Map<String, Result>> {
             val (externalExampleDir, externalExamples) = ExampleModule().loadExternalExamples(examplesDir = examplesDir)
@@ -240,7 +237,7 @@ For example, to filter by HTTP methods:
         }
 
         private fun validateImplicitExamplesFrom(contractFile: File): Int {
-            val feature = parseContractFileToFeature(contractFile)
+            val feature = parseContractFileToFeature(contractFile, specmaticConfig = EMPTY_SPECMATIC_CONFIG)
 
             val (validateInline, validateExternal) = getValidateInlineAndValidateExternalFlags()
 

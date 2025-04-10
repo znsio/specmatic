@@ -752,6 +752,25 @@ internal class AnyPatternTest {
             assertThat(fixedValue).isInstanceOf(JSONObjectValue::class.java); fixedValue as JSONObjectValue
             assertThat(fixedValue.jsonObject).isEqualTo(mapOf("id" to NumberValue(999)))
         }
+
+        fun `should be able to fix invalid values with a partial resolver`() {
+            val pattern = AnyPattern(
+                listOf(
+                    JSONObjectPattern(mapOf("type" to "sub1".toDiscriminator(), "prop" to StringPattern(), "extra" to NumberPattern()), typeAlias = "(Sub1)"),
+                    JSONObjectPattern(mapOf("type" to "sub2".toDiscriminator(), "prop" to NumberPattern()), typeAlias = "(Sub2)")
+                ), typeAlias = "(Base)",
+                discriminator = Discriminator(
+                    property = "type",
+                    values = setOf("sub1", "sub2"),
+                    mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
+                )
+            )
+            val resolver = Resolver(findKeyErrorCheck = PARTIAL_KEYCHECK, dictionary = mapOf("(number)" to NumberValue(999)))
+            val partialValue = JSONObjectValue(mapOf("extra" to StringValue("(string)")))
+            val fixedValue = pattern.fixValue(partialValue, resolver)
+
+            assertThat(fixedValue).isEqualTo(JSONObjectValue(mapOf("extra" to NumberValue(999))))
+        }
     }
 
     @Nested

@@ -472,7 +472,7 @@ data class Scenario(
         }
     }
 
-    fun fillInTheBlanksAndResolvePatterns(row: Row, resolver: Resolver): ReturnValue<Row> {
+    private fun fillInTheBlanksAndResolvePatterns(row: Row, resolver: Resolver): ReturnValue<Row> {
         if (row.requestExample == null) return HasValue(row)
 
         return runCatching {
@@ -487,7 +487,7 @@ data class Scenario(
         }
     }
 
-    fun fillInTheBlanksAndResolvePatterns(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
+    private fun fillInTheBlanksAndResolvePatterns(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
         val resolvedRequest = ExampleProcessor.resolve(httpRequest, ExampleProcessor::defaultIfNotExits)
         val updatedResolver = resolver.copy(isNegative = httpResponsePattern.status in invalidRequestStatuses)
         return httpRequestPattern.fillInTheBlanks(resolvedRequest, updatedResolver)
@@ -894,13 +894,18 @@ data class Scenario(
         return defaultAttributeSelectionFields.plus(attributeSelectionFieldsFromRequest)
     }
 
-    fun fixRequestResponse(httpRequest: HttpRequest, httpResponse: HttpResponse, flagsBased: FlagsBased): Pair<HttpRequest, HttpResponse> {
+    fun fixRequestResponse(httpRequest: HttpRequest, httpResponse: HttpResponse, flagsBased: FlagsBased, isPartial: Boolean): Pair<HttpRequest, HttpResponse> {
         val updatedResolver = flagsBased.copy(
             unexpectedKeyCheck = when {
                 isRequestAttributeSelected(httpRequest) -> ValidateUnexpectedKeys
                 else -> flagsBased.unexpectedKeyCheck
             }
-        ).update(resolver).copy(mockMode = true)
+        ).update(
+            resolver.copy(
+                mockMode = true,
+                findKeyErrorCheck = if (isPartial) PARTIAL_KEYCHECK else resolver.findKeyErrorCheck
+            )
+        )
 
         this.newBasedOnAttributeSelectionFields(httpRequest.queryParams).let { newScenario ->
             return Pair(

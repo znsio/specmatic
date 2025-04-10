@@ -8,6 +8,7 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.pattern.*
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
 import io.specmatic.stub.captureStandardOutput
@@ -2683,13 +2684,122 @@ paths:
         val exampleFile = examplesDir.resolve("example.json").apply { writeText(example) }
         tempDir.resolve("api_dictionary.json").apply { writeText(dictionary) }
 
+        Flags.using(
+            Flags.SPECMATIC_GENERATIVE_TESTS to "true"
+        ) {
+            val feature = parseContractFileToFeature(apiSpecFile)
+            val contractTest = feature.createContractTestFromExampleFile(exampleFile.canonicalPath).value
+
+            val expectedRequestBody = parsedJSONObject("""{"name" : "John Doe", "isEligible" : true, "age" : 999}""")
+            val result = contractTest.runTest(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.body).isEqualTo(expectedRequestBody)
+                    return HttpResponse.ok(expectedRequestBody.addEntry("id", "10")).also {
+                        println(request.toLogString())
+                        println()
+                        println(it.toLogString())
+                    }
+                }
+            }).first
+
+            assertThat(result.isSuccess()).withFailMessage(result.reportString()).isTrue()
+        }
+    }
+
+    @Test
+    fun `should perform assertions on the response for test created from example file`(@TempDir tempDir: File) {
+        val apiSpecification = """
+        openapi: 3.0.0
+        info:
+          title: Simple API
+          version: 1.0.0
+        paths:
+          /test:
+            post:
+              summary: Test Example
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      ${"$"}ref: '#/components/schemas/ExampleRequest'
+              responses:
+                '200':
+                  description: Successful response
+                  content:
+                    application/json:
+                      schema:
+                        ${"$"}ref: '#/components/schemas/ExampleResponse'
+        components:
+          schemas:
+            ExampleRequest:
+              type: object
+              required:
+                - name
+                - age
+              properties:
+                name:
+                  type: string
+                age:
+                  type: integer
+                isEligible:
+                  type: boolean
+            ExampleResponse:
+              allOf:
+                - ${"$"}ref: '#/components/schemas/ExampleRequest'
+                - type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: string
+        """.trimIndent()
+        val example = """
+        {
+          "partial": {
+            "http-request": {
+              "method": "POST",
+              "path": "/test",
+              "body": {
+                "name": "(string)",
+                "isEligible": true
+              }
+            },
+            "http-response": {
+              "status": 200,
+              "body": {
+                "id": "(string)",
+                "name": "${"$"}eq(REQUEST.BODY.name)",
+                "age": "${"$"}eq(REQUEST.BODY.age)",
+                "isEligible": "${"$"}eq(REQUEST.BODY.isEligible)"
+              }
+            }
+          }
+        }
+        """.trimIndent()
+        val dictionary = """
+        {
+            "ExampleRequest.name": "John Doe",
+            "ExampleRequest.age": 999,
+            "ExampleRequest.isEligible": false
+        }
+        """.trimIndent()
+
+        val apiSpecFile = tempDir.resolve("api.yaml").apply { writeText(apiSpecification) }
+        val examplesDir = tempDir.resolve("api_examples").apply { mkdirs() }
+        val exampleFile = examplesDir.resolve("example.json").apply { writeText(example) }
+        tempDir.resolve("api_dictionary.json").apply { writeText(dictionary) }
+
         val feature = parseContractFileToFeature(apiSpecFile)
         val contractTest = feature.createContractTestFromExampleFile(exampleFile.canonicalPath).value
 
-        val results = contractTest.runTest(object : TestExecutor {
+        val expectedRequestBody = parsedJSONObject("""{"name" : "John Doe", "isEligible" : true, "age" : 999}""")
+        val result = contractTest.runTest(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                assertThat(request.body).isEqualTo(parsedJSONObject("""{"name" : "John Doe", "isEligible" : true, "age" : 999}"""))
-                return HttpResponse.ok(parsedJSONObject("""{"id": "10"}""")).also {
+                assertThat(request.body).isEqualTo(expectedRequestBody)
+                return HttpResponse.ok(
+                    parsedJSONObject("""{"name" : "Jane Doe", "isEligible" : false, "age" : 123, "id": "10"}""")
+                ).also {
                     println(request.toLogString())
                     println()
                     println(it.toLogString())
@@ -2697,7 +2807,17 @@ paths:
             }
         }).first
 
-        assertThat(results.isSuccess()).isTrue()
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        In scenario "Test Example. Response: Successful response"
+        API: POST /test -> 200
+        >> RESPONSE.BODY.name
+        Expected "Jane Doe" to equal "John Doe"
+        >> RESPONSE.BODY.age
+        Expected 123 to equal 999
+        >> RESPONSE.BODY.isEligible
+        Expected false to equal true
+        """.trimIndent())
     }
 
     @Nested

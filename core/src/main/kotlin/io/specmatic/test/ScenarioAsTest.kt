@@ -100,7 +100,7 @@ data class ScenarioAsTest(
                 return Pair(validatorResult.withBindings(testScenario.bindings, response), response)
             }
 
-            val testResult = testResult(request, response, testScenario, flagsBased)
+            val testResult = validatorResult ?: testResult(request, response, testScenario, flagsBased)
             if (testResult is Result.Failure && !(response.isAcceptedHenceValid() && ResponseMonitor.isMonitorLinkPresent(response))) {
                 return Pair(testResult.withBindings(testScenario.bindings, response), response)
             }

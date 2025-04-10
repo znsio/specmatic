@@ -558,6 +558,17 @@ Feature: Recursive test
                 assertThat((fixedValue as JSONArrayValue).list).hasOnlyElementsOfType(JSONObjectValue::class.java)
             }
         }
+
+        @Test
+        fun `should not generate values when list is empty and resolver is partial`() {
+            val innerPattern = JSONObjectPattern(mapOf("number" to NumberPattern()), typeAlias = "(Object)")
+            val pattern = ListPattern(innerPattern, typeAlias = "(List)")
+            val resolver = Resolver(newPatterns = mapOf("(List)" to pattern, "(Object)" to innerPattern), findKeyErrorCheck = PARTIAL_KEYCHECK)
+            val partialValue = JSONArrayValue(listOf())
+
+            val fixedValue = pattern.fixValue(partialValue, resolver)
+            assertThat(fixedValue).isEqualTo(partialValue)
+        }
     }
 
     @Nested

@@ -7,6 +7,8 @@ import io.specmatic.core.Results
 import io.specmatic.core.examples.server.InteractiveExamplesMismatchMessages
 import io.specmatic.core.examples.server.ScenarioFilter
 import io.specmatic.core.examples.server.SchemaExample
+import io.specmatic.core.lifecycle.ExamplesUsedFor
+import io.specmatic.core.lifecycle.LifecycleHooks
 import io.specmatic.core.log.logger
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.value.NullValue
@@ -48,6 +50,7 @@ class ExampleValidationModule {
             exampleFile.canonicalPath to validateExample(updatedFeature, exampleFile)
         }
 
+        callLifecycleHook(updatedFeature, ExampleModule().getExamplesFromFiles(examples))
         return results
     }
 
@@ -96,6 +99,14 @@ class ExampleValidationModule {
             hasValue = { example, _ -> validateExample(feature, example) },
             orException = { it.toHasFailure().failure },
             orFailure = { it.failure }
+        )
+    }
+
+    private fun callLifecycleHook(feature: Feature, examples: List<ExampleFromFile>) {
+        val scenarioStubs = examples.map { ScenarioStub(request = it.request, filePath = it.file.path) }
+        LifecycleHooks.afterLoadingStaticExamples.call(
+            ExamplesUsedFor.Validation,
+            listOf(Pair(feature, scenarioStubs))
         )
     }
 }

@@ -1,12 +1,12 @@
 plugins {
-    id 'java-library'
-    id 'maven-publish'
-    id 'signing'
-    id 'application'
-    id 'com.github.johnrengelman.shadow' version '7.1.2'
-    id 'org.jetbrains.kotlin.jvm'
-    id 'org.jetbrains.kotlin.plugin.serialization'
-    id 'org.jreleaser'
+    id("java-library")
+    id("maven-publish")
+    id("signing")
+    id("application")
+    id("com.github.johnrengelman.shadow") version "7.1.2"
+    id("org.jetbrains.kotlin.jvm")
+    id("org.jetbrains.kotlin.plugin.serialization")
+    id("org.jreleaser")
 }
 
 application {
@@ -14,12 +14,12 @@ application {
 }
 
 jar {
-    from '../version.properties'
+    from("../version.properties")
 }
 
 shadowJar {
     archiveFileName = "specmatic.${archiveExtension.get()}"
-    from '../version.properties'
+    from("../version.properties")
 }
 
 repositories {
@@ -27,85 +27,84 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "2.3.13"
-def junit_version = "5.11.4"
-def jgit_version = "7.0.0.202409031743-r"
-
 dependencies {
     // TODO Put library reference overrides here to eliminate vulnerabilities, and remove the override when no longer needed
-    implementation 'io.netty:netty-codec-http:4.1.118.Final' // used by ktor-server-netty-jvm 2.3.13 in core (last checked on Feb 13 2025)
-    implementation 'joda-time:joda-time:2.13.1' // used by swagger-parser 2.1.22
-    implementation 'net.minidev:json-smart:2.5.2' // used by json-path 2.9.0 (last checked on Feb 13 2025)
+    implementation("io.netty:netty-codec-http:4.1.118.Final")
+    // used by ktor-server-netty-jvm 2.3.13 in core (last checked on Feb 13 2025
+    implementation("joda-time:joda-time:2.13.1") // used by swagger-parser 2.1.22
+    implementation("net.minidev:json-smart:2.5.2") // used by json-path 2.9.0 (last checked on Feb 13 2025)
 
 
-    implementation 'com.arakelian:java-jq:2.0.0'
-    testImplementation 'com.arakelian:java-jq:2.0.0'
+    implementation("com.arakelian:java-jq:2.0.0")
+    testImplementation("com.arakelian:java-jq:2.0.0")
 
-    implementation 'org.assertj:assertj-core:3.27.3'
-    implementation 'org.junit.jupiter:junit-jupiter-api:5.11.4'
+    implementation("org.assertj:assertj-core:3.27.3")
+    implementation "org.junit.jupiter:junit-jupiter-api:5.11.4"
 
-    implementation('info.picocli:picocli-spring-boot-starter:4.7.6') {
-        exclude group: 'ch.qos.logback', module: 'logback-classic'
-        exclude group: 'org.springframework.boot', module: 'spring-boot'
-        exclude group: 'org.springframework.boot', module: 'spring-boot-starter'
-        exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
+    implementation("info.picocli:picocli-spring-boot-starter:4.7.6") {
+        exclude(group: "ch.qos.logback", module: "logback-classic")
+        exclude(group: "org.springframework.boot", module: "spring-boot")
+        exclude(group: "org.springframework.boot", module: "spring-boot-starter")
+        exclude(group: "org.springframework.boot", module: "spring-boot-autoconfigure")
     }
-    implementation('org.springframework.boot:spring-boot-starter:3.3.5') {
-        exclude group: 'org.springframework', module: 'spring-core'
-        exclude group: 'ch.qos.logback', module: 'logback-classic'
-        exclude group: 'ch.qos.logback', module: 'logback-core'
+    implementation("org.springframework.boot:spring-boot-starter:3.3.5") {
+        exclude(group: "org.springframework", module: "spring-core")
+        exclude(group: "ch.qos.logback", module: "logback-classic")
+        exclude(group: "ch.qos.logback", module: "logback-core")
     }
-    implementation('org.springframework.boot:spring-boot-autoconfigure:3.4.1')
-    implementation('org.springframework:spring-core:6.1.14')
-    implementation 'info.picocli:picocli:4.7.6'
-    implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
-    implementation "io.ktor:ktor-network-tls:$ktor_version"
-    implementation "io.ktor:ktor-network-tls-certificates:$ktor_version"
+    implementation("org.springframework.boot:spring-boot-autoconfigure:3.4.1")
+    implementation("org.springframework:spring-core:6.1.14")
+    implementation("info.picocli:picocli:4.7.6")
+    implementation("io.ktor:ktor-client-core-jvm:${"2.3.13"}")
+    implementation("io.ktor:ktor-network-tls:2.3.13")
+    implementation("io.ktor:ktor-network-tls-certificates:2.3.13")
 
-    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.18.3'
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.3")
 
-    implementation 'org.junit.platform:junit-platform-launcher:1.11.4'
-    implementation 'org.junit.platform:junit-platform-reporting:1.11.4'
+    implementation("org.junit.platform:junit-platform-launcher:1.11.4")
+    implementation("org.junit.platform:junit-platform-reporting:1.11.4")
 
-    implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
-    implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
+    implementation("org.eclipse.jgit:org.eclipse.jgit:7.0.0.202409031743-r")
+    implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.apache:7.0.0.202409031743-r")
 
-    implementation 'org.slf4j:slf4j-nop:2.0.17'
+    implementation("org.slf4j:slf4j-nop:2.0.17")
 
-    implementation 'org.apache.ant:ant-junit:1.10.15'
+    implementation("org.apache.ant:ant-junit:1.10.15")
 
-    implementation(project(':core'))
-    implementation(project(':junit5-support'))
+    implementation(project(":core"))
+    implementation(project(":junit5-support"))
 
-    implementation "io.ktor:ktor-client-cio:$ktor_version"
-    implementation 'io.swagger.parser.v3:swagger-parser:2.1.24'
-
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.3"
-
-    implementation "org.jetbrains.kotlin:kotlin-reflect"
-
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
-
-    testImplementation('org.springframework.boot:spring-boot-starter-test:3.4.2') {
-        exclude group: 'ch.qos.logback', module: 'logback-classic'
-        exclude module: 'mockito-core'
+    implementation("io.ktor:ktor-client-cio:2.3.13")
+    implementation("io.swagger.parser.v3:swagger-parser:2.1.24") {
+        exclude(group: "org.mozilla", module: "rhino")
     }
-    testImplementation 'io.mockk:mockk:1.13.11'
-    testImplementation('com.ninja-squad:springmockk:3.1.1') {
-        exclude group: 'ch.qos.logback', module: 'logback-classic'
+    implementation("org.mozilla:rhino:1.7.15")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.3")
+
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.4")
+
+    testImplementation("org.springframework.boot:spring-boot-starter-test:3.4.2") {
+        exclude(group: "ch.qos.logback", module: "logback-classic")
+        exclude(module: "mockito-core")
     }
-    testImplementation 'org.assertj:assertj-core:3.27.3'
-    testImplementation 'com.ginsberg:junit5-system-exit:2.0.2'
-    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
-    testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
-    testImplementation 'io.kotest:kotest-assertions-core-jvm:5.9.1'
+    testImplementation("io.mockk:mockk:1.13.11")
+    testImplementation("com.ninja-squad:springmockk:3.1.1") {
+        exclude(group: "ch.qos.logback", module: "logback-classic")
+    }
+    testImplementation("org.assertj:assertj-core:3.27.3")
+    testImplementation("com.ginsberg:junit5-system-exit:2.0.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.11.4")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.11.4")
+    testImplementation("io.kotest:kotest-assertions-core-jvm:5.9.1")
 }
 
 test {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
     def junit5SystemExit = configurations.testRuntimeClasspath.files
-            .find { it.name.contains('junit5-system-exit') }
+            .find { it.name.contains("junit5-system-exit") }
     jvmArgumentProviders.add({ ["-javaagent:$junit5SystemExit"] } as CommandLineArgumentProvider)
 }
 
@@ -116,35 +115,35 @@ java {
 
 javadoc {
     if (JavaVersion.current().isJava9Compatible()) {
-        options.addBooleanOption('html5', true)
+        options.addBooleanOption("html5", true)
     }
 }
 
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            artifactId = 'specmatic-executable'
+            artifactId = "specmatic-executable"
             from components.java
             pom {
-                name = 'Specmatic Executable'
-                description = 'Command-line standalone executable jar for Specmatic'
-                url = 'https://specmatic.io'
+                name = "Specmatic Executable"
+                description = "Command-line standalone executable jar for Specmatic"
+                url = "https://specmatic.io"
                 licenses {
                     license {
-                        name = 'MIT'
-                        url = 'https://github.com/znsio/specmatic/blob/main/License.md'
+                        name = "MIT"
+                        url = "https://github.com/znsio/specmatic/blob/main/License.md"
                     }
                 }
                 developers {
                     developer {
-                        id = 'specmaticBuilders'
-                        name = 'Specmatic Builders'
-                        email = 'info@specmatic.io'
+                        id = "specmaticBuilders"
+                        name = "Specmatic Builders"
+                        email = "info@specmatic.io"
                     }
                 }
                 scm {
-                    connection = 'scm:git:git@github.com:znsio/specmatic.git'
-                    url = 'https://specmatic.io/'
+                    connection = "scm:git:git@github.com:znsio/specmatic.git"
+                    url = "https://specmatic.io/"
                 }
             }
         }
@@ -152,7 +151,7 @@ publishing {
     repositories {
         maven {
             name = "stagingDeploy"
-            url = project.layout.buildDirectory.dir('staging-deploy')
+            url = project.layout.buildDirectory.dir("staging-deploy")
         }
     }
 }
@@ -175,7 +174,7 @@ jreleaser {
     }
 
     signing {
-        active = 'ALWAYS'
+        active = "ALWAYS"
         armored = true
     }
 
@@ -183,25 +182,25 @@ jreleaser {
         maven {
             mavenCentral {
                 core {
-                    stage = 'UPLOAD'
-                    active = project.version.get().endsWith('-SNAPSHOT') ? 'SNAPSHOT' : 'RELEASE'
-                    url = project.version.get().endsWith('-SNAPSHOT') ? 'https://central.sonatype.com/repository/maven-snapshots' : 'https://central.sonatype.com/api/v1/publisher'
+                    stage = "UPLOAD"
+                    active = project.version.get().endsWith("-SNAPSHOT") ? "SNAPSHOT" : "RELEASE"
+                    url = project.version.get().endsWith("-SNAPSHOT") ? "https://central.sonatype.com/repository/maven-snapshots" : "https://central.sonatype.com/api/v1/publisher"
                     stagingRepositories.add("build/staging-deploy")
 
                     snapshotSupported = true
                     applyMavenCentralRules = true
 
                     artifactOverride {
-                        artifactId = 'specmatic-core'
+                        artifactId = "specmatic-core"
                         jar = true
                         sourceJar = true
                         javadocJar = true
                         verifyPom = true
                     }
 
-                    stagingRepository('build/staging-deploy')
+                    stagingRepository("build/staging-deploy")
 
-                    namespace = 'io.specmatic'
+                    namespace = "io.specmatic"
                 }
             }
         }

@@ -39,6 +39,10 @@ class EmailPattern (private val stringPatternDelegate: StringPattern) :
         return fillInTheBlanksWithPattern(value, resolver, this)
     }
 
+    override fun fixValue(value: Value, resolver: Resolver): Value {
+        return fixValue(value, this, resolver)
+    }
+
     override fun generate(resolver: Resolver): Value {
         val localPart = randomString(5).lowercase(Locale.getDefault())
         val domain = randomString(5).lowercase(Locale.getDefault())

@@ -91,7 +91,7 @@ interface Pattern {
     }
 
     fun fixValue(value: Value, resolver: Resolver): Value {
-        return value.takeIf { resolver.matchesPattern(null, this, value).isSuccess() } ?: resolver.generate(this)
+        return fixValue(value, this, resolver)
     }
 
     val typeAlias: String?
@@ -130,4 +130,8 @@ fun Pattern.isDiscriminator(): Boolean {
 fun fillInIfPatternToken(value: Value, pattern: Pattern, resolver: Resolver): ReturnValue<Value> {
     if (value !is StringValue || !value.isPatternToken()) return HasValue(value)
     return runCatching { pattern.fillInTheBlanks(StringValue("(anyvalue)"), resolver) }.getOrElse(::HasException)
+}
+
+fun fixValue(value: Value, pattern: Pattern, resolver: Resolver): Value {
+    return value.takeIf { resolver.matchesPattern(null, pattern, value).isSuccess() } ?: resolver.generate(pattern)
 }

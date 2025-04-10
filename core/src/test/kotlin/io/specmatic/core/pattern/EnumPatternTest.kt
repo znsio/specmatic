@@ -193,4 +193,23 @@ class EnumPatternTest {
 
         assertThat(filledInValue).isEqualTo(JSONObjectValue(mapOf("type" to StringValue("Dog"))))
     }
+
+    @Test
+    fun `should be able to fix invalid values`() {
+        val enumValues: List<Value> = listOf("Cat", "Dog", "Fish").map { StringValue(it) }
+        val enumPattern = EnumPattern(enumValues, typeAlias = "(AnimalType)")
+        val pattern = JSONObjectPattern(mapOf("type" to enumPattern), typeAlias = "(Test)")
+        val resolver = Resolver(dictionary = mapOf("Test.type" to StringValue("Dog")))
+        val invalidValues = listOf(
+            StringValue("Unknown"),
+            NumberValue(999),
+            NullValue
+        )
+
+        assertThat(invalidValues).allSatisfy {
+            val fixedValue = pattern.fixValue(JSONObjectValue(mapOf("type" to it)), resolver)
+            fixedValue as JSONObjectValue
+            assertThat(fixedValue.jsonObject["type"]).isIn(enumValues)
+        }
+    }
 }

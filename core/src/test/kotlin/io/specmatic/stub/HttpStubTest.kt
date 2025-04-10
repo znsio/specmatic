@@ -21,13 +21,10 @@ import io.specmatic.osAgnosticPath
 import io.specmatic.shouldMatch
 import io.specmatic.test.HttpClient
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.RepeatedTest
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledOnOs
 import org.junit.jupiter.api.condition.OS
-import org.junit.jupiter.api.fail
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.springframework.http.HttpHeaders
@@ -39,6 +36,7 @@ import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForEntity
 import org.springframework.web.client.postForEntity
 import java.io.File
+import java.net.ConnectException
 import java.net.URI
 import java.nio.file.Paths
 import java.util.*
@@ -2404,7 +2402,7 @@ Then status 200
         }
 
         @Test
-        fun `should return an error if a request associated to a spec being served on a non-default port is made to the default port`() {
+        fun `should only start stub server on specified baseUrls`() {
             val specmaticConfigFile = File("src/test/resources/multi_port_stub/specmatic.yaml")
             val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
             val contractPathData = contractStubPaths(specmaticConfigFile.absolutePath)
@@ -2421,11 +2419,12 @@ Then status 200
                     path = "/products",
                     body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
                 )
-                val response = HttpClient(
-                    endPointFromHostAndPort("localhost", 9000, null)
-                ).execute(request)
 
-                assertThat(response.status).isEqualTo(400)
+                assertThrows<ConnectException> {
+                    HttpClient(endPointFromHostAndPort(
+                        "localhost", Configuration.DEFAULT_HTTP_STUB_PORT.toInt(), null
+                    )).execute(request)
+                }
             }
         }
 

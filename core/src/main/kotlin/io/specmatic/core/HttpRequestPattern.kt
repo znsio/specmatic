@@ -319,7 +319,7 @@ data class HttpRequestPattern(
 
                 requestPattern.copy(headersPattern = headersPattern.copy(
                     pattern = headersFromRequest,
-                    ancestorHeaders = headersPattern.pattern.mergeIgnoringCaseAndOptionals(headersFromRequest)
+                    ancestorHeaders = headersFromRequest.mergeIgnoringCaseAndOptionalsWith(headersPattern.pattern)
                 ))
             }
 
@@ -937,9 +937,10 @@ fun multiPartListCombinations(values: List<Sequence<MultiPartFormDataPattern?>>)
     }
 }
 
-private fun Map<String, Pattern>.mergeIgnoringCaseAndOptionals(other: Map<String, Pattern>): Map<String, Pattern> {
+private fun Map<String, Pattern>.mergeIgnoringCaseAndOptionalsWith(other: Map<String, Pattern>): Map<String, Pattern> {
+    val thisNormalizedKeys = this.keys.map(::withoutOptionality).map(String::toLowerCasePreservingASCIIRules).toSet()
     return buildMap {
-        putAll(this@mergeIgnoringCaseAndOptionals.mapKeys { withoutOptionality(it.key).toLowerCasePreservingASCIIRules() })
-        putAll(other.mapKeys { withoutOptionality(it.key).toLowerCasePreservingASCIIRules() })
+        putAll(this@mergeIgnoringCaseAndOptionalsWith)
+        putAll(other.filterKeys { withoutOptionality(it).toLowerCasePreservingASCIIRules() !in thisNormalizedKeys })
     }
 }

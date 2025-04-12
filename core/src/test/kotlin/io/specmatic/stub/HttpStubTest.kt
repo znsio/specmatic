@@ -2806,11 +2806,12 @@ Then status 200
             }
 
             assertThat(consoleOutput.first).containsIgnoringWhitespaces("""
-            WARNING: Some specs are associated with multiple base URLs, This may lead to unexpected behavior
-            OAS "product_with_category.yaml" is linked to the following base URLs:
-            >> http://localhost:9001
-            >> http://0.0.0.0:9002
-            >> http://127.0.0.1:9000
+            WARNING: The following specification are associated with multiple base URLs:
+            - product_with_category.yaml
+              - http://localhost:9001
+              - http://0.0.0.0:9002
+              - http://127.0.0.1:9000
+            Note: The logs below indicate the selected base URL for each specification
             """.trimIndent())
         }
 

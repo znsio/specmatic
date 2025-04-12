@@ -398,8 +398,9 @@ fun <T> runWithTimeout(timeout: Long, task: Callable<T>): T {
 }
 
 enum class URIValidationResult(val message: String) {
-    URIParsingError("Please specify a valid URL"),
+    URIParsingError("Please specify a valid URL in 'scheme://host[:port][path]' format, Example: http://localhost:9000/api"),
     InvalidURLSchemeError("Please specify a valid scheme / protocol (http or https)"),
+    MissingHostError("Please specify a valid host name"),
     InvalidPortError("Please specify a valid port number"),
     Success("This URL is valid");
 }
@@ -420,6 +421,7 @@ fun validateTestOrStubUri(uri: String): URIValidationResult {
 
     return when {
         !validProtocols.contains(parsedURI.scheme) -> URIValidationResult.InvalidURLSchemeError
+        parsedURI.host.isNullOrBlank() -> URIValidationResult.MissingHostError
         parsedURI.port != -1 && !validPorts.contains(parsedURI.port) -> URIValidationResult.InvalidPortError
         else -> URIValidationResult.Success
     }

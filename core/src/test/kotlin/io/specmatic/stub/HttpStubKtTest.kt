@@ -9,6 +9,7 @@ import io.specmatic.core.HttpResponsePattern
 import io.specmatic.core.KeyData
 import io.specmatic.core.QueryParameters
 import io.specmatic.core.Resolver
+import io.specmatic.core.Result
 import io.specmatic.core.SPECMATIC_RESULT_HEADER
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.parseGherkinStringToFeature
@@ -996,5 +997,52 @@ paths:
             assertThat(response.status).isEqualTo(200)
             assertThat(response.body.toString()).isNotEmpty
         }
+    }
+
+    @Test
+    fun `should return a failure when a invalid baseUrls are provided`() {
+        val specToBaseUrls = mapOf(
+            // invalid scheme
+            "spec1.yaml" to "httd://localhost:8080/api",
+            "spec2.yaml" to "ftp://localhost:8080/api",
+            // invalid port
+            "spec3.yaml" to "http://localhost:99999/api",
+            "spec4.yaml" to "http://localhost:not_a_port/api",
+            // partials
+            "spec5.yaml" to "localhost/api",
+            "spec6.yaml" to "/api"
+        )
+        val result = validateBaseUrls(specToBaseUrls)
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToIgnoringWhitespace("""
+        >> Invalid baseURL "httd://localhost:8080/api" for spec1.yaml
+        Please specify a valid URL in 'scheme://host[:port][path]' format, Example: http://localhost:9000/api
+        >> Invalid baseURL "ftp://localhost:8080/api" for spec2.yaml
+        Please specify a valid scheme / protocol (http or https)
+        >> Invalid baseURL "http://localhost:99999/api" for spec3.yaml
+        Please specify a valid port number
+        >> Invalid baseURL "http://localhost:not_a_port/api" for spec4.yaml
+        Please specify a valid URL in 'scheme://host[:port][path]' format, Example: http://localhost:9000/api
+        >> Invalid baseURL "localhost/api" for spec5.yaml
+        Please specify a valid URL in 'scheme://host[:port][path]' format, Example: http://localhost:9000/api
+        >> Invalid baseURL "/api" for spec6.yaml
+        Please specify a valid URL in 'scheme://host[:port][path]' format, Example: http://localhost:9000/api
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should not complain when a valid baseUrls are provided`() {
+        val specToBaseUrls = mapOf(
+            "spec1.yaml" to "http://localhost:9000/api",
+            "spec2.yaml" to "https://localhost:9000/api",
+            "spec3.yaml" to "http://localhost/api",
+            "spec4.yaml" to "https://localhost/api",
+            "spec5.yaml" to "http://localhost",
+            "spec6.yaml" to "https://localhost"
+        )
+        val result = validateBaseUrls(specToBaseUrls)
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 }

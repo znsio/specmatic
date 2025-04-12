@@ -154,7 +154,7 @@ class HttpStub(
         else
             SpecmaticConfig()
 
-    private val specToBaseUrlMap = validateBaseUrls(
+    private val specToBaseUrlMap = getValidatedBaseUrlsOrExit(
         specToStubBaseUrlMap.mapValues { (_, value) ->
             value ?: endPointFromHostAndPort(host, port, keyData)
         }
@@ -753,20 +753,9 @@ class HttpStub(
         }
     }
 
-    private fun validateBaseUrls(specToBaseUrlMap: Map<String, String>): Map<String, String> {
-        val results = specToBaseUrlMap.map { (contractPath, baseUrl) ->
-            when (val result = validateTestOrStubUri(baseUrl)) {
-                URIValidationResult.Success -> Result.Success()
-                else -> Result.Failure(
-                    breadCrumb = "Invalid baseURL \"$baseUrl\" for $contractPath",
-                    message = result.message
-                )
-            }
-        }
-
-        val validationResult = Result.fromResults(results)
+    private fun getValidatedBaseUrlsOrExit(specToBaseUrlMap: Map<String, String>): Map<String, String> {
+        val validationResult = validateBaseUrls(specToBaseUrlMap)
         if (validationResult is Result.Failure) exitWithMessage(validationResult.reportString())
-
         return specToBaseUrlMap
     }
 }
@@ -1310,6 +1299,20 @@ fun normalizeHost(host: String): String {
 
 fun isSameBaseIgnoringHost(base: URI, other: URI): Boolean {
     return base.scheme == other.scheme && base.port == other.port && base.path.startsWith(other.path)
+}
+
+fun validateBaseUrls(specToBaseUrlMap: Map<String, String>): Result {
+    val results = specToBaseUrlMap.map { (contractPath, baseUrl) ->
+        when (val result = validateTestOrStubUri(baseUrl)) {
+            URIValidationResult.Success -> Result.Success()
+            else -> Result.Failure(
+                breadCrumb = "Invalid baseURL \"$baseUrl\" for $contractPath",
+                message = result.message
+            )
+        }
+    }
+
+    return Result.fromResults(results)
 }
 
 internal fun isPath(path: String?, lastPart: String): Boolean {

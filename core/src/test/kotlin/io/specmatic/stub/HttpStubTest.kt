@@ -4,14 +4,11 @@ import io.mockk.every
 import io.mockk.mockk
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
-import io.specmatic.core.log.DebugLogger
-import io.specmatic.core.log.withLogger
+import io.specmatic.core.log.*
 import io.specmatic.core.pattern.*
-import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.core.utilities.*
 import io.specmatic.core.utilities.ContractPathData.Companion.specToBaseUrlMap
-import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
-import io.specmatic.core.utilities.contractStubPaths
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
@@ -2812,6 +2809,33 @@ Then status 200
               - http://0.0.0.0:9002
               - http://127.0.0.1:9000
             Note: The logs below indicate the selected base URL for each specification
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should exit with code non-zero exit code when invalid baseUrl is provided`() {
+            val specmaticConfigFile = File("src/test/resources/multi_port_stub_with_invalid_url/specmatic.yaml")
+            val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+            val contractPathData = contractStubPaths(specmaticConfigFile.absolutePath)
+            val scenarioStubs = scenarioStubsFrom(specmaticConfigFile, contractPathData, specmaticConfig)
+
+            SystemExit.throwOnExit {  }
+
+            val exception = assertThrows<SystemExitException> {
+                SystemExit.throwOnExit {
+                    HttpStub(
+                        features = scenarioStubs.features(),
+                        rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+                        specmaticConfigPath = specmaticConfigFile.canonicalPath,
+                        specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
+                    ).close()
+                }
+            }
+
+            assertThat(exception.code).isEqualTo(1)
+            assertThat(exception.message).isEqualToNormalizingWhitespace("""
+            >> Invalid baseURL "localhost:9001/api" for ${File(".").resolve("hello.yaml").path}
+            Please specify a valid URL in 'scheme://host[:port][path]' format, Example: http://localhost:9000/api
             """.trimIndent())
         }
 

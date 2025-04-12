@@ -49,11 +49,31 @@ import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 import kotlin.system.exitProcess
 
-fun exitWithMessage(message: String): Nothing {
-    val newLine = System.lineSeparator()
-    logger.log("$newLine$message$newLine")
-    exitProcess(1)
+class SystemExitException(val code: Int, message: String) : Exception(message)
+
+object SystemExit {
+    private val exitFunc: ThreadLocal<(Int, String) -> Nothing> = ThreadLocal.withInitial { ::defaultExit }
+
+    private fun defaultExit(code: Int, message: String): Nothing {
+        logger.log("\n$message\n")
+        exitProcess(code)
+    }
+
+    fun exitWithMessage(code: Int, message: String): Nothing {
+        exitFunc.get().invoke(code, message)
+    }
+
+    fun <T> throwOnExit(block: () -> T): T {
+        return try {
+            exitFunc.set { code, message -> throw SystemExitException(code, message) }
+            block()
+        } finally {
+            exitFunc.remove()
+        }
+    }
 }
+
+fun exitWithMessage(message: String): Nothing = SystemExit.exitWithMessage(1, message)
 
 fun messageStringFrom(e: Throwable): String {
     val messageStack = exceptionMessageStack(e, emptyList())

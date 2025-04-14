@@ -341,16 +341,23 @@ paths:
             No example files found in $examplesDir
             """.trimIndent())
         }
+    }
+
+    @Nested
+    inner class ValidateLifeCycleTests {
+        init {
+            registerTestHook()
+        }
+
+        private val cli = CommandLine(ExamplesCommand.Validate(), CommandLine.defaultFactory())
 
         @Test
         fun `should call the life cycle hook for validate if only spec file is provided`() {
-            registerTestHook()
-            val runner = SpecmaticApplicationRunner(SpecmaticCommand(), CommandLine.defaultFactory())
-            val (stdOut, _) = captureStandardOutput {
-                runner.run("examples",  "validate", "--spec-file", "src/test/resources/examples/single/persons.yaml")
+            val (stdOut, exitCode) = captureStandardOutput {
+                cli.execute("--spec-file", "src/test/resources/examples/single/persons.yaml")
             }
 
-            assertThat(runner.exitCode).isEqualTo(0)
+            assertThat(exitCode).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
             life cycle hook called for 'Validation'
             spec: 'persons.yaml'
@@ -361,16 +368,14 @@ paths:
 
         @Test
         fun `should call the life cycle hook for validate spec file and example file is provided`() {
-            registerTestHook()
-            val runner = SpecmaticApplicationRunner(SpecmaticCommand(), CommandLine.defaultFactory())
-            val (stdOut, _) = captureStandardOutput {
-                runner.run("examples",  "validate",
+            val (stdOut, exitCode) = captureStandardOutput {
+                cli.execute(
                     "--spec-file", "src/test/resources/examples/only_specs/persons/persons.yaml",
                     "--example-file", "src/test/resources/examples/only_examples/persons/persons_examples/create_person-01.json"
                 )
             }
 
-            assertThat(runner.exitCode).isEqualTo(0)
+            assertThat(exitCode).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
             life cycle hook called for 'Validation'
             spec: 'persons.yaml'
@@ -381,17 +386,15 @@ paths:
 
         @Test
         fun `should call the life cycle hook for validate if both spec file and examples dir is provided`() {
-            registerTestHook()
-            val runner = SpecmaticApplicationRunner(SpecmaticCommand(), CommandLine.defaultFactory())
-            val (stdOut, _) = captureStandardOutput {
+            val (stdOut, exitCode) = captureStandardOutput {
                 val non_implicit_examples_dir = "src/test/resources/examples/only_examples/persons/persons_examples"
-                runner.run("examples",  "validate",
+                cli.execute(
                     "--spec-file", "src/test/resources/examples/only_specs/persons/persons.yaml",
                     "--examples-dir", non_implicit_examples_dir
                 )
             }
 
-            assertThat(runner.exitCode).isEqualTo(0)
+            assertThat(exitCode).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
             life cycle hook called for 'Validation'
             spec: 'persons.yaml'
@@ -402,13 +405,11 @@ paths:
 
         @Test
         fun `should call the life cycle hook for validate if spec dir is provided`() {
-            registerTestHook()
-            val runner = SpecmaticApplicationRunner(SpecmaticCommand(), CommandLine.defaultFactory())
-            val (stdOut, _) = captureStandardOutput {
-                runner.run("examples",  "validate", "--specs-dir", "src/test/resources/examples/multiple")
+            val (stdOut, exitCode) = captureStandardOutput {
+                cli.execute("--specs-dir", "src/test/resources/examples/multiple")
             }
 
-            assertThat(runner.exitCode).isEqualTo(0)
+            assertThat(exitCode).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
             life cycle hook called for 'Validation'
             spec: 'persons.yaml'
@@ -425,15 +426,13 @@ paths:
 
         @Test
         fun `should call the life cycle hook for validate if both spec dir and examples dir is provided`() {
-            registerTestHook()
-            val runner = SpecmaticApplicationRunner(SpecmaticCommand(), CommandLine.defaultFactory())
-            val (stdOut, _) = captureStandardOutput {
-                runner.run("examples",  "validate",
+            val (stdOut, exitCode) = captureStandardOutput {
+                cli.execute(
                     "--specs-dir", "src/test/resources/examples/only_specs",
                     "--examples-base-dir", "src/test/resources/examples/only_examples")
             }
 
-            assertThat(runner.exitCode).isEqualTo(0)
+            assertThat(exitCode).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
             life cycle hook called for 'Validation'
             spec: 'persons.yaml'

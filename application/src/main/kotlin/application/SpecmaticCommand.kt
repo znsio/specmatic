@@ -21,7 +21,6 @@ import java.util.concurrent.Callable
             GenerateCompletion::class,
             GraphCommand::class,
             MergeCommand::class,
-            ToOpenAPICommand::class,
             ImportCommand::class,
             ProxyCommand::class,
             ExamplesCommand::class,

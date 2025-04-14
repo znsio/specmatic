@@ -12,6 +12,7 @@ class ScenarioTestGenerationFailure(
     var scenario: Scenario,
     val failure: Result.Failure,
     val message: String,
+    private val baseURL: String,
 ): ContractTest {
 
     init {
@@ -47,9 +48,9 @@ class ScenarioTestGenerationFailure(
         return scenario.testDescription()
     }
 
-    override fun runTest(testBaseURL: String, timeoutInMilliseconds: Long): Pair<Result, HttpResponse?> {
+    override fun runTest(timeoutInMilliseconds: Long): Pair<Result, HttpResponse?> {
         val log: (LogMessage) -> Unit = { logMessage -> logger.log(logMessage) }
-        val httpClient = HttpClient(testBaseURL, log = log, timeoutInMilliseconds = timeoutInMilliseconds)
+        val httpClient = HttpClient(baseURL, log = log, timeoutInMilliseconds = timeoutInMilliseconds)
         return runTest(httpClient)
     }
 
@@ -62,4 +63,5 @@ class ScenarioTestGenerationFailure(
         return this
     }
 
+    override fun getBaseURL(): String = baseURL
 }

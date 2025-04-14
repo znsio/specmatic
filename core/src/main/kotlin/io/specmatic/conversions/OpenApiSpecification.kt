@@ -131,7 +131,7 @@ class OpenApiSpecification(
             securityConfiguration: SecurityConfiguration? = null,
             specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
             overlayContent: String = "",
-            strictMode: Boolean = false
+            strictMode: Boolean = false,
         ): OpenApiSpecification {
             val implicitOverlayFile = getImplicitOverlayContent(openApiFilePath)
 
@@ -167,6 +167,30 @@ class OpenApiSpecification(
                 specmaticConfig,
                 strictMode = strictMode
             )
+        }
+
+        fun checkIfServersExist(
+            yamlContent: String,
+            openApiFilePath: String,
+            overlayContent: String,
+        ): Boolean {
+            val implicitOverlayFile = getImplicitOverlayContent(openApiFilePath)
+
+            val parseResult: SwaggerParseResult =
+                OpenAPIV3Parser().readContents(
+                    yamlContent.applyOverlay(overlayContent).applyOverlay(implicitOverlayFile),
+                    null,
+                    resolveExternalReferences(),
+                    openApiFilePath
+                )
+
+            val parsedOpenApi: OpenAPI? = parseResult.openAPI
+
+            if (parsedOpenApi != null) {
+                return parsedOpenApi.servers.isNotEmpty() && parsedOpenApi.servers.any { it.url != "/" }
+            }
+
+            return false
         }
 
         fun loadDictionary(openApiFilePath: String, dictionaryPathFromConfig: String?): Map<String, Value> {
@@ -230,7 +254,7 @@ class OpenApiSpecification(
         return parsedOpenApi.openapi.startsWith("3.1")
     }
 
-    fun toFeature(): Feature {
+    fun toFeature(baseURL: String = "", serverURLIndex: Int? = null): Feature {
         val name = File(openApiFilePath).name
 
         val (scenarioInfos, stubsFromExamples) = toScenarioInfos()
@@ -251,7 +275,8 @@ class OpenApiSpecification(
             serviceType = SERVICE_TYPE_HTTP,
             stubsFromExamples = stubsFromExamples,
             specmaticConfig = specmaticConfig,
-            strictMode = strictMode
+            strictMode = strictMode,
+            baseURL = baseURL.ifEmpty { serverURLIndex?.let { parsedOpenApi.servers?.get(it)?.url } ?: "" }
         )
     }
 

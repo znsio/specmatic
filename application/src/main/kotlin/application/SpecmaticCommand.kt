@@ -16,7 +16,6 @@ import java.util.concurrent.Callable
             BackwardCompatibilityCheckCommand::class,
             BundleCommand::class,
             CompareCommand::class,
-            CompatibleCommand::class,
             GenerateCompletion::class,
             ImportCommand::class,
             ProxyCommand::class,

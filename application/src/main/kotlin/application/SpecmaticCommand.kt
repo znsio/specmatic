@@ -14,7 +14,6 @@ import java.util.concurrent.Callable
         subcommands = [
             BackwardCompatibilityCheckCommandV2::class,
             BackwardCompatibilityCheckCommand::class,
-            BundleCommand::class,
             CompareCommand::class,
             GenerateCompletion::class,
             ImportCommand::class,

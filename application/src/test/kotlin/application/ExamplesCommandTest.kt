@@ -1,8 +1,11 @@
 package application
 
+import io.specmatic.core.lifecycle.AfterLoadingStaticExamples
 import io.specmatic.core.lifecycle.LifecycleHooks
 import io.specmatic.core.log.logger
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -345,8 +348,23 @@ paths:
 
     @Nested
     inner class ValidateLifeCycleTests {
-        init {
-            registerTestHook()
+        private val hook = AfterLoadingStaticExamples { examplesUsedFor, examples ->
+            logger.log("life cycle hook called for '$examplesUsedFor'")
+            examples.forEach { (feature, stubs) ->
+                logger.log("spec: '${File(feature.path).name}'")
+                logger.log("implicit example: '${feature.stubsFromExamples.map { (k, _) -> k }.sorted().joinToString(",")}'")
+                logger.log("external stub: '${stubs.map { File(it.filePath!!).name }.sorted().joinToString(",") }'")
+            }
+        }
+
+        @BeforeEach
+        fun setupHook() {
+            LifecycleHooks.afterLoadingStaticExamples.register(hook)
+        }
+
+        @AfterEach
+        fun tearDownHook() {
+            LifecycleHooks.afterLoadingStaticExamples.remove(hook)
         }
 
         private val cli = CommandLine(ExamplesCommand.Validate(), CommandLine.defaultFactory())
@@ -445,17 +463,6 @@ paths:
             implicit example: 'CreateProduct'
             external stub: 'example_1.json,example_3.json'
             """.trimIndent())
-        }
-
-        private fun registerTestHook() {
-            LifecycleHooks.afterLoadingStaticExamples.register { examplesUsedFor, examples ->
-                logger.log("life cycle hook called for '$examplesUsedFor'")
-                examples.forEach { (feature, stubs) ->
-                    logger.log("spec: '${File(feature.path).name}'")
-                    logger.log("implicit example: '${feature.stubsFromExamples.map { (k, _) -> k }.sorted().joinToString(",")}'")
-                    logger.log("external stub: '${stubs.map { File(it.filePath!!).name }.sorted().joinToString(",") }'")
-                }
-            }
         }
     }
 }

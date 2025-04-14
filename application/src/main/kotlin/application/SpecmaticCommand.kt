@@ -33,7 +33,6 @@ import java.util.concurrent.Callable
             VirtualServiceCommand::class,
             SubscribeCommand::class,
             TestCommand::class,
-            ValidateViaLogs::class,
             CentralContractRepoReportCommand::class,
             ConfigCommand::class
         ]

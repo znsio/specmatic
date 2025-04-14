@@ -10,7 +10,6 @@ import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.logger
 import io.specmatic.stub.isOpenAPI
-import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
 import java.io.File
 import java.nio.file.Files
@@ -25,7 +24,6 @@ import kotlin.system.exitProcess
 const val ONE_INDENT = "  "
 const val TWO_INDENTS = "${ONE_INDENT}${ONE_INDENT}"
 
-@Component
 @Command(
     name = "backwardCompatibilityCheck",
     mixinStandardHelpOptions = true,

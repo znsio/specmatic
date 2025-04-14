@@ -25,7 +25,6 @@ import java.util.concurrent.Callable
             ImportCommand::class,
             InstallCommand::class,
             ProxyCommand::class,
-            PushCommand::class,
             ExamplesCommand::class,
             StubCommand::class,
             VirtualServiceCommand::class,

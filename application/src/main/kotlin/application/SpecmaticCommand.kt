@@ -17,7 +17,6 @@ import java.util.concurrent.Callable
             BundleCommand::class,
             CompareCommand::class,
             CompatibleCommand::class,
-            DifferenceCommand::class,
             GenerateCompletion::class,
             ImportCommand::class,
             ProxyCommand::class,

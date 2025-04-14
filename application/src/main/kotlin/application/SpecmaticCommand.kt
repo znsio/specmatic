@@ -1,12 +1,10 @@
 package application
 
 import application.backwardCompatibility.BackwardCompatibilityCheckCommandV2
-import org.springframework.stereotype.Component
 import picocli.AutoComplete.GenerateCompletion
 import picocli.CommandLine.Command
 import java.util.concurrent.Callable
 
-@Component
 @Command(
         name = "specmatic",
         mixinStandardHelpOptions = true,

@@ -28,7 +28,6 @@ import java.util.concurrent.Callable
             PushCommand::class,
             ReDeclaredAPICommand::class,
             ExamplesCommand::class,
-            SamplesCommand::class,
             StubCommand::class,
             VirtualServiceCommand::class,
             TestCommand::class,

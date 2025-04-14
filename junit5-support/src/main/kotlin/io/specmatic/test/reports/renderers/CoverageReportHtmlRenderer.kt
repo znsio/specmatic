@@ -5,6 +5,7 @@ import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.Flags
+import io.specmatic.junit5.support.VersionInfo
 import io.specmatic.test.SpecmaticJUnitSupport
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
@@ -56,11 +57,7 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
     }
 
     private fun getSpecmaticVersion(): String {
-        val props = Properties()
-        CoverageReportHtmlRenderer::class.java.classLoader.getResourceAsStream("version.properties").use {
-            props.load(it)
-        }
-        return props.getProperty("version")
+        return VersionInfo.describe()
     }
 
     private fun makeTableRows(

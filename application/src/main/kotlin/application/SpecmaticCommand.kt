@@ -23,7 +23,6 @@ import java.util.concurrent.Callable
             MergeCommand::class,
             ToOpenAPICommand::class,
             ImportCommand::class,
-            InstallCommand::class,
             ProxyCommand::class,
             ExamplesCommand::class,
             StubCommand::class,

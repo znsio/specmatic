@@ -10,6 +10,10 @@ class AfterLoadingStaticExamplesHooks : AfterLoadingStaticExamples {
         afterLoadingStaticExamples.add(hook)
     }
 
+    fun remove(hook: AfterLoadingStaticExamples) {
+        afterLoadingStaticExamples.remove(hook)
+    }
+
     override fun call(examplesUsedFor: ExamplesUsedFor, examples: List<Pair<Feature, List<ScenarioStub>>>) {
         afterLoadingStaticExamples.forEach {
             it.call(examplesUsedFor, examples)

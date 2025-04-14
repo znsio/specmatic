@@ -19,7 +19,6 @@ import java.util.concurrent.Callable
             CompatibleCommand::class,
             DifferenceCommand::class,
             GenerateCompletion::class,
-            GraphCommand::class,
             ImportCommand::class,
             ProxyCommand::class,
             ExamplesCommand::class,

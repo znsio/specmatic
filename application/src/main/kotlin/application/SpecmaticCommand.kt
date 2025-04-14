@@ -31,7 +31,6 @@ import java.util.concurrent.Callable
             SamplesCommand::class,
             StubCommand::class,
             VirtualServiceCommand::class,
-            SubscribeCommand::class,
             TestCommand::class,
             CentralContractRepoReportCommand::class,
             ConfigCommand::class

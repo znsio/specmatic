@@ -24,11 +24,7 @@ import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
-import io.specmatic.core.utilities.capitalizeFirstChar
-import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.utilities.jsonStringToValueMap
-import io.specmatic.core.utilities.saveJsonFile
-import io.specmatic.core.utilities.toMap
+import io.specmatic.core.utilities.*
 import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
@@ -65,6 +61,8 @@ import java.util.*
 import kotlin.text.toCharArray
 
 const val SPECMATIC_RESPONSE_CODE_HEADER = "Specmatic-Response-Code"
+const val HTTP_PORT = 80
+const val HTTPS_PORT = 443
 
 class HttpStub(
     private val features: List<Feature>,
@@ -158,9 +156,11 @@ class HttpStub(
         else
             SpecmaticConfig()
 
-    private val specToBaseUrlMap = specToStubBaseUrlMap.mapValues { (_, value) ->
-        value ?: endPointFromHostAndPort(host, port, keyData)
-    }
+    private val specToBaseUrlMap = getValidatedBaseUrlsOrExit(
+        specToStubBaseUrlMap.mapValues { (_, value) ->
+            value ?: endPointFromHostAndPort(host, port, keyData)
+        }
+    )
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(
         httpStubs = staticHttpStubData(rawHttpStubs),
@@ -373,13 +373,7 @@ class HttpStub(
     }
 
     private fun ApplicationEngineEnvironmentBuilder.configureHostPorts() {
-        val hostPortList = specmaticConfig.stubBaseUrls(
-            endPointFromHostAndPort(this@HttpStub.host, this@HttpStub.port, null)
-        ).map { stubBaseUrl ->
-            val host = extractHost(stubBaseUrl)?.let { normalizeHost(it) } ?: this@HttpStub.host
-            val port = extractPort(stubBaseUrl) ?: this@HttpStub.port
-            Pair(host, port)
-        }.distinct()
+        val hostPortList = getHostAndPortList()
 
         when (keyData) {
             null -> connectors.addAll(
@@ -425,6 +419,32 @@ class HttpStub(
 
             anyHost()
         }
+    }
+
+    private fun getHostAndPortList(): List<Pair<String, Int>> {
+        val defaultBaseUrl = endPointFromHostAndPort(this.host, this.port, null)
+        val specsWithMultipleBaseUrls = specmaticConfig.stubToBaseUrlList(defaultBaseUrl).groupBy(
+            keySelector = { it.first }, valueTransform = { it.second }
+        ).filterValues { it.size > 1 }
+
+        if (specsWithMultipleBaseUrls.isNotEmpty()) {
+            logger.log("WARNING: The following specification are associated with multiple base URLs:")
+            specsWithMultipleBaseUrls.forEach { (spec, baseUrls) ->
+                logger.log("- $spec")
+                baseUrls.forEach { baseUrl ->
+                    logger.withIndentation(2) {
+                        logger.log("- $baseUrl")
+                    }
+                }
+            }
+            logger.log("Note: The logs below indicate the selected base URL for each specification")
+        }
+
+        return specmaticConfig.stubBaseUrls(defaultBaseUrl).map { stubBaseUrl ->
+            val host = extractHost(stubBaseUrl).let(::normalizeHost)
+            val port = extractPort(stubBaseUrl) ?: 80
+            Pair(host, port)
+        }.distinct().ifEmpty { listOf(this.host to this.port) }
     }
 
     fun serveStubResponse(
@@ -733,6 +753,12 @@ class HttpStub(
 
             saveJsonFile(reportJson, JSON_REPORT_PATH, JSON_REPORT_FILE_NAME)
         }
+    }
+
+    private fun getValidatedBaseUrlsOrExit(specToBaseUrlMap: Map<String, String>): Map<String, String> {
+        val validationResult = validateBaseUrls(specToBaseUrlMap)
+        if (validationResult is Result.Failure) exitWithMessage(validationResult.reportString())
+        return specToBaseUrlMap
     }
 }
 
@@ -1257,7 +1283,7 @@ fun endPointFromHostAndPort(host: String, port: Int?, keyData: KeyData?): String
     return "$protocol://$host$computedPortString"
 }
 
-fun extractHost(url: String): String? {
+fun extractHost(url: String): String {
     return URI(url).host
 }
 
@@ -1274,7 +1300,31 @@ fun normalizeHost(host: String): String {
 }
 
 fun isSameBaseIgnoringHost(base: URI, other: URI): Boolean {
-    return base.scheme == other.scheme && base.port == other.port && base.path.startsWith(other.path)
+    val basePort = resolvedPort(base)
+    val otherPort = resolvedPort(other)
+    return base.scheme == other.scheme && basePort == otherPort && base.path.startsWith(other.path)
+}
+
+private fun resolvedPort(uri: URI): Int {
+    return when (uri.scheme) {
+        "http" -> uri.port.takeUnless { it == -1 } ?: HTTP_PORT
+        "https" -> uri.port.takeUnless { it == -1 } ?: HTTPS_PORT
+        else -> uri.port
+    }
+}
+
+fun validateBaseUrls(specToBaseUrlMap: Map<String, String>): Result {
+    val results = specToBaseUrlMap.map { (contractPath, baseUrl) ->
+        when (val result = validateTestOrStubUri(baseUrl)) {
+            URIValidationResult.Success -> Result.Success()
+            else -> Result.Failure(
+                breadCrumb = "Invalid baseURL \"$baseUrl\" for $contractPath",
+                message = result.message
+            )
+        }
+    }
+
+    return Result.fromResults(results)
 }
 
 internal fun isPath(path: String?, lastPart: String): Boolean {

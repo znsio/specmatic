@@ -314,7 +314,19 @@ data class SpecmaticConfig(
                     is Consumes.ObjectValue -> consumes.baseUrl
                 }
             }
-        }.plus(defaultBaseUrl).distinct()
+        }.distinct()
+    }
+
+    @JsonIgnore
+    fun stubToBaseUrlList(defaultBaseUrl: String): List<Pair<String, String>> {
+        return sources.flatMap { source ->
+            source.stub.orEmpty().flatMap { consumes ->
+                when (consumes) {
+                    is Consumes.StringValue -> listOf(consumes.value to defaultBaseUrl)
+                    is Consumes.ObjectValue -> consumes.specs.map { it to consumes.baseUrl }
+                }
+            }
+        }
     }
 
     @JsonIgnore

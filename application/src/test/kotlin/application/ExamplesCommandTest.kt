@@ -1,11 +1,17 @@
 package application
 
+import io.specmatic.core.lifecycle.AfterLoadingStaticExamples
+import io.specmatic.core.lifecycle.LifecycleHooks
+import io.specmatic.core.log.logger
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import picocli.CommandLine
 import java.io.File
 
 class ExamplesCommandTest {
@@ -336,6 +342,126 @@ paths:
             assertThat(exitCode).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
             No example files found in $examplesDir
+            """.trimIndent())
+        }
+    }
+
+    @Nested
+    inner class ValidateLifeCycleTests {
+        private val hook = AfterLoadingStaticExamples { examplesUsedFor, examples ->
+            logger.log("life cycle hook called for '$examplesUsedFor'")
+            examples.forEach { (feature, stubs) ->
+                logger.log("spec: '${File(feature.path).name}'")
+                logger.log("implicit example: '${feature.stubsFromExamples.map { (k, _) -> k }.sorted().joinToString(",")}'")
+                logger.log("external stub: '${stubs.map { File(it.filePath!!).name }.sorted().joinToString(",") }'")
+            }
+        }
+
+        @BeforeEach
+        fun setupHook() {
+            LifecycleHooks.afterLoadingStaticExamples.register(hook)
+        }
+
+        @AfterEach
+        fun tearDownHook() {
+            LifecycleHooks.afterLoadingStaticExamples.remove(hook)
+        }
+
+        private val cli = CommandLine(ExamplesCommand.Validate(), CommandLine.defaultFactory())
+
+        @Test
+        fun `should call the life cycle hook for validate if only spec file is provided`() {
+            val (stdOut, exitCode) = captureStandardOutput {
+                cli.execute("--spec-file", "src/test/resources/examples/single/persons.yaml")
+            }
+
+            assertThat(exitCode).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            life cycle hook called for 'Validation'
+            spec: 'persons.yaml'
+            implicit example: 'person-example-01,person-example-11'
+            external stub: 'create_person-01.json,create_person-02.json'
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should call the life cycle hook for validate spec file and example file is provided`() {
+            val (stdOut, exitCode) = captureStandardOutput {
+                cli.execute(
+                    "--spec-file", "src/test/resources/examples/only_specs/persons/persons.yaml",
+                    "--example-file", "src/test/resources/examples/only_examples/persons/persons_examples/create_person-01.json"
+                )
+            }
+
+            assertThat(exitCode).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            life cycle hook called for 'Validation'
+            spec: 'persons.yaml'
+            implicit example: 'person-example-01,person-example-11'
+            external stub: 'create_person-01.json'
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should call the life cycle hook for validate if both spec file and examples dir is provided`() {
+            val (stdOut, exitCode) = captureStandardOutput {
+                val non_implicit_examples_dir = "src/test/resources/examples/only_examples/persons/persons_examples"
+                cli.execute(
+                    "--spec-file", "src/test/resources/examples/only_specs/persons/persons.yaml",
+                    "--examples-dir", non_implicit_examples_dir
+                )
+            }
+
+            assertThat(exitCode).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            life cycle hook called for 'Validation'
+            spec: 'persons.yaml'
+            implicit example: 'person-example-01,person-example-11'
+            external stub: 'create_person-01.json,create_person-02.json'
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should call the life cycle hook for validate if spec dir is provided`() {
+            val (stdOut, exitCode) = captureStandardOutput {
+                cli.execute("--specs-dir", "src/test/resources/examples/multiple")
+            }
+
+            assertThat(exitCode).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            life cycle hook called for 'Validation'
+            spec: 'persons.yaml'
+            implicit example: 'person-example-01,person-example-11'
+            external stub: 'create_person-01.json,create_person-02.json'
+            """.trimIndent())
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            life cycle hook called for 'Validation'
+            spec: 'spec.yaml'
+            implicit example: 'CreateProduct'
+            external stub: 'example_1.json,example_3.json'
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should call the life cycle hook for validate if both spec dir and examples dir is provided`() {
+            val (stdOut, exitCode) = captureStandardOutput {
+                cli.execute(
+                    "--specs-dir", "src/test/resources/examples/only_specs",
+                    "--examples-base-dir", "src/test/resources/examples/only_examples")
+            }
+
+            assertThat(exitCode).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            life cycle hook called for 'Validation'
+            spec: 'persons.yaml'
+            implicit example: 'person-example-01,person-example-11'
+            external stub: 'create_person-01.json,create_person-02.json'
+            """.trimIndent())
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            life cycle hook called for 'Validation'
+            spec: 'spec.yaml'
+            implicit example: 'CreateProduct'
+            external stub: 'example_1.json,example_3.json'
             """.trimIndent())
         }
     }

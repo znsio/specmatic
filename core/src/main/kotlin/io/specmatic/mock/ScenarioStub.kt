@@ -47,17 +47,43 @@ data class ScenarioStub(
     fun isPartial() = partial != null
 
     fun toJSON(): JSONObjectValue {
-        val mockInteraction = mutableMapOf<String, Value>()
-        mockInteraction.putAll(data.jsonObject)
+        val requestResponse: Map<String, Value> =
+            if (partial != null) {
+                mapOf(
+                    PARTIAL to JSONObjectValue(serializeRequestResponse(partial))
+                )
+            } else {
+                serializeRequestResponse(this)
+            }
 
-        mockInteraction[MOCK_HTTP_REQUEST] = request.toJSON()
-        mockInteraction[MOCK_HTTP_RESPONSE] = response.toJSON()
+        return JSONObjectValue(requestResponse + data.jsonObject)
+    }
 
-        return JSONObjectValue(mockInteraction)
+    private fun serializeRequestResponse(scenarioStub: ScenarioStub): Map<String, Value> {
+        return mapOf(
+            MOCK_HTTP_REQUEST to scenarioStub.request.toJSON(),
+            MOCK_HTTP_RESPONSE to scenarioStub.response.toJSON()
+        )
     }
 
     private fun getHttpResponse(): HttpResponse {
         return this.partial?.response ?: this.response
+    }
+
+    fun updateRequest(request: HttpRequest): ScenarioStub {
+        if (partial != null) {
+            return this.copy(partial = this.partial.updateRequest(request))
+        }
+
+        return this.copy(request = request)
+    }
+
+    fun updateResponse(response: HttpResponse): ScenarioStub {
+        if (partial != null) {
+            return this.copy(partial = this.partial.updateResponse(response))
+        }
+
+        return this.copy(response = response)
     }
 
     fun getRequestWithAdditionalParamsIfAny(additionalExampleParamsFilePath: String?): HttpRequest {

@@ -10,9 +10,7 @@ import io.specmatic.stub.HttpClientFactory
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.contractInfoToHttpExpectations
 import io.specmatic.stub.endPointFromHostAndPort
-import org.springframework.stereotype.Component
 
-@Component
 class HTTPStubEngine {
     fun runHTTPStub(
         stubs: List<Pair<Feature, List<ScenarioStub>>>,

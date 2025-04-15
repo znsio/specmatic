@@ -1,6 +1,5 @@
 package application
 
-import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -22,8 +21,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.junit.platform.launcher.Launcher
 import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.junit.platform.launcher.TestExecutionListener
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
 import org.w3c.dom.Document
 import org.xml.sax.InputSource
 import picocli.CommandLine
@@ -32,19 +29,11 @@ import java.util.*
 import java.util.stream.Stream
 
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [SpecmaticApplication::class, TestCommand::class])
 internal class TestCommandTest {
-    @MockkBean
-    lateinit var specmaticConfig: SpecmaticConfig
-
-    @MockkBean
-    lateinit var junitLauncher: Launcher
-
-    @Autowired
-    lateinit var factory: CommandLine.IFactory
-
-    @Autowired
-    lateinit var testCommand: TestCommand
+    private var specmaticConfig: SpecmaticConfig = mockk()
+    private var junitLauncher: Launcher = mockk()
+    private val factory: CommandLine.IFactory = CommandLine.defaultFactory()
+    private val testCommand: TestCommand = TestCommand(junitLauncher)
 
     private val contractsToBeRunAsTests = arrayListOf("/config/path/to/contract_1.$CONTRACT_EXTENSION",
             "/config/path/to/another_contract_1.$CONTRACT_EXTENSION")

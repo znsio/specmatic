@@ -442,7 +442,7 @@ class HttpStub(
 
         return specmaticConfig.stubBaseUrls(defaultBaseUrl).map { stubBaseUrl ->
             val host = extractHost(stubBaseUrl).let(::normalizeHost)
-            val port = extractPort(stubBaseUrl) ?: 80
+            val port = extractPort(stubBaseUrl)
             Pair(host, port)
         }.distinct().ifEmpty { listOf(this.host to this.port) }
     }
@@ -1287,8 +1287,8 @@ fun extractHost(url: String): String {
     return URI(url).host
 }
 
-fun extractPort(url: String): Int? {
-    return URI(url).port.takeIf { it != -1 }
+fun extractPort(url: String): Int {
+    return resolvedPort(URI.create(url))
 }
 
 fun normalizeHost(host: String): String {

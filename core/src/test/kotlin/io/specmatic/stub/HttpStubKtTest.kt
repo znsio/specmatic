@@ -1017,17 +1017,17 @@ paths:
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).isEqualToIgnoringWhitespace("""
         >> Invalid baseURL "httd://localhost:8080/api" for spec1.yaml
-        Please specify a valid URL in 'scheme://host[:port][path]' format, Example: http://localhost:9000/api
+        Please specify a valid URL in 'scheme://host[:port][path]' format
         >> Invalid baseURL "ftp://localhost:8080/api" for spec2.yaml
         Please specify a valid scheme / protocol (http or https)
         >> Invalid baseURL "http://localhost:99999/api" for spec3.yaml
         Please specify a valid port number
         >> Invalid baseURL "http://localhost:not_a_port/api" for spec4.yaml
-        Please specify a valid URL in 'scheme://host[:port][path]' format, Example: http://localhost:9000/api
+        Please specify a valid URL in 'scheme://host[:port][path]' format
         >> Invalid baseURL "localhost/api" for spec5.yaml
-        Please specify a valid URL in 'scheme://host[:port][path]' format, Example: http://localhost:9000/api
+        Please specify a valid URL in 'scheme://host[:port][path]' format
         >> Invalid baseURL "/api" for spec6.yaml
-        Please specify a valid URL in 'scheme://host[:port][path]' format, Example: http://localhost:9000/api
+        Please specify a valid URL in 'scheme://host[:port][path]' format
         """.trimIndent())
     }
 
@@ -1044,5 +1044,26 @@ paths:
         val result = validateBaseUrls(specToBaseUrls)
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should extract host from url`() {
+        extractHost("http://localhost:8080/api").let {
+            assertThat(it).isEqualTo("localhost")
+        }
+    }
+
+    @Test
+    fun `should extract port from url`() {
+        extractPort("http://localhost:8080/api").let {
+            assertThat(it).isEqualTo(8080)
+        }
+    }
+
+    @Test
+    fun `should default to port 80 if the port is not found in the base url`() {
+        extractPort("http://localhost/api").let {
+            assertThat(it).isEqualTo(80)
+        }
     }
 }

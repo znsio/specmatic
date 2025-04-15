@@ -418,7 +418,7 @@ fun <T> runWithTimeout(timeout: Long, task: Callable<T>): T {
 }
 
 enum class URIValidationResult(val message: String) {
-    URIParsingError("Please specify a valid URL in 'scheme://host[:port][path]' format, Example: http://localhost:9000/api"),
+    URIParsingError("Please specify a valid URL in 'scheme://host[:port][path]' format"),
     InvalidURLSchemeError("Please specify a valid scheme / protocol (http or https)"),
     MissingHostError("Please specify a valid host name"),
     InvalidPortError("Please specify a valid port number"),

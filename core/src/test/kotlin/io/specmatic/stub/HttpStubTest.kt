@@ -2835,29 +2835,8 @@ Then status 200
             assertThat(exception.code).isEqualTo(1)
             assertThat(exception.message).isEqualToNormalizingWhitespace("""
             >> Invalid baseURL "localhost:9001/api" for ${File(".").resolve("hello.yaml").path}
-            Please specify a valid URL in 'scheme://host[:port][path]' format, Example: http://localhost:9000/api
+            Please specify a valid URL in 'scheme://host[:port][path]' format
             """.trimIndent())
-        }
-
-        @Test
-        fun `should start on http port if not specified in baseUrl in config`() {
-            val specmaticConfigFile = File("src/test/resources/multi_base_url_default_http_port/specmatic.yaml")
-            val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
-            val contractPathData = contractStubPaths(specmaticConfigFile.absolutePath)
-            val scenarioStubs = scenarioStubsFrom(specmaticConfigFile, contractPathData, specmaticConfig)
-
-            HttpStub(
-                features = scenarioStubs.features(),
-                rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
-                specmaticConfigPath = specmaticConfigFile.canonicalPath,
-                specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
-            ).use {
-                val request = HttpRequest(method = "GET", path = "/api/hello")
-                val client = HttpClient(endPointFromHostAndPort("localhost", 80, null))
-                val response = client.execute(request)
-
-                assertThat(response.status).isEqualTo(200)
-            }
         }
 
         @Nested

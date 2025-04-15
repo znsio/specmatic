@@ -11,7 +11,6 @@ import java.util.concurrent.Callable
         versionProvider = VersionProvider::class,
         subcommands = [
             BackwardCompatibilityCheckCommandV2::class,
-            BackwardCompatibilityCheckCommand::class,
             CompareCommand::class,
             GenerateCompletion::class,
             ImportCommand::class,

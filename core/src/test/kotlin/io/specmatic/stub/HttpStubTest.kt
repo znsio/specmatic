@@ -2839,6 +2839,27 @@ Then status 200
             """.trimIndent())
         }
 
+        @Test
+        fun `should start on http port if not specified in baseUrl in config`() {
+            val specmaticConfigFile = File("src/test/resources/multi_base_url_default_http_port/specmatic.yaml")
+            val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+            val contractPathData = contractStubPaths(specmaticConfigFile.absolutePath)
+            val scenarioStubs = scenarioStubsFrom(specmaticConfigFile, contractPathData, specmaticConfig)
+
+            HttpStub(
+                features = scenarioStubs.features(),
+                rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+                specmaticConfigPath = specmaticConfigFile.canonicalPath,
+                specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
+            ).use {
+                val request = HttpRequest(method = "GET", path = "/api/hello")
+                val client = HttpClient(endPointFromHostAndPort("localhost", 80, null))
+                val response = client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+            }
+        }
+
         @Nested
         inner class FeaturesAssociatedToTests {
 

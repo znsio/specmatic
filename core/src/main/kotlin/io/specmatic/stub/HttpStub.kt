@@ -61,6 +61,8 @@ import java.util.*
 import kotlin.text.toCharArray
 
 const val SPECMATIC_RESPONSE_CODE_HEADER = "Specmatic-Response-Code"
+const val HTTP_PORT = 80
+const val HTTPS_PORT = 443
 
 class HttpStub(
     private val features: List<Feature>,
@@ -1298,7 +1300,17 @@ fun normalizeHost(host: String): String {
 }
 
 fun isSameBaseIgnoringHost(base: URI, other: URI): Boolean {
-    return base.scheme == other.scheme && base.port == other.port && base.path.startsWith(other.path)
+    val basePort = resolvedPort(base)
+    val otherPort = resolvedPort(other)
+    return base.scheme == other.scheme && basePort == otherPort && base.path.startsWith(other.path)
+}
+
+private fun resolvedPort(uri: URI): Int {
+    return when (uri.scheme) {
+        "http" -> uri.port.takeUnless { it == -1 } ?: HTTP_PORT
+        "https" -> uri.port.takeUnless { it == -1 } ?: HTTPS_PORT
+        else -> uri.port
+    }
 }
 
 fun validateBaseUrls(specToBaseUrlMap: Map<String, String>): Result {

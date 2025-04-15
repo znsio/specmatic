@@ -113,7 +113,7 @@ internal class StubCommandTest {
                     httpClientFactory = any(),
                     workingDirectory = any(),
                     gracefulRestartTimeoutInMs = any(),
-                    specToPortMap = any()
+                    specToBaseUrlMap = any()
                 )
             }.returns(
                 mockk {
@@ -137,7 +137,7 @@ internal class StubCommandTest {
                     httpClientFactory = any(),
                     workingDirectory = any(),
                     gracefulRestartTimeoutInMs = any(),
-                    specToPortMap = any()
+                    specToBaseUrlMap = any()
                 )
             }
         } finally {
@@ -223,7 +223,7 @@ internal class StubCommandTest {
                     httpClientFactory = any(),
                     workingDirectory = any(),
                     gracefulRestartTimeoutInMs = any(),
-                    specToPortMap = any()
+                    specToBaseUrlMap = any()
                 )
             }.returns(
                 mockk {
@@ -250,7 +250,7 @@ internal class StubCommandTest {
                     httpClientFactory = any(),
                     workingDirectory = any(),
                     gracefulRestartTimeoutInMs = any(),
-                    specToPortMap = any()
+                    specToBaseUrlMap = any()
                 )
             }
         } finally {

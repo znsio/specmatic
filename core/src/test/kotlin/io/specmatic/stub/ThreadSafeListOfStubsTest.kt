@@ -14,8 +14,8 @@ class ThreadSafeListOfStubsTest {
 
         @Test
         fun `should return a ThreadSafeListOfStubs for a given port`() {
-            val specToPortMap = mapOf(
-                "spec1.yaml" to 8080
+            val specToBaseUrlMap = mapOf(
+                "spec1.yaml" to "http://localhost:8080"
             )
             val httpStubs = mutableListOf(
                 mockk<HttpStubData> {
@@ -26,9 +26,13 @@ class ThreadSafeListOfStubsTest {
                 }
             )
 
-            val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToPortMap)
+            val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToBaseUrlMap)
 
-            val result = threadSafeList.stubAssociatedTo(port = 8080, defaultPort = 9090)
+            val result = threadSafeList.stubAssociatedTo(
+                baseUrl = "http://localhost:8080",
+                defaultBaseUrl = "http://localhost:9090",
+                urlPath = ""
+            )
 
             assertNotNull(result)
             assertThat(result?.size).isEqualTo(1)
@@ -36,10 +40,10 @@ class ThreadSafeListOfStubsTest {
 
         @Test
         fun `should return null if port has no associated stubs`() {
-            val specToPortMap = mapOf(
-                "spec1.yaml" to 8080,
-                "spec2.yaml" to 8080,
-                "spec3.yaml" to 8000
+            val specToBaseUrlMap = mapOf(
+                "spec1.yaml" to "http://localhost:8080",
+                "spec2.yaml" to "http://localhost:8080",
+                "spec3.yaml" to "http://localhost:8000"
             )
             val httpStubs = mutableListOf(
                 mockk<HttpStubData> {
@@ -50,17 +54,21 @@ class ThreadSafeListOfStubsTest {
                 }
             )
 
-            val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToPortMap)
+            val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToBaseUrlMap)
 
-            val result = threadSafeList.stubAssociatedTo(port = 8000, defaultPort = 9090)
+            val result = threadSafeList.stubAssociatedTo(
+                baseUrl = "http://localhost:8000",
+                defaultBaseUrl = "http://localhost:9090",
+                urlPath = ""
+            )
 
             assertThat(result.size).isEqualTo(0)
         }
 
         @Test
         fun `should return a ThreadSafeListOfStubs for the default port if port not found in map`() {
-            val specToPortMap = mapOf(
-                "spec1.yaml" to 8080
+            val specToBaseUrlMap = mapOf(
+                "spec1.yaml" to "http://localhost:8080"
             )
             val httpStubs = mutableListOf(
                 mockk<HttpStubData> {
@@ -74,9 +82,13 @@ class ThreadSafeListOfStubsTest {
                 }
             )
 
-            val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToPortMap)
+            val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToBaseUrlMap)
 
-            val result = threadSafeList.stubAssociatedTo(port = 9090, defaultPort = 9090)
+            val result = threadSafeList.stubAssociatedTo(
+                baseUrl = "http://localhost:9090",
+                defaultBaseUrl = "http://localhost:9090",
+                urlPath = ""
+            )
 
             assertNotNull(result)
             assertEquals(2, result!!.size)
@@ -84,10 +96,10 @@ class ThreadSafeListOfStubsTest {
 
         @Test
         fun `should return multiple stubs associated with the same port`() {
-            val specToPortMap = mapOf(
-                "spec1.yaml" to 8080,
-                "spec2.yaml" to 8080,
-                "spec3.yaml" to 8080
+            val specToBaseUrlMap = mapOf(
+                "spec1.yaml" to "http://localhost:8080",
+                "spec2.yaml" to "http://localhost:8080",
+                "spec3.yaml" to "http://localhost:8080"
             )
             val httpStubs = mutableListOf(
                 mockk<HttpStubData> {
@@ -101,9 +113,13 @@ class ThreadSafeListOfStubsTest {
                 }
             )
 
-            val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToPortMap)
+            val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToBaseUrlMap)
 
-            val result = threadSafeList.stubAssociatedTo(port = 8080, defaultPort = 9090)
+            val result = threadSafeList.stubAssociatedTo(
+                baseUrl = "http://localhost:8080",
+                defaultBaseUrl = "http://localhost:9090",
+                urlPath = ""
+            )
 
             assertNotNull(result)
             assertEquals(3, result!!.size)
@@ -111,12 +127,16 @@ class ThreadSafeListOfStubsTest {
 
         @Test
         fun `should return an empty list if no stubs exist`() {
-            val specToPortMap = mapOf("spec1.yaml" to 8080)
+            val specToBaseUrlMap = mapOf("spec1.yaml" to "http://localhost:8080")
             val httpStubs = mutableListOf<HttpStubData>()
 
-            val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToPortMap)
+            val threadSafeList = ThreadSafeListOfStubs(httpStubs, specToBaseUrlMap)
 
-            val result = threadSafeList.stubAssociatedTo(port = 8080, defaultPort = 9090)
+            val result = threadSafeList.stubAssociatedTo(
+                baseUrl = "http://localhost:8080",
+                defaultBaseUrl = "http://localhost:9090",
+                urlPath = ""
+            )
 
             assertThat(result.size).isEqualTo(0)
         }

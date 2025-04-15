@@ -9,6 +9,7 @@ import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpClientFactory
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.contractInfoToHttpExpectations
+import io.specmatic.stub.endPointFromHostAndPort
 
 class HTTPStubEngine {
     fun runHTTPStub(
@@ -22,8 +23,10 @@ class HTTPStubEngine {
         httpClientFactory: HttpClientFactory,
         workingDirectory: WorkingDirectory,
         gracefulRestartTimeoutInMs: Long,
-        specToPortMap: Map<String, Int?>
+        specToBaseUrlMap: Map<String, String?>
     ): HttpStub {
+        val keyData = certInfo.getHttpsCert()
+
         return HttpStub(
             features = stubs.map { it.first },
             rawHttpStubs = contractInfoToHttpExpectations(stubs),
@@ -31,31 +34,41 @@ class HTTPStubEngine {
             port = port,
             log = ::consoleLog,
             strictMode = strictMode,
-            keyData = certInfo.getHttpsCert(),
+            keyData = keyData,
             passThroughTargetBase = passThroughTargetBase,
             httpClientFactory = httpClientFactory,
             workingDirectory = workingDirectory,
             specmaticConfigPath = specmaticConfigPath,
             timeoutMillis = gracefulRestartTimeoutInMs,
-            specToStubPortMap = specToPortMap
+            specToStubBaseUrlMap = specToBaseUrlMap
         ).also {
             consoleLog(NewLineLogMessage)
-            consoleLog(StringLog(serverStartupMessage(specToPortMap, port)))
+            consoleLog(
+                StringLog(
+                    serverStartupMessage(
+                        specToBaseUrlMap,
+                        endPointFromHostAndPort(host, port, keyData)
+                    )
+                )
+            )
             consoleLog(StringLog("Press Ctrl + C to stop."))
         }
     }
 
-    private fun serverStartupMessage(specToStubPortMap: Map<String, Int?>, defaultPort: Int): String {
+    private fun serverStartupMessage(
+        specToStubBaseUrlMap: Map<String, String?>,
+        defaultBaseUrl: String
+    ): String {
         val newLine = System.lineSeparator()
-        val portToSpecs: Map<Int, List<String>> = specToStubPortMap.entries
-            .groupBy({ it.value ?: defaultPort }, { it.key })
+        val baseUrlToSpecs: Map<String, List<String>> = specToStubBaseUrlMap.entries
+            .groupBy({ it.value ?: defaultBaseUrl }, { it.key })
 
         val messageBuilder = StringBuilder("Stub server is running on the following URLs:")
 
-        portToSpecs.entries
+        baseUrlToSpecs.entries
             .sortedBy { it.key }
-            .forEach { (port, specs) ->
-                messageBuilder.append("${newLine}- http://localhost:$port serving endpoints from specs:")
+            .forEach { (baseUrl, specs) ->
+                messageBuilder.append("${newLine}- $baseUrl serving endpoints from specs:")
                 specs.sorted().forEachIndexed { index, spec ->
                     messageBuilder.append("$newLine    ${index.inc()}. $spec")
                 }

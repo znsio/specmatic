@@ -5,7 +5,7 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
-import io.specmatic.core.utilities.ContractPathData.Companion.specToPortMap
+import io.specmatic.core.utilities.ContractPathData.Companion.specToBaseUrlMap
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.exitIfAnyDoNotExist
 import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
@@ -192,7 +192,7 @@ class StubCommand(
             httpClientFactory = httpClientFactory,
             workingDirectory = workingDirectory,
             gracefulRestartTimeoutInMs = gracefulRestartTimeoutInMs,
-            specToPortMap = contractSources.specToPortMap()
+            specToBaseUrlMap = contractSources.specToBaseUrlMap()
         )
 
         LogTail.storeSnapshot()

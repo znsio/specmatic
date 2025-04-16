@@ -19,12 +19,17 @@ class HttpExpectationsTest {
         response = HttpResponse.ok(parsedJSONObject("{\"id\": 10}")),
         responsePattern = HttpResponsePattern(HttpResponse.OK),
         resolver = Resolver(),
+        contractPath = "test.yaml",
         originalRequest = request
     )
 
     private val sandwichedSpecificExpectation = mutableListOf(staticStubData)
     private val expectations = HttpExpectations(
-        static = ThreadSafeListOfStubs(sandwichedSpecificExpectation, emptyMap())
+        static = ThreadSafeListOfStubs(sandwichedSpecificExpectation, mapOf("test.yaml" to "http://localhost:8080")),
+    )
+
+    private val expectationsWithNoBaseUrl = HttpExpectations(
+        static = ThreadSafeListOfStubs(sandwichedSpecificExpectation, emptyMap()),
     )
 
     @Test

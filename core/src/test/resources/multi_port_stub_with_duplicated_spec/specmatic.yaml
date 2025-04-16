@@ -6,7 +6,7 @@ contracts:
       - baseUrl: http://localhost:9001
         specs:
           - product_with_category.yaml
-      - baseUrl: http://0.0.0.0:9002
+      - baseUrl: http://127.0.0.1:9002
         specs:
           - product_with_category.yaml
       - product_with_category.yaml

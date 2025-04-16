@@ -264,53 +264,6 @@ internal class SpecmaticConfigKtTest {
 
     @Nested
     inner class StubBaseUrlConfigTests {
-        @Test
-        fun `should return all stub baseUrls from sources`() {
-            val source1 = Source(
-                stub = listOf(
-                    Consumes.StringValue("9000_first.yaml"),
-                    Consumes.StringValue("9000_second.yaml"),
-                    Consumes.ObjectValue(
-                        specs = listOf("9001_first.yaml", "9001_second.yaml"),
-                        baseUrl = "http://localhost:9001"
-                    ),
-                    Consumes.ObjectValue(
-                        specs = listOf("9002_first.yaml"),
-                        baseUrl = "http://localhost:9002"
-                    ),
-                )
-            )
-
-            val source2 = Source(
-                stub = listOf(
-                    Consumes.StringValue("9000_third.yaml"),
-                    Consumes.ObjectValue(
-                        specs = listOf("9001_third.yaml", "9001_fourth.yaml"),
-                        baseUrl = "http://localhost:9001"
-                    ),
-                    Consumes.ObjectValue(
-                        specs = listOf("9002_second.yaml"),
-                        baseUrl = "http://localhost:9002"
-                    ),
-                )
-            )
-
-            val specmaticConfig = SpecmaticConfig(
-                sources = listOf(source1, source2)
-            )
-
-            assertThat(
-                specmaticConfig.stubBaseUrls(
-                   "http://localhost:9000"
-                )
-            ).containsAll(
-                listOf(
-                    "http://localhost:9000",
-                    "http://localhost:9001",
-                    "http://localhost:9002"
-                )
-            )
-        }
 
         @Test
         fun `should return all stub contracts from sources`() {
@@ -360,6 +313,32 @@ internal class SpecmaticConfigKtTest {
                     "9001_third.yaml",
                     "9001_fourth.yaml",
                     "9002_second.yaml"
+                )
+            )
+        }
+
+        @Test
+        fun `should return all stub contracts from sources with duplications if any`() {
+            val source = Source(
+                stub = listOf(
+                    Consumes.StringValue("api.yaml"),
+                    Consumes.ObjectValue(
+                        specs = listOf("api.yaml"),
+                        baseUrl = "http://localhost:9001"
+                    ),
+                    Consumes.ObjectValue(
+                        specs = listOf("other.yaml"),
+                        baseUrl = "http://localhost:9002"
+                    ),
+                )
+            )
+            val specmaticConfig = SpecmaticConfig(sources = listOf(source))
+
+            assertThat(specmaticConfig.stubToBaseUrlList("http://localhost:9000")).isEqualTo(
+                listOf(
+                    "api.yaml" to "http://localhost:9000",
+                    "api.yaml" to "http://localhost:9001",
+                    "other.yaml" to "http://localhost:9002"
                 )
             )
         }

@@ -2806,8 +2806,8 @@ Then status 200
             WARNING: The following specification are associated with multiple base URLs:
             - product_with_category.yaml
               - http://localhost:9001
-              - http://0.0.0.0:9002
-              - http://127.0.0.1:9000
+              - http://127.0.0.1:9002
+              - http://0.0.0.0:9000
             Note: The logs below indicate the selected base URL for each specification
             """.trimIndent())
         }

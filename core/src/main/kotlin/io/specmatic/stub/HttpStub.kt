@@ -162,8 +162,9 @@ class HttpStub(
         }
     )
 
-    private val threadSafeHttpStubs = ThreadSafeListOfStubs(
-        httpStubs = staticHttpStubData(rawHttpStubs),
+    private val httpExpectations: HttpExpectations = HttpExpectations(
+        static = staticHttpStubData(rawHttpStubs),
+        transient = rawHttpStubs.filter { it.stubToken != null }.reversed().toMutableList(),
         specToBaseUrlMap = specToBaseUrlMap
     )
 
@@ -216,12 +217,6 @@ class HttpStub(
         return staticStubs.plus(stubsFromSpecificationExamples).toMutableList()
     }
 
-    private val threadSafeHttpStubQueue =
-        ThreadSafeListOfStubs(
-            httpStubs = rawHttpStubs.filter { it.stubToken != null }.reversed().toMutableList(),
-            specToBaseUrlMap = specToBaseUrlMap
-        )
-
     private val _logs: MutableList<StubEndpoint> = Collections.synchronizedList(ArrayList())
     private val _allEndpoints: List<StubEndpoint> = extractALlEndpoints()
 
@@ -231,12 +226,12 @@ class HttpStub(
 
     val stubCount: Int
         get() {
-            return threadSafeHttpStubs.size
+            return httpExpectations.stubCount
         }
 
     val transientStubCount: Int
         get() {
-            return threadSafeHttpStubQueue.size
+            return httpExpectations.transientStubCount
         }
 
     val endPoint = endPointFromHostAndPort(host, port, keyData)
@@ -447,7 +442,7 @@ class HttpStub(
         }.distinct().ifEmpty { listOf(this.host to this.port) }
     }
 
-    fun serveStubResponse(
+    private fun serveStubResponse(
         httpRequest: HttpRequest,
         baseUrl: String,
         defaultBaseUrl: String,
@@ -459,15 +454,14 @@ class HttpStub(
         return getHttpResponse(
             httpRequest = httpRequest.trimBaseUrlPath(stubBaseUrlPath),
             features = featuresAssociatedTo(baseUrl, features, specToBaseUrlMap, urlPath),
-            threadSafeStubs = threadSafeHttpStubs.stubAssociatedTo(baseUrl, defaultBaseUrl, urlPath),
-            threadSafeStubQueue = threadSafeHttpStubQueue.stubAssociatedTo(baseUrl, defaultBaseUrl, urlPath),
+            httpExpectations.associatedTo(baseUrl, defaultBaseUrl, urlPath),
             strictMode = strictMode,
             passThroughTargetBase = passThroughTargetBase,
             httpClientFactory = httpClientFactory,
             specmaticConfig = specmaticConfig,
         ).also {
             if (it is FoundStubbedResponse) {
-                it.response.mock?.let { mock -> threadSafeHttpStubQueue.remove(mock) }
+                it.response.mock?.let { mock -> httpExpectations.removeTransientMock(mock) }
             }
             it.log(_logs, httpRequest)
         }.response
@@ -490,7 +484,7 @@ class HttpStub(
     private fun handleFlushTransientStubsRequest(httpRequest: HttpRequest): HttpStubResponse {
         val token = httpRequest.path?.removePrefix("/_specmatic/$TRANSIENT_MOCK/")
 
-        threadSafeHttpStubQueue.removeWithToken(token)
+        httpExpectations.removeWithToken(token)
 
         return HttpStubResponse(HttpResponse.OK)
     }
@@ -664,12 +658,12 @@ class HttpStub(
 
                 if (stub.stubToken != null) {
                     resultWithRequestBodyRegex.forEach {
-                        threadSafeHttpStubQueue.addToStub(it, stub)
+                        httpExpectations.addDynamicTransient(it, stub)
                     }
 
                 } else {
                     resultWithRequestBodyRegex.forEach {
-                        threadSafeHttpStubs.addToStub(it, stub)
+                        httpExpectations.addDynamic(it, stub)
                     }
                 }
             }
@@ -911,15 +905,14 @@ internal suspend fun respondToKtorHttpResponse(
 fun getHttpResponse(
     httpRequest: HttpRequest,
     features: List<Feature>,
-    threadSafeStubs: ThreadSafeListOfStubs,
-    threadSafeStubQueue: ThreadSafeListOfStubs,
+    httpExpectations: HttpExpectations,
     strictMode: Boolean,
     passThroughTargetBase: String = "",
     httpClientFactory: HttpClientFactory? = null,
     specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
 ): StubbedResponseResult {
     try {
-        val (matchResults, matchingStubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
+        val (matchResults, matchingStubResponse) = stubbedResponse(httpExpectations, httpRequest)
         if(matchingStubResponse != null) {
             val (httpStubResponse, httpStubData) = matchingStubResponse
             return FoundStubbedResponse(
@@ -974,23 +967,22 @@ object StubAndRequestMismatchMessages : MismatchMessages {
 }
 
 private fun stubbedResponse(
-    threadSafeStubs: ThreadSafeListOfStubs,
-    threadSafeStubQueue: ThreadSafeListOfStubs,
+    httpExpectations: HttpExpectations,
     httpRequest: HttpRequest
 ): Pair<List<Pair<Result, HttpStubData>>, Pair<HttpStubResponse, HttpStubData>?> {
 
-    val (mock, matchResults) = stubThatMatchesRequest(threadSafeStubQueue, threadSafeStubs, httpRequest)
+    val (stubData, matchResults) = httpExpectations.matchingStub(httpRequest)
 
-    val stubResponse = mock?.let {
+    val stubResponse = stubData?.let {
         val softCastResponse = it.softCastResponseToXML(httpRequest).response
         HttpStubResponse(
             softCastResponse,
             it.delayInMilliseconds,
             it.contractPath,
             examplePath = it.examplePath,
-            feature = mock.feature,
-            scenario = mock.scenario,
-            mock = mock
+            feature = stubData.feature,
+            scenario = stubData.scenario,
+            mock = stubData
         ) to it
     }
 
@@ -998,12 +990,10 @@ private fun stubbedResponse(
 }
 
 private fun stubThatMatchesRequest(
-    transientStubs: ThreadSafeListOfStubs,
-    nonTransientStubs: ThreadSafeListOfStubs,
+    httpExpectations: HttpExpectations,
     httpRequest: HttpRequest
 ): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
-    return transientStubs.matchingTransientStub(httpRequest)
-        ?: nonTransientStubs.matchingNonTransientStub(httpRequest)
+    return httpExpectations.matchingStub(httpRequest)
 }
 
 fun isMissingData(e: Throwable?): Boolean {

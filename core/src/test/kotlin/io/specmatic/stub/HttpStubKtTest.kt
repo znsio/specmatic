@@ -33,7 +33,11 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.json.JSONObject
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledOnOs
 import org.junit.jupiter.api.condition.OS
@@ -702,10 +706,11 @@ paths:
               schema:
                 type: string
         """.trimIndent(), "").toFeature()
-        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc123"}""")), listOf(contract), ThreadSafeListOfStubs(
-            mutableListOf(),
-            emptyMap()
-        ), ThreadSafeListOfStubs(mutableListOf(), emptyMap()), false).response
+        val response: HttpStubResponse = getHttpResponse(
+            HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc123"}""")),
+            listOf(contract),
+            HttpExpectations(mutableListOf()), false
+        ).response
 
         println(response.response.toLogString())
 
@@ -750,10 +755,7 @@ paths:
         )
 
         assertThatThrownBy {
-            getHttpResponse(HttpRequest("POST", "/data", body = StringValue("Hello")), listOf(contract), ThreadSafeListOfStubs(
-                mutableListOf(stub),
-                emptyMap()
-            ), ThreadSafeListOfStubs(mutableListOf(), emptyMap()), false)
+            getHttpResponse(HttpRequest("POST", "/data", body = StringValue("Hello")), listOf(contract), HttpExpectations(mutableListOf(stub)), false)
         }.satisfies(Consumer {
             it as ContractException
 
@@ -799,10 +801,8 @@ paths:
             responsePattern = contract.scenarios.single().httpResponsePattern
         )
 
-        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc"}""")), listOf(contract), ThreadSafeListOfStubs(
-            mutableListOf(stub),
-            emptyMap()
-        ), ThreadSafeListOfStubs(mutableListOf(), emptyMap()),true).response
+        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc"}""")), listOf(contract),
+            HttpExpectations(mutableListOf(stub)),true).response
         val requestString = response.response.toLogString()
 
         println(requestString)

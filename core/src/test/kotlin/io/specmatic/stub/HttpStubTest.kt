@@ -3054,6 +3054,71 @@ Then status 200
             }
         }
 
+        @Test
+        fun `should map dynamic expectations to the spec on the correct port`() = stubTest(
+            configYaml = """
+                version: 2
+                contracts:
+                - consumes:
+                  - src/test/resources/multi_base_url_dynamic_stubs/specs/product.yaml
+                  - specs:
+                    - src/test/resources/multi_base_url_dynamic_stubs/specs/product-2.yaml
+                    baseUrl: http://localhost:8080
+            """.trimIndent(),
+            port = 9000,
+            dataDirPaths = emptyList<String>()
+        ) { stub ->
+            val client8080 = HttpClient("http://localhost:8080")
+            val client9000 = HttpClient("http://localhost:9000")
+
+            val dynamicExpectationRequest = HttpRequest(
+                method = "POST",
+                path = "/_specmatic/expectations",
+                body = parsedJSONObject("""
+                        {                                                                                              
+                            "http-request": {
+                                "method": "POST",
+                                "path": "/products",
+                                "headers": {
+                                    "Content-Type": "application/json"
+                                },
+                                "body": {
+                                    "name": "iPhone",
+                                    "price": 19.99,
+                                    "category": "Electronics"
+                                }
+                            },
+                            "http-response": {
+                                "status": 201,
+                                "headers": {
+                                    "Content-Type": "application/json"
+                                },
+                                "body": {
+                                    "id": "abc123",
+                                    "name": "iPhone",
+                                    "price": 19.99,
+                                    "category": "Electronics"
+                                }
+                            }
+                        }
+                    """.trimIndent())
+            )
+
+            val expectationStatusResponse = client8080.execute(dynamicExpectationRequest)
+            assertThat(expectationStatusResponse.status).isEqualTo(200)
+
+            val request = HttpRequest(
+                method = "POST",
+                path = "/products",
+                body = parsedJSONObject("""{"name": "iPhone", "price": 19.99, "category": "Electronics"}""")
+            )
+
+            val response = client9000.execute(request)
+            val responseBody = response.body as JSONObjectValue
+
+            assertThat(responseBody.findFirstChildByPath("id")?.toStringLiteral()).isEqualTo("123")
+        }
+
         private fun Map<String, Int>.toBaseUrlMap(): Map<String, String> {
             return this.mapValues { "http://localhost:${it.value}" }
         }
@@ -3170,6 +3235,33 @@ Then status 200
                 stubSpecPaths = specPaths,
                 configFilePath = configFilePath
             )
+            createStub(
+                host = "localhost",
+                port = port,
+                timeoutMillis = 0,
+                givenConfigFileName = configFilePath,
+                dataDirPaths = dataDirPaths
+            ).use { stub ->
+                runTest(stub)
+            }
+        } finally {
+            File(configFilePath).delete()
+        }
+    }
+
+
+    private fun stubTest(
+        configYaml: String,
+        port: Int = 9000,
+        dataDirPaths: List<String> = emptyList(),
+        runTest: (ContractStub) -> Unit,
+    ) {
+        val configFilePath = "src/test/resources/specmatic.yaml"
+        try {
+            val file = File(configFilePath)
+            file.createNewFile()
+            file.writeText(configYaml)
+
             createStub(
                 host = "localhost",
                 port = port,

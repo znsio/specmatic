@@ -29,7 +29,7 @@ class ThreadSafeListOfStubs(
         } ?: emptyStubs()
     }
 
-    fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {
+    private fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {
         synchronized(this) {
             return fn(httpStubs.toList())
         }
@@ -83,7 +83,73 @@ class ThreadSafeListOfStubs(
         return httpStubData.responsePattern.status == expectedResponseCode
     }
 
-    fun matchingNonTransientStub(httpRequest: HttpRequest): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
+    fun matchingStaticStub(httpRequest: HttpRequest): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
+        val expectedResponseCode = httpRequest.expectedResponseCode()
+
+        val listMatchResults: List<Pair<Result, HttpStubData>> = matchResults { httpStubData ->
+            httpStubData.filter {
+                hasExpectedResponseCode(it, expectedResponseCode)
+            }.filter { it.partial == null }.map {
+                Pair(it.matches(httpRequest), it)
+            }.plus(partialMatchResults(httpStubData, httpRequest))
+        }
+
+        val mocks = listMatchResults.map { (result, stubData) ->
+            if (result !is Result.Success) return@map Pair(result, stubData)
+
+            val response =
+                if (stubData.partial == null)
+                    stubData.response
+                else
+                    stubData.responsePattern.fillInTheBlanks(stubData.partial.response, stubData.resolver)
+
+            val stubResponse = HttpStubResponse(
+                response,
+                stubData.delayInMilliseconds,
+                stubData.contractPath,
+                feature = stubData.feature,
+                scenario = stubData.scenario
+            )
+
+            try {
+                val originalRequest =
+                    if (stubData.partial != null) stubData.partial.request
+                    else stubData.originalRequest
+
+                stubResponse.resolveSubstitutions(
+                    httpRequest,
+                    originalRequest ?: httpRequest,
+                    stubData.data
+                )
+
+                result to stubData.copy(response = response)
+            } catch (e: ContractException) {
+                if (isMissingData(e)) Pair(e.failure(), stubData)
+                else throw e
+            }
+        }
+
+        val successfulMatches = mocks.filter { (result, _) -> result is Result.Success }
+        val grouped = successfulMatches.groupBy { (_, stubData) ->
+            stubData.stubType
+        }
+
+        val exactMatch = grouped[StubType.Exact].orEmpty().sortedBy {
+            it.second.originalRequest?.generality ?: Int.MAX_VALUE
+        }.find { (result, _) -> result is Result.Success }
+
+        if(exactMatch != null)
+            return Pair(exactMatch.second, listMatchResults)
+
+        val partialMatch = grouped[StubType.Partial].orEmpty().find { (result, _) -> result is Result.Success }
+
+        if(partialMatch != null)
+            return Pair(partialMatch.second, listMatchResults)
+
+        return Pair(null, listMatchResults)
+    }
+
+    fun matchingDynamicStub(httpRequest: HttpRequest): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
         val expectedResponseCode = httpRequest.expectedResponseCode()
 
         val listMatchResults: List<Pair<Result, HttpStubData>> = matchResults { httpStubData ->
@@ -164,10 +230,8 @@ class ThreadSafeListOfStubs(
             }
     }
 
-    companion object {
-        fun emptyStubs(): ThreadSafeListOfStubs {
-            return ThreadSafeListOfStubs(mutableListOf(), emptyMap())
-        }
+    private fun emptyStubs(): ThreadSafeListOfStubs {
+        return ThreadSafeListOfStubs(mutableListOf(), specToBaseUrlMap)
     }
 }
 

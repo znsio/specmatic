@@ -3054,6 +3054,63 @@ Then status 200
             }
         }
 
+        @Test
+        fun `should map dynamic expectations to the spec on the correct port`() {
+            createStub(
+                timeoutMillis = 0,
+                givenConfigFileName = "src/test/resources/multi_base_url_dynamic_stubs/specmatic.yaml",
+            ).use { stub ->
+                val client = HttpClient("http://localhost:8080")
+
+                val dynamicExpectationRequest = HttpRequest(
+                    method = "POST",
+                    path = "/_specmatic/expectations",
+                    body = parsedJSONObject("""
+                        {                                                                                              
+                            "http-request": {
+                                "method": "POST",
+                                "path": "/products",
+                                "headers": {
+                                    "Content-Type": "application/json"
+                                },
+                                "body": {
+                                    "name": "iPhone",
+                                    "price": 19.99,
+                                    "category": "Electronics"
+                                }
+                            },
+                            "http-response": {
+                                "status": 201,
+                                "headers": {
+                                    "Content-Type": "application/json"
+                                },
+                                "body": {
+                                    "id": "abc123",
+                                    "name": "iPhone",
+                                    "price": 19.99,
+                                    "category": "Electronics"
+                                }
+                            }
+                        }
+                    """.trimIndent())
+                )
+
+                val expectationStatusResponse = client.execute(dynamicExpectationRequest)
+                assertThat(expectationStatusResponse.status).isEqualTo(200)
+
+                val request = HttpRequest(
+                    method = "POST",
+                    path = "/products",
+                    body = parsedJSONObject("""{"name": "iPhone", "price": 19.99, "category": "Electronics"}""")
+                )
+
+                val response = client.execute(request)
+                val responseBody = response.body as JSONObjectValue
+
+                assertThat(responseBody.findFirstChildByPath("id")?.toStringLiteral()).isEqualTo("abc123")
+            }
+        }
+
         private fun Map<String, Int>.toBaseUrlMap(): Map<String, String> {
             return this.mapValues { "http://localhost:${it.value}" }
         }

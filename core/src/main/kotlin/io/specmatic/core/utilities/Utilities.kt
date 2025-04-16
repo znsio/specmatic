@@ -423,6 +423,13 @@ enum class URIValidationResult(val message: String) {
     MissingHostError("Please specify a valid host name"),
     InvalidPortError("Please specify a valid port number"),
     Success("This URL is valid");
+
+    fun toResult(): Result {
+        return when (this) {
+            Success -> Result.Success()
+            else -> Result.Failure(message = message)
+        }
+    }
 }
 
 fun validateTestOrStubUri(uri: String): URIValidationResult {

@@ -37,6 +37,7 @@ class Configuration {
                 System.setProperty(CONFIG_FILE_PATH, value)
             }
 
+        const val DEFAULT_HTTP_STUB_SCHEME = "http"
         private const val ALL_IPV4_ADDRESS_ON_LOCAL_MACHINE = "0.0.0.0"
         const val DEFAULT_HTTP_STUB_HOST = ALL_IPV4_ADDRESS_ON_LOCAL_MACHINE
         const val DEFAULT_HTTP_STUB_PORT = "9000"

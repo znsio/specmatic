@@ -306,18 +306,6 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun stubBaseUrls(defaultBaseUrl: String): List<String> {
-        return sources.flatMap {
-            it.stub.orEmpty().map { consumes ->
-                when(consumes) {
-                    is Consumes.StringValue -> defaultBaseUrl
-                    is Consumes.ObjectValue -> consumes.baseUrl
-                }
-            }
-        }.distinct()
-    }
-
-    @JsonIgnore
     fun stubToBaseUrlList(defaultBaseUrl: String): List<Pair<String, String>> {
         return sources.flatMap { source ->
             source.stub.orEmpty().flatMap { consumes ->
@@ -330,9 +318,9 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun stubBaseUrlPathAssociatedTo(url: String, defaultBaseUrl: String): String {
+    fun stubBaseUrlPathAssociatedTo(url: String, defaultBaseUrl: String, baseUrls: Collection<String>): String {
         val parsedUrl = URI(url)
-        return stubBaseUrls(defaultBaseUrl).map(::URI).firstOrNull { stubBaseUrl ->
+        return baseUrls.plus(defaultBaseUrl).distinct().map(::URI).firstOrNull { stubBaseUrl ->
             isSameBaseIgnoringHost(parsedUrl, stubBaseUrl)
         }?.path.orEmpty()
     }

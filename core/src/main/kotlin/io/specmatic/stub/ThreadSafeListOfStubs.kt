@@ -9,9 +9,6 @@ import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 import io.specmatic.mock.ScenarioStub
 import java.net.URI
 
-private const val PARTIAL = "partial"
-private const val EXACT = "exact"
-
 class ThreadSafeListOfStubs(
     private val httpStubs: MutableList<HttpStubData>,
     private val specToBaseUrlMap: Map<String, String>
@@ -134,17 +131,17 @@ class ThreadSafeListOfStubs(
 
         val successfulMatches = mocks.filter { (result, _) -> result is Result.Success }
         val grouped = successfulMatches.groupBy { (_, stubData) ->
-            if(stubData.partial != null) PARTIAL else EXACT
+            stubData.stubType
         }
 
-        val exactMatch = grouped[EXACT].orEmpty().sortedBy {
+        val exactMatch = grouped[StubType.Exact].orEmpty().sortedBy {
             it.second.originalRequest?.precisionScore ?: Int.MAX_VALUE
         }.find { (result, _) -> result is Result.Success }
 
         if(exactMatch != null)
             return Pair(exactMatch.second, listMatchResults)
 
-        val partialMatch = grouped[PARTIAL].orEmpty().find { (result, _) -> result is Result.Success }
+        val partialMatch = grouped[StubType.Partial].orEmpty().find { (result, _) -> result is Result.Success }
 
         if(partialMatch != null)
             return Pair(partialMatch.second, listMatchResults)

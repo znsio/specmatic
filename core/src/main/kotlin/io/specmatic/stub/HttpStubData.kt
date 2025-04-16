@@ -25,6 +25,13 @@ data class HttpStubData(
     val data: JSONObjectValue = JSONObjectValue(),
     val partial: ScenarioStub? = null
 ) {
+    val stubType: StubType get () {
+        if(partial != null) {
+            return StubType.Partial
+        }
+
+        return StubType.Exact
+    }
     val matchFailure: Boolean
         get() = response.headers[SPECMATIC_RESULT_HEADER] == "failure"
 
@@ -77,3 +84,5 @@ fun executeExternalCommand(command: String, envParams: Map<String, String>): Str
 }
 
 data class StubDataItems(val http: List<HttpStubData> = emptyList())
+
+enum class StubType { Exact, Partial }

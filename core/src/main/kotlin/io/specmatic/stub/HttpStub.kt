@@ -80,7 +80,7 @@ class HttpStub(
     val workingDirectory: WorkingDirectory? = null,
     val specmaticConfigPath: String? = null,
     private val timeoutMillis: Long = 0,
-    private val specToStubBaseUrlMap: Map<String, String?> = features.associate { it.path to baseUrl }
+    specToStubBaseUrlMap: Map<String, String?> = features.associate { it.path to null }
 ) : ContractStub {
     constructor(
         features: List<Feature>,
@@ -94,8 +94,7 @@ class HttpStub(
         httpClientFactory: HttpClientFactory = HttpClientFactory(),
         workingDirectory: WorkingDirectory? = null,
         specmaticConfigPath: String? = null,
-        timeoutMillis: Long = 0,
-        specToStubBaseUrlMap: Map<String, String?> = features.associate { it.path to endPointFromHostAndPort(host, port, keyData) }
+        timeoutMillis: Long = 0
     ): this (
         features,
         rawHttpStubs,
@@ -107,8 +106,7 @@ class HttpStub(
         httpClientFactory,
         workingDirectory,
         specmaticConfigPath,
-        timeoutMillis,
-        specToStubBaseUrlMap
+        timeoutMillis
     )
 
     constructor(
@@ -116,16 +114,12 @@ class HttpStub(
         scenarioStubs: List<ScenarioStub> = emptyList(),
         host: String = "localhost",
         port: Int = 9000,
-        log: (event: LogMessage) -> Unit = dontPrintToConsole,
-        specToStubBaseUrlMap: Map<String, String> = mapOf(
-            feature.path to endPointFromHostAndPort(host, port, null)
-        )
+        log: (event: LogMessage) -> Unit = dontPrintToConsole
     ) : this(
         listOf(feature),
         contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))),
         endPointFromHostAndPort(host, port, keyData = null),
-        log,
-        specToStubBaseUrlMap = specToStubBaseUrlMap
+        log
     )
 
     constructor(
@@ -139,10 +133,7 @@ class HttpStub(
         scenarioStubs,
         host,
         port,
-        log,
-        specToStubBaseUrlMap = mapOf(
-            parseGherkinStringToFeature(gherkinData).path to endPointFromHostAndPort(host, port, null)
-        )
+        log
     )
 
     companion object {
@@ -185,8 +176,10 @@ class HttpStub(
         else
             SpecmaticConfig()
 
-    private val specToBaseUrlMap = getValidatedBaseUrlsOrExit(
-        specToBaseUrlMap = specToStubBaseUrlMap.mapValues { (_, value) -> value ?: baseUrl },
+    val specToBaseUrlMap = getValidatedBaseUrlsOrExit(
+        specToBaseUrlMap = specToStubBaseUrlMap.mapValues { (path, baseUrl) ->
+            baseUrl ?: features.firstOrNull { it.path == path }?.getPreferredServer() ?: this.baseUrl
+        },
         defaultBaseUrl = baseUrl
     )
 

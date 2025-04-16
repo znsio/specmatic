@@ -41,30 +41,25 @@ class HTTPStubEngine {
             consoleLog(NewLineLogMessage)
             consoleLog(
                 StringLog(
-                    serverStartupMessage(specToBaseUrlMap, baseUrl)
+                    serverStartupMessage(it.specToBaseUrlMap)
                 )
             )
             consoleLog(StringLog("Press Ctrl + C to stop."))
         }
     }
 
-    private fun serverStartupMessage(specToStubBaseUrlMap: Map<String, String?>, defaultBaseUrl: String): String {
-        val newLine = System.lineSeparator()
-        val baseUrlToSpecs: Map<String, List<String>> = specToStubBaseUrlMap.entries
-            .groupBy({ it.value ?: defaultBaseUrl }, { it.key })
+    private fun serverStartupMessage(specToStubBaseUrlMap: Map<String, String>): String {
+        val baseUrlToSpecs= specToStubBaseUrlMap.entries.groupBy({ it.value }, { it.key })
 
-        val messageBuilder = StringBuilder("Stub server is running on the following URLs:")
-
-        baseUrlToSpecs.entries
-            .sortedBy { it.key }
-            .forEach { (baseUrl, specs) ->
-                messageBuilder.append("${newLine}- $baseUrl serving endpoints from specs:")
-                specs.sorted().forEachIndexed { index, spec ->
-                    messageBuilder.append("$newLine    ${index.inc()}. $spec")
+        return buildString {
+            appendLine("Stub server is running on the following URLs:")
+            baseUrlToSpecs.entries.sortedBy { it.key }.forEachIndexed { baseUrlIndex, (baseUrl, specs) ->
+                appendLine("- $baseUrl serving endpoints from specs:")
+                specs.sorted().forEachIndexed { specIndex, spec ->
+                    appendLine("\t${specIndex.inc()}. $spec")
                 }
-                messageBuilder.append(newLine)
+                if (baseUrlIndex < baseUrlToSpecs.size - 1) appendLine()
             }
-
-        return messageBuilder.toString()
+        }
     }
 }

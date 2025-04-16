@@ -3068,7 +3068,8 @@ Then status 200
             port = 9000,
             dataDirPaths = emptyList<String>()
         ) { stub ->
-            val client = HttpClient("http://localhost:8080")
+            val client8080 = HttpClient("http://localhost:8080")
+            val client9000 = HttpClient("http://localhost:9000")
 
             val dynamicExpectationRequest = HttpRequest(
                 method = "POST",
@@ -3103,7 +3104,7 @@ Then status 200
                     """.trimIndent())
             )
 
-            val expectationStatusResponse = client.execute(dynamicExpectationRequest)
+            val expectationStatusResponse = client8080.execute(dynamicExpectationRequest)
             assertThat(expectationStatusResponse.status).isEqualTo(200)
 
             val request = HttpRequest(
@@ -3112,10 +3113,10 @@ Then status 200
                 body = parsedJSONObject("""{"name": "iPhone", "price": 19.99, "category": "Electronics"}""")
             )
 
-            val response = client.execute(request)
+            val response = client9000.execute(request)
             val responseBody = response.body as JSONObjectValue
 
-            assertThat(responseBody.findFirstChildByPath("id")?.toStringLiteral()).isEqualTo("abc123")
+            assertThat(responseBody.findFirstChildByPath("id")?.toStringLiteral()).isEqualTo("123")
         }
 
         private fun Map<String, Int>.toBaseUrlMap(): Map<String, String> {

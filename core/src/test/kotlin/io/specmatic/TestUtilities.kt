@@ -75,7 +75,7 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeSt
     return io.specmatic.stub.getHttpResponse(
         httpRequest,
         features,
-        HttpExpectations(ThreadSafeListOfStubs(threadSafeStubs.toMutableList(), emptyMap())),
+        HttpExpectations(threadSafeStubs.toMutableList()),
         strictMode
     ).response
 }

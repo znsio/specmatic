@@ -1,7 +1,0 @@
-version: 2
-contracts:
-- consumes:
-  - specs/product.yaml
-  - specs:
-    - specs/product-2.yaml
-    baseUrl: http://localhost:8080

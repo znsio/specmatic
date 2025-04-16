@@ -163,13 +163,9 @@ class HttpStub(
     )
 
     private val httpExpectations: HttpExpectations = HttpExpectations(
-        ThreadSafeListOfStubs(
-            httpStubs = staticHttpStubData(rawHttpStubs),
-            specToBaseUrlMap = specToBaseUrlMap
-        ), ThreadSafeListOfStubs(
-            httpStubs = rawHttpStubs.filter { it.stubToken != null }.reversed().toMutableList(),
-            specToBaseUrlMap = specToBaseUrlMap
-        )
+        static = staticHttpStubData(rawHttpStubs),
+        transient = rawHttpStubs.filter { it.stubToken != null }.reversed().toMutableList(),
+        specToBaseUrlMap = specToBaseUrlMap
     )
 
     private val requestHandlers: MutableList<RequestHandler> = mutableListOf()
@@ -220,12 +216,6 @@ class HttpStub(
 
         return staticStubs.plus(stubsFromSpecificationExamples).toMutableList()
     }
-
-    private val threadSafeHttpStubQueue =
-        ThreadSafeListOfStubs(
-            httpStubs = rawHttpStubs.filter { it.stubToken != null }.reversed().toMutableList(),
-            specToBaseUrlMap = specToBaseUrlMap
-        )
 
     private val _logs: MutableList<StubEndpoint> = Collections.synchronizedList(ArrayList())
     private val _allEndpoints: List<StubEndpoint> = extractALlEndpoints()

@@ -25,11 +25,8 @@ class HttpExpectationsTest {
 
     private val sandwichedSpecificExpectation = mutableListOf(staticStubData)
     private val expectations = HttpExpectations(
-        static = ThreadSafeListOfStubs(sandwichedSpecificExpectation, mapOf("test.yaml" to "http://localhost:8080")),
-    )
-
-    private val expectationsWithNoBaseUrl = HttpExpectations(
-        static = ThreadSafeListOfStubs(sandwichedSpecificExpectation, emptyMap()),
+        sandwichedSpecificExpectation,
+        specToBaseUrlMap = mapOf("test.yaml" to "http://localhost:8080")
     )
 
     @Test

@@ -230,10 +230,8 @@ class ThreadSafeListOfStubs(
             }
     }
 
-    companion object {
-        fun emptyStubs(): ThreadSafeListOfStubs {
-            return ThreadSafeListOfStubs(mutableListOf(), emptyMap())
-        }
+    private fun emptyStubs(): ThreadSafeListOfStubs {
+        return ThreadSafeListOfStubs(mutableListOf(), specToBaseUrlMap)
     }
 }
 

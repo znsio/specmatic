@@ -4,11 +4,21 @@ import io.specmatic.core.HttpRequest
 import io.specmatic.core.Result
 import io.specmatic.mock.ScenarioStub
 
-class HttpExpectations(
-    private val static: ThreadSafeListOfStubs = ThreadSafeListOfStubs(mutableListOf(), emptyMap()),
-    private val transient: ThreadSafeListOfStubs = ThreadSafeListOfStubs(mutableListOf(), emptyMap()),
-    private val dynamic: ThreadSafeListOfStubs = ThreadSafeListOfStubs(mutableListOf(), emptyMap())
+class HttpExpectations private constructor (
+    private val static: ThreadSafeListOfStubs,
+    private val transient: ThreadSafeListOfStubs,
+    private val dynamic: ThreadSafeListOfStubs
 ) {
+    constructor(
+        static: MutableList<HttpStubData>,
+        transient: MutableList<HttpStubData> = mutableListOf(),
+        specToBaseUrlMap: Map<String, String> = emptyMap()
+    ) : this(
+        static = ThreadSafeListOfStubs(static, specToBaseUrlMap),
+        transient = ThreadSafeListOfStubs(transient, specToBaseUrlMap),
+        dynamic = ThreadSafeListOfStubs(mutableListOf(), specToBaseUrlMap)
+    )
+
     val stubCount: Int get() { return static.size }
     val transientStubCount: Int get() { return transient.size }
 

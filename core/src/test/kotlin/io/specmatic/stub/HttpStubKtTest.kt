@@ -709,7 +709,7 @@ paths:
         val response: HttpStubResponse = getHttpResponse(
             HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc123"}""")),
             listOf(contract),
-            HttpExpectations(), false
+            HttpExpectations(mutableListOf()), false
         ).response
 
         println(response.response.toLogString())
@@ -755,10 +755,7 @@ paths:
         )
 
         assertThatThrownBy {
-            getHttpResponse(HttpRequest("POST", "/data", body = StringValue("Hello")), listOf(contract), HttpExpectations(ThreadSafeListOfStubs(
-                mutableListOf(stub),
-                emptyMap()
-            ), ThreadSafeListOfStubs(mutableListOf(), emptyMap())), false)
+            getHttpResponse(HttpRequest("POST", "/data", body = StringValue("Hello")), listOf(contract), HttpExpectations(mutableListOf(stub)), false)
         }.satisfies(Consumer {
             it as ContractException
 
@@ -805,11 +802,7 @@ paths:
         )
 
         val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc"}""")), listOf(contract),
-            HttpExpectations(
-                ThreadSafeListOfStubs(
-                    mutableListOf(stub),
-                    emptyMap()
-                )),true).response
+            HttpExpectations(mutableListOf(stub)),true).response
         val requestString = response.response.toLogString()
 
         println(requestString)

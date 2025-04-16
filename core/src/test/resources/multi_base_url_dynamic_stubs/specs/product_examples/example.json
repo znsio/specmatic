@@ -1,0 +1,26 @@
+{
+    "http-request": {
+        "method": "POST",
+        "path": "/products",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "body": {
+            "name": "iPhone",
+            "price": 19.99,
+            "category": "Electronics"
+        }
+    },
+    "http-response": {
+        "status": 201,
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "body": {
+            "id": 123,
+            "name": "iPhone",
+            "price": 19.99,
+            "category": "Electronics"
+        }
+    }
+}

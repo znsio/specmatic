@@ -2819,8 +2819,6 @@ Then status 200
             val contractPathData = contractStubPaths(specmaticConfigFile.absolutePath)
             val scenarioStubs = scenarioStubsFrom(specmaticConfigFile, contractPathData, specmaticConfig)
 
-            SystemExit.throwOnExit {  }
-
             val exception = assertThrows<SystemExitException> {
                 SystemExit.throwOnExit {
                     HttpStub(
@@ -2837,6 +2835,33 @@ Then status 200
             >> Invalid baseURL "localhost:9001/api" for ${File(".").resolve("hello.yaml").path}
             Please specify a valid URL in 'scheme://host[:port][path]' format
             """.trimIndent())
+        }
+
+        @Test
+        fun `should work when specToStubBaseUrlMap contains values which are not present in config`() {
+            // This can happen when stubCommand wants to stub out specs provided as positional arguments
+            val feature = Feature(
+                name = "Feature",
+                path = "./api.yaml",
+                scenarios = listOf(Scenario(ScenarioInfo(
+                    scenarioName = "Scenario",
+                    httpRequestPattern = HttpRequestPattern(method = "GET", httpPathPattern = HttpPathPattern.from("/test")),
+                    httpResponsePattern = HttpResponsePattern(status = 200, body = ExactValuePattern(StringValue("OK")))
+                )))
+            )
+
+            HttpStub(
+                baseUrl = "http://localhost:5000/api",
+                features = listOf(feature),
+                specToStubBaseUrlMap = mapOf("./api.yaml" to null)
+            ).use {
+                val client = HttpClient(endPointFromHostAndPort("localhost", 5000, null))
+                val request = HttpRequest(method = "GET", path = "/api/test")
+                val response = client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.body.toString()).isEqualTo("OK")
+            }
         }
 
         @Nested

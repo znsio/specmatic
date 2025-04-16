@@ -14,8 +14,7 @@ import io.specmatic.stub.endPointFromHostAndPort
 class HTTPStubEngine {
     fun runHTTPStub(
         stubs: List<Pair<Feature, List<ScenarioStub>>>,
-        host: String,
-        port: Int,
+        baseUrl: String,
         certInfo: CertInfo,
         strictMode: Boolean,
         passThroughTargetBase: String = "",
@@ -25,16 +24,13 @@ class HTTPStubEngine {
         gracefulRestartTimeoutInMs: Long,
         specToBaseUrlMap: Map<String, String?>
     ): HttpStub {
-        val keyData = certInfo.getHttpsCert()
-
         return HttpStub(
             features = stubs.map { it.first },
             rawHttpStubs = contractInfoToHttpExpectations(stubs),
-            host = host,
-            port = port,
+            baseUrl = baseUrl,
             log = ::consoleLog,
             strictMode = strictMode,
-            keyData = keyData,
+            keyData = certInfo.getHttpsCert(),
             passThroughTargetBase = passThroughTargetBase,
             httpClientFactory = httpClientFactory,
             workingDirectory = workingDirectory,
@@ -45,20 +41,14 @@ class HTTPStubEngine {
             consoleLog(NewLineLogMessage)
             consoleLog(
                 StringLog(
-                    serverStartupMessage(
-                        specToBaseUrlMap,
-                        endPointFromHostAndPort(host, port, keyData)
-                    )
+                    serverStartupMessage(specToBaseUrlMap, baseUrl)
                 )
             )
             consoleLog(StringLog("Press Ctrl + C to stop."))
         }
     }
 
-    private fun serverStartupMessage(
-        specToStubBaseUrlMap: Map<String, String?>,
-        defaultBaseUrl: String
-    ): String {
+    private fun serverStartupMessage(specToStubBaseUrlMap: Map<String, String?>, defaultBaseUrl: String): String {
         val newLine = System.lineSeparator()
         val baseUrlToSpecs: Map<String, List<String>> = specToStubBaseUrlMap.entries
             .groupBy({ it.value ?: defaultBaseUrl }, { it.key })

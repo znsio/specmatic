@@ -9,12 +9,14 @@ import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.StubServerWatcher
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.endPointFromHostAndPort
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import picocli.CommandLine
 import java.io.File
@@ -105,8 +107,7 @@ internal class StubCommandTest {
             every {
                 httpStubEngine.runHTTPStub(
                     stubInfo,
-                    host,
-                    port,
+                    endPointFromHostAndPort(host, port, certInfo.getHttpsCert()),
                     certInfo,
                     strictMode,
                     any(),
@@ -128,7 +129,6 @@ internal class StubCommandTest {
 
             verify(exactly = 1) {
                 httpStubEngine.runHTTPStub(
-                    any(),
                     any(),
                     any(),
                     certInfo,
@@ -215,8 +215,7 @@ internal class StubCommandTest {
             every {
                 httpStubEngine.runHTTPStub(
                     stubInfo,
-                    host,
-                    port,
+                    endPointFromHostAndPort(host, port, certInfo.getHttpsCert()),
                     certInfo,
                     strictMode,
                     passThroughTargetBase,
@@ -242,8 +241,7 @@ internal class StubCommandTest {
             verify(exactly = 1) {
                 httpStubEngine.runHTTPStub(
                     stubInfo,
-                    host,
-                    any(),
+                    endPointFromHostAndPort(host, port, certInfo.getHttpsCert()),
                     certInfo,
                     strictMode,
                     any(),
@@ -255,6 +253,41 @@ internal class StubCommandTest {
             }
         } finally {
             file.delete()
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "          ,      ,                      , http://0.0.0.0:9000",
+        "localhost , 8080 ,                      , http://localhost:8080",
+        "localhost ,      ,                      , http://localhost:9000",
+        "          , 8080 ,                      , http://0.0.0.0:8080",
+        "          ,      , http://0.0.0.0:3000  , http://0.0.0.0:3000",
+        "localhost , 8080 , http://0.0.0.0:3000  , http://0.0.0.0:3000",
+        "localhost ,      , https://0.0.0.0:3000 , https://0.0.0.0:3000",
+        "          , 8080 , https://0.0.0.0:3000 , https://0.0.0.0:3000"
+    )
+    fun `should prioritise baseURL over passed through port and host args`(host: String?, port: String?, baseURL: String?, expected: String) {
+        every { stubLoaderEngine.loadStubs(any(), any(), any(), any()) } returns emptyList()
+        every { watchMaker.make(any()) } returns watcher
+        every { specmaticConfig.contractStubPaths() } returns emptyList()
+        every { specmaticConfig.contractStubPathData() } returns emptyList()
+        every {
+            httpStubEngine.runHTTPStub(any(), expected, any(), any(), any(), any(), any(), any(), any(), any())
+        } returns mockk { every { close() } returns Unit }
+
+        val args = buildList {
+            baseURL?.let { add("--baseUrl=$it") }
+            host?.let { add("--host=$it") }
+            port?.let { add("--port=$it") }
+        }
+        val exitStatus = CommandLine(stubCommand).execute(*args.toTypedArray())
+
+        assertThat(exitStatus).isZero()
+        verify(exactly = 1) {
+            httpStubEngine.runHTTPStub(
+                any(), expected, any(), any(), any(), any(), any(), any(), any(), any()
+            )
         }
     }
 }

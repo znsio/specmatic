@@ -11,7 +11,9 @@ import io.specmatic.core.utilities.exitIfAnyDoNotExist
 import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.stub.ContractStub
+import io.specmatic.stub.DEFAULT_STUB_BASE_URL
 import io.specmatic.stub.HttpClientFactory
+import io.specmatic.stub.endPointFromHostAndPort
 import picocli.CommandLine.*
 import java.io.File
 import java.util.concurrent.Callable
@@ -38,11 +40,24 @@ class StubCommand(
     @Option(names = ["--data", "--examples"], description = ["Directories containing JSON examples"], required = false)
     var exampleDirs: List<String> = mutableListOf()
 
-    @Option(names = ["--host"], description = ["Host for the http stub"], defaultValue = DEFAULT_HTTP_STUB_HOST)
+    @Option(
+        names = ["--host"],
+        description = ["(DEPRECATED) Host for the http stub, Please use '--baseURL' instead"],
+        defaultValue = DEFAULT_HTTP_STUB_HOST,
+        hidden = true
+    )
     lateinit var host: String
 
-    @Option(names = ["--port"], description = ["Port for the http stub"], defaultValue = DEFAULT_HTTP_STUB_PORT)
+    @Option(
+        names = ["--port"],
+        description = ["(DEPRECATED) Port for the http stub, Please use '--baseURL' instead"],
+        defaultValue = DEFAULT_HTTP_STUB_PORT,
+        hidden = true
+    )
     var port: Int = 0
+
+    @Option(names = ["--baseUrl"], description = ["BaseURL for the http stub in the format 'scheme://host[:port][path]'"], required = false)
+    var baseUrl: String? = null
 
     @Option(names = ["--strict"], description = ["Start HTTP stub in strict mode"], required = false)
     var strictMode: Boolean = false
@@ -176,15 +191,15 @@ class StubCommand(
         val stubData = stubLoaderEngine.loadStubs(contractSources, exampleDirs, specmaticConfigPath, strictMode)
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
-
         port = when (isDefaultPort(port)) {
             true -> if (portIsInUse(host, port)) findRandomFreePort() else port
             false -> port
         }
+        val finalBaseUrl = baseUrl ?: endPointFromHostAndPort(host, port, keyData = certInfo.getHttpsCert())
+
         httpStub = httpStubEngine.runHTTPStub(
             stubs = stubData,
-            host = host,
-            port = port,
+            baseUrl = finalBaseUrl,
             certInfo = certInfo,
             strictMode = strictMode,
             passThroughTargetBase = passThroughTargetBase,

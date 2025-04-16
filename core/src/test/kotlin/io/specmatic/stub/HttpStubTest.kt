@@ -3055,17 +3055,25 @@ Then status 200
         }
 
         @Test
-        fun `should map dynamic expectations to the spec on the correct port`() {
-            createStub(
-                timeoutMillis = 0,
-                givenConfigFileName = "src/test/resources/multi_base_url_dynamic_stubs/specmatic.yaml",
-            ).use { stub ->
-                val client = HttpClient("http://localhost:8080")
+        fun `should map dynamic expectations to the spec on the correct port`() = stubTest(
+            configYaml = """
+                version: 2
+                contracts:
+                - consumes:
+                  - src/test/resources/multi_base_url_dynamic_stubs/specs/product.yaml
+                  - specs:
+                    - src/test/resources/multi_base_url_dynamic_stubs/specs/product-2.yaml
+                    baseUrl: http://localhost:8080
+            """.trimIndent(),
+            port = 9000,
+            dataDirPaths = emptyList<String>()
+        ) { stub ->
+            val client = HttpClient("http://localhost:8080")
 
-                val dynamicExpectationRequest = HttpRequest(
-                    method = "POST",
-                    path = "/_specmatic/expectations",
-                    body = parsedJSONObject("""
+            val dynamicExpectationRequest = HttpRequest(
+                method = "POST",
+                path = "/_specmatic/expectations",
+                body = parsedJSONObject("""
                         {                                                                                              
                             "http-request": {
                                 "method": "POST",
@@ -3093,22 +3101,21 @@ Then status 200
                             }
                         }
                     """.trimIndent())
-                )
+            )
 
-                val expectationStatusResponse = client.execute(dynamicExpectationRequest)
-                assertThat(expectationStatusResponse.status).isEqualTo(200)
+            val expectationStatusResponse = client.execute(dynamicExpectationRequest)
+            assertThat(expectationStatusResponse.status).isEqualTo(200)
 
-                val request = HttpRequest(
-                    method = "POST",
-                    path = "/products",
-                    body = parsedJSONObject("""{"name": "iPhone", "price": 19.99, "category": "Electronics"}""")
-                )
+            val request = HttpRequest(
+                method = "POST",
+                path = "/products",
+                body = parsedJSONObject("""{"name": "iPhone", "price": 19.99, "category": "Electronics"}""")
+            )
 
-                val response = client.execute(request)
-                val responseBody = response.body as JSONObjectValue
+            val response = client.execute(request)
+            val responseBody = response.body as JSONObjectValue
 
-                assertThat(responseBody.findFirstChildByPath("id")?.toStringLiteral()).isEqualTo("abc123")
-            }
+            assertThat(responseBody.findFirstChildByPath("id")?.toStringLiteral()).isEqualTo("abc123")
         }
 
         private fun Map<String, Int>.toBaseUrlMap(): Map<String, String> {
@@ -3227,6 +3234,33 @@ Then status 200
                 stubSpecPaths = specPaths,
                 configFilePath = configFilePath
             )
+            createStub(
+                host = "localhost",
+                port = port,
+                timeoutMillis = 0,
+                givenConfigFileName = configFilePath,
+                dataDirPaths = dataDirPaths
+            ).use { stub ->
+                runTest(stub)
+            }
+        } finally {
+            File(configFilePath).delete()
+        }
+    }
+
+
+    private fun stubTest(
+        configYaml: String,
+        port: Int = 9000,
+        dataDirPaths: List<String> = emptyList(),
+        runTest: (ContractStub) -> Unit,
+    ) {
+        val configFilePath = "src/test/resources/specmatic.yaml"
+        try {
+            val file = File(configFilePath)
+            file.createNewFile()
+            file.writeText(configYaml)
+
             createStub(
                 host = "localhost",
                 port = port,

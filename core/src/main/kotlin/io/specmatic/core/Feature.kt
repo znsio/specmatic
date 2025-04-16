@@ -129,8 +129,18 @@ data class Feature(
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
     val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
     val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig),
-    val strictMode: Boolean = false
+    val strictMode: Boolean = false,
+    val servers: List<String> = emptyList()
 ): IFeature {
+
+    fun getPreferredServer(): String? {
+        val index = Flags.getIntValue(Flags.SERVER_URL_INDEX) ?: return servers.firstOrNull()
+        return servers.getOrNull(index) ?: throw ContractException(
+            breadCrumb = "servers[$index]",
+            errorMessage = "Invalid server url index $index, must be between 0 and ${servers.lastIndex}"
+        )
+    }
+
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         return this.copy(flagsBased = this.flagsBased.copy(
             generation = GenerativeTestsEnabled(onlyPositive),

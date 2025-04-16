@@ -251,7 +251,8 @@ class OpenApiSpecification(
             serviceType = SERVICE_TYPE_HTTP,
             stubsFromExamples = stubsFromExamples,
             specmaticConfig = specmaticConfig,
-            strictMode = strictMode
+            strictMode = strictMode,
+            servers = this.extractServers()
         )
     }
 
@@ -259,6 +260,10 @@ class OpenApiSpecification(
         return openApiSchemas().filterNot { withPatternDelimiters(it.key) in patterns }.map {
             withPatternDelimiters(it.key) to toSpecmaticPattern(it.value, emptyList(), it.key)
         }.toMap()
+    }
+
+    private fun extractServers(): List<String> {
+        return parsedOpenApi.servers.orEmpty().map { it.url }
     }
 
     override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {

@@ -135,7 +135,7 @@ class ThreadSafeListOfStubs(
         }
 
         val exactMatch = grouped[StubType.Exact].orEmpty().sortedBy {
-            it.second.originalRequest?.precisionScore ?: Int.MAX_VALUE
+            it.second.originalRequest?.generality ?: Int.MAX_VALUE
         }.find { (result, _) -> result is Result.Success }
 
         if(exactMatch != null)

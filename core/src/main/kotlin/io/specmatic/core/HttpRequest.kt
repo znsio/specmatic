@@ -408,10 +408,10 @@ data class HttpRequest(
         return headers[SPECMATIC_RESPONSE_CODE_HEADER]?.toIntOrNull()
     }
 
-    val precisionScore: Int by lazy {
+    val generality: Int by lazy {
         val headerScore: Int = headers.values.sumOf { if(isPatternToken(it)) 1 as Int else 0 }
         val queryScore: Int = queryParams.paramPairs.sumOf { if(isPatternToken(it.second)) 1 as Int else 0 }
-        val bodyScore: Int = body.precisionScore()
+        val bodyScore: Int = body.generality()
 
         headerScore + queryScore + bodyScore
     }

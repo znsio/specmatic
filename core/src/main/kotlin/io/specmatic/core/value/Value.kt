@@ -37,7 +37,7 @@ interface Value {
         return this is StringValue && this.string.hasDataTemplate()
     }
 
-    fun precisionScore(): Int {
+    fun generality(): Int {
         return 0
     }
 }

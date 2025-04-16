@@ -51,7 +51,7 @@ data class StringValue(val string: String = "") : Value, ScalarValue, XMLValue {
     fun isPatternToken(): Boolean = isPatternToken(string.trim())
     fun trimmed(): StringValue = StringValue(string.trim())
 
-    override fun precisionScore(): Int {
+    override fun generality(): Int {
         return if(isPatternToken(string)) 1 else 0
     }
 }

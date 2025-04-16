@@ -390,8 +390,8 @@ internal class HttpRequestTest {
         "(string), (string), 2",
         ignoreLeadingAndTrailingWhitespace = true
     )
-    fun `should calculate precision score based on the number of patterns seen`(id: String, count: String, precisionScore: Int) {
+    fun `should calculate precision score based on the number of patterns seen`(id: String, count: String, generality: Int) {
         val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"id": "$id", "count": "$count"}"""))
-        assertThat(request.precisionScore).isEqualTo(precisionScore)
+        assertThat(request.generality).isEqualTo(generality)
     }
 }

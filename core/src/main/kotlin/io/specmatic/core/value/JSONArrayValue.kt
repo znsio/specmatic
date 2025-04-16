@@ -95,7 +95,7 @@ data class JSONArrayValue(override val list: List<Value>) : Value, ListValue, JS
 
     }
 
-    override fun precisionScore(): Int {
-        return list.sumOf { it.precisionScore() }
+    override fun generality(): Int {
+        return list.sumOf { it.generality() }
     }
 }

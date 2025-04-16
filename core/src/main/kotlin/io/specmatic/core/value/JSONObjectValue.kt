@@ -121,8 +121,8 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
         )
     }
 
-    override fun precisionScore(): Int {
-        return jsonObject.values.sumOf { it.precisionScore() }
+    override fun generality(): Int {
+        return jsonObject.values.sumOf { it.generality() }
     }
 }
 

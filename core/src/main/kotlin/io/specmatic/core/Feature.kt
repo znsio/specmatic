@@ -137,7 +137,7 @@ data class Feature(
         val index = Flags.getIntValue(Flags.SERVER_URL_INDEX) ?: return servers.firstOrNull()
         return servers.getOrNull(index) ?: throw ContractException(
             breadCrumb = "servers[$index]",
-            errorMessage = "Invalid server url index $index, must be between 0 and ${servers.lastIndex}"
+            errorMessage = "Invalid server url index $index for ${path}, must be between 0 and ${servers.lastIndex}"
         )
     }
 

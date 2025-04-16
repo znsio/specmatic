@@ -83,33 +83,6 @@ class HttpStub(
     specToStubBaseUrlMap: Map<String, String?> = features.associate { it.path to null }
 ) : ContractStub {
     constructor(
-        features: List<Feature>,
-        rawHttpStubs: List<HttpStubData> = emptyList(),
-        host: String = DEFAULT_HTTP_STUB_HOST,
-        port: Int = 9000,
-        log: (event: LogMessage) -> Unit = dontPrintToConsole,
-        strictMode: Boolean = false,
-        keyData: KeyData? = null,
-        passThroughTargetBase: String = "",
-        httpClientFactory: HttpClientFactory = HttpClientFactory(),
-        workingDirectory: WorkingDirectory? = null,
-        specmaticConfigPath: String? = null,
-        timeoutMillis: Long = 0
-    ): this (
-        features,
-        rawHttpStubs,
-        endPointFromHostAndPort(host, port, keyData),
-        log,
-        strictMode,
-        keyData,
-        passThroughTargetBase,
-        httpClientFactory,
-        workingDirectory,
-        specmaticConfigPath,
-        timeoutMillis
-    )
-
-    constructor(
         feature: Feature,
         scenarioStubs: List<ScenarioStub> = emptyList(),
         host: String = "localhost",

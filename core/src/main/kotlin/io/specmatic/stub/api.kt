@@ -161,8 +161,7 @@ internal fun createStub(
     return HttpStub(
         stubValues.features,
         stubValues.expectations,
-        host,
-        port,
+        endPointFromHostAndPort(host, port, null),
         log = ::consoleLog,
         workingDirectory = stubValues.workingDirectory,
         specmaticConfigPath = File(configFileName).canonicalPath,
@@ -206,8 +205,7 @@ internal fun createStubFromContracts(
     return HttpStub(
         features,
         httpExpectations,
-        host,
-        port,
+        endPointFromHostAndPort(host, port, null),
         ::consoleLog,
         specmaticConfigPath = File(getConfigFilePath()).canonicalPath,
         timeoutMillis = timeoutMillis

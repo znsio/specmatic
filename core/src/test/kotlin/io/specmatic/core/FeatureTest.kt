@@ -2938,6 +2938,111 @@ paths:
         assertThat(openAPI.paths["/data"]?.post?.requestBody).isNull()
     }
 
+    @Test
+    fun `should return the preferred server url from oas servers based on server url index property`() {
+        val openApiSpecification = """
+        openapi: 3.1.0
+        info:
+          title: Sample API
+          version: 1.0.0
+        servers:
+          - url: http://localhost:3000
+          - url: http://localhost:5000
+          - url: http://localhost:9000
+        paths:
+          /ping:
+            get:
+              summary: Health check
+              responses:
+                '200':
+                  description: OK
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(openApiSpecification, "").toFeature()
+        val indexToUrl = mapOf(
+            0 to "http://localhost:3000",
+            1 to "http://localhost:5000",
+            2 to "http://localhost:9000"
+        )
+
+        assertThat(feature.servers).containsExactlyInAnyOrderElementsOf(indexToUrl.values)
+        assertThat(indexToUrl).allSatisfy { index, expectedUrl ->
+            Flags.using(Flags.SERVER_URL_INDEX to index.toString()) {
+                assertThat(feature.getPreferredServer()).isEqualTo(expectedUrl)
+            }
+        }
+    }
+
+    @Test
+    fun `should return the first server url from oas servers if not empty and server url index property is not set`() {
+        val openApiSpecification = """
+        openapi: 3.1.0
+        info:
+          title: Sample API
+          version: 1.0.0
+        servers:
+          - url: http://localhost:3000
+          - url: http://localhost:5000
+          - url: http://localhost:9000
+        paths:
+          /ping:
+            get:
+              summary: Health check
+              responses:
+                '200':
+                  description: OK
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(openApiSpecification, "").toFeature()
+        assertThat(feature.getPreferredServer()).isEqualTo("http://localhost:3000")
+    }
+
+    @Test
+    fun `should return null if oas servers is empty and server url index property is not set`() {
+        val openApiSpecification = """
+        openapi: 3.1.0
+        info:
+          title: Sample API
+          version: 1.0.0
+        paths:
+          /ping:
+            get:
+              summary: Health check
+              responses:
+                '200':
+                  description: OK
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(openApiSpecification, "").toFeature()
+        assertThat(feature.getPreferredServer()).isNull()
+    }
+
+    @Test
+    fun `should throw an exception when specified server url index is out of range`() {
+        val openApiSpecification = """
+        openapi: 3.1.0
+        info:
+          title: Sample API
+          version: 1.0.0
+        servers:
+          - url: http://localhost:3000
+          - url: http://localhost:5000
+        paths:
+          /ping:
+            get:
+              summary: Health check
+              responses:
+                '200':
+                  description: OK
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(openApiSpecification, "./specs/api.yaml").toFeature()
+        val exception = Flags.using(Flags.SERVER_URL_INDEX to "2") {
+            assertThrows<ContractException> { feature.getPreferredServer() }
+        }
+
+        assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+        >> servers[2]
+        Invalid server url index 2 for ./specs/api.yaml, must be between 0 and 1
+        """.trimIndent())
+    }
+
     companion object {
         @JvmStatic
         fun singleFeatureContractSource(): Stream<Arguments> {

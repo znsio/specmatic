@@ -65,7 +65,7 @@ class AssertArrayTest {
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> REQUEST.BODY
         None of the values in "REQUEST.BODY[*].name" matched "ENTITY.name" of value "John"
         """.trimIndent())
@@ -83,7 +83,7 @@ class AssertArrayTest {
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> REQUEST.BODY
         Expected "REQUEST.BODY" to be an array
         """.trimIndent())

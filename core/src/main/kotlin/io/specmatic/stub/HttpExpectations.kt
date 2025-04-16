@@ -28,8 +28,11 @@ class HttpExpectations(
         return dynamic.addToStub(expectation, stub)
     }
 
-    fun associatedTo(port: Int, defaultPort: Int): HttpExpectations {
-        return HttpExpectations(static.stubAssociatedTo(port, defaultPort), transient.stubAssociatedTo(port, defaultPort), dynamic.stubAssociatedTo(port, defaultPort))
+    fun associatedTo(baseUrl: String, defaultBaseUrl: String, urlPath: String): HttpExpectations {
+        return HttpExpectations(
+            static.stubAssociatedTo(baseUrl, defaultBaseUrl, urlPath),
+            transient.stubAssociatedTo(baseUrl, defaultBaseUrl, urlPath),
+            dynamic.stubAssociatedTo(baseUrl, defaultBaseUrl, urlPath))
     }
 
     fun matchingStub(httpRequest: HttpRequest): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {

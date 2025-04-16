@@ -1,59 +1,53 @@
 package application
 
 import com.ginsberg.junit.exit.ExpectSystemExitWithStatus
-import com.ninjasquad.springmockk.MockkBean
+import io.mockk.*
+import io.mockk.impl.annotations.InjectMockKs
+import io.mockk.impl.annotations.MockK
 import io.specmatic.core.CONTRACT_EXTENSION
-import io.specmatic.core.CONTRACT_EXTENSIONS
 import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.StubServerWatcher
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.stub.HttpClientFactory
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE
 import picocli.CommandLine
-import picocli.CommandLine.IFactory
 import java.io.File
 import java.nio.file.Path
 
-@SpringBootTest(webEnvironment = NONE, classes = [SpecmaticApplication::class, StubCommand::class, HttpClientFactory::class])
 internal class StubCommandTest {
-    @MockkBean
+
+    @MockK
     lateinit var specmaticConfig: SpecmaticConfig
 
-    @MockkBean
-    lateinit var fileOperations: FileOperations
-
-    @Autowired
-    lateinit var factory: IFactory
-
-    @MockkBean
+    @MockK
     lateinit var watchMaker: WatchMaker
 
-    @MockkBean(relaxUnitFun = true)
+    @MockK(relaxUnitFun = true)
     lateinit var watcher: StubServerWatcher
 
-    @MockkBean
+    @MockK
     lateinit var httpStubEngine: HTTPStubEngine
 
-    @MockkBean
+    @MockK
     lateinit var stubLoaderEngine: StubLoaderEngine
 
-    @Autowired
+    @InjectMockKs
     lateinit var stubCommand: StubCommand
 
     @BeforeEach
-    fun `clean up stub command`() {
+    fun setUp() {
+        MockKAnnotations.init(this)
+    }
+
+    @AfterEach
+    fun cleanUp() {
+        clearAllMocks()
         stubCommand.contractPaths = arrayListOf()
         stubCommand.specmaticConfigPath = null
     }
@@ -62,7 +56,7 @@ internal class StubCommandTest {
     fun `when contract files are not given it should load from specmatic config`() {
         every { specmaticConfig.contractStubPathData() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION").map { ContractPathData("", it) })
 
-        CommandLine(stubCommand, factory).execute()
+        CommandLine(stubCommand).execute()
 
         verify(exactly = 1) { specmaticConfig.contractStubPathData() }
     }
@@ -71,7 +65,7 @@ internal class StubCommandTest {
     fun `when contract files are given it should not load from specmatic config`() {
         every { specmaticConfig.contractStubPathData() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION").map { ContractPathData("", it) })
 
-        CommandLine(stubCommand, factory).execute("/parameter/path/to/contract.$CONTRACT_EXTENSION")
+        CommandLine(stubCommand).execute("/parameter/path/to/contract.$CONTRACT_EXTENSION")
 
         verify(exactly = 0) { specmaticConfig.contractStubPathData() }
     }
@@ -119,7 +113,7 @@ internal class StubCommandTest {
                     httpClientFactory = any(),
                     workingDirectory = any(),
                     gracefulRestartTimeoutInMs = any(),
-                    specToPortMap = any()
+                    specToBaseUrlMap = any()
                 )
             }.returns(
                 mockk {
@@ -128,10 +122,8 @@ internal class StubCommandTest {
             )
 
             every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
-            every { fileOperations.isFile(contractPath) }.returns(true)
-            every { fileOperations.extensionIsNot(contractPath, CONTRACT_EXTENSIONS) }.returns(false)
 
-            val exitStatus = CommandLine(stubCommand, factory).execute(contractPath)
+            val exitStatus = CommandLine(stubCommand).execute(contractPath)
             assertThat(exitStatus).isZero()
 
             verify(exactly = 1) {
@@ -145,7 +137,7 @@ internal class StubCommandTest {
                     httpClientFactory = any(),
                     workingDirectory = any(),
                     gracefulRestartTimeoutInMs = any(),
-                    specToPortMap = any()
+                    specToBaseUrlMap = any()
                 )
             }
         } finally {
@@ -165,10 +157,8 @@ internal class StubCommandTest {
 
         every { watchMaker.make(listOf(specFilePath)) }.returns(watcher)
         every { specmaticConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$extension"))
-        every { fileOperations.isFile(specFilePath) }.returns(true)
-        every { fileOperations.extensionIsNot(specFilePath, CONTRACT_EXTENSIONS) }.returns(false)
 
-        val execute = CommandLine(stubCommand, factory).execute(specFilePath)
+        val execute = CommandLine(stubCommand).execute(specFilePath)
 
         assertThat(execute).isEqualTo(0)
     }
@@ -185,10 +175,8 @@ internal class StubCommandTest {
 
         every { watchMaker.make(listOf(specFilePath)) }.returns(watcher)
         every { specmaticConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
-        every { fileOperations.isFile(specFilePath) }.returns(true)
-        every { fileOperations.extensionIsNot(specFilePath, CONTRACT_EXTENSIONS) }.returns(true)
 
-        CommandLine(stubCommand, factory).execute(specFilePath)
+        CommandLine(stubCommand).execute(specFilePath)
     }
 
     @Test
@@ -235,7 +223,7 @@ internal class StubCommandTest {
                     httpClientFactory = any(),
                     workingDirectory = any(),
                     gracefulRestartTimeoutInMs = any(),
-                    specToPortMap = any()
+                    specToBaseUrlMap = any()
                 )
             }.returns(
                 mockk {
@@ -244,10 +232,8 @@ internal class StubCommandTest {
             )
 
             every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
-            every { fileOperations.isFile(contractPath) }.returns(true)
-            every { fileOperations.extensionIsNot(contractPath, CONTRACT_EXTENSIONS) }.returns(false)
 
-            val exitStatus = CommandLine(stubCommand, factory).execute(
+            val exitStatus = CommandLine(stubCommand).execute(
                 "--passThroughTargetBase=$passThroughTargetBase",
                 contractPath
             )
@@ -264,7 +250,7 @@ internal class StubCommandTest {
                     httpClientFactory = any(),
                     workingDirectory = any(),
                     gracefulRestartTimeoutInMs = any(),
-                    specToPortMap = any()
+                    specToBaseUrlMap = any()
                 )
             }
         } finally {

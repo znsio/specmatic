@@ -54,7 +54,7 @@ class AssertComparisonTest {
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> REQUEST.BODY.name
         Expected "Jane" to equal "John"
         """.trimIndent())
@@ -86,7 +86,7 @@ class AssertComparisonTest {
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> REQUEST.BODY.name
         Expected "John" to not equal "John"
         """.trimIndent())
@@ -147,7 +147,7 @@ class AssertComparisonTest {
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> ENTITY.name
         Could not resolve "ENTITY.name" in actual fact store
         """.trimIndent())
@@ -164,7 +164,7 @@ class AssertComparisonTest {
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> REQUEST.BODY
         Could not resolve "REQUEST.BODY" in current fact store
         """.trimIndent())

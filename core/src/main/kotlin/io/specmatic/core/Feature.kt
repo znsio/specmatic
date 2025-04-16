@@ -60,6 +60,10 @@ fun checkExists(file: File) = file.also {
         throw ContractException("File ${file.path} does not exist (absolute path ${file.canonicalPath})")
 }
 
+fun parseContractFileWithNoMissingConfigWarning(contractFile: File): Feature {
+    return parseContractFileToFeature(contractFile, specmaticConfig = SpecmaticConfig())
+}
+
 fun parseContractFileToFeature(
     file: File,
     hook: Hook = PassThroughHook(),
@@ -639,22 +643,12 @@ data class Feature(
             matchResult.isSuccess() || (matchResult as Result.Failure).hasReason(FailureReason.URLPathParamMismatchButSameStructure) && isBadRequest
         } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
 
-        return runCatching {
-            originalScenario.fillInTheBlanksAndResolvePatterns(example.request, originalScenario.resolver)
-        }.mapCatching { resolvedRequest ->
-            scenarioAsTest(
-                concreteTestScenario =  Scenario(
-                    name = originalScenario.apiIdentifier,
-                    httpRequestPattern = resolvedRequest.toPattern(),
-                    httpResponsePattern = HttpResponsePattern(example.response)
-                ),
-                comment = null,
-                workflow = Workflow(),
-                originalScenario = originalScenario
-            )
-        }.map(::HasValue).getOrElse { e ->
-            e.asReturnValue(example.testName)
-        }
+        val exampleRow = example.toRow(specmaticConfig)
+        return originalScenario.newBasedOn(exampleRow, flagsBased.withoutGenerativeTests()).map {
+            it.ifHasValue { rValue ->
+                HasValue(scenarioAsTest(rValue.value, rValue.comments(), Workflow(), originalScenario, scenarios))
+            }
+        }.firstOrNull() ?: HasFailure(Result.Failure("Could not generate contract test from example file $filePath"))
     }
 
     private fun scenarioAsTest(

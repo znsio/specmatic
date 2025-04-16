@@ -2,18 +2,14 @@ package application
 
 import io.specmatic.core.Feature
 import io.specmatic.core.getConfigFilePath
-import io.specmatic.core.lifecycle.ExamplesUsedFor
-import io.specmatic.core.lifecycle.LifecycleHooks
 import io.specmatic.core.loadSpecmaticConfigOrDefault
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.loadContractStubsFromFiles
 import io.specmatic.stub.loadContractStubsFromImplicitPaths
-import org.springframework.stereotype.Component
 import java.io.File
 
-@Component
 class StubLoaderEngine {
     fun loadStubs(
         contractPathDataList: List<ContractPathData>,
@@ -34,8 +30,6 @@ class StubLoaderEngine {
                 loadContractStubsFromFiles(contractPathDataList, dataDirs, specmaticConfig, strictMode, withImplicitStubs = true)
             }
             else -> loadContractStubsFromImplicitPaths(contractPathDataList, specmaticConfig, dataDirs)
-        }.also {
-            LifecycleHooks.afterLoadingStaticExamples.call(ExamplesUsedFor.Stub, it)
         }
     }
 }

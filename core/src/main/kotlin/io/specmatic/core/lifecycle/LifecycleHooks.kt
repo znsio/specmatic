@@ -1,5 +1,5 @@
 package io.specmatic.core.lifecycle
 
 object LifecycleHooks {
-    var afterLoadingStaticExamples: AfterLoadingStaticExamplesHooks = AfterLoadingStaticExamplesHooks()
+    val afterLoadingStaticExamples: AfterLoadingStaticExamplesHooks = AfterLoadingStaticExamplesHooks()
 }

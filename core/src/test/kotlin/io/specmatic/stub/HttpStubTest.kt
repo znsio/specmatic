@@ -4,14 +4,11 @@ import io.mockk.every
 import io.mockk.mockk
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
-import io.specmatic.core.log.DebugLogger
-import io.specmatic.core.log.withLogger
+import io.specmatic.core.log.*
 import io.specmatic.core.pattern.*
-import io.specmatic.core.utilities.ContractPathData
-import io.specmatic.core.utilities.ContractPathData.Companion.specToPortMap
-import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.*
+import io.specmatic.core.utilities.ContractPathData.Companion.specToBaseUrlMap
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
-import io.specmatic.core.utilities.contractStubPaths
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
@@ -21,13 +18,10 @@ import io.specmatic.osAgnosticPath
 import io.specmatic.shouldMatch
 import io.specmatic.test.HttpClient
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.RepeatedTest
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledOnOs
 import org.junit.jupiter.api.condition.OS
-import org.junit.jupiter.api.fail
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.springframework.http.HttpHeaders
@@ -39,6 +33,7 @@ import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForEntity
 import org.springframework.web.client.postForEntity
 import java.io.File
+import java.net.ConnectException
 import java.net.URI
 import java.nio.file.Paths
 import java.util.*
@@ -2231,7 +2226,7 @@ Then status 200
     }
 
     @Nested
-    inner class MultiPortStubTest {
+    inner class MultiBaseUrlStubTest {
 
         private fun scenarioStubsFrom(
             specmaticConfigFile: File,
@@ -2288,7 +2283,7 @@ Then status 200
                 features = scenarioStubs.features(),
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
-                specToStubPortMap = contractPathData.specToPortMap()
+                specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use { _ ->
                 val request = HttpRequest(
                     method = "POST",
@@ -2321,6 +2316,49 @@ Then status 200
         }
 
         @Test
+        fun `should serve requests from multiple baseUrls with a path as configured in specmatic config where stubs are loaded from examples`() {
+            val specmaticConfigFile = File("src/test/resources/multi_baseUrl_stub_with_path/specmatic.yaml")
+            val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+            val contractPathData = contractStubPaths(specmaticConfigFile.absolutePath)
+            val scenarioStubs = scenarioStubsFrom(specmaticConfigFile, contractPathData, specmaticConfig)
+
+            HttpStub(
+                features = scenarioStubs.features(),
+                rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+                specmaticConfigPath = specmaticConfigFile.canonicalPath,
+                specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
+            ).use { _ ->
+                val request = HttpRequest(
+                    method = "POST",
+                    path = "/products",
+                    body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
+                )
+                val importedProductResponse = HttpClient(
+                    endPointFromHostAndPort("localhost", 9001, null)
+                ).execute(request.copy(path = "/base/products"))
+                assertThat(
+                    (importedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+                ).isEqualTo("100")
+
+
+                val exportedProductResponse = HttpClient(
+                    endPointFromHostAndPort("localhost", 9002, null)
+                ).execute(request.copy(path = "/random/products"))
+                assertThat(
+                    (exportedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+                ).isEqualTo("200")
+
+
+                val anotherExportedProductResponse = HttpClient(
+                    endPointFromHostAndPort("localhost", 9003, null)
+                ).execute(request.copy(path = "/random/base/products"))
+                assertThat(
+                    (anotherExportedProductResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+                ).isEqualTo("300")
+            }
+        }
+
+        @Test
         fun `should serve requests from multiple ports as configured in specmatic config where no examples are loaded as stubs`() {
             val specmaticConfigFile = File("src/test/resources/multi_port_stub_without_examples/specmatic.yaml")
             val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
@@ -2331,7 +2369,7 @@ Then status 200
                 features = scenarioStubs.features(),
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
-                specToStubPortMap = contractPathData.specToPortMap()
+                specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use {
                 val productWithoutCategoryResponse = HttpClient(
                     endPointFromHostAndPort("localhost", 9000, null)
@@ -2361,7 +2399,7 @@ Then status 200
         }
 
         @Test
-        fun `should return an error if a request associated to a spec being served on a non-default port is made to the default port`() {
+        fun `should only start stub server on specified baseUrls`() {
             val specmaticConfigFile = File("src/test/resources/multi_port_stub/specmatic.yaml")
             val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
             val contractPathData = contractStubPaths(specmaticConfigFile.absolutePath)
@@ -2371,18 +2409,19 @@ Then status 200
                 features = scenarioStubs.features(),
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
-                specToStubPortMap = contractPathData.specToPortMap()
+                specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use {
                 val request = HttpRequest(
                     method = "POST",
                     path = "/products",
                     body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
                 )
-                val response = HttpClient(
-                    endPointFromHostAndPort("localhost", 9000, null)
-                ).execute(request)
 
-                assertThat(response.status).isEqualTo(400)
+                assertThrows<ConnectException> {
+                    HttpClient(endPointFromHostAndPort(
+                        "localhost", Configuration.DEFAULT_HTTP_STUB_PORT.toInt(), null
+                    )).execute(request)
+                }
             }
         }
 
@@ -2397,7 +2436,7 @@ Then status 200
                 features = scenarioStubs.features(),
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
-                specToStubPortMap = contractPathData.specToPortMap()
+                specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use {
 
                 val productWithoutCategoryExampleBasedRequest = HttpRequest(
@@ -2436,7 +2475,7 @@ Then status 200
                 features = scenarioStubs.features(),
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
-                specToStubPortMap = contractPathData.specToPortMap()
+                specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use {
                 val exportedProductStubbedRequest = HttpRequest(
                     method = "POST",
@@ -2473,7 +2512,7 @@ Then status 200
                 features = scenarioStubs.features(),
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
-                specToStubPortMap = contractPathData.specToPortMap()
+                specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use {
                 val productsResponse = HttpClient(
                     endPointFromHostAndPort("localhost", 9000, null)
@@ -2521,7 +2560,7 @@ Then status 200
                 features = scenarioStubs.features(),
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
-                specToStubPortMap = contractPathData.specToPortMap()
+                specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use {
                 val productsResponse = HttpClient(
                     endPointFromHostAndPort("localhost", 9000, null)
@@ -2585,7 +2624,7 @@ Then status 200
                 features = scenarioStubs.features(),
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
-                specToStubPortMap = contractPathData.specToPortMap()
+                specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use {
                 val postProductResponse = HttpClient(
                     endPointFromHostAndPort("localhost", 9000, null)
@@ -2645,11 +2684,11 @@ Then status 200
                 features = scenarioStubs.features(),
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
-                specToStubPortMap = contractPathData.map {
+                specToStubBaseUrlMap = contractPathData.map {
                     it.copy(
                         path = specmaticConfigFile.parentFile.resolve(it.path).absolutePath
                     )
-                }.specToPortMap()
+                }.specToBaseUrlMap()
             ).use { _ ->
                 val request = HttpRequest(
                     method = "POST",
@@ -2693,7 +2732,7 @@ Then status 200
                 features = scenarioStubs.features(),
                 rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
-                specToStubPortMap = contractPathData.specToPortMap()
+                specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use { _ ->
                 val request = HttpRequest(
                     method = "POST",
@@ -2714,6 +2753,92 @@ Then status 200
             }
         }
 
+        @Test
+        fun `stub bound to loop-back or wildcard interface should be able to serve requests sent to any loop-back address`() {
+            val specmaticConfigFile = File("src/test/resources/multi_port_stub/specmatic.yaml")
+            val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+            val contractPathData = contractStubPaths(specmaticConfigFile.absolutePath)
+            val scenarioStubs = scenarioStubsFrom(specmaticConfigFile, contractPathData, specmaticConfig)
+
+            val loopBackAndWildcardHostnames = setOf("127.0.0.1","localhost", "0.0.0.0")
+            val portToExpectedId = mapOf(9001 to "100", 9002 to "200", 9003 to "300")
+            val hostPortIdCombos = portToExpectedId.flatMap { (port, expectedId) ->
+                loopBackAndWildcardHostnames.map { host -> Triple(host, port, expectedId) }
+            }
+
+            HttpStub(
+                features = scenarioStubs.features(),
+                rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+                specmaticConfigPath = specmaticConfigFile.canonicalPath,
+                specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
+            ).use {
+                assertThat(hostPortIdCombos).allSatisfy { (host, port, expectedId) ->
+                    val request = HttpRequest(
+                        method = "POST", path = "/products",
+                        body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
+                    )
+                    val client = HttpClient(endPointFromHostAndPort(host, port, null))
+                    val response = client.execute(request)
+                    val actualId = (response.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
+
+                    assertThat(actualId).isEqualTo(expectedId)
+                }
+            }
+        }
+
+        @Test
+        fun `stub should warn when a single spec is mounted on multiple baseUrls`() {
+            val specmaticConfigFile = File("src/test/resources/multi_port_stub_with_duplicated_spec/specmatic.yaml")
+            val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+            val contractPathData = contractStubPaths(specmaticConfigFile.absolutePath)
+            val scenarioStubs = scenarioStubsFrom(specmaticConfigFile, contractPathData, specmaticConfig)
+
+            val consoleOutput = captureStandardOutput {
+                HttpStub(
+                    features = scenarioStubs.features(),
+                    rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+                    specmaticConfigPath = specmaticConfigFile.canonicalPath,
+                    specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
+                ).close()
+            }
+
+            assertThat(consoleOutput.first).containsIgnoringWhitespaces("""
+            WARNING: The following specification are associated with multiple base URLs:
+            - product_with_category.yaml
+              - http://localhost:9001
+              - http://0.0.0.0:9002
+              - http://127.0.0.1:9000
+            Note: The logs below indicate the selected base URL for each specification
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should exit with code non-zero exit code when invalid baseUrl is provided`() {
+            val specmaticConfigFile = File("src/test/resources/multi_port_stub_with_invalid_url/specmatic.yaml")
+            val specmaticConfig = loadSpecmaticConfig(specmaticConfigFile.absolutePath)
+            val contractPathData = contractStubPaths(specmaticConfigFile.absolutePath)
+            val scenarioStubs = scenarioStubsFrom(specmaticConfigFile, contractPathData, specmaticConfig)
+
+            SystemExit.throwOnExit {  }
+
+            val exception = assertThrows<SystemExitException> {
+                SystemExit.throwOnExit {
+                    HttpStub(
+                        features = scenarioStubs.features(),
+                        rawHttpStubs = contractInfoToHttpExpectations(scenarioStubs),
+                        specmaticConfigPath = specmaticConfigFile.canonicalPath,
+                        specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
+                    ).close()
+                }
+            }
+
+            assertThat(exception.code).isEqualTo(1)
+            assertThat(exception.message).isEqualToNormalizingWhitespace("""
+            >> Invalid baseURL "localhost:9001/api" for ${File(".").resolve("hello.yaml").path}
+            Please specify a valid URL in 'scheme://host[:port][path]' format
+            """.trimIndent())
+        }
+
         @Nested
         inner class FeaturesAssociatedToTests {
 
@@ -2722,10 +2847,42 @@ Then status 200
             }
 
             @Test
-            fun `should return feature associated with given port`() {
-                val specToStubPortMap = mapOf(
+            fun `should return feature associated with given baseUrl`() {
+                val specToStubBaseUrlMap = mapOf(
                     "spec1.yaml" to 8080,
                     "spec2.yaml" to 9090
+                ).toBaseUrlMap()
+                val features = listOf<Feature>(
+                    mockk {
+                        every { path } returns "spec1.yaml"
+                        every { specification } returns "spec1.yaml"
+                        every { stubsFromExamples } returns emptyMap()
+                        every { scenarios } returns emptyList()
+                    },
+                    mockk {
+                        every { path } returns "spec2.yaml"
+                        every { specification } returns "spec2.yaml"
+                        every { stubsFromExamples } returns emptyMap()
+                        every { scenarios } returns emptyList()
+                    }
+                )
+                HttpStub(features = features).use { stub ->
+                    val result = stub.featuresAssociatedTo(
+                        "http://localhost:${8080}",
+                        features,
+                        specToStubBaseUrlMap,
+                        urlPath = ""
+                    )
+
+                    assertEquals(features.take(1), result)
+                }
+            }
+
+            @Test
+            fun `should return feature associated with given baseUrl with a path`() {
+                val specToStubBaseUrlMap = mapOf(
+                    "spec1.yaml" to "http://localhost:8080/base",
+                    "spec2.yaml" to "http://localhost:9090/random/base"
                 )
                 val features = listOf<Feature>(
                     mockk {
@@ -2742,18 +2899,23 @@ Then status 200
                     }
                 )
                 HttpStub(features = features).use { stub ->
-                    val result = stub.featuresAssociatedTo(8080, features, specToStubPortMap)
+                    val result = stub.featuresAssociatedTo(
+                        "http://localhost:${9090}",
+                        features,
+                        specToStubBaseUrlMap,
+                        urlPath = "/random/base"
+                    )
 
-                    assertEquals(features.take(1), result)
+                    assertEquals(features.takeLast(1), result)
                 }
             }
 
             @Test
-            fun `should return empty list when no features match the given port`() {
-                val specToStubPortMap = mapOf(
+            fun `should return empty list when no features match the given baseUrl`() {
+                val specToStubBaseUrlMap = mapOf(
                     "spec1.yaml".canonicalPath() to 8080,
                     "spec2.yaml".canonicalPath() to 9090
-                )
+                ).toBaseUrlMap()
                 val features = listOf<Feature>(
                     mockk {
                         every { path } returns "spec3.yaml"
@@ -2769,15 +2931,20 @@ Then status 200
                     }
                 )
                 HttpStub(features = features).use { stub ->
-                    val result = stub.featuresAssociatedTo(7070, features, specToStubPortMap)
+                    val result = stub.featuresAssociatedTo(
+                        "http://localhost:${7070}",
+                        features,
+                        specToStubBaseUrlMap,
+                        urlPath = ""
+                    )
 
                     assertEquals(emptyList<Feature>(), result)
                 }
             }
 
             @Test
-            fun `should return empty list when specToStubPortMap is empty`() {
-                val specToStubPortMap = emptyMap<String, Int>()
+            fun `should return empty list when specToStubBaseUrlMap is empty`() {
+                val specToStubBaseUrlMap = emptyMap<String, String>()
                 val features = listOf<Feature>(
                     mockk {
                         every { path } returns "spec3.yaml"
@@ -2794,7 +2961,12 @@ Then status 200
                 )
 
                 HttpStub(features = features).use { stub ->
-                    val result = stub.featuresAssociatedTo(8080, features, specToStubPortMap)
+                    val result = stub.featuresAssociatedTo(
+                        "http://localhost:${8080}",
+                        features,
+                        specToStubBaseUrlMap,
+                        urlPath = ""
+                    )
 
                     assertEquals(emptyList<Feature>(), result)
                 }
@@ -2802,21 +2974,58 @@ Then status 200
 
             @Test
             fun `should return empty list when features list is empty`() {
-                val specToStubPortMap = mapOf("spec1.yaml" to 8080)
+                val specToStubBaseUrlMap = mapOf("spec1.yaml" to 8080).toBaseUrlMap()
                 val features = emptyList<Feature>()
 
                 HttpStub(features = features).use { stub ->
-                    val result = stub.featuresAssociatedTo(8080, features, specToStubPortMap)
+                    val result = stub.featuresAssociatedTo(
+                        "http://localhost:${8080}",
+                        features,
+                        specToStubBaseUrlMap,
+                        urlPath = ""
+                    )
 
                     assertEquals(emptyList<Feature>(), result)
                 }
             }
 
             @Test
-            fun `should return multiple features associated with the same port`() {
-                val specToStubPortMap = mapOf(
+            fun `should return multiple features associated with the same baseUrl`() {
+                val specToStubBaseUrlMap = mapOf(
                     "spec1.yaml" to 8080,
                     "spec2.yaml" to 8080
+                ).toBaseUrlMap()
+                val feature1 = mockk<Feature> {
+                    every { path } returns "spec1.yaml"
+                    every { specification } returns "spec1.yaml"
+                    every { stubsFromExamples } returns emptyMap()
+                    every { scenarios } returns emptyList()
+                }
+                val feature2 = mockk<Feature> {
+                    every { path } returns "spec2.yaml"
+                    every { specification } returns "spec2.yaml"
+                    every { stubsFromExamples } returns emptyMap()
+                    every { scenarios } returns emptyList()
+                }
+                val features = listOf(feature1,feature2)
+
+                HttpStub(features = features).use { stub ->
+                    val result = stub.featuresAssociatedTo(
+                        "http://localhost:${8080}",
+                        features,
+                        specToStubBaseUrlMap,
+                        urlPath = ""
+                    )
+
+                    assertThat(result).isEqualTo(listOf(feature1, feature2))
+                }
+            }
+
+            @Test
+            fun `should return multiple features associated with the same baseUrl with a path`() {
+                val specToStubBaseUrlMap = mapOf(
+                    "spec1.yaml" to "http://localhost:8080/base",
+                    "spec2.yaml" to "http://localhost:8080/base"
                 )
                 val feature1 = mockk<Feature> {
                     every { path } returns "spec1.yaml"
@@ -2833,12 +3042,20 @@ Then status 200
                 val features = listOf(feature1,feature2)
 
                 HttpStub(features = features).use { stub ->
-                    val result = stub.featuresAssociatedTo(8080, features, specToStubPortMap)
+                    val result = stub.featuresAssociatedTo(
+                        "http://localhost:${8080}",
+                        features,
+                        specToStubBaseUrlMap,
+                        urlPath = "/base"
+                    )
 
                     assertThat(result).isEqualTo(listOf(feature1, feature2))
                 }
             }
+        }
 
+        private fun Map<String, Int>.toBaseUrlMap(): Map<String, String> {
+            return this.mapValues { "http://localhost:${it.value}" }
         }
     }
 

@@ -1,17 +1,13 @@
 package application
 
-import org.springframework.boot.Banner
-import org.springframework.boot.SpringApplication
-import org.springframework.boot.autoconfigure.SpringBootApplication
-import picocli.CommandLine
 import io.specmatic.core.utilities.UncaughtExceptionHandler
+import picocli.CommandLine
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.*
 import java.util.logging.LogManager
 import kotlin.system.exitProcess
 
-@SpringBootApplication
 open class SpecmaticApplication {
     companion object {
         @JvmStatic
@@ -27,10 +23,8 @@ open class SpecmaticApplication {
             when {
                 args.isEmpty() -> CommandLine(SpecmaticCommand()).usage(System.out)
                 else ->  {
-                    val app = SpringApplication(SpecmaticApplication::class.java)
-                    app.setBannerMode(Banner.Mode.OFF)
-
-                    exitProcess(SpringApplication.exit(app.run(*args)))
+                    val exitCode = CommandLine(SpecmaticCommand()).execute(*args)
+                    exitProcess(exitCode)
                 }
             }
         }

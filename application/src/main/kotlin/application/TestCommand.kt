@@ -33,7 +33,7 @@ import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import org.junit.platform.launcher.Launcher
 import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
-import org.springframework.beans.factory.annotation.Autowired
+import org.junit.platform.launcher.core.LauncherFactory
 import org.w3c.dom.Document
 import org.w3c.dom.Node
 import org.w3c.dom.NodeList
@@ -51,15 +51,10 @@ private const val SYSTEM_OUT_TESTCASE_TAG = "system-out"
 
 private const val DISPLAY_NAME_PREFIX_IN_SYSTEM_OUT_TAG_TEXT = "display-name: "
 
-private const val s = "Contract"
-
 @Command(name = "test",
         mixinStandardHelpOptions = true,
         description = ["Run contract as tests"])
-class TestCommand : Callable<Unit> {
-
-    @Autowired
-    lateinit var junitLauncher: Launcher
+class TestCommand(private val junitLauncher: Launcher = LauncherFactory.create()) : Callable<Unit> {
 
     @CommandLine.Parameters(arity = "0..*", description = ["Contract file paths"])
     var contractPaths: List<String> = emptyList()

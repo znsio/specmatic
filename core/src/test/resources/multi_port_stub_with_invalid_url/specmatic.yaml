@@ -1,0 +1,8 @@
+version: 2
+contracts:
+  - filesystem:
+      directory: "."
+    consumes:
+      - baseUrl: localhost:9001/api
+        specs:
+          - hello.yaml

@@ -6,6 +6,7 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.ContractPathData.Companion.specToBaseUrlMap
+import io.specmatic.core.utilities.Flags.Companion.SERVER_URL_INDEX
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.exitIfAnyDoNotExist
 import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
@@ -58,6 +59,9 @@ class StubCommand(
 
     @Option(names = ["--baseUrl"], description = ["BaseURL for the http stub in the format 'scheme://host[:port][path]'"], required = false)
     var baseUrl: String? = null
+
+    @Option(names = ["--serverUrlIndex"], description = ["Index of the base URL to use from the OpenAPI servers list"], required = false)
+    var serverUrlIndex: Int? = null
 
     @Option(names = ["--strict"], description = ["Start HTTP stub in strict mode"], required = false)
     var strictMode: Boolean = false
@@ -115,6 +119,8 @@ class StubCommand(
         if (delayInMilliseconds > 0) {
             System.setProperty(SPECMATIC_STUB_DELAY, delayInMilliseconds.toString())
         }
+
+        serverUrlIndex?.let { System.setProperty(SERVER_URL_INDEX, it.toString()) }
 
         val logPrinters = configureLogPrinters()
 

@@ -12,6 +12,7 @@ class Flags {
         const val SPECMATIC_STUB_DELAY = "SPECMATIC_STUB_DELAY"
         const val SPECMATIC_TEST_TIMEOUT = "SPECMATIC_TEST_TIMEOUT"
         const val ALL_PATTERNS_MANDATORY = "ALL_PATTERNS_MANDATORY"
+        const val SERVER_URL_INDEX = "SERVER_URL_INDEX"
 
         const val CONFIG_FILE_PATH = "CONFIG_FILE_PATH"
 
@@ -28,7 +29,9 @@ class Flags {
 
         fun getBooleanValue(flagName: String, default: Boolean = false) = getStringValue(flagName)?.toBoolean() ?: default
 
-        fun getLongValue(flagName: String): Long? = ( getStringValue(flagName))?.toLong()
+        fun getLongValue(flagName: String): Long? = getStringValue(flagName)?.toLong()
+
+        fun getIntValue(flagName: String) = getStringValue(flagName)?.toInt()
 
         fun <T> using(vararg properties: Pair<String, String>, fn: () -> T): T {
             try {

@@ -56,4 +56,14 @@ class EmailPatternTest {
             assertThat(fixedValue.jsonObject["email"]).isEqualTo(StringValue("SomeDude@example.com"))
         }
     }
+
+    @Test
+    fun `should be able to create newBasedOn values without row value`() {
+        val jsonPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "email" to EmailPattern()), typeAlias = "(Details)")
+        val newBased = jsonPattern.newBasedOn(Resolver())
+
+        assertThat(newBased.toList()).allSatisfy {
+            assertThat(it.pattern.getValue("email")).isInstanceOf(EmailPattern::class.java)
+        }
+    }
 }

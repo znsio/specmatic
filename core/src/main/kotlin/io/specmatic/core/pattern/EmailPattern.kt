@@ -53,6 +53,10 @@ class EmailPattern (private val stringPatternDelegate: StringPattern) :
         return sequenceOf(HasValue(this))
     }
 
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
+        return sequenceOf(this)
+    }
+
     override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
         val negativePatterns = stringPatternDelegate.negativeBasedOn(row, resolver).map { it.value }.plus(StringPattern())
         return scalarAnnotation(this, negativePatterns)

@@ -4,6 +4,8 @@ import application.backwardCompatibility.BackwardCompatibilityCheckCommandV2
 import io.mockk.every
 import io.mockk.spyk
 import io.specmatic.core.git.SystemGit
+import io.specmatic.core.utilities.SystemExit
+import io.specmatic.core.utilities.SystemExitException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -11,8 +13,12 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.Paths
 
 class BackwardCompatibilityCheckCommandV2Test {
     private lateinit var tempDir: File
@@ -189,6 +195,51 @@ class BackwardCompatibilityCheckCommandV2Test {
         }
     }
 
+    @Nested
+    inner class ExternalExampleTests {
+
+        @Test
+        fun `should catch when external example files are modified and run backward compatibility check on respective api spec`() {
+            val oasDir = File("src/test/resources/specifications/spec_with_examples")
+            oasDir.copyRecursively(remoteDir); oasDir.copyRecursively(tempDir)
+            commitAndPush(tempDir, "Initial commit")
+
+            val exampleFile = tempDir.resolve("api_examples").resolve("example.json")
+            exampleFile.writeText(exampleFile.readText().replace("john", "jane"))
+
+            val (stdOut, exception) = captureStandardOutput {
+                assertThrows<SystemExitException> {
+                    SystemExit.throwOnExit {
+                        BackwardCompatibilityCheckCommandV2().apply { repoDir = tempDir.canonicalPath }.call()
+                    }
+                }
+            }
+
+            assertThat(exception.code).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            - Specs that have changed: 
+            1. ${exampleFile.toPath().toRealPath()}
+            - Specs whose externalised examples were changed:
+            1. ${tempDir.resolve("api.yaml").toPath().toRealPath()}
+            """.trimIndent()).containsIgnoringWhitespaces("""
+            Files checked: 2 (Passed: 2, Failed: 0)
+            """.trimIndent())
+        }
+
+        @ParameterizedTest
+        @CsvSource(
+            "/api/api_examples/example.json, /api/api_examples",
+            "/api/api_examples/product/example.json, /api/api_examples",
+            "/api_tests/example.json, /api_tests",
+            "/api/api_config/config.json, ",
+            "/example.json, "
+        )
+        fun `should be able to properly resolve examples dir when by walking up the example file path`(exampleFile: String, expectedDir: String?) {
+            val exampleDir = BackwardCompatibilityCheckCommandV2().getParentExamplesDirectory(Paths.get(exampleFile))
+            assertThat(exampleDir).isEqualTo(expectedDir?.let(Paths::get))
+        }
+    }
+
     @AfterEach
     fun `cleanup files`() {
         listOf(
@@ -220,5 +271,11 @@ class BackwardCompatibilityCheckCommandV2Test {
                  ${"$"}ref: '#/components/schemas/$schemaFileName' 
        """.trimIndent()
         this.writeText(specContent)
+    }
+
+    private fun commitAndPush(repoDir: File, commitMessage: String) {
+        ProcessBuilder("git", "add", ".").directory(repoDir).inheritIO().start().waitFor()
+        ProcessBuilder("git", "commit", "-m", commitMessage).directory(repoDir).inheritIO().start().waitFor()
+        ProcessBuilder("git", "push", "origin", "master").directory(repoDir).inheritIO().start().waitFor()
     }
 }

@@ -5,13 +5,13 @@ import io.specmatic.core.Results
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.logger
+import io.specmatic.core.utilities.SystemExit
 import picocli.CommandLine.Option
 import java.io.File
 import java.nio.file.Paths
 import java.util.concurrent.Callable
 import java.util.regex.Pattern
 import kotlin.io.path.absolutePathString
-import kotlin.system.exitProcess
 
 abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     private lateinit var gitCommand: GitCommand
@@ -68,11 +68,11 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
             logger.newLine()
             logger.newLine()
             logger.log(e)
-            exitProcess(1)
+            SystemExit.exitWith(1)
         }
 
         logger.log(result.report)
-        exitProcess(result.exitCode)
+        SystemExit.exitWith(result.exitCode)
     }
 
     private fun getChangedSpecs(): Set<String> {
@@ -106,7 +106,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         }.toSet().also {
             if (it.isEmpty()) {
                 logger.log("$newLine No specs were changed, skipping the check.$newLine")
-                exitProcess(0)
+                SystemExit.exitWith(0)
             }
         }
     }

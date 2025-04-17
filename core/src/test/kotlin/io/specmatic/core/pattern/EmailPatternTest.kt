@@ -44,10 +44,6 @@ class EmailPatternTest {
             "hello@world,com",    // Comma instead of dot
             "hello@world@com",    // Multiple @ symbols
             "hello@world.com.",   // Trailing dot
-            // TODO: Update the email pattern regex to mark below pattern as invalid
-            // "hello@-world.com",   // Invalid domain starting with a hyphen
-            // "hello@world-.com",   // Invalid domain ending with a hyphen
-            // "hello@world..com",   // Double dots in domain
         )
 
         invalidEmails.forEach { email ->

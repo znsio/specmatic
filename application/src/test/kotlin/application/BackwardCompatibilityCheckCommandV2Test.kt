@@ -218,9 +218,9 @@ class BackwardCompatibilityCheckCommandV2Test {
             assertThat(exception.code).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
             - Specs that have changed: 
-            1. ${exampleFile.path}
+            1. ${exampleFile.toPath().toRealPath()}
             - Specs whose externalised examples were changed:
-            1. ${tempDir.resolve("api.yaml").path}
+            1. ${tempDir.resolve("api.yaml").toPath().toRealPath()}
             """.trimIndent()).containsIgnoringWhitespaces("""
             Files checked: 2 (Passed: 2, Failed: 0)
             """.trimIndent())

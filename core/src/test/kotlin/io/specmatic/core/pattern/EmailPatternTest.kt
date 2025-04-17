@@ -35,7 +35,25 @@ class EmailPatternTest {
 
     @Test
     fun `email pattern should not match an invalid email string`() {
-        TODO()
+        val invalidEmails = listOf(
+            "hello@world",        // Missing domain suffix
+            "hello@.com",         // Missing domain name
+            "@world.com",         // Missing local part
+            "hello world@com",    // Space in email
+            "hello@world.c",      // Domain suffix too short
+            "hello@world,com",    // Comma instead of dot
+            "hello@world@com",    // Multiple @ symbols
+            "hello@world.com.",   // Trailing dot
+            // TODO: Update the email pattern regex to mark below pattern as invalid
+            // "hello@-world.com",   // Invalid domain starting with a hyphen
+            // "hello@world-.com",   // Invalid domain ending with a hyphen
+            // "hello@world..com",   // Double dots in domain
+        )
+
+        invalidEmails.forEach { email ->
+            val matchResult = EmailPattern().matches(StringValue(email), Resolver())
+            assertThat(matchResult).isInstanceOf(Result.Failure::class.java)
+        }
     }
 
     @Test
@@ -85,7 +103,7 @@ class EmailPatternTest {
             val response = it.client.execute(
                 HttpRequest(
                 "GET",
-                "/pets/1"
+                "/pets/2"
                 )
             )
 
@@ -93,6 +111,9 @@ class EmailPatternTest {
 
             val body = (response.body as JSONObjectValue).jsonObject
             assertThat(body.keys).containsExactlyInAnyOrder("id", "name", "type", "status", "email")
+
+            val emailValue = EmailPattern().matches(body["email"] as StringValue, Resolver())
+            assertThat(emailValue).isInstanceOf(Result.Success::class.java)
         }
     }
 

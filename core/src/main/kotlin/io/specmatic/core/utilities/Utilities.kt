@@ -55,7 +55,7 @@ object SystemExit {
     private val exitFunc: ThreadLocal<(Int, String?) -> Nothing> = ThreadLocal.withInitial { ::defaultExit }
 
     private fun defaultExit(code: Int, message: String? = null): Nothing {
-        logger.log("\n$message\n")
+        message?.let(logger::log)
         exitProcess(code)
     }
 
@@ -73,7 +73,7 @@ object SystemExit {
     }
 }
 
-fun exitWithMessage(message: String): Nothing = SystemExit.exitWith(1, message)
+fun exitWithMessage(message: String): Nothing = SystemExit.exitWith(1, "\n$message\n")
 
 fun messageStringFrom(e: Throwable): String {
     val messageStack = exceptionMessageStack(e, emptyList())

@@ -87,7 +87,7 @@ class BackwardCompatibilityCheckCommandV2: BackwardCompatibilityCheckBaseCommand
 
         val collectedFiles = filesChangedInCurrentBranch.fold(CollectedFiles()) { acc, filePath ->
             val path = Paths.get(filePath)
-            val examplesDir = path.find { it.toString().endsWith("_examples") || it.toString().endsWith("_tests") }
+            val examplesDir = getParentExamplesDirectory(path)
 
             if (examplesDir == null) {
                 acc.ignoredFiles.add(filePath)
@@ -109,7 +109,7 @@ class BackwardCompatibilityCheckCommandV2: BackwardCompatibilityCheckBaseCommand
 
         collectedFiles.examplesMissingSpecifications.forEach { filePath ->
             val path = Paths.get(filePath)
-            val examplesDir = path.find { it.toString().endsWith("_examples") || it.toString().endsWith("_tests") }
+            val examplesDir = getParentExamplesDirectory(path)
             if (examplesDir != null) {
                 val parentPath = examplesDir.parent
                 val strippedPath = parentPath.resolve(examplesDir.fileName.toString().removeSuffix("_examples"))
@@ -123,6 +123,12 @@ class BackwardCompatibilityCheckCommandV2: BackwardCompatibilityCheckBaseCommand
         }
 
         return result
+    }
+
+    private fun getParentExamplesDirectory(path: Path): Path? {
+        return generateSequence(path, Path::getParent).find {
+            it.pathString.endsWith("_examples") || it.pathString.endsWith("_tests")
+        }
     }
 
     override fun areExamplesValid(feature: IFeature, which: String): Boolean {

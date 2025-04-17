@@ -14,8 +14,11 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.Paths
 
 class BackwardCompatibilityCheckCommandV2Test {
     private lateinit var tempDir: File
@@ -221,6 +224,19 @@ class BackwardCompatibilityCheckCommandV2Test {
             """.trimIndent()).containsIgnoringWhitespaces("""
             Files checked: 2 (Passed: 2, Failed: 0)
             """.trimIndent())
+        }
+
+        @ParameterizedTest
+        @CsvSource(
+            "/api/api_examples/example.json, /api/api_examples",
+            "/api/api_examples/product/example.json, /api/api_examples",
+            "/api_tests/example.json, /api_tests",
+            "/api/api_config/config.json, ",
+            "/example.json, "
+        )
+        fun `should be able to properly resolve examples dir when by walking up the example file path`(exampleFile: String, expectedDir: String?) {
+            val exampleDir = BackwardCompatibilityCheckCommandV2().getParentExamplesDirectory(Paths.get(exampleFile))
+            assertThat(exampleDir).isEqualTo(expectedDir?.let(Paths::get))
         }
     }
 

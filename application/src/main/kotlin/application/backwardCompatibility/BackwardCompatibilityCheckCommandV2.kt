@@ -125,7 +125,7 @@ class BackwardCompatibilityCheckCommandV2: BackwardCompatibilityCheckBaseCommand
         return result
     }
 
-    private fun getParentExamplesDirectory(path: Path): Path? {
+    fun getParentExamplesDirectory(path: Path): Path? {
         return generateSequence(path, Path::getParent).find {
             it.pathString.endsWith("_examples") || it.pathString.endsWith("_tests")
         }

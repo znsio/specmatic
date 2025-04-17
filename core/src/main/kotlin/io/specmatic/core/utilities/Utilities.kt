@@ -49,17 +49,17 @@ import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 import kotlin.system.exitProcess
 
-class SystemExitException(val code: Int, message: String) : Exception(message)
+class SystemExitException(val code: Int, message: String?) : Exception(message)
 
 object SystemExit {
-    private val exitFunc: ThreadLocal<(Int, String) -> Nothing> = ThreadLocal.withInitial { ::defaultExit }
+    private val exitFunc: ThreadLocal<(Int, String?) -> Nothing> = ThreadLocal.withInitial { ::defaultExit }
 
-    private fun defaultExit(code: Int, message: String): Nothing {
+    private fun defaultExit(code: Int, message: String? = null): Nothing {
         logger.log("\n$message\n")
         exitProcess(code)
     }
 
-    fun exitWithMessage(code: Int, message: String): Nothing {
+    fun exitWith(code: Int, message: String? = null): Nothing {
         exitFunc.get().invoke(code, message)
     }
 
@@ -73,7 +73,7 @@ object SystemExit {
     }
 }
 
-fun exitWithMessage(message: String): Nothing = SystemExit.exitWithMessage(1, message)
+fun exitWithMessage(message: String): Nothing = SystemExit.exitWith(1, message)
 
 fun messageStringFrom(e: Throwable): String {
     val messageStack = exceptionMessageStack(e, emptyList())

@@ -6,7 +6,6 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.log.logger
 import io.specmatic.stub.isOpenAPI
-import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
 import java.io.File
 import java.nio.file.Files
@@ -15,7 +14,6 @@ import java.nio.file.Paths
 import kotlin.io.path.extension
 import kotlin.io.path.pathString
 
-@Component
 @Command(
     name = "backward-compatibility-check",
     mixinStandardHelpOptions = true,

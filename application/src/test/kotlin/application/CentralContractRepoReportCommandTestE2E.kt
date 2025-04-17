@@ -8,18 +8,11 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
 import java.io.File
 
-@SpringBootTest(
-    webEnvironment = SpringBootTest.WebEnvironment.NONE,
-    classes = [SpecmaticApplication::class, CentralContractRepoReportCommand::class]
-)
 class CentralContractRepoReportCommandTestE2E {
 
-    @Autowired
-    lateinit var centralContractRepoReportCommand: CentralContractRepoReportCommand
+    private val centralContractRepoReportCommand = CentralContractRepoReportCommand()
 
     @Test
     fun `test generates report json file`() {

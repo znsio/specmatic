@@ -1,0 +1,79 @@
+openapi: 3.0.1
+info:
+  title: Product API
+  description: Add a product
+  version: "2.0"
+servers:
+  - url: http://localhost:3000
+    description: Generated server url
+tags:
+  - name: products
+    description: the products API
+paths:
+  /products:
+    post:
+      tags:
+        - products
+      summary: POST /products
+      operationId: createProduct
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductDetails'
+            examples:
+              CreateProduct:
+                summary: Product Details
+                value:
+                  name: "Inline Example Product"
+                  type: "other"
+                  inventory: 100
+      responses:
+        "201":
+          description: POST /products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductId'
+              examples:
+                CreateProduct:
+                  summary: Product Id
+                  value:
+                    id: 100
+components:
+  schemas:
+    ProductId:
+      title: Product Id
+      required:
+        - id
+      type: object
+      properties:
+        id:
+          type: integer
+    ProductDetails:
+      title: Product Details
+      required:
+        - inventory
+        - name
+        - type
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/ProductType'
+        inventory:
+          type: integer
+    Product:
+      title: Product
+      allOf:
+        - $ref: '#/components/schemas/ProductId'
+        - $ref: '#/components/schemas/ProductDetails'
+    ProductType:
+      type: string
+      title: Product Type
+      enum:
+        - book
+        - food
+        - gadget
+        - other

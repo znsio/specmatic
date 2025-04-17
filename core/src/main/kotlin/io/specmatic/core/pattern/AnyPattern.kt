@@ -57,17 +57,15 @@ data class AnyPattern(
         } else null
 
         if (discBasedFixedValue != null) return discBasedFixedValue
-        val updatedPatterns = discriminator
-            ?.updatePatternsWithDiscriminator(pattern, resolver)?.listFold()
-            ?.withDefault(pattern) { it } ?: pattern
 
+        val updatedPatterns = getUpdatedPattern(resolver).sortedBy { it is NullPattern }
         val patternMatches = updatedPatterns.map { pattern ->
             AnyPatternMatch(pattern, pattern.matches(value, resolver))
         }
 
-        if (patternMatches.any { it.result.isSuccess() }) return value
-        val matchingPatternNew = patternMatches.minBy { (it.result as? Failure)?.failureCount() ?: 0}
-        return matchingPatternNew.pattern.fixValue(value, resolver)
+        val matchingPatternNew = patternMatches.minBy { (it.result as? Failure)?.failureCount() ?: 0 }
+        val updatedResolver = resolver.updateLookupPath(this.typeAlias, "")
+        return matchingPatternNew.pattern.fixValue(value, updatedResolver)
     }
 
     override fun removeKeysNotPresentIn(keys: Set<String>, resolver: Resolver): Pattern {
@@ -206,12 +204,9 @@ data class AnyPattern(
         return Result.fromFailures(failuresWithUpdatedBreadcrumbs)
     }
 
+    @Suppress("MemberVisibilityCanBePrivate") // Being used in openapi
     fun getUpdatedPattern(resolver: Resolver): List<Pattern> {
-        return if (discriminator != null) {
-            discriminator.updatePatternsWithDiscriminator(pattern, resolver).listFold().takeIf {
-                it is HasValue<List<Pattern>>
-            }?.value ?: return emptyList()
-        } else pattern
+        return discriminator?.updatePatternsWithDiscriminator(pattern, resolver)?.listFold()?.value ?: pattern
     }
 
     override fun generate(resolver: Resolver): Value {
@@ -420,26 +415,15 @@ data class AnyPattern(
     }
 
     fun generateValue(resolver: Resolver, discriminatorValue: String = ""): Value {
-        if (this.isScalarBasedPattern()) {
-            return this.pattern.filterNot { it is NullPattern }.let { discriminator?.updatePatternsWithDiscriminator(pattern, resolver)?.listFold()?.value ?: pattern }.first { it is ScalarType }
-                .generate(resolver)
-        }
-
-        val updatedPatterns =
-            if(discriminator != null)
-                discriminator.updatePatternsWithDiscriminator(pattern, resolver).listFold().value
-            else
-                pattern
-
-        val chosenByDiscriminator = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue, resolver)
-        if(chosenByDiscriminator != null)
-            return generate(resolver, chosenByDiscriminator)
-
         data class GenerationResult(val value: Value? = null, val exception: Throwable? = null) {
             val isCycle = exception is ContractException && exception.isCycle
         }
 
-        val generationResults = updatedPatterns.asSequence().map { chosenPattern ->
+        val updatedPatterns = getUpdatedPattern(resolver)
+        val chosenByDiscriminator = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue, resolver)
+        if (chosenByDiscriminator != null) return generate(resolver, chosenByDiscriminator)
+
+        val generationResults = updatedPatterns.sortedBy { it is NullPattern }.asSequence().map { chosenPattern ->
             try {
                 GenerationResult(value = generate(resolver, chosenPattern))
             } catch (e: Throwable) {
@@ -447,14 +431,11 @@ data class AnyPattern(
             }
         }
 
-        val successfulGeneration = generationResults.map { it.value }.filterNotNull().firstOrNull()
+        val successfulGeneration = generationResults.firstNotNullOfOrNull { it.value }
+        if(successfulGeneration != null) return successfulGeneration
 
-        if(successfulGeneration != null)
-            return successfulGeneration
-
-        val cycle = generationResults.filter { it.isCycle }.map { it.exception }.firstOrNull()
-        if(cycle != null)
-            throw cycle
+        val cycle = generationResults.firstOrNull { it.isCycle }?.exception
+        if(cycle != null) throw cycle
 
         throw generationResults.firstOrNull { it.exception != null }?.exception ?: ContractException("Could not generate value")
     }
@@ -472,10 +453,9 @@ data class AnyPattern(
         } ?: NullValue // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
     }
 
-    fun isScalarBasedPattern(): Boolean {
-        return pattern.size == 2 &&
-                pattern.any { it is NullPattern} &&
-                pattern.filterNot { it is NullPattern }.filter { it is ScalarType }.size == 1
+    @Suppress("unused") // Being used in openapi
+    fun isNullableScalarPattern(): Boolean {
+        return pattern.size == 2 && pattern.count { it is NullPattern } == 1 && pattern.count { it is ScalarType } == 2
     }
 
     private fun getDiscriminatorBasedPattern(updatedPatterns: List<Pattern>, discriminatorValue: String, resolver: Resolver): JSONObjectPattern? {

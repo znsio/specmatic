@@ -1,0 +1,27 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/persons",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "name": "Kaushal Vora",
+      "age": 35,
+      "height": 1.78,
+      "weight": 80.5,
+      "isStudent": true,
+      "email": "kaushal.vora@example.com"
+    }
+  },
+  "http-response": {
+    "status": 201,
+    "status-text": "Created",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "id": 2
+    }
+  }
+}

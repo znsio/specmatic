@@ -34,6 +34,10 @@ data class QueryParameterScalarPattern(override val pattern: Pattern): Pattern b
         return  pattern.parse(value, resolver)
     }
 
+    override fun fixValue(value: Value, resolver: Resolver): Value {
+        return fixValue(value, this, resolver)
+    }
+
     override fun encompasses(
         otherPattern: Pattern,
         thisResolver: Resolver,

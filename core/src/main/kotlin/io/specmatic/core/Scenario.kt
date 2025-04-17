@@ -335,7 +335,7 @@ data class Scenario(
             resolver.copy(
                 mockMode = true,
                 mismatchMessages = mismatchMessages,
-                findKeyErrorCheck = if (isPartial) PARTIAL_KEYCHECK else resolver.findKeyErrorCheck
+                findKeyErrorCheck = if (isPartial) resolver.getPartialKeyCheck() else resolver.findKeyErrorCheck
             )
         )
 
@@ -472,7 +472,7 @@ data class Scenario(
         }
     }
 
-    fun fillInTheBlanksAndResolvePatterns(row: Row, resolver: Resolver): ReturnValue<Row> {
+    private fun fillInTheBlanksAndResolvePatterns(row: Row, resolver: Resolver): ReturnValue<Row> {
         if (row.requestExample == null) return HasValue(row)
 
         return runCatching {
@@ -487,7 +487,7 @@ data class Scenario(
         }
     }
 
-    fun fillInTheBlanksAndResolvePatterns(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
+    private fun fillInTheBlanksAndResolvePatterns(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
         val resolvedRequest = ExampleProcessor.resolve(httpRequest, ExampleProcessor::defaultIfNotExits)
         val updatedResolver = resolver.copy(isNegative = httpResponsePattern.status in invalidRequestStatuses)
         return httpRequestPattern.fillInTheBlanks(resolvedRequest, updatedResolver)
@@ -509,10 +509,8 @@ data class Scenario(
     fun validExamplesOrException(flagsBased: FlagsBased) {
         val rowsToValidate = examples.flatMap { it.rows }
 
-        val updatedResolver = flagsBased.update(resolver)
-
         val errors = rowsToValidate.mapNotNull { row ->
-            val resolverForExample = resolverForValidation(updatedResolver, row)
+            val resolverForExample = flagsBased.update(resolverForValidation(resolver, row))
 
             val requestError = nullOrExceptionString {
                 validateRequestExample(row, resolverForExample)
@@ -561,7 +559,7 @@ data class Scenario(
                 return "The $keyLabel $keyName in the specification was missing in example ${row.name}"
             }
         },
-        findKeyErrorCheck = if (row.isPartial) PARTIAL_KEYCHECK else updatedResolver.findKeyErrorCheck,
+        findKeyErrorCheck = if (row.isPartial) updatedResolver.getPartialKeyCheck() else updatedResolver.findKeyErrorCheck,
         mockMode = true
     )
 
@@ -841,7 +839,7 @@ data class Scenario(
     }
 
     fun matchesPartial(template: ScenarioStub): Result {
-        val updatedResolver = resolver.copy(findKeyErrorCheck = PARTIAL_KEYCHECK, mockMode = true)
+        val updatedResolver = resolver.copy(mockMode = true).partializeKeyCheck()
 
         val requestMatch = attempt(breadCrumb = "REQUEST") {
             if (template.response.status !in invalidRequestStatuses) {
@@ -894,13 +892,18 @@ data class Scenario(
         return defaultAttributeSelectionFields.plus(attributeSelectionFieldsFromRequest)
     }
 
-    fun fixRequestResponse(httpRequest: HttpRequest, httpResponse: HttpResponse, flagsBased: FlagsBased): Pair<HttpRequest, HttpResponse> {
+    fun fixRequestResponse(httpRequest: HttpRequest, httpResponse: HttpResponse, flagsBased: FlagsBased, isPartial: Boolean): Pair<HttpRequest, HttpResponse> {
         val updatedResolver = flagsBased.copy(
             unexpectedKeyCheck = when {
                 isRequestAttributeSelected(httpRequest) -> ValidateUnexpectedKeys
                 else -> flagsBased.unexpectedKeyCheck
             }
-        ).update(resolver).copy(mockMode = true)
+        ).update(
+            resolver.copy(
+                mockMode = true,
+                findKeyErrorCheck = if (isPartial) resolver.getPartialKeyCheck() else resolver.findKeyErrorCheck
+            )
+        )
 
         this.newBasedOnAttributeSelectionFields(httpRequest.queryParams).let { newScenario ->
             return Pair(
@@ -970,8 +973,3 @@ val noPatternKeyCheck = object : KeyErrorCheck {
         return emptyList()
     }
 }
-
-val PARTIAL_KEYCHECK = KeyCheck(
-    patternKeyCheck = noPatternKeyCheck,
-    unexpectedKeyCheck = ValidateUnexpectedKeys
-)

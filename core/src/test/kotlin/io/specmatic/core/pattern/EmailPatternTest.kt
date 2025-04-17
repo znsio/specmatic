@@ -6,10 +6,9 @@ import io.specmatic.core.EXAMPLES_DIR_SUFFIX
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.StringValue
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
+import io.specmatic.core.value.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -57,7 +56,7 @@ class EmailPatternTest {
     }
 
     @Test
-    fun `should handle email format`() {
+    fun `should be able to handle email format in example`() {
         val specFilepath = File("src/test/resources/openapi/spec_with_format_email_with_external_example/spec.yaml")
 
         val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
@@ -75,6 +74,24 @@ class EmailPatternTest {
 
             val body = (response.body as JSONObjectValue).jsonObject
             assertThat(body.keys).containsExactlyInAnyOrder("id", "name", "type", "status", "email")
+        }
+    }
+
+
+    @Test
+    fun `should be able to fix invalid values`() {
+        val pattern = JSONObjectPattern(mapOf("email" to EmailPattern()), typeAlias = "(Test)")
+        val resolver = Resolver(dictionary = mapOf("Test.email" to StringValue("SomeDude@example.com")))
+        val invalidValues = listOf(
+            StringValue("Unknown"),
+            NumberValue(999),
+            NullValue
+        )
+
+        assertThat(invalidValues).allSatisfy {
+            val fixedValue = pattern.fixValue(JSONObjectValue(mapOf("email" to it)), resolver)
+            fixedValue as JSONObjectValue
+            assertThat(fixedValue.jsonObject["email"]).isEqualTo(StringValue("SomeDude@example.com"))
         }
     }
 }

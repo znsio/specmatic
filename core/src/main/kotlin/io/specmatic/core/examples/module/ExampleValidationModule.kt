@@ -1,14 +1,13 @@
 package io.specmatic.core.examples.module
 
 import io.specmatic.conversions.ExampleFromFile
-import io.specmatic.core.Feature
-import io.specmatic.core.Result
-import io.specmatic.core.Results
+import io.specmatic.core.*
 import io.specmatic.core.examples.server.InteractiveExamplesMismatchMessages
 import io.specmatic.core.examples.server.ScenarioFilter
 import io.specmatic.core.examples.server.SchemaExample
+import io.specmatic.core.lifecycle.ExamplesUsedFor
+import io.specmatic.core.lifecycle.LifecycleHooks
 import io.specmatic.core.log.logger
-import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.value.NullValue
 import io.specmatic.mock.ScenarioStub
 import java.io.File
@@ -48,12 +47,15 @@ class ExampleValidationModule {
             exampleFile.canonicalPath to validateExample(updatedFeature, exampleFile)
         }
 
+        callLifecycleHook(updatedFeature, ExampleModule().getExamplesFromFiles(examples))
         return results
     }
 
     fun validateExample(contractFile: File, exampleFile: File): Result {
-        val feature = parseContractFileToFeature(contractFile)
-        return validateExample(feature, exampleFile)
+        val feature = parseContractFileWithNoMissingConfigWarning(contractFile)
+        val result = validateExample(feature, exampleFile)
+        callLifecycleHook(feature, ExampleModule().getExamplesFromFiles(listOf(exampleFile)))
+        return result
     }
 
     fun validateExample(feature: Feature, scenarioStub: ScenarioStub): Results {
@@ -96,6 +98,14 @@ class ExampleValidationModule {
             hasValue = { example, _ -> validateExample(feature, example) },
             orException = { it.toHasFailure().failure },
             orFailure = { it.failure }
+        )
+    }
+
+    private fun callLifecycleHook(feature: Feature, examples: List<ExampleFromFile>) {
+        val scenarioStubs = examples.map { ScenarioStub(request = it.request, filePath = it.file.path) }
+        LifecycleHooks.afterLoadingStaticExamples.call(
+            ExamplesUsedFor.Validation,
+            listOf(Pair(feature, scenarioStubs))
         )
     }
 }

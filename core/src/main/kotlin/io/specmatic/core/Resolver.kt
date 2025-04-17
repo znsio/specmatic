@@ -202,9 +202,6 @@ data class Resolver(
     }
 
     fun generate(pattern: Pattern): Value {
-        if(dictionaryLookupPath.isBlank())
-            return pattern.generate(this)
-
         val value = dictionary[dictionaryLookupPath] ?: defaultPatternValueFromDictionary(pattern) ?: return pattern.generate(this)
 
         val dictionaryValueMatchResult = pattern.matches(value, this)
@@ -434,6 +431,18 @@ ${matchResult.reportString()}
 
     fun cyclePast(jsonPattern: Pattern, key: String): Resolver {
         return this.copy(cycleMarker = lookupPath(jsonPattern.typeAlias, key))
+    }
+
+    fun hasPartialKeyCheck(): Boolean {
+        return this.findKeyErrorCheck.isPartial()
+    }
+
+    fun partializeKeyCheck(): Resolver {
+        return this.copy(findKeyErrorCheck = findKeyErrorCheck.toPartialKeyCheck())
+    }
+
+    fun getPartialKeyCheck(): KeyCheck {
+        return findKeyErrorCheck.toPartialKeyCheck()
     }
 }
 

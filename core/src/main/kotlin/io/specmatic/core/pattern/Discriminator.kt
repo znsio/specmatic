@@ -1,7 +1,6 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.core.FailureReason
-import io.specmatic.core.PARTIAL_KEYCHECK
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.pattern.AnyPattern.AnyPatternMatch
@@ -95,7 +94,7 @@ class Discriminator(
         if (sampleData !is JSONObjectValue)
             return jsonObjectMismatchError(resolver, sampleData)
 
-        if (!valueHasDiscriminator(sampleData) && resolver.findKeyErrorCheck == PARTIAL_KEYCHECK) {
+        if (!valueHasDiscriminator(sampleData) && resolver.hasPartialKeyCheck()) {
             return _matches_partial(sampleData, pattern, key, resolver)
         }
 

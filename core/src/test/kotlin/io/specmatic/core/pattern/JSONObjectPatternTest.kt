@@ -1107,7 +1107,7 @@ internal class JSONObjectPatternTest {
             println(result.reportString())
 
             assertThat(result).isInstanceOf(Result.Failure::class.java)
-            assertThat(result.reportString()).containsIgnoringWhitespaces("""
+            assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
             >> subOptionalObject.subOptionalKey
             Expected key named "subOptionalKey" was missing
             >> topLevelOptionalKey
@@ -1120,9 +1120,9 @@ internal class JSONObjectPatternTest {
         @Test
         fun `should not result in failure for missing keys when pattern is cycling with resolver set to allPatternsAsMandatory`() {
             val basePattern = parsedPattern("""{
-            "mandatoryKey": "(number)",
-            "optionalKey?": "(string)"
-        }""".trimIndent()) as JSONObjectPattern
+                "mandatoryKey": "(number)",
+                "optionalKey?": "(string)"
+            }""".trimIndent()) as JSONObjectPattern
 
             val thirdPattern = JSONObjectPattern(
                 basePattern.pattern + mapOf("firstObject?" to DeferredPattern("(firstPattern)")),
@@ -1139,20 +1139,20 @@ internal class JSONObjectPatternTest {
             val newPatterns = mapOf("(firstPattern)" to firstPattern, "(secondPattern)" to secondPattern, "(thirdPattern)" to thirdPattern)
 
             val matchingValue = parsedValue("""{
-            "mandatoryKey": 10,
-            "optionalKey": "abc",
-            "secondObject": {
                 "mandatoryKey": 10,
                 "optionalKey": "abc",
-                "thirdObject": {
+                "secondObject": {
                     "mandatoryKey": 10,
                     "optionalKey": "abc",
-                    "firstObject": {
-                        "mandatoryKey": 10
+                    "thirdObject": {
+                        "mandatoryKey": 10,
+                        "optionalKey": "abc",
+                        "firstObject": {
+                            "mandatoryKey": 10
+                        }
                     }
                 }
-            }
-        }""".trimIndent())
+            }""".trimIndent())
             val matchingResult = firstPattern.matches(matchingValue, Resolver(newPatterns = newPatterns).withAllPatternsAsMandatory())
             println(matchingResult.reportString())
             assertThat(matchingResult).isInstanceOf(Result.Success::class.java)
@@ -2322,6 +2322,16 @@ components:
                     assertThat(it.list).containsOnly(NumberValue(999))
                 }
             )
+        }
+
+        @Test
+        fun `should not add missing mandatory keys when resolver is set to partial`() {
+            val pattern = JSONObjectPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()), typeAlias = "(Test)")
+            val resolver = Resolver(dictionary = mapOf("(number)" to NumberValue(999), "(string)" to StringValue("TODO"))).partializeKeyCheck()
+            val partialInvalidValue = JSONObjectValue(mapOf("number" to StringValue("(string)")))
+            val fixedValue = pattern.fixValue(partialInvalidValue, resolver)
+
+            assertThat(fixedValue).isEqualTo(JSONObjectValue(mapOf("number" to NumberValue(999))))
         }
     }
 

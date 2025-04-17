@@ -1,0 +1,17 @@
+{
+  "http-request": {
+    "path": "/pets/2",
+    "method": "GET"
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": 2,
+      "name": "Hero",
+      "type": "Labrador",
+      "status": "Adopted",
+      "email": "(email)"
+    },
+    "status-text": "OK"
+  }
+}

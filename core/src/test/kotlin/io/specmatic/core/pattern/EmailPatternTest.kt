@@ -28,6 +28,25 @@ class EmailPatternTest {
     }
 
     @Test
+    fun `email pattern should match an email string`() {
+        val matchResult = EmailPattern().matches(StringValue("hello@world.com"), Resolver())
+        assertThat(matchResult).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `email pattern should not match an invalid email string`() {
+        TODO()
+    }
+
+    @Test
+    fun `email pattern should generate an email string test`() {
+        val emails = EmailPattern().newBasedOn(Row(), Resolver()).toList().map { it.value }
+        assertThat(emails).allSatisfy {
+            assertThat(it).isInstanceOf(EmailPattern::class.java)
+        }
+    }
+
+    @Test
     fun `email should not encompass string`() {
         assertThat(
             EmailPattern().encompasses(StringPattern(), Resolver(), Resolver(), emptySet())

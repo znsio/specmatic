@@ -9,7 +9,6 @@ import io.specmatic.core.value.*
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.SPECMATIC_RESPONSE_CODE_HEADER
 import io.specmatic.stub.loadContractStubsFromImplicitPaths
-import io.specmatic.stub.stateful.StatefulHttpStubTest.Companion
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll

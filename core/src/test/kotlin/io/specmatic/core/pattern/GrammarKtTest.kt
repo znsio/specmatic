@@ -137,4 +137,10 @@ internal class GrammarKtTest {
             })
         }
     }
+
+    @Test
+    fun `email pattern should be recognized as a built-in pattern`() {
+        val pattern = getBuiltInPattern("(email)")
+        assertThat(pattern).isInstanceOf(EmailPattern::class.java)
+    }
 }

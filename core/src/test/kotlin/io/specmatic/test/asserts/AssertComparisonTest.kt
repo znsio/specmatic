@@ -50,7 +50,7 @@ class AssertComparisonTest {
         val result = assert.assert(currentStore, actualStore)
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> BODY.name
         Expected "Jane" to equal "John"
         """.trimIndent())
@@ -80,7 +80,7 @@ class AssertComparisonTest {
         val result = assert.assert(currentStore, actualStore)
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> BODY.name
         Expected "John" to not equal "John"
         """.trimIndent())
@@ -137,7 +137,7 @@ class AssertComparisonTest {
         val result = assert.assert(currentStore, actualStore)
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> ENTITY.name
         Could not resolve "ENTITY.name" in store
         """.trimIndent())
@@ -153,7 +153,7 @@ class AssertComparisonTest {
         val result = assert.assert(currentStore, actualStore)
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> BODY
         Could not resolve "BODY" in response
         """.trimIndent())

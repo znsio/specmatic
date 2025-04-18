@@ -75,7 +75,7 @@ class AssertPatternTest {
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> BODY.name
         Expected string, actual was 100 (number)
         """.trimIndent())
@@ -93,7 +93,7 @@ class AssertPatternTest {
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> BODY.name
         Could not resolve "BODY.name" in response
         """.trimIndent())
@@ -137,7 +137,7 @@ class AssertPatternTest {
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> BODY[0].name
         Expected string, actual was 100 (number)
         >> BODY[1].name

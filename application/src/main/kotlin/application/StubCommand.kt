@@ -5,14 +5,13 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
-import io.specmatic.core.utilities.ContractPathData.Companion.specToPortMap
+import io.specmatic.core.utilities.ContractPathData.Companion.specToBaseUrlMap
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.exitIfAnyDoNotExist
 import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.HttpClientFactory
-import org.springframework.beans.factory.annotation.Autowired
 import picocli.CommandLine.*
 import java.io.File
 import java.util.concurrent.Callable
@@ -24,17 +23,14 @@ import java.util.concurrent.Callable
     mixinStandardHelpOptions = true,
     description = ["Start a stub server with contract"]
 )
-class StubCommand : Callable<Unit> {
+class StubCommand(
+    private val httpStubEngine: HTTPStubEngine = HTTPStubEngine(),
+    private val stubLoaderEngine: StubLoaderEngine = StubLoaderEngine(),
+    private val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    private val watchMaker: WatchMaker = WatchMaker(),
+    private val httpClientFactory: HttpClientFactory = HttpClientFactory()
+) : Callable<Unit> {
     var httpStub: ContractStub? = null
-
-    @Autowired
-    private var httpStubEngine: HTTPStubEngine = HTTPStubEngine()
-
-    @Autowired
-    private var stubLoaderEngine: StubLoaderEngine = StubLoaderEngine()
-
-    @Autowired
-    private var specmaticConfig: SpecmaticConfig = SpecmaticConfig()
 
     @Parameters(arity = "0..*", description = ["Contract file paths", "Spec file paths"])
     var contractPaths: List<String> = mutableListOf()
@@ -96,15 +92,6 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--graceful-restart-timeout-in-ms"], description = ["Time to wait for the server to stop before starting it again"])
     var gracefulRestartTimeoutInMs: Long = 1000
 
-    @Autowired
-    val watchMaker = WatchMaker()
-
-    @Autowired
-    val fileOperations = FileOperations()
-
-    @Autowired
-    val httpClientFactory = HttpClientFactory()
-
     private var contractSources:List<ContractPathData> = emptyList()
 
     var specmaticConfigPath: String? = null
@@ -141,7 +128,7 @@ class StubCommand : Callable<Unit> {
             }
             contractPaths = contractSources.map { it.path }
             exitIfAnyDoNotExist("The following specifications do not exist", contractPaths)
-            validateContractFileExtensions(contractPaths, fileOperations)
+            validateContractFileExtensions(contractPaths)
             startServer()
 
             if(httpStub != null) {
@@ -205,7 +192,7 @@ class StubCommand : Callable<Unit> {
             httpClientFactory = httpClientFactory,
             workingDirectory = workingDirectory,
             gracefulRestartTimeoutInMs = gracefulRestartTimeoutInMs,
-            specToPortMap = contractSources.specToPortMap()
+            specToBaseUrlMap = contractSources.specToBaseUrlMap()
         )
 
         LogTail.storeSnapshot()
@@ -248,10 +235,12 @@ class StubCommand : Callable<Unit> {
     }
 }
 
-internal fun validateContractFileExtensions(contractPaths: List<String>, fileOperations: FileOperations) {
-    contractPaths.filter { fileOperations.isFile(it) && fileOperations.extensionIsNot(it, CONTRACT_EXTENSIONS) }.let {
+internal fun validateContractFileExtensions(contractPaths: List<String>) {
+    contractPaths.map(::File).filter {
+        it.isFile && it.extension !in CONTRACT_EXTENSIONS
+    }.let {
         if (it.isNotEmpty()) {
-            val files = it.joinToString("\n")
+            val files = it.joinToString("\n") { file -> file.path }
             exitWithMessage("The following files do not end with $CONTRACT_EXTENSIONS and cannot be used:\n$files")
         }
     }

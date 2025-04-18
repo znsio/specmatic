@@ -6,7 +6,6 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.log.logger
 import io.specmatic.stub.isOpenAPI
-import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
 import java.io.File
 import java.nio.file.Files
@@ -15,7 +14,6 @@ import java.nio.file.Paths
 import kotlin.io.path.extension
 import kotlin.io.path.pathString
 
-@Component
 @Command(
     name = "backward-compatibility-check",
     mixinStandardHelpOptions = true,
@@ -89,7 +87,7 @@ class BackwardCompatibilityCheckCommandV2: BackwardCompatibilityCheckBaseCommand
 
         val collectedFiles = filesChangedInCurrentBranch.fold(CollectedFiles()) { acc, filePath ->
             val path = Paths.get(filePath)
-            val examplesDir = path.find { it.toString().endsWith("_examples") || it.toString().endsWith("_tests") }
+            val examplesDir = getParentExamplesDirectory(path)
 
             if (examplesDir == null) {
                 acc.ignoredFiles.add(filePath)
@@ -111,7 +109,7 @@ class BackwardCompatibilityCheckCommandV2: BackwardCompatibilityCheckBaseCommand
 
         collectedFiles.examplesMissingSpecifications.forEach { filePath ->
             val path = Paths.get(filePath)
-            val examplesDir = path.find { it.toString().endsWith("_examples") || it.toString().endsWith("_tests") }
+            val examplesDir = getParentExamplesDirectory(path)
             if (examplesDir != null) {
                 val parentPath = examplesDir.parent
                 val strippedPath = parentPath.resolve(examplesDir.fileName.toString().removeSuffix("_examples"))
@@ -125,6 +123,12 @@ class BackwardCompatibilityCheckCommandV2: BackwardCompatibilityCheckBaseCommand
         }
 
         return result
+    }
+
+    fun getParentExamplesDirectory(path: Path): Path? {
+        return generateSequence(path, Path::getParent).find {
+            it.pathString.endsWith("_examples") || it.pathString.endsWith("_tests")
+        }
     }
 
     override fun areExamplesValid(feature: IFeature, which: String): Boolean {

@@ -1,0 +1,167 @@
+openapi: 3.0.0
+info:
+  title: Primitive Types Example
+  version: 1.0.0
+
+paths:
+  /persons2:
+    post:
+      summary: Create a person
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PersonInput"
+            examples:
+              person-example-11:
+                value:
+                  name: John Doe
+                  age: 35
+                  height: 1.78
+                  weight: 80.5
+                  isStudent: true
+                  email: john.doe@example.com
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonResponse"
+              examples:
+                person-example-11:
+                  value:
+                    id: 1
+  /persons:
+    post:
+      summary: Create a person
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PersonInput"
+            examples:
+              person-example-01:
+                value:
+                  name: John Doe
+                  age: 35
+                  height: 1.78
+                  weight: 80.5
+                  isStudent: true
+                  email: john.doe@example.com
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonResponse"
+              examples:
+                person-example-01:
+                  value:
+                    id: 1
+    get:
+      summary: Get all persons
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Person"
+              examples:
+                person-list-example:
+                  value:
+                    - id: 1
+                      name: John Doe
+                      age: 35
+                      height: 1.78
+                      weight: 80.5
+                      isStudent: true
+                      email: john.doe@example.com
+                    - id: 2
+                      name: Jane Smith
+                      age: 28
+                      height: 1.65
+                      weight: 60.0
+                      isStudent: false
+                      email: jane.smith@example.com
+  /persons/{id}:
+    get:
+      summary: Get a person by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+              examples:
+                person-example:
+                  value:
+                    id: 1
+                    name: John Doe
+                    age: 35
+                    height: 1.78
+                    weight: 80.5
+                    isStudent: true
+                    email: john.doe@example.com
+
+components:
+  schemas:
+    PersonInput:
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+          format: int32
+        height:
+          type: number
+          format: float
+        weight:
+          type: number
+          format: double
+        isStudent:
+          type: boolean
+        email:
+          type: string
+          format: email
+    PersonResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+    Person:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        age:
+          type: integer
+          format: int32
+        height:
+          type: number
+          format: float
+        weight:
+          type: number
+          format: double
+        isStudent:
+          type: boolean
+        email:
+          type: string
+          format: email

@@ -1,0 +1,60 @@
+openapi: 3.0.1
+info:
+  title: Contract for the pet store service
+  version: '1'
+paths:
+  /pets/{petId}:
+    get:
+      summary: Should be able to get a pet by petId
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: number
+          examples:
+            SCOOBY_200_OK:
+              value: 1
+            404_NOT_FOUND:
+              value: 126
+      responses:
+        '200':
+          description: Should be able to get a pet by petId
+          content:
+            application/json:
+              schema:
+                required:
+                  - id
+                  - name
+                  - status
+                  - type
+                  - email
+                properties:
+                  id:
+                    type: number
+                  name:
+                    type: string
+                  type:
+                    type: string
+                  status:
+                    type: string
+                  email:
+                    type: string
+                    format: email
+              examples:
+                SCOOBY_200_OK:
+                  value:
+                    id: 1
+                    name: Scooby
+                    type: Golden Retriever
+                    status: Adopted
+                    email: hello@hello.com
+        '404':
+          description: Pet not found
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                404_NOT_FOUND:
+                  value: {}

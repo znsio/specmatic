@@ -14,7 +14,7 @@ data class ListPattern(
 
     override fun fixValue(value: Value, resolver: Resolver): Value {
         if (resolver.matchesPattern(null, this, value).isSuccess()) return value
-        if (value !is JSONArrayValue || (value.list.isEmpty() && resolver.allPatternsAreMandatory)) {
+        if (value !is JSONArrayValue || (value.list.isEmpty() && resolver.allPatternsAreMandatory && !resolver.hasPartialKeyCheck())) {
             return pattern.listOf(0.until(randomNumber(3)).mapIndexed { index, _ ->
                 attempt(breadCrumb = "[$index (random)]") { pattern.fixValue(NullValue, resolver) }
             }, resolver)

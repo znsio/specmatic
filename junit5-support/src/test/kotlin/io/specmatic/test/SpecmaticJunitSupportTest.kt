@@ -101,7 +101,7 @@ class SpecmaticJunitSupportTest {
         val ex = assertThrows<TestAbortedException> {
             SpecmaticJUnitSupport().constructTestBaseURL()
         }
-        assertThat(ex.message).isEqualTo("Please specify a valid URL in $TEST_BASE_URL environment variable")
+        assertThat(ex.message).isEqualTo("Please specify a valid URL in 'scheme://host[:port][path]' format in testBaseURL environment variable")
     }
 
     @Test

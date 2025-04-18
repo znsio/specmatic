@@ -27,8 +27,12 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
 import java.net.ServerSocket
+import java.util.stream.Stream
 
 private const val testSystemProperty = "THIS_PROPERTY_EXISTS"
 
@@ -536,6 +540,13 @@ internal class UtilitiesTest {
         }
     }
 
+    @ParameterizedTest
+    @MethodSource("invalidTestOrStubUrlsProvider")
+    fun `validateURI should return error for invalid URLs`(url: String, expectedResult: URIValidationResult) {
+        val result = validateTestOrStubUri(url)
+        assertThat(result).isEqualTo(expectedResult)
+    }
+
     private fun deleteGitIgnoreFile(){
         File(".gitignore").delete()
     }
@@ -554,6 +565,21 @@ internal class UtilitiesTest {
         @JvmStatic
         fun teardown() {
             System.clearProperty(testSystemProperty)
+        }
+
+        @JvmStatic
+        fun invalidTestOrStubUrlsProvider(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of("ftp://localhost", URIValidationResult.InvalidURLSchemeError),
+                Arguments.of("file:///C:/path", URIValidationResult.InvalidURLSchemeError),
+
+                Arguments.of("http://127.0.0.1:0", URIValidationResult.InvalidPortError),
+                Arguments.of("https://localhost:99999", URIValidationResult.InvalidPortError),
+                Arguments.of("http://localhost:notAPort", URIValidationResult.URIParsingError),
+
+                Arguments.of("/not_a_url", URIValidationResult.URIParsingError),
+                Arguments.of("", URIValidationResult.URIParsingError)
+            )
         }
     }
 }

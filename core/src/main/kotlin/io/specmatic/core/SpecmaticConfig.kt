@@ -42,7 +42,9 @@ import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
+import io.specmatic.stub.isSameBaseIgnoringHost
 import java.io.File
+import java.net.URI
 
 private const val excludedEndpointsWarning =
     "WARNING: excludedEndpoints is not supported in Specmatic config v2. . Refer to https://specmatic.io/documentation/configuration.html#report-configuration to see how to exclude endpoints."
@@ -304,15 +306,35 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun stubPorts(defaultPort: Int): List<Int> {
+    fun stubBaseUrls(defaultBaseUrl: String): List<String> {
         return sources.flatMap {
             it.stub.orEmpty().map { consumes ->
                 when(consumes) {
-                    is Consumes.StringValue -> defaultPort
-                    is Consumes.ObjectValue -> consumes.port
+                    is Consumes.StringValue -> defaultBaseUrl
+                    is Consumes.ObjectValue -> consumes.baseUrl
                 }
             }
-        }.plus(defaultPort).distinct()
+        }.distinct()
+    }
+
+    @JsonIgnore
+    fun stubToBaseUrlList(defaultBaseUrl: String): List<Pair<String, String>> {
+        return sources.flatMap { source ->
+            source.stub.orEmpty().flatMap { consumes ->
+                when (consumes) {
+                    is Consumes.StringValue -> listOf(consumes.value to defaultBaseUrl)
+                    is Consumes.ObjectValue -> consumes.specs.map { it to consumes.baseUrl }
+                }
+            }
+        }
+    }
+
+    @JsonIgnore
+    fun stubBaseUrlPathAssociatedTo(url: String, defaultBaseUrl: String): String {
+        val parsedUrl = URI(url)
+        return stubBaseUrls(defaultBaseUrl).map(::URI).firstOrNull { stubBaseUrl ->
+            isSameBaseIgnoringHost(parsedUrl, stubBaseUrl)
+        }?.path.orEmpty()
     }
 
     @JsonIgnore
@@ -348,7 +370,7 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun loadSources(): List<ContractSource> {
         return sources.map { source ->
-            val stubPaths = source.specToStubPortMap().entries.map { ContractSourceEntry(it.key, it.value) }
+            val stubPaths = source.specToStubBaseUrlMap().entries.map { ContractSourceEntry(it.key, it.value) }
             val testPaths = source.test.orEmpty().map { ContractSourceEntry(it) }
 
             when (source.provider) {
@@ -660,20 +682,15 @@ data class Source(
         }
     }
 
-    fun specToStubPortMap(): Map<String, Int?> {
+    fun specToStubBaseUrlMap(): Map<String, String?> {
         return stub.orEmpty().flatMap {
             when (it) {
                 is Consumes.StringValue -> listOf(it.value to null)
                 is Consumes.ObjectValue -> it.specs.map { specPath ->
-                    specPath to it.port
+                    specPath to it.baseUrl
                 }
             }
         }.toMap()
-    }
-
-    private fun String.canonicalPath(relativeTo: File): String {
-        if (provider == web) return this
-        return relativeTo.parentFile?.resolve(this)?.canonicalPath ?: File(this).canonicalPath
     }
 }
 

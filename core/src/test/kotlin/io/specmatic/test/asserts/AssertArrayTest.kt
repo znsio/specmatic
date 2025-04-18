@@ -65,7 +65,7 @@ class AssertArrayTest {
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> BODY[*].name
         None of the values matched "ENTITY.name" of value "John"
         """.trimIndent())
@@ -83,7 +83,7 @@ class AssertArrayTest {
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> BODY
         Expected json array but found json object
         """.trimIndent())
@@ -120,7 +120,7 @@ class AssertArrayTest {
 
         assertThat(dynamicAsserts.size).isEqualTo(3)
         dynamicAsserts.forEachIndexed { index, it ->
-            assertThat(it).isInstanceOf(AssertArray::class.java); it as AssertArray
+            assertThat(it).isInstanceOf(AssertArray::class.java)
             assertThat(it.keys).containsExactly("BODY", "[$index]", "details", "[*]", "name")
             assertThat(it.lookupKey).isEqualTo("ENTITY.name")
             assertThat(it.arrayAssertType).isEqualTo(ArrayAssertType.ARRAY_HAS)

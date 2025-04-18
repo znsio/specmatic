@@ -15,6 +15,7 @@ import io.specmatic.core.azure.AzureAuthCredentials
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.loadSpecmaticConfig
+import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.nativeString
@@ -36,6 +37,9 @@ import org.xml.sax.InputSource
 import java.io.File
 import java.io.StringReader
 import java.io.StringWriter
+import java.net.MalformedURLException
+import java.net.URISyntaxException
+import java.net.URL
 import java.util.concurrent.*
 import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
@@ -45,11 +49,31 @@ import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 import kotlin.system.exitProcess
 
-fun exitWithMessage(message: String): Nothing {
-    val newLine = System.lineSeparator()
-    logger.log("$newLine$message$newLine")
-    exitProcess(1)
+class SystemExitException(val code: Int, message: String?) : Exception(message)
+
+object SystemExit {
+    private val exitFunc: ThreadLocal<(Int, String?) -> Nothing> = ThreadLocal.withInitial { ::defaultExit }
+
+    private fun defaultExit(code: Int, message: String? = null): Nothing {
+        message?.let(logger::log)
+        exitProcess(code)
+    }
+
+    fun exitWith(code: Int, message: String? = null): Nothing {
+        exitFunc.get().invoke(code, message)
+    }
+
+    fun <T> throwOnExit(block: () -> T): T {
+        return try {
+            exitFunc.set { code, message -> throw SystemExitException(code, message) }
+            block()
+        } finally {
+            exitFunc.remove()
+        }
+    }
 }
+
+fun exitWithMessage(message: String): Nothing = SystemExit.exitWith(1, "\n$message\n")
 
 fun messageStringFrom(e: Throwable): String {
     val messageStack = exceptionMessageStack(e, emptyList())
@@ -271,11 +295,11 @@ data class ContractPathData(
     val repository: String? = null,
     val branch: String? = null,
     val specificationPath: String? = null,
-    val port: Int? = null
+    val baseUrl: String? = null
 ) {
     companion object {
-        fun List<ContractPathData>.specToPortMap(): Map<String, Int?> {
-            return this.associate { File(it.path).path to it.port }
+        fun List<ContractPathData>.specToBaseUrlMap(): Map<String, String?> {
+            return this.associate { File(it.path).path to it.baseUrl }
         }
     }
 }
@@ -390,5 +414,35 @@ fun <T> runWithTimeout(timeout: Long, task: Callable<T>): T {
         throw e.cause ?: e
     } finally {
         executor.shutdown() // Shut down the executor
+    }
+}
+
+enum class URIValidationResult(val message: String) {
+    URIParsingError("Please specify a valid URL in 'scheme://host[:port][path]' format"),
+    InvalidURLSchemeError("Please specify a valid scheme / protocol (http or https)"),
+    MissingHostError("Please specify a valid host name"),
+    InvalidPortError("Please specify a valid port number"),
+    Success("This URL is valid");
+}
+
+fun validateTestOrStubUri(uri: String): URIValidationResult {
+    val parsedURI = try {
+        URL(uri).toURI()
+    } catch (e: URISyntaxException) {
+        consoleDebug(e)
+        return URIValidationResult.URIParsingError
+    } catch(e: MalformedURLException) {
+        consoleDebug(e)
+        return URIValidationResult.URIParsingError
+    }
+
+    val validProtocols = listOf("http", "https")
+    val validPorts = 1..65535
+
+    return when {
+        !validProtocols.contains(parsedURI.scheme) -> URIValidationResult.InvalidURLSchemeError
+        parsedURI.host.isNullOrBlank() -> URIValidationResult.MissingHostError
+        parsedURI.port != -1 && !validPorts.contains(parsedURI.port) -> URIValidationResult.InvalidPortError
+        else -> URIValidationResult.Success
     }
 }

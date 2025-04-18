@@ -40,7 +40,7 @@ class AssertExistenceTest {
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> BODY.name
         Expected "BODY.name" to exist
         """.trimIndent())
@@ -57,7 +57,7 @@ class AssertExistenceTest {
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> BODY.name
         Expected "BODY.name" to not exist
         """.trimIndent())
@@ -74,7 +74,7 @@ class AssertExistenceTest {
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> BODY.name
         Expected "BODY.name" to not be null
         """.trimIndent())
@@ -91,7 +91,7 @@ class AssertExistenceTest {
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> BODY.name
         Expected "BODY.name" to be null
         """.trimIndent())

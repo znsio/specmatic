@@ -11,6 +11,7 @@ import io.specmatic.mock.mockFromJSON
 import io.specmatic.osAgnosticPath
 import io.mockk.every
 import io.mockk.mockk
+import io.specmatic.stub.captureStandardOutput
 import io.swagger.v3.core.util.Yaml
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -784,5 +785,14 @@ paths:
     private fun String.toFeatureString(): String {
         val parsedJSONValue = parsedJSON(this) as JSONObjectValue
         return toGherkinFeature(NamedStub("Test Feature", mockFromJSON(parsedJSONValue.jsonObject)))
+    }
+
+    @Test
+    fun `should be able to parse a spec with no warning about missing config`() {
+        val (stdout, _) = captureStandardOutput {
+            parseContractFileWithNoMissingConfigWarning(File("src/test/resources/openapi/jsonAndYamlEquivalence/openapi.yaml"))
+        }
+
+        assertThat(stdout).doesNotContain("Could not find the Specmatic configuration at path")
     }
 }

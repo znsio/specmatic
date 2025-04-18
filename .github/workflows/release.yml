@@ -53,7 +53,7 @@ jobs:
     needs: build
     strategy:
       matrix:
-        repository: [znsio/specmatic-documentation]
+        repository: [znsio/docs.specmatic.io]
     runs-on: ubuntu-latest
     steps:
       - name: Extracting Latest Release Version From Github Ref

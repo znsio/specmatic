@@ -8,10 +8,8 @@ import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.loadContractStubsFromFiles
 import io.specmatic.stub.loadContractStubsFromImplicitPaths
-import org.springframework.stereotype.Component
 import java.io.File
 
-@Component
 class StubLoaderEngine {
     fun loadStubs(
         contractPathDataList: List<ContractPathData>,

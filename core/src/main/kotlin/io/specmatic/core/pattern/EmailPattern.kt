@@ -39,6 +39,10 @@ class EmailPattern (private val stringPatternDelegate: StringPattern) :
         return fillInTheBlanksWithPattern(value, resolver, this)
     }
 
+    override fun fixValue(value: Value, resolver: Resolver): Value {
+        return fixValue(value, this, resolver)
+    }
+
     override fun generate(resolver: Resolver): Value {
         val localPart = randomString(5).lowercase(Locale.getDefault())
         val domain = randomString(5).lowercase(Locale.getDefault())
@@ -47,6 +51,10 @@ class EmailPattern (private val stringPatternDelegate: StringPattern) :
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return sequenceOf(HasValue(this))
+    }
+
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
+        return sequenceOf(this)
     }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
@@ -61,7 +69,7 @@ class EmailPattern (private val stringPatternDelegate: StringPattern) :
         typeStack: TypeStack
     ): Result {
         val resolvedOther = resolvedHop(otherPattern, otherResolver)
-        if(resolvedOther !is EmailPattern) return Result.Failure("Expected email, get ${resolvedOther.typeAlias}")
+        if(resolvedOther !is EmailPattern) return Result.Failure("Expected email, got ${resolvedOther.typeName}")
 
         return stringPatternDelegate.encompasses(resolvedOther.stringPatternDelegate, thisResolver, otherResolver, typeStack)
     }

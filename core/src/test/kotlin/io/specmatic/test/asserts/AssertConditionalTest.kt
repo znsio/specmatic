@@ -33,7 +33,7 @@ class AssertConditionalTest {
             println(result.reportString())
 
             assertThat(result).isInstanceOf(Result.Failure::class.java)
-            assertThat(result.reportString()).containsIgnoringWhitespaces("""
+            assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
             >> BODY.address
             Expected "456 Main St" to equal "123 Main St"
             """.trimIndent())
@@ -56,7 +56,7 @@ class AssertConditionalTest {
             println(result.reportString())
 
             assertThat(result).isInstanceOf(Result.Failure::class.java)
-            assertThat(result.reportString()).containsIgnoringWhitespaces("""
+            assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
             >> BODY.address
             Expected "123 Main St" to not equal "123 Main St"
             """.trimIndent())
@@ -88,7 +88,7 @@ class AssertConditionalTest {
             println(result.reportString())
 
             assertThat(result).isInstanceOf(Result.Failure::class.java)
-            assertThat(result.reportString()).containsIgnoringWhitespaces("""
+            assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
             >> BODY[1].address
             Expected "123 Main St" to equal "456 Main St"
             """.trimIndent())
@@ -117,7 +117,7 @@ class AssertConditionalTest {
             println(result.reportString())
 
             assertThat(result).isInstanceOf(Result.Failure::class.java)
-            assertThat(result.reportString()).containsIgnoringWhitespaces("""
+            assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
             >> BODY[0].address
             Expected "123 Main St" to not equal "123 Main St"
             >> BODY[2].address

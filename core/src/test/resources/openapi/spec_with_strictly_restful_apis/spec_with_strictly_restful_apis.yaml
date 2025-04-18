@@ -146,6 +146,41 @@ paths:
         '404':
           description: Product not found
 
+  /todos:
+    get:
+      summary: Get list of todos
+      responses:
+        "200":
+          description: Fetched todos successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Todos_ResponseBody"
+
+  /todos/{id}:
+    get:
+      summary: Get todo with id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Fetched todo successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Todo_ResponseBody"
+        "404":
+          description: Todo not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {}
+
 components:
   schemas:
     Product:
@@ -221,3 +256,37 @@ components:
           type: string
         reason:
           type: string
+
+    Todos_ResponseBody:
+      required:
+        - limit
+        - skip
+        - todos
+        - total
+      properties:
+        todos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Todos"
+        total:
+          type: number
+        skip:
+          type: number
+        limit:
+          type: number
+
+    Todo_ResponseBody:
+      required:
+        - completed
+        - id
+        - todo
+        - userId
+      properties:
+        id:
+          type: number
+        todo:
+          type: string
+        completed:
+          type: boolean
+        userId:
+          type: number

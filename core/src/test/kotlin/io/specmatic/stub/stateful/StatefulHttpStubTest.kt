@@ -9,6 +9,7 @@ import io.specmatic.core.value.*
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.SPECMATIC_RESPONSE_CODE_HEADER
 import io.specmatic.stub.loadContractStubsFromImplicitPaths
+import io.specmatic.stub.stateful.StatefulHttpStubTest.Companion
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -850,6 +851,37 @@ class StatefulHttpStubSeedDataFromExamplesTest {
             }
 
         assertThat(productsWithIds500And600).isEmpty()
+    }
+
+    @Test
+    fun `should able to handle array inside the object and cache the data`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/todos"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+    }
+
+    @Test
+    fun `should able fetch todo from cached data`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/todos/30"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        val responseBody = response.body as JSONObjectValue
+
+        assertThat(responseBody.getStringValue("id")).isEqualTo("30")
+        assertThat(responseBody.getStringValue("todo")).isEqualTo("Go to the gym")
+        assertThat(responseBody.getStringValue("completed")).isEqualTo("true")
+        assertThat(responseBody.getStringValue("userId")).isEqualTo("142")
     }
 }
 

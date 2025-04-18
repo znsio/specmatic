@@ -871,14 +871,14 @@ class StatefulHttpStubSeedDataFromExamplesTest {
         val response = httpStub.client.execute(
             HttpRequest(
                 method = "GET",
-                path = "/todos/30"
+                path = "/todos/3"
             )
         )
 
         assertThat(response.status).isEqualTo(200)
         val responseBody = response.body as JSONObjectValue
 
-        assertThat(responseBody.getStringValue("id")).isEqualTo("30")
+        assertThat(responseBody.getStringValue("id")).isEqualTo("3")
         assertThat(responseBody.getStringValue("todo")).isEqualTo("Go to the gym")
         assertThat(responseBody.getStringValue("completed")).isEqualTo("true")
         assertThat(responseBody.getStringValue("userId")).isEqualTo("142")

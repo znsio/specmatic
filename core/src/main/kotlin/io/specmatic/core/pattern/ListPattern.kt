@@ -134,12 +134,6 @@ data class ListPattern(
         return resolver.generateList(pattern)
     }
 
-    private fun generateRandomValue(resolver: Resolver): Value {
-        return pattern.listOf(0.until(randomNumber(3)).mapIndexed{ index, _ ->
-            attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolver) }
-        }, resolver)
-    }
-
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
         return attempt(breadCrumb = "[]") {
@@ -169,7 +163,20 @@ data class ListPattern(
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(NullPattern))
+    override fun negativeBasedOn(
+        row: Row,
+        resolver: Resolver,
+        config: NegativePatternConfiguration
+    ): Sequence<ReturnValue<Pattern>> {
+        return attempt(breadCrumb = "[]") {
+            pattern.negativeBasedOn(row, resolver, config)
+                .map { negativePatternValue ->
+                    negativePatternValue.ifValue { pattern ->
+                        ListPattern(pattern) as Pattern
+                    }.breadCrumb("[]")
+                }
+        }
+    }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONArray(value, resolver.mismatchMessages)
 

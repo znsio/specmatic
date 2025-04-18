@@ -24,9 +24,7 @@ class AssertComparisonTest {
 
     @ParameterizedTest
     @CsvSource(
-        "REQUEST.BODY.name, name, ENTITY.name, true",
         "REQUEST.BODY, name, ENTITY.name, true",
-        "REQUEST.BODY.name, name, ENTITY.name, false",
         "REQUEST.BODY, name, ENTITY.name, false"
     )
     fun `should be able to parse equal and not equal assertions`(prefix: String, key: String, lookupKey: String, isEqualityCheck: Boolean) {
@@ -34,102 +32,95 @@ class AssertComparisonTest {
         val value = StringValue("\$${assertType}($lookupKey)")
 
         println("value: $value, prefix: $prefix, key: $key, lookupKey: $lookupKey, isEqualityCheck: $isEqualityCheck")
-        val assert = AssertComparison.parse(prefix, key, value)
-        assertThat(assert).isNotNull.isInstanceOf(AssertComparison::class.java)
-        assertThat(assert!!.prefix).isEqualTo("REQUEST.BODY")
-        assertThat(assert.key).isEqualTo(key)
+        val assert = parsedAssert(prefix, key, value)
+        assertThat(assert).isNotNull.isInstanceOf(AssertComparison::class.java); assert as AssertComparison
+        assertThat(assert.keys).containsExactly("REQUEST", "BODY", "name")
         assertThat(assert.lookupKey).isEqualTo(lookupKey)
         assertThat(assert.isEqualityCheck).isEqualTo(isEqualityCheck)
     }
 
     @Test
     fun `should return failure when actual value is not expected value and equality check is True`() {
-        val assert = AssertComparison(prefix = "REQUEST.BODY", key = "name", lookupKey = "ENTITY.name", isEqualityCheck = true)
+        val assert = AssertComparison(keys = listOf("BODY", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)
 
         val actualStore = mapOf("ENTITY.name" to StringValue("John"))
         val bodyValue = JSONObjectValue(mapOf("name" to StringValue("Jane")))
-        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+        val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, actualStore)
-        println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
-        >> REQUEST.BODY.name
+        >> BODY.name
         Expected "Jane" to equal "John"
         """.trimIndent())
     }
 
     @Test
     fun `should return success when actual value is expected value and equality check is True`() {
-        val assert = AssertComparison(prefix = "REQUEST.BODY", key = "name", lookupKey = "ENTITY.name", isEqualityCheck = true)
+        val assert = AssertComparison(keys = listOf("BODY", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)
 
         val actualStore = mapOf("ENTITY.name" to StringValue("John"))
         val bodyValue = JSONObjectValue(mapOf("name" to StringValue("John")))
-        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+        val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, actualStore)
-        println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `should return failure when actual value is expected value and equality check is False`() {
-        val assert = AssertComparison(prefix = "REQUEST.BODY", key = "name", lookupKey = "ENTITY.name", isEqualityCheck = false)
+        val assert = AssertComparison(keys = listOf("BODY", "name"), lookupKey = "ENTITY.name", isEqualityCheck = false)
 
         val actualStore = mapOf("ENTITY.name" to StringValue("John"))
         val bodyValue = JSONObjectValue(mapOf("name" to StringValue("John")))
-        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+        val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, actualStore)
-        println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
-        >> REQUEST.BODY.name
+        >> BODY.name
         Expected "John" to not equal "John"
         """.trimIndent())
     }
 
     @Test
     fun `should return success when actual value is not expected value and equality check is False`() {
-        val assert = AssertComparison(prefix = "REQUEST.BODY", key = "name", lookupKey = "ENTITY.name", isEqualityCheck = false)
+        val assert = AssertComparison(keys = listOf("BODY", "name"), lookupKey = "ENTITY.name", isEqualityCheck = false)
 
         val actualStore = mapOf("ENTITY.name" to StringValue("John"))
         val bodyValue = JSONObjectValue(mapOf("name" to StringValue("Jane")))
-        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+        val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, actualStore)
-        println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `should be able to create dynamic asserts based on prefix value`() {
-        val assert = AssertComparison(prefix = "REQUEST.BODY", key = "name", lookupKey = "ENTITY.name", isEqualityCheck = true)
+        val arrayAssert = AssertComparison(keys = listOf("BODY", "[*]", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)
         val jsonValue = JSONObjectValue(mapOf("name" to StringValue("Jane")))
         val arrayValue = JSONArrayValue(List(3) { jsonValue })
 
-        val arrayBasedAsserts = assert.dynamicAsserts(arrayValue)
+        val arrayBasedAsserts = arrayAssert.dynamicAsserts(arrayValue.toFactStore("BODY"))
         assertThat(arrayBasedAsserts.size).isEqualTo(3)
         arrayBasedAsserts.forEachIndexed { index, it ->
             assertThat(it).isInstanceOf(AssertComparison::class.java)
-            it as AssertComparison
-            assertThat(it.prefix).isEqualTo("REQUEST.BODY[$index]")
-            assertThat(it.key).isEqualTo("name")
+            assertThat(it.keys).containsExactly("BODY", "[$index]", "name")
             assertThat(it.lookupKey).isEqualTo("ENTITY.name")
             assertThat(it.isEqualityCheck).isTrue
         }
 
-        val jsonBasedAsserts = assert.dynamicAsserts(jsonValue)
+        val objectAssert = AssertComparison(keys = listOf("BODY", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)
+        val jsonBasedAsserts = objectAssert.dynamicAsserts(jsonValue.toFactStore("BODY"))
         assertThat(jsonBasedAsserts.size).isEqualTo(1)
         assertThat(jsonBasedAsserts).allSatisfy {
             assertThat(it).isInstanceOf(AssertComparison::class.java)
             it as AssertComparison
-            assertThat(it.prefix).isEqualTo("REQUEST.BODY")
-            assertThat(it.key).isEqualTo("name")
+            assertThat(it.keys).containsExactly("BODY", "name")
             assertThat(it.lookupKey).isEqualTo("ENTITY.name")
             assertThat(it.isEqualityCheck).isTrue
         }
@@ -137,48 +128,46 @@ class AssertComparisonTest {
 
     @Test
     fun `should return failure when lookup key is not present in actual store`() {
-        val assert = AssertComparison(prefix = "REQUEST.BODY", key = "name", lookupKey = "ENTITY.name", isEqualityCheck = true)
+        val assert = AssertComparison(keys = listOf("BODY", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)
 
         val actualStore = emptyMap<String, Value>()
         val bodyValue = JSONObjectValue(mapOf("name" to StringValue("Jane")))
-        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+        val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, actualStore)
-        println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         >> ENTITY.name
-        Could not resolve "ENTITY.name" in actual fact store
+        Could not resolve "ENTITY.name" in store
         """.trimIndent())
     }
 
     @Test
     fun `should return failure when lookup key is not present in current store`() {
-        val assert = AssertComparison(prefix = "REQUEST.BODY", key = "name", lookupKey = "ENTITY.name", isEqualityCheck = true)
+        val assert = AssertComparison(keys = listOf("BODY", "name"), lookupKey = "ENTITY.name", isEqualityCheck = true)
 
         val actualStore = mapOf("ENTITY.name" to StringValue("John"))
         val currentStore = emptyMap<String, Value>()
 
         val result = assert.assert(currentStore, actualStore)
-        println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
-        >> REQUEST.BODY
-        Could not resolve "REQUEST.BODY" in current fact store
+        >> BODY
+        Could not resolve "BODY" in response
         """.trimIndent())
     }
 
     @Test
     fun `should not combine key if key is empty with prefix`() {
-        val assert = AssertComparison(prefix = "REQUEST.BODY", key = "", lookupKey = "ENTITY.name", isEqualityCheck = true)
+        val assert = AssertComparison(keys = listOf("BODY", ""), lookupKey = "ENTITY.name", isEqualityCheck = true)
         val actualStore = mapOf("ENTITY.name" to StringValue("John"))
         val bodyValue = StringValue("John")
-        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+        val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, actualStore)
-        println(result.reportString())
+
         assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 }

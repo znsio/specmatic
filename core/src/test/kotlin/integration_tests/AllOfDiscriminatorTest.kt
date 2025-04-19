@@ -522,7 +522,7 @@ class AllOfDiscriminatorTest {
                   allOf:
                     - ${'$'}ref: '#/components/schemas/Vehicle'
                     - type: object
-                      requried:
+                      required:
                         - gearType
                       properties:
                         gearType:
@@ -532,7 +532,7 @@ class AllOfDiscriminatorTest {
                   allOf:
                     - ${'$'}ref: '#/components/schemas/Vehicle'
                     - type: object
-                      requried:
+                      required:
                         - sidecarAvailable
                       properties:
                         sidecarAvailable:

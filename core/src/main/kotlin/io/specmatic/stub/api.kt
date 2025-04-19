@@ -56,7 +56,8 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
         mocks,
         host,
         port,
-        ::consoleLog
+        ::consoleLog,
+        specToStubBaseUrlMap = mapOf(contractBehaviour.specification.orEmpty() to endPointFromHostAndPort(host, port, null))
     )
 }
 
@@ -161,12 +162,14 @@ internal fun createStub(
     return HttpStub(
         stubValues.features,
         stubValues.expectations,
-        endPointFromHostAndPort(host, port, null),
+        host,
+        port,
         log = ::consoleLog,
         workingDirectory = stubValues.workingDirectory,
         specmaticConfigPath = File(configFileName).canonicalPath,
         timeoutMillis = timeoutMillis,
-        strictMode = strict
+        strictMode = strict,
+        specToStubBaseUrlMap = stubValues.contractStubPaths.specToBaseUrlMap()
     )
 }
 
@@ -205,10 +208,12 @@ internal fun createStubFromContracts(
     return HttpStub(
         features,
         httpExpectations,
-        endPointFromHostAndPort(host, port, null),
+        host,
+        port,
         ::consoleLog,
         specmaticConfigPath = File(getConfigFilePath()).canonicalPath,
-        timeoutMillis = timeoutMillis
+        timeoutMillis = timeoutMillis,
+        specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
     )
 }
 

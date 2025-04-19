@@ -318,9 +318,9 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun stubBaseUrlPathAssociatedTo(url: String, defaultBaseUrl: String, baseUrls: Collection<String>): String {
+    fun stubBaseUrlPathAssociatedTo(url: String, baseUrls: Collection<String>): String {
         val parsedUrl = URI(url)
-        return baseUrls.plus(defaultBaseUrl).distinct().map(::URI).firstOrNull { stubBaseUrl ->
+        return baseUrls.distinct().map(::URI).firstOrNull { stubBaseUrl ->
             isSameBaseIgnoringHost(parsedUrl, stubBaseUrl)
         }?.path.orEmpty()
     }

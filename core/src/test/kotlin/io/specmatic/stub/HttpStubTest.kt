@@ -3243,6 +3243,101 @@ Then status 200
         }
     }
 
+    @Nested
+    inner class BaseUrlStubTest {
+
+        @Test
+        fun `should always prioritise value from specToBaseUrlMap over baseUrl, servers and default value`() {
+            HttpStub(
+                features = featureWithServers("http://localhost:3000").let(::listOf),
+                baseUrl = "http://localhost:8080/api",
+                specToStubBaseUrlMap = mapOf("./api.yaml" to "http://localhost:9000/api")
+            ).use {
+                assertThat(it.specToBaseUrlMap).containsExactlyInAnyOrderEntriesOf(mapOf("./api.yaml" to "http://localhost:9000/api"))
+                assertServerResponse("http://localhost:9000/api")
+            }
+        }
+
+        @Test
+        fun `should start on baseUrl if provided and not use servers from OAS or default baseUrl when specToMap isn't provided`() {
+            HttpStub(
+                features = featureWithServers("http://localhost:3000").let(::listOf),
+                baseUrl = "http://localhost:8080/api",
+                specToStubBaseUrlMap = emptyMap()
+            ).use {
+                assertThat(it.baseUrl.value).isEqualTo("http://localhost:8080/api")
+                assertThat(it.endPoint).isEqualTo("http://localhost:8080/api")
+                assertThat(it.specToBaseUrlMap).containsExactlyInAnyOrderEntriesOf(mapOf("./api.yaml" to "http://localhost:8080/api"))
+                assertServerResponse("http://localhost:8080/api")
+            }
+        }
+
+        @Test
+        fun `should use value from OAS servers list if baseUrl is not provided and specToMap is empty`() {
+            HttpStub(
+                features = featureWithServers("http://localhost:3000/api").let(::listOf),
+                baseUrl = null,
+                specToStubBaseUrlMap = emptyMap()
+            ).use {
+                assertThat(it.specToBaseUrlMap).containsExactlyInAnyOrderEntriesOf(mapOf("./api.yaml" to "http://localhost:3000/api"))
+                assertServerResponse("http://localhost:3000/api")
+            }
+        }
+
+        @Test
+        fun `should fallback to default baseUrl if all other options are missing`() {
+            HttpStub(
+                features = featureWithServers().let(::listOf),
+                baseUrl = null,
+                specToStubBaseUrlMap = emptyMap()
+            ).use {
+                assertThat(it.baseUrl.value).isEqualTo("http://0.0.0.0:9000")
+                assertThat(it.endPoint).isEqualTo("http://0.0.0.0:9000")
+                assertThat(it.specToBaseUrlMap).containsExactlyInAnyOrderEntriesOf(mapOf("./api.yaml" to "http://0.0.0.0:9000"))
+                assertServerResponse("http://0.0.0.0:9000")
+            }
+        }
+
+        @Test
+        fun `should pick a random free port if default baseUrl port is already in use`() {
+            val portFromBaseUrl: (String) -> Int = { URI(it).port }
+
+            ServerSocket(9000, 1, InetAddress.getByName("0.0.0.0")).use {
+                HttpStub(
+                    features = featureWithServers().let(::listOf),
+                    baseUrl = null,
+                    specToStubBaseUrlMap = emptyMap()
+                ).use {
+                    assertThat(portFromBaseUrl(it.baseUrl.value)).isNotEqualTo(9000)
+                    assertThat(portFromBaseUrl(it.endPoint)).isNotEqualTo(9000)
+                    assertThat(portFromBaseUrl(it.specToBaseUrlMap["./api.yaml"]!!)).isNotEqualTo(9000)
+                    assertServerResponse(it.endPoint)
+                }
+            }
+        }
+
+        private fun featureWithServers(vararg servers: String): Feature {
+            return Feature(
+                name = "",
+                scenarios = Scenario(ScenarioInfo(
+                    scenarioName = "Simple GET",
+                    httpRequestPattern = HttpRequestPattern(httpPathPattern = HttpPathPattern.from("/simple"), method = "GET"),
+                    httpResponsePattern = HttpResponsePattern(status = 200, body = ExactValuePattern(StringValue("OK")))
+                )).let(::listOf),
+                servers = servers.toList(),
+                path = "./api.yaml"
+            )
+        }
+
+        private fun assertServerResponse(baseUrl: String) {
+            val client = HttpClient(baseUrl)
+            val response = client.execute(HttpRequest("GET", "/simple"))
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toStringLiteral()).isEqualTo("OK")
+        }
+    }
+
     private fun String.replaceFileSeparator(): String {
         return this.replace("/", File.separator)
     }

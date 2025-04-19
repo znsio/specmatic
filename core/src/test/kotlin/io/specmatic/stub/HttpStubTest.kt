@@ -4,6 +4,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
+import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
+import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.*
@@ -34,6 +36,8 @@ import org.springframework.web.client.getForEntity
 import org.springframework.web.client.postForEntity
 import java.io.File
 import java.net.ConnectException
+import java.net.InetAddress
+import java.net.ServerSocket
 import java.net.URI
 import java.nio.file.Paths
 import java.util.*
@@ -685,7 +689,7 @@ components:
 
         val credentials = "Basic " + Base64.getEncoder().encodeToString("user:password".toByteArray())
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, host = DEFAULT_HTTP_STUB_HOST, port = DEFAULT_HTTP_STUB_PORT).use { stub ->
             val request = HttpRequest(
                 "POST",
                 "/hello",
@@ -711,7 +715,7 @@ components:
             ScenarioStub.parse(file.readText())
         }
 
-        HttpStub(feature, examples).use { stub ->
+        HttpStub(feature, examples, host = DEFAULT_HTTP_STUB_HOST, port = DEFAULT_HTTP_STUB_PORT).use { stub ->
             val request = HttpRequest(
                 "GET",
                 "/hello/10",
@@ -1280,7 +1284,7 @@ paths:
 
             val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-            HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            HttpStub(listOf(feature), baseUrl = DEFAULT_STUB_BASE_URL, specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
                 val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
                 val response = stub.client.execute(request)
 
@@ -1342,7 +1346,7 @@ paths:
 
             val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-            HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            HttpStub(listOf(feature), baseUrl = DEFAULT_STUB_BASE_URL, specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
                 val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
                 val response = stub.client.execute(request)
 
@@ -1409,7 +1413,7 @@ paths:
 
             val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-            HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            HttpStub(listOf(feature), baseUrl = DEFAULT_STUB_BASE_URL, specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
                 val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
                 val response = stub.client.execute(request)
 
@@ -1471,7 +1475,7 @@ paths:
 
             val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-            HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            HttpStub(listOf(feature), baseUrl = DEFAULT_STUB_BASE_URL, specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
                 val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
                 val response = stub.client.execute(request)
 
@@ -1533,7 +1537,7 @@ paths:
 
             val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-            HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            HttpStub(listOf(feature), baseUrl = DEFAULT_STUB_BASE_URL, specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
                 val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
                 val response = stub.client.execute(request)
 
@@ -2419,7 +2423,7 @@ Then status 200
 
                 assertThrows<ConnectException> {
                     HttpClient(endPointFromHostAndPort(
-                        "localhost", Configuration.DEFAULT_HTTP_STUB_PORT.toInt(), null
+                        "localhost", Configuration.DEFAULT_HTTP_STUB_PORT, null
                     )).execute(request)
                 }
             }
@@ -2883,12 +2887,14 @@ Then status 200
                         every { specification } returns "spec1.yaml"
                         every { stubsFromExamples } returns emptyMap()
                         every { scenarios } returns emptyList()
+                        every { getPreferredServer() } returns null
                     },
                     mockk {
                         every { path } returns "spec2.yaml"
                         every { specification } returns "spec2.yaml"
                         every { stubsFromExamples } returns emptyMap()
                         every { scenarios } returns emptyList()
+                        every { getPreferredServer() } returns null
                     }
                 )
                 HttpStub(features = features).use { stub ->
@@ -2915,12 +2921,14 @@ Then status 200
                         every { specification } returns "spec1.yaml"
                         every { stubsFromExamples } returns emptyMap()
                         every { scenarios } returns emptyList()
+                        every { getPreferredServer() } returns null
                     },
                     mockk {
                         every { path } returns "spec2.yaml"
                         every { specification } returns "spec2.yaml"
                         every { stubsFromExamples } returns emptyMap()
                         every { scenarios } returns emptyList()
+                        every { getPreferredServer() } returns null
                     }
                 )
                 HttpStub(features = features).use { stub ->
@@ -2947,12 +2955,14 @@ Then status 200
                         every { specification } returns "spec3.yaml"
                         every { stubsFromExamples } returns emptyMap()
                         every { scenarios } returns emptyList()
+                        every { getPreferredServer() } returns null
                     },
                     mockk {
                         every { path } returns "spec4.yaml"
                         every { specification } returns "spec4.yaml"
                         every { stubsFromExamples } returns emptyMap()
                         every { scenarios } returns emptyList()
+                        every { getPreferredServer() } returns null
                     }
                 )
                 HttpStub(features = features).use { stub ->
@@ -2976,12 +2986,14 @@ Then status 200
                         every { specification } returns "spec3.yaml"
                         every { stubsFromExamples } returns emptyMap()
                         every { scenarios } returns emptyList()
+                        every { getPreferredServer() } returns null
                     },
                     mockk {
                         every { path } returns "spec4.yaml"
                         every { specification } returns "spec4.yaml"
                         every { stubsFromExamples } returns emptyMap()
                         every { scenarios } returns emptyList()
+                        every { getPreferredServer() } returns null
                     }
                 )
 
@@ -3025,12 +3037,14 @@ Then status 200
                     every { specification } returns "spec1.yaml"
                     every { stubsFromExamples } returns emptyMap()
                     every { scenarios } returns emptyList()
+                    every { getPreferredServer() } returns null
                 }
                 val feature2 = mockk<Feature> {
                     every { path } returns "spec2.yaml"
                     every { specification } returns "spec2.yaml"
                     every { stubsFromExamples } returns emptyMap()
                     every { scenarios } returns emptyList()
+                    every { getPreferredServer() } returns null
                 }
                 val features = listOf(feature1,feature2)
 
@@ -3057,12 +3071,14 @@ Then status 200
                     every { specification } returns "spec1.yaml"
                     every { stubsFromExamples } returns emptyMap()
                     every { scenarios } returns emptyList()
+                    every { getPreferredServer() } returns null
                 }
                 val feature2 = mockk<Feature> {
                     every { path } returns "spec2.yaml"
                     every { specification } returns "spec2.yaml"
                     every { stubsFromExamples } returns emptyMap()
                     every { scenarios } returns emptyList()
+                    every { getPreferredServer() } returns null
                 }
                 val features = listOf(feature1,feature2)
 

@@ -2,6 +2,8 @@ package integration_tests
 
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
+import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
+import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONArrayValue
@@ -237,7 +239,7 @@ security:
 
         val credentials = "Basic " + Base64.getEncoder().encodeToString("user:password".toByteArray())
 
-        HttpStub(feature).use {
+        HttpStub(feature, host = DEFAULT_HTTP_STUB_HOST, port = DEFAULT_HTTP_STUB_PORT).use {
             val response = it.client.execute(HttpRequest(
                 "POST",
                 "/hello",
@@ -305,7 +307,7 @@ components:
 
         val credentials = "Basic " + Base64.getEncoder().encodeToString("user:password".toByteArray())
 
-        HttpStub(feature).use {
+        HttpStub(feature, host = DEFAULT_HTTP_STUB_HOST, port = DEFAULT_HTTP_STUB_PORT).use {
             val response = it.client.execute(HttpRequest(
                 "POST",
                 "/hello",
@@ -364,7 +366,7 @@ paths:
          """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(feature).use {
+        HttpStub(feature, host = DEFAULT_HTTP_STUB_HOST, port = DEFAULT_HTTP_STUB_PORT).use {
             val response = it.client.execute(HttpRequest(
                 "POST",
                 "/hello",
@@ -426,7 +428,7 @@ security:
 
         val credentials = "Basic " + Base64.getEncoder().encodeToString("user:password".toByteArray())
 
-        HttpStub(feature).use {
+        HttpStub(feature, host = DEFAULT_HTTP_STUB_HOST, port = DEFAULT_HTTP_STUB_PORT).use {
             val response = it.client.execute(HttpRequest(
                 "GET",
                 "/hello",

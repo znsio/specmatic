@@ -7,6 +7,8 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.specmatic.core.*
+import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
+import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.log.CompositePrinter
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.LogStrategy
@@ -8526,7 +8528,7 @@ paths:
 
         val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
-        HttpStub(feature).use { stub ->
+        HttpStub(feature, host = DEFAULT_HTTP_STUB_HOST, port = DEFAULT_HTTP_STUB_PORT).use { stub ->
             stub.client.execute(HttpRequest("DELETE", "/items/123-to-be-deleted")).also { response ->
                 assertThat(response.status).isEqualTo(203)
                 assertThat(response.headers).doesNotContainEntry(SPECMATIC_TYPE_HEADER, "random")

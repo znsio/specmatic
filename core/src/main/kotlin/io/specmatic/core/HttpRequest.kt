@@ -68,9 +68,9 @@ data class HttpRequest(
     )
 
     fun trimBaseUrlPath(baseUrlPath: String): HttpRequest {
-        return this.copy(
-            path = this.path?.replaceFirst(baseUrlPath, "").orEmpty()
-        )
+        val prefix = baseUrlPath.removeSuffix("/")
+        val trimmed = this.path?.removePrefix(prefix).orEmpty()
+        return this.copy(path = trimmed.ifEmpty { "/" })
     }
 
     fun addHeaderIfMissing(name: String, value: String): HttpRequest {

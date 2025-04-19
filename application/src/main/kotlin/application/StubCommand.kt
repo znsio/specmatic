@@ -1,8 +1,6 @@
 package application
 
 import io.specmatic.core.*
-import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
-import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.ContractPathData.Companion.specToBaseUrlMap
@@ -12,8 +10,8 @@ import io.specmatic.core.utilities.exitIfAnyDoNotExist
 import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.stub.ContractStub
-import io.specmatic.stub.DEFAULT_STUB_BASE_URL
 import io.specmatic.stub.HttpClientFactory
+import io.specmatic.stub.HttpStub.Companion.resolveHostPort
 import io.specmatic.stub.endPointFromHostAndPort
 import picocli.CommandLine.*
 import java.io.File
@@ -41,21 +39,11 @@ class StubCommand(
     @Option(names = ["--data", "--examples"], description = ["Directories containing JSON examples"], required = false)
     var exampleDirs: List<String> = mutableListOf()
 
-    @Option(
-        names = ["--host"],
-        description = ["(DEPRECATED) Host for the http stub, Please use '--baseURL' instead"],
-        defaultValue = DEFAULT_HTTP_STUB_HOST,
-        hidden = true
-    )
-    lateinit var host: String
+    @Option(names = ["--host"], description = ["(DEPRECATED) Host for the http stub, Please use '--baseURL' instead"], hidden = true)
+    var host: String? = null
 
-    @Option(
-        names = ["--port"],
-        description = ["(DEPRECATED) Port for the http stub, Please use '--baseURL' instead"],
-        defaultValue = DEFAULT_HTTP_STUB_PORT,
-        hidden = true
-    )
-    var port: Int = 0
+    @Option(names = ["--port"], description = ["(DEPRECATED) Port for the http stub, Please use '--baseURL' instead"], hidden = true)
+    var port: Int? = null
 
     @Option(names = ["--baseUrl"], description = ["BaseURL for the http stub in the format 'scheme://host[:port][path]'"], required = false)
     var baseUrl: String? = null
@@ -195,17 +183,11 @@ class StubCommand(
         val workingDirectory = WorkingDirectory()
         if(strictMode) throwExceptionIfDirectoriesAreInvalid(exampleDirs, "example directories")
         val stubData = stubLoaderEngine.loadStubs(contractSources, exampleDirs, specmaticConfigPath, strictMode)
-
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
-        port = when (isDefaultPort(port)) {
-            true -> if (portIsInUse(host, port)) findRandomFreePort() else port
-            false -> port
-        }
-        val finalBaseUrl = baseUrl ?: endPointFromHostAndPort(host, port, keyData = certInfo.getHttpsCert())
 
         httpStub = httpStubEngine.runHTTPStub(
             stubs = stubData,
-            baseUrl = finalBaseUrl,
+            baseUrl = getResolvedBaseUrl(certInfo),
             certInfo = certInfo,
             strictMode = strictMode,
             passThroughTargetBase = passThroughTargetBase,
@@ -219,8 +201,10 @@ class StubCommand(
         LogTail.storeSnapshot()
     }
 
-    private fun isDefaultPort(port:Int): Boolean {
-        return DEFAULT_HTTP_STUB_PORT == port.toString()
+    private fun getResolvedBaseUrl(certInfo: CertInfo): String? {
+        if (baseUrl != null) return baseUrl
+        val (rHost, rPort) = resolveHostPort(host, port) ?: return null
+        return endPointFromHostAndPort(rHost, rPort, certInfo.getHttpsCert())
     }
 
     private fun restartServer() {

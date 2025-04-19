@@ -26,7 +26,7 @@ class VirtualServiceCommand  : Callable<Int> {
     @Option(names = ["--host"], description = ["Host for the virtual service"], defaultValue = DEFAULT_HTTP_STUB_HOST)
     lateinit var host: String
 
-    @Option(names = ["--port"], description = ["Port for the virtual service"], defaultValue = DEFAULT_HTTP_STUB_PORT)
+    @Option(names = ["--port"], description = ["Port for the virtual service"], defaultValue = DEFAULT_HTTP_STUB_PORT.toString())
     var port: Int = 0
 
     @Option(names = ["--examples"], description = ["Directories containing JSON examples"], required = false)

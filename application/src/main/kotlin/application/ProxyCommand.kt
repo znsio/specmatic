@@ -24,7 +24,7 @@ class ProxyCommand : Callable<Unit> {
     @Option(names = ["--host"], description = ["Host for the proxy"], defaultValue = DEFAULT_PROXY_HOST)
     lateinit var host: String
 
-    @Option(names = ["--port"], description = ["Port for the proxy"], defaultValue = DEFAULT_PROXY_PORT)
+    @Option(names = ["--port"], description = ["Port for the proxy"], defaultValue = DEFAULT_PROXY_PORT.toString())
     var port: Int = 9000
 
     @Parameters(description = ["Store data from the proxy interactions into this dir"], index = "0")

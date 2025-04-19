@@ -9,12 +9,11 @@ import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpClientFactory
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.contractInfoToHttpExpectations
-import io.specmatic.stub.endPointFromHostAndPort
 
 class HTTPStubEngine {
     fun runHTTPStub(
         stubs: List<Pair<Feature, List<ScenarioStub>>>,
-        baseUrl: String,
+        baseUrl: String?,
         certInfo: CertInfo,
         strictMode: Boolean,
         passThroughTargetBase: String = "",

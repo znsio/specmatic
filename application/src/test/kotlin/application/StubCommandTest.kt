@@ -206,8 +206,6 @@ internal class StubCommandTest {
                 )
             }.returns(stubInfo)
 
-            val host = "0.0.0.0"
-            val port = 9000
             val certInfo = CertInfo()
             val strictMode = false
             val passThroughTargetBase = "http://passthroughTargetBase"
@@ -215,7 +213,7 @@ internal class StubCommandTest {
             every {
                 httpStubEngine.runHTTPStub(
                     stubInfo,
-                    endPointFromHostAndPort(host, port, certInfo.getHttpsCert()),
+                    null,
                     certInfo,
                     strictMode,
                     passThroughTargetBase,
@@ -241,7 +239,7 @@ internal class StubCommandTest {
             verify(exactly = 1) {
                 httpStubEngine.runHTTPStub(
                     stubInfo,
-                    endPointFromHostAndPort(host, port, certInfo.getHttpsCert()),
+                    null,
                     certInfo,
                     strictMode,
                     any(),
@@ -258,7 +256,7 @@ internal class StubCommandTest {
 
     @ParameterizedTest
     @CsvSource(
-        "          ,      ,                      , http://0.0.0.0:9000",
+        "		   ,      ,                      , ",
         "localhost , 8080 ,                      , http://localhost:8080",
         "localhost ,      ,                      , http://localhost:9000",
         "          , 8080 ,                      , http://0.0.0.0:8080",
@@ -267,7 +265,7 @@ internal class StubCommandTest {
         "localhost ,      , https://0.0.0.0:3000 , https://0.0.0.0:3000",
         "          , 8080 , https://0.0.0.0:3000 , https://0.0.0.0:3000"
     )
-    fun `should prioritise baseURL over passed through port and host args`(host: String?, port: String?, baseURL: String?, expected: String) {
+    fun `should prioritise baseURL over passed through port and host args`(host: String?, port: String?, baseURL: String?, expected: String?) {
         every { stubLoaderEngine.loadStubs(any(), any(), any(), any()) } returns emptyList()
         every { watchMaker.make(any()) } returns watcher
         every { specmaticConfig.contractStubPaths() } returns emptyList()

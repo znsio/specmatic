@@ -37,6 +37,7 @@ import org.xml.sax.InputSource
 import java.io.File
 import java.io.StringReader
 import java.io.StringWriter
+import java.net.InetAddress
 import java.net.MalformedURLException
 import java.net.URISyntaxException
 import java.net.URL
@@ -421,6 +422,7 @@ enum class URIValidationResult(val message: String) {
     URIParsingError("Please specify a valid URL in 'scheme://host[:port][path]' format"),
     InvalidURLSchemeError("Please specify a valid scheme / protocol (http or https)"),
     MissingHostError("Please specify a valid host name"),
+    NotLoopBackOrWildcardHost("Host must be a loopBack or wildcard address"),
     InvalidPortError("Please specify a valid port number"),
     Success("This URL is valid");
 
@@ -432,7 +434,7 @@ enum class URIValidationResult(val message: String) {
     }
 }
 
-fun validateTestOrStubUri(uri: String): URIValidationResult {
+fun validateTestOrStubUri(uri: String, assertHostLoopBackOrAnyLocal: Boolean = false): URIValidationResult {
     val parsedURI = try {
         URL(uri).toURI()
     } catch (e: URISyntaxException) {
@@ -445,11 +447,15 @@ fun validateTestOrStubUri(uri: String): URIValidationResult {
 
     val validProtocols = listOf("http", "https")
     val validPorts = 1..65535
+    val isHostLoopBackOrAnyLocalAddress = runCatching {
+        InetAddress.getByName(parsedURI.host).let { it.isLoopbackAddress || it.isAnyLocalAddress }
+    }.getOrDefault(false)
 
     return when {
         !validProtocols.contains(parsedURI.scheme) -> URIValidationResult.InvalidURLSchemeError
         parsedURI.host.isNullOrBlank() -> URIValidationResult.MissingHostError
         parsedURI.port != -1 && !validPorts.contains(parsedURI.port) -> URIValidationResult.InvalidPortError
+        assertHostLoopBackOrAnyLocal && !isHostLoopBackOrAnyLocalAddress -> URIValidationResult.NotLoopBackOrWildcardHost
         else -> URIValidationResult.Success
     }
 }

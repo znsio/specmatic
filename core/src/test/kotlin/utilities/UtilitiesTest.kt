@@ -547,6 +547,29 @@ internal class UtilitiesTest {
         assertThat(result).isEqualTo(expectedResult)
     }
 
+    @ParameterizedTest
+    @MethodSource("validTestOrStubUrlsProvider")
+    fun `validateTestOrStubUri should return success for valid URLs`(url: String, expectedResult: URIValidationResult) {
+        val result = validateTestOrStubUri(url)
+        assertThat(result).isEqualTo(expectedResult)
+    }
+
+    @Test
+    fun `validateTestOrStubUri should fail when validating loopBack host and url is not a loopBack`() {
+        val nonLoopBackUris = setOf("http://www.example.com/api", "http://host.docker.internal:9000")
+        val loopBackOrWildCardUris = setOf("http://localhost/api", "http://1238.0.0.1:9000", "http://0.0.0.0:5000/api")
+
+        assertThat(nonLoopBackUris).allSatisfy {
+            val result = validateTestOrStubUri(it, assertHostLoopBackOrAnyLocal = true)
+            assertThat(result).isInstanceOf(URIValidationResult.NotLoopBackOrWildcardHost::class.java)
+        }
+
+        assertThat(loopBackOrWildCardUris).allSatisfy {
+            val result = validateTestOrStubUri(it, assertHostLoopBackOrAnyLocal = true)
+            assertThat(result).isInstanceOf(URIValidationResult.Success::class.java)
+        }
+    }
+
     private fun deleteGitIgnoreFile(){
         File(".gitignore").delete()
     }
@@ -579,6 +602,18 @@ internal class UtilitiesTest {
 
                 Arguments.of("/not_a_url", URIValidationResult.URIParsingError),
                 Arguments.of("", URIValidationResult.URIParsingError)
+            )
+        }
+
+        @JvmStatic
+        fun validTestOrStubUrlsProvider(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of("http://localhost:9000", URIValidationResult.Success),
+                Arguments.of("https://localhost:9000", URIValidationResult.Success),
+                Arguments.of("http://www.example.comn", URIValidationResult.Success),
+                Arguments.of("https://0.0.0.0:9000/api", URIValidationResult.Success),
+                Arguments.of("http://0.0.0.0:9000/api", URIValidationResult.Success),
+                Arguments.of("https://127.0.0.1/api", URIValidationResult.Success)
             )
         }
     }

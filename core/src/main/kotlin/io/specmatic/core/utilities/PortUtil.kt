@@ -1,4 +1,4 @@
-package application
+package io.specmatic.core.utilities
 
 import io.specmatic.core.log.logger
 import java.io.IOException
@@ -29,3 +29,8 @@ fun findRandomFreePort(): Int {
     throw RuntimeException("Could not find a free port")
 }
 
+fun findFreePort(host: String, preferredPort: Int): Int {
+    val preferredInUse = portIsInUse(host, preferredPort)
+    if (!preferredInUse) return preferredPort
+    return findRandomFreePort()
+}

@@ -4,6 +4,8 @@ import io.swagger.v3.oas.models.*
 import io.swagger.v3.oas.models.info.Info
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.security.SecurityScheme
+import io.swagger.v3.oas.models.servers.Server
+import io.swagger.v3.parser.OpenAPIV3Parser
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -95,5 +97,72 @@ class OpenApiSpecificationInfoTest {
         """.trimIndent()
 
         assertThat(openApiSpecificationInfo("testFilePath", openApi)).isEqualTo(expected)
+    }
+
+    @Test
+    fun `should instantiate feature with empty servers list if no servers are defines in oas`() {
+        val openApiSpec = """
+        openapi: 3.0.3
+        info:
+          title: Hello API
+          version: 1.0.0
+        paths:
+          /hello:
+            get:
+              responses:
+                '200':
+                  description: A successful response
+        """.trimIndent()
+        val openApiSpecification = OpenApiSpecification.fromYAML(openApiSpec, "")
+        val feature = openApiSpecification.toFeature()
+
+        assertThat(feature.servers).isEmpty()
+    }
+
+    @Test
+    fun `should extract servers from oas servers list into feature when not empty`() {
+        val openApiSpec = """
+        openapi: 3.0.3
+        info:
+          title: Hello API
+          version: 1.0.0
+        servers:
+          - url: http://localhost:8080
+          - url: http://www.example.com/api
+        paths:
+          /hello:
+            get:
+              responses:
+                '200':
+                  description: A successful response
+        """.trimIndent()
+        val openApiSpecification = OpenApiSpecification.fromYAML(openApiSpec, "")
+        val feature = openApiSpecification.toFeature()
+
+        assertThat(feature.servers).containsExactly(
+            "http://localhost:8080",
+            "http://www.example.com/api"
+        )
+    }
+
+    @Test
+    fun `should fail when swagger parser stops adding default server to servers list if its empty or null in oas`() {
+        val openApiSpec = """
+        openapi: 3.0.3
+        info:
+          title: Hello API
+          version: 1.0.0
+        paths:
+          /hello:
+            get:
+              responses:
+                '200':
+                  description: A successful response
+        """.trimIndent()
+        val openApi = OpenAPIV3Parser().readContents(openApiSpec)
+
+        assertThat(openApi.openAPI.servers).containsExactly(
+            Server().apply { url = "/" }
+        )
     }
 }

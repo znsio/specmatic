@@ -263,7 +263,12 @@ class OpenApiSpecification(
     }
 
     private fun extractServers(): List<String> {
-        return parsedOpenApi.servers.orEmpty().map { it.url }
+        val servers = parsedOpenApi.servers.orEmpty()
+        val isParserDefault = servers.size == 1 && with(servers.single()) {
+            description == null && variables == null && extensions == null && url == "/"
+        }
+
+        return servers.takeUnless { isParserDefault }?.map { it.url }.orEmpty()
     }
 
     override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {

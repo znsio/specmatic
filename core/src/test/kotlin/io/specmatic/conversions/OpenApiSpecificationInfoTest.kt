@@ -1,11 +1,17 @@
 package io.specmatic.conversions
 
+import io.specmatic.core.value.BooleanValue
+import io.specmatic.core.value.NullValue
+import io.specmatic.core.value.NumberValue
+import io.specmatic.core.value.StringValue
 import io.swagger.v3.oas.models.*
 import io.swagger.v3.oas.models.info.Info
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.security.SecurityScheme
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
 
 class OpenApiSpecificationInfoTest {
     @Test
@@ -95,5 +101,31 @@ class OpenApiSpecificationInfoTest {
         """.trimIndent()
 
         assertThat(openApiSpecificationInfo("testFilePath", openApi)).isEqualTo(expected)
+    }
+
+    @Test
+    fun `should be able to load dictionary in yaml format`(@TempDir tempDir: File) {
+        val apiFile = tempDir.resolve("api.yaml")
+        val yamlDictionary = """
+        Schema.stringKey: stringValue
+        Schema.numberKey: 123
+        Schema.booleanKey: true
+        Schema.nullKey: null
+        Schema.nested.key: value
+        Schema.array[*]: value
+        Schema.array[0].key: value
+        """.trimIndent()
+        tempDir.resolve("api_dictionary.yaml").writeText(yamlDictionary)
+        val dictionary = OpenApiSpecification.loadDictionary(apiFile.canonicalPath, null)
+
+        assertThat(dictionary).containsExactlyInAnyOrderEntriesOf(mapOf(
+            "Schema.stringKey" to StringValue("stringValue"),
+            "Schema.numberKey" to NumberValue(123),
+            "Schema.booleanKey" to BooleanValue(true),
+            "Schema.nullKey" to NullValue,
+            "Schema.nested.key" to StringValue("value"),
+            "Schema.array[*]" to StringValue("value"),
+            "Schema.array[0].key" to StringValue("value"),
+        ))
     }
 }

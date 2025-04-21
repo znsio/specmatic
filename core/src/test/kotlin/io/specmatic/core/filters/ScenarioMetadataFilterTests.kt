@@ -15,7 +15,8 @@ class ScenarioMetadataFilterTests {
         path: String = "/default",
         statusCode: Int = 200,
         header: Set<String> = emptySet(),
-        query: Set<String> = emptySet()
+        query: Set<String> = emptySet(),
+        exampleName: String = ""
     ): ScenarioMetadata {
         return ScenarioMetadata(
             method = method,
@@ -23,7 +24,7 @@ class ScenarioMetadataFilterTests {
             statusCode = statusCode,
             header = header,
             query = query,
-            exampleName = "example"
+            exampleName = exampleName
         )
     }
 
@@ -558,5 +559,12 @@ class ScenarioMetadataFilterTests {
 
         val methods = filteredItems.map { it.toScenarioMetadata().method }.distinct()
         assertThat(methods).containsOnly("GET")
+    }
+
+    @Test
+    fun `filter by example`() {
+        val exampleName = createScenarioMetadata(exampleName = "SCOOBY_200_OK")
+        val filter = ScenarioMetadataFilter.from("EXAMPLE='SCOOBY_200_OK'")
+        assertTrue(filter.isSatisfiedBy(exampleName))
     }
 }

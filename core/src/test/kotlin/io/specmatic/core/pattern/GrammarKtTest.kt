@@ -1,16 +1,11 @@
 package io.specmatic.core.pattern
 
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.toXMLNode
+import io.specmatic.core.utilities.valueToYamlString
+import io.specmatic.core.value.*
 import org.apache.commons.io.ByteOrderMark
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertDoesNotThrow
-import org.junit.jupiter.api.fail
+import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.nio.charset.Charset
@@ -142,5 +137,85 @@ internal class GrammarKtTest {
     fun `email pattern should be recognized as a built-in pattern`() {
         val pattern = getBuiltInPattern("(email)")
         assertThat(pattern).isInstanceOf(EmailPattern::class.java)
+    }
+
+    @Test
+    fun `should be able to read yaml content and convert to value`() {
+        val yaml = """
+        name: John Doe
+        age: 30
+        isEligible: true
+        address:
+          street: 123 Main St
+          city: Anytown
+        aliases:
+        - John
+        - 123
+        - false
+        """.trimIndent()
+        val value = readValue(yaml)
+
+        assertThat(value).isInstanceOf(JSONObjectValue::class.java)
+        assertThat(value.toStringLiteral()).isEqualToNormalizingWhitespace("""{
+        "name": "John Doe",
+        "age": 30,
+        "isEligible": true,
+        "address": {
+            "street": "123 Main St",
+            "city": "Anytown"
+        },
+        "aliases": [
+            "John",
+            123,
+            false
+        ]
+        }""".trimIndent())
+    }
+
+    @Test
+    fun `readValue should also be able to read json content`() {
+        val json = """
+        {
+            "name": "John Doe",
+            "age": 30,
+            "isEligible": true,
+            "address": {
+                "street": "123 Main St",
+                "city": "Anytown"
+            },
+            "aliases": [
+                "John",
+                123,
+                false
+            ]
+        }
+        """.trimIndent()
+        val value = readValue(json)
+        val equivalentYaml = valueToYamlString(value)
+
+        assertThat(value).isInstanceOf(JSONObjectValue::class.java)
+        assertThat(equivalentYaml).isEqualToNormalizingWhitespace("""
+        name: John Doe
+        age: 30
+        isEligible: true
+        address:
+          street: 123 Main St
+          city: Anytown
+        aliases:
+        - John
+        - 123
+        - false
+        """.trimIndent())
+    }
+
+    @Test
+    fun `readValue as should throw an exception when expected value does not match parsed value`() {
+        val yaml = """
+        - item1
+        - item2
+        """.trimIndent()
+        val exception = assertThrows<ClassCastException> { readValueAs<JSONObjectValue>(yaml) }
+
+        assertThat(exception.message).isEqualTo("Expected JSONObjectValue but got JSONArrayValue")
     }
 }

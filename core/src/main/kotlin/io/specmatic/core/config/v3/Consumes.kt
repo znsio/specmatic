@@ -26,7 +26,7 @@ sealed class Consumes {
                 null,
                 host ?: this.host,
                 port ?: this.port,
-                path ?: this.path,
+                path,
                 this.query,
                 this.fragment
             )

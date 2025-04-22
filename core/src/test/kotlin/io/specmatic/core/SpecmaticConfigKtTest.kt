@@ -7,6 +7,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import io.specmatic.core.config.v3.Consumes
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.specmatic.core.config.v2.ContractConfig
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
@@ -21,8 +22,11 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
+import java.util.stream.Stream
 
 internal class SpecmaticConfigKtTest {
 
@@ -367,6 +371,17 @@ internal class SpecmaticConfigKtTest {
                 )
             )
         }
+
+        @ParameterizedTest
+        @MethodSource("io.specmatic.core.SpecmaticConfigKtTest#consumesProvider")
+        fun `should return a complete baseUrl when accessing value of a consumes object`(consumes: Consumes.ObjectValue, defaultBaseUrl: String?, expectedValue: String) {
+            try {
+                defaultBaseUrl?.let { System.setProperty(Flags.SPECMATIC_BASE_URL, it) }
+                assertThat(consumes.value).isEqualTo(expectedValue)
+            } finally {
+                System.clearProperty(Flags.SPECMATIC_BASE_URL)
+            }
+        }
     }
 
     @Nested
@@ -425,6 +440,35 @@ internal class SpecmaticConfigKtTest {
             assertThat(exception.originalMessage).isEqualToNormalizingWhitespace("""
             Missing `specs` array or `specs` is empty
             """.trimIndent())
+        }
+    }
+
+    companion object {
+
+        @JvmStatic
+        fun consumesProvider(): Stream<Arguments> {
+            val withDefaultBaseUrls = listOf(
+                Consumes.ObjectValue.BaseUrl("http://localhost:3000", specs = emptyList()) to "http://localhost:3000",
+                Consumes.ObjectValue.Host("127.0.0.1", specs = emptyList()) to "http://127.0.0.1:9000",
+                Consumes.ObjectValue.Port(3000, specs = emptyList()) to "http://0.0.0.0:3000",
+                Consumes.ObjectValue.BasePath("/api/v2", specs = emptyList()) to "http://0.0.0.0:9000/api/v2"
+            ).map { Arguments.of(it.first, null, it.second) }
+
+            val withCustomBaseUrlCases = listOf(
+                Consumes.ObjectValue.BaseUrl("http://localhost:3000", specs = emptyList()) to "http://localhost:3000",
+                Consumes.ObjectValue.Host("127.0.0.1", specs = emptyList()) to "https://127.0.0.1:5000",
+                Consumes.ObjectValue.Port(3000, specs = emptyList()) to "https://localhost:3000",
+                Consumes.ObjectValue.BasePath("/api/v2", specs = emptyList()) to "https://localhost:5000/api/v2"
+            ).map { Arguments.of(it.first, "https://localhost:5000", it.second) }
+
+            val baseUrlWithBasePath = listOf(
+                Consumes.ObjectValue.BaseUrl("http://localhost:3000", specs = emptyList()) to "http://localhost:3000",
+                Consumes.ObjectValue.Host("127.0.0.1", specs = emptyList()) to "http://127.0.0.1:8080",
+                Consumes.ObjectValue.Port(3000, specs = emptyList()) to "http://localhost:3000",
+                Consumes.ObjectValue.BasePath("/api/v2", specs = emptyList()) to "http://localhost:8080/api/v2"
+            ).map { Arguments.of(it.first, "http://localhost:8080/api", it.second) }
+
+            return withDefaultBaseUrls.plus(withCustomBaseUrlCases).plus(baseUrlWithBasePath).stream()
         }
     }
 }

@@ -1,5 +1,8 @@
 package application
 
+import application.example.ExamplesToValidate
+import application.example.ExamplesToValidateConverter
+import application.example.ValidateCommandOptions
 import io.specmatic.core.lifecycle.AfterLoadingStaticExamples
 import io.specmatic.core.lifecycle.LifecycleHooks
 import io.specmatic.core.log.logger
@@ -79,9 +82,7 @@ paths:
         val exampleFile = examplesDir.resolve("example.json")
         exampleFile.writeText(example)
 
-        val command = ExamplesCommand.Validate().also {
-            it.contractFile = specFile
-        }
+        val command = ExamplesCommand.Validate(ValidateCommandOptions().withUpdated(specFile))
 
         val (output, returnValue: Int) = captureStandardOutput {
             command.call()
@@ -156,9 +157,7 @@ paths:
         val exampleFile = examplesDir.resolve("example.json")
         exampleFile.writeText(example)
 
-        val command = ExamplesCommand.Validate().also {
-            it.contractFile = specFile
-        }
+        val command = ExamplesCommand.Validate(ValidateCommandOptions().withUpdated(specFile))
 
         val (output, returnValue: Int) = captureStandardOutput {
             command.call()
@@ -233,9 +232,7 @@ paths:
         val exampleFile = examplesDir.resolve("example.json")
         exampleFile.writeText(example)
 
-        val command = ExamplesCommand.Validate().also {
-            it.contractFile = specFile
-        }
+        val command = ExamplesCommand.Validate(ValidateCommandOptions().withUpdated(specFile))
 
         val (output, returnValue: Int) = captureStandardOutput {
             command.call()
@@ -253,7 +250,7 @@ paths:
 
         @Test
         fun `should validate both inline and external examples by default`() {
-            val command = ExamplesCommand.Validate().also { it.contractFile = specFile }
+            val command = ExamplesCommand.Validate(ValidateCommandOptions().withUpdated(specFile))
             val (stdOut, exitCode) = captureStandardOutput { command.call() }
             println(stdOut)
 
@@ -272,10 +269,9 @@ paths:
 
         @Test
         fun `should validate inline only when the examplesToValidate flag is set to inline`() {
-            val command = ExamplesCommand.Validate().also {
-                it.contractFile = specFile
-                it.examplesToValidate = ExamplesCommand.Validate.ExamplesToValidate.INLINE
-            }
+            val command = ExamplesCommand.Validate(
+                ValidateCommandOptions().withUpdated(specFile).withUpdated(ExamplesToValidate.INLINE)
+            )
             val (stdOut, exitCode) = captureStandardOutput { command.call() }
             println(stdOut)
 
@@ -292,10 +288,9 @@ paths:
 
         @Test
         fun `should validate external only when the examplesToValidate flag is set to external`() {
-            val command = ExamplesCommand.Validate().also {
-                it.contractFile = specFile
-                it.examplesToValidate = ExamplesCommand.Validate.ExamplesToValidate.EXTERNAL
-            }
+            val command = ExamplesCommand.Validate(
+                ValidateCommandOptions().withUpdated(specFile).withUpdated(ExamplesToValidate.EXTERNAL)
+            )
             val (stdOut, exitCode) = captureStandardOutput { command.call() }
             println(stdOut)
 
@@ -321,7 +316,7 @@ paths:
         ) {
             val cases = listOf(lowerCase, upperCase, titleCase)
             assertThat(cases).allSatisfy {
-                val examplesToValidate = ExamplesCommand.Validate.ExamplesToValidateConverter().convert(it)
+                val examplesToValidate = ExamplesToValidateConverter().convert(it)
                 println("$it -> $examplesToValidate")
                 assertThat(examplesToValidate.name).isEqualTo(expected)
             }
@@ -332,10 +327,9 @@ paths:
             val copiedSpecFile = specFile.copyTo(tempDir.resolve("spec.yaml"))
             val examplesDir = tempDir.resolve("spec_examples").also { it.mkdirs() }
 
-            val command = ExamplesCommand.Validate().also {
-                it.contractFile = copiedSpecFile
-                it.examplesToValidate = ExamplesCommand.Validate.ExamplesToValidate.EXTERNAL
-            }
+            val command = ExamplesCommand.Validate(
+                ValidateCommandOptions().withUpdated(copiedSpecFile).withUpdated(ExamplesToValidate.EXTERNAL)
+            )
             val (stdOut, exitCode) = captureStandardOutput { command.call() }
             println(stdOut)
 
@@ -405,10 +399,10 @@ paths:
         @Test
         fun `should call the life cycle hook for validate if both spec file and examples dir is provided`() {
             val (stdOut, exitCode) = captureStandardOutput {
-                val non_implicit_examples_dir = "src/test/resources/examples/only_examples/persons/persons_examples"
+                val nonImplicitExamplesDir = "src/test/resources/examples/only_examples/persons/persons_examples"
                 cli.execute(
                     "--spec-file", "src/test/resources/examples/only_specs/persons/persons.yaml",
-                    "--examples-dir", non_implicit_examples_dir
+                    "--examples-dir", nonImplicitExamplesDir
                 )
             }
 

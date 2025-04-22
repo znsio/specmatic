@@ -1,7 +1,8 @@
 package application
 
+import application.example.ExamplesToValidate
+import application.example.ValidateCommandOptions
 import io.specmatic.core.*
-import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.examples.module.ExampleModule
 import io.specmatic.core.examples.module.ExampleValidationModule
 import io.specmatic.core.examples.server.ScenarioFilter
@@ -40,93 +41,19 @@ class ExamplesCommand : Callable<Int> {
         mixinStandardHelpOptions = true,
         description = ["Validate the examples"]
     )
-    class Validate : Callable<Int> {
-        @Option(
-            names= ["--filter"],
-            description = [
-                """
-Filter tests matching the specified filtering criteria
-
-You can filter tests based on the following keys:
-- `METHOD`: HTTP methods (e.g., GET, POST)
-- `PATH`: Request paths (e.g., /users, /product)
-- `STATUS`: HTTP response status codes (e.g., 200, 400)
-- `HEADERS`: Request headers (e.g., Accept, X-Request-ID)
-- `QUERY-PARAM`: Query parameters (e.g., status, productId)
-- `EXAMPLE-NAME`: Example name (e.g., create-product, active-status)
-
-To specify multiple values for the same filter, separate them with commas. 
-For example, to filter by HTTP methods: 
---filter="METHOD=GET,POST"
-           """
-            ],
-            required = false
-        )
-        var filter: String = ""
-
-        @Option(names = ["--contract-file", "--spec-file"], description = ["Contract file path"], required = false)
-        var contractFile: File? = null
-
-        @Option(names = ["--example-file"], description = ["Example file path"], required = false)
-        val exampleFile: File? = null
-
-        @Option(names = ["--examples-dir"], description = ["External examples directory path for a single API specification (If you are not following the default naming convention for external examples directory)"], required = false)
-        val examplesDir: File? = null
-
-        @Option(names = ["--specs-dir"], description = ["Directory with the API specification files"], required = false)
-        val specsDir: File? = null
-
-        @Option(
-            names = ["--examples-base-dir"],
-            description = ["Base directory which contains multiple external examples directories each named as per the Specmatic naming convention to associate them with the corresponding API specification"],
-            required = false
-        )
-        val examplesBaseDir: File? = null
-
-        @Option(names = ["--debug"], description = ["Debug logs"])
-        var verbose = false
-
-        @Option(
-            names = ["--filter-name"],
-            description = ["Validate examples of only APIs with this value in their name"],
-            defaultValue = "\${env:SPECMATIC_FILTER_NAME}",
-            hidden = true
-        )
-        var filterName: String = ""
-
-        @Option(
-            names = ["--filter-not-name"],
-            description = ["Validate examples of only APIs which do not have this value in their name"],
-            defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}",
-            hidden = true
-        )
-        var filterNotName: String = ""
-
-        @Option(
-            names = ["--examples-to-validate"],
-            description = ["Whether to validate inline, external, or both examples. Options: INLINE, EXTERNAL, BOTH"],
-            converter = [ExamplesToValidateConverter::class],
-            defaultValue = "BOTH"
-        )
-        var examplesToValidate: ExamplesToValidate = ExamplesToValidate.BOTH
-
-        enum class ExamplesToValidate { INLINE, EXTERNAL, BOTH }
-        class ExamplesToValidateConverter : ITypeConverter<ExamplesToValidate> {
-            override fun convert(value: String): ExamplesToValidate {
-                return ExamplesToValidate.entries.firstOrNull { it.name.equals(value, ignoreCase = true) }
-                    ?: throw IllegalArgumentException("Invalid value: $value. Expected one of: ${ExamplesToValidate.entries.joinToString(", ")}")
-            }
-        }
+    class Validate(validateCommandOptions: ValidateCommandOptions = ValidateCommandOptions()) : Callable<Int> {
+        @Mixin
+        var options = validateCommandOptions
 
         private val exampleValidationModule = ExampleValidationModule()
 
         override fun call(): Int {
-            configureLogger(this.verbose)
+            configureLogger(options.verbose)
 
-            if (contractFile != null && exampleFile != null) return validateExampleFile(contractFile!!, exampleFile)
+            if (options.contractFile != null && options.exampleFile != null) return validateExampleFile(options.contractFile!!, options.exampleFile!!)
 
-            if (contractFile != null && examplesDir != null) {
-                val (exitCode, validationResults) = validateExamplesDir(contractFile!!, examplesDir)
+            if (options.contractFile != null && options.examplesDir != null) {
+                val (exitCode, validationResults) = validateExamplesDir(options.contractFile!!, options.examplesDir!!)
 
                 printValidationResult(validationResults, "Example directory")
                 if (exitCode == 1) return FAILURE_EXIT_CODE
@@ -134,17 +61,17 @@ For example, to filter by HTTP methods:
                 return SUCCESS_EXIT_CODE
             }
 
-            if (contractFile != null) return validateImplicitExamplesFrom(contractFile!!)
+            if (options.contractFile != null) return validateImplicitExamplesFrom(options.contractFile!!)
 
-            if (specsDir != null && examplesBaseDir != null) {
-                logger.log("- Validating associated examples in the directory: ${examplesBaseDir.path}")
+            if (options.specsDir != null && options.examplesBaseDir != null) {
+                logger.log("- Validating associated examples in the directory: ${options.examplesBaseDir!!.path}")
                 logger.newLine()
-                val externalExampleValidationResults = validateAllExamplesAssociatedToEachSpecIn(specsDir, examplesBaseDir)
+                val externalExampleValidationResults = validateAllExamplesAssociatedToEachSpecIn(options.specsDir!!, options.examplesBaseDir!!)
 
                 logger.newLine()
-                logger.log("- Validating associated examples in the directory: ${specsDir.path}")
+                logger.log("- Validating associated examples in the directory: ${options.specsDir!!.path}")
                 logger.newLine()
-                val implicitExampleValidationResults = validateAllExamplesAssociatedToEachSpecIn(specsDir, specsDir)
+                val implicitExampleValidationResults = validateAllExamplesAssociatedToEachSpecIn(options.specsDir!!, options.specsDir!!)
 
                 logger.newLine()
                 val summaryTitle = "- Validation summary across all example directories:"
@@ -161,8 +88,8 @@ For example, to filter by HTTP methods:
                 return SUCCESS_EXIT_CODE
             }
 
-            if (specsDir != null) {
-                return validateAllExamplesAssociatedToEachSpecIn(specsDir, specsDir).exitCode()
+            if (options.specsDir != null) {
+                return validateAllExamplesAssociatedToEachSpecIn(options.specsDir!!, options.specsDir!!).exitCode()
             }
 
             logger.log("Invalid combination of CLI options. Please refer to the help section using --help command to understand how to use this command")
@@ -270,7 +197,7 @@ For example, to filter by HTTP methods:
                         ScenarioStub(request, response)
                     }
                 },
-                scenarioFilter = ScenarioFilter(filterName, filterNotName, filter)
+                scenarioFilter = ScenarioFilter(options.filterName, options.filterNotName, options.filter)
             )
         }
 
@@ -278,12 +205,12 @@ For example, to filter by HTTP methods:
             return exampleValidationModule.validateExamples(
                 feature,
                 examples = externalExamples,
-                scenarioFilter = ScenarioFilter(filterName, filterNotName, filter)
+                scenarioFilter = ScenarioFilter(options.filterName, options.filterNotName, options.filter)
             )
         }
 
         private fun getValidateInlineAndValidateExternalFlags(): Pair<Boolean, Boolean> {
-            return when(examplesToValidate) {
+            return when(options.examplesToValidate) {
                 ExamplesToValidate.BOTH -> true to true
                 ExamplesToValidate.INLINE -> true to false
                 ExamplesToValidate.EXTERNAL -> false to true

@@ -1,6 +1,5 @@
 package io.specmatic.core
 
-import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.*
 import io.specmatic.test.ExampleProcessor
@@ -202,23 +201,23 @@ data class Resolver(
     }
 
     fun generate(pattern: Pattern): Value {
-        val value = dictionary[dictionaryLookupPath] ?: defaultPatternValueFromDictionary(pattern) ?: return pattern.generate(this)
+        val value = getDictionaryValue(dictionaryLookupPath, pattern) ?: return pattern.generate(this)
 
-        val dictionaryValueMatchResult = pattern.matches(value, this)
-        if (dictionaryValueMatchResult is Result.Failure && isNegative) return pattern.generate(this)
-        dictionaryValueMatchResult.throwOnFailure()
-
-        return value
+        return value.realise(
+            hasValue = { dictValue, _ -> dictValue },
+            orFailure = { hasF -> throw ContractException(hasF.toFailure().toFailureReport()) },
+            orException = { hasE -> throw ContractException(hasE.toHasFailure().toFailure().toFailureReport()) }
+        )
     }
 
     private fun defaultPatternValueFromDictionary(pattern: Pattern): Value? {
         val defaultPatternValue = dictionary[withPatternDelimiters(pattern.typeName)]
+        val valueToMatch = when {
+            defaultPatternValue !is ListValue || pattern is SequenceType -> defaultPatternValue
+            else -> defaultPatternValue.list.randomOrNull() ?: return null
+        }
 
-        return pattern
-            .matches(defaultPatternValue, this)
-            .onSuccessElseNull {
-                defaultPatternValue
-            }
+        return pattern.matches(valueToMatch, this).onSuccessElseNull { valueToMatch }
     }
 
     fun generate(typeAlias: String?, rawLookupKey: String, pattern: Pattern): Value {
@@ -293,27 +292,24 @@ data class Resolver(
         return false
     }
 
-    fun generateList(pattern: Pattern): Value {
-        val lookupKey = dictionaryLookupPath.trim() + "[*]"
+    fun generateList(pattern: ListPattern): Value {
+        val indexLookupKey = dictionaryLookupPath.trim() + "[*]"
 
-        val value = dictionary[lookupKey] ?: return this.copy(dictionaryLookupPath = lookupKey).generateRandomList(pattern)
+        getDictionaryValue(dictionaryLookupPath, pattern)?.let {
+            return when (it) {
+                is ReturnFailure -> throw ContractException(it.toFailure().toFailureReport())
+                else -> it.value
+            }
+        }
 
-        val matchResult = pattern.matches(value, this)
+        getDictionaryValue(indexLookupKey, pattern.pattern)?.let {
+            return when (it) {
+                is ReturnFailure -> throw ContractException(it.toFailure().toFailureReport())
+                else -> it.value.let(::listOf).let(::JSONArrayValue)
+            }
+        }
 
-        if(matchResult.isSuccess())
-            return JSONArrayValue(listOf(value))
-
-        val errorReport = """
->> $lookupKey
-
-Dictionary value did not match the spec
-
-${matchResult.reportString()}
-        """.trimIndent()
-
-        logger.log(errorReport)
-
-        return generateRandomList(pattern)
+        return copy(dictionaryLookupPath = indexLookupKey).generateRandomList(pattern.pattern)
     }
 
     private fun generateRandomList(pattern: Pattern): Value {
@@ -443,6 +439,20 @@ ${matchResult.reportString()}
 
     fun getPartialKeyCheck(): KeyCheck {
         return findKeyErrorCheck.toPartialKeyCheck()
+    }
+
+    private fun getDictionaryValue(lookupKey: String, pattern: Pattern): ReturnValue<Value>? {
+        val dictionaryValue = dictionary[lookupKey] ?: defaultPatternValueFromDictionary(pattern) ?: return null
+        val valueToMatch = when {
+            dictionaryValue !is ListValue || pattern is SequenceType -> dictionaryValue
+            else -> dictionaryValue.list.randomOrNull() ?: return null
+        }
+
+        return runCatching {
+            val result = pattern.matches(valueToMatch, this)
+            if (result is Result.Failure && this.isNegative) return@runCatching null
+            result.toReturnValue(valueToMatch, "Invalid Dictionary value at \"$lookupKey\"")
+        }.getOrElse(::HasException)
     }
 }
 

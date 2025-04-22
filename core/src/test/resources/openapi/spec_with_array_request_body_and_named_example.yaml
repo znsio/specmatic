@@ -1,0 +1,51 @@
+openapi: 3.0.3
+info:
+  title: Array Example API
+  version: 1.0.0
+
+paths:
+  /items:
+    post:
+      summary: Create multiple items
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  quantity:
+                    type: integer
+                required:
+                  - name
+                  - quantity
+            examples:
+              sampleItems:
+                summary: A list of sample items
+                value:
+                  - name: "Apple"
+                    quantity: 10
+                  - name: "Banana"
+                    quantity: 5
+      responses:
+        '201':
+          description: Items created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  createdCount:
+                    type: integer
+              examples:
+                sampleItems:
+                  summary: Successful creation response
+                  value:
+                    status: "success"
+                    createdCount: 2

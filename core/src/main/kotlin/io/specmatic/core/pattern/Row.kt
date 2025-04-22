@@ -113,7 +113,7 @@ data class Row(
 
     private fun withNoJSONObjectExample() = this.copy(requestBodyJSONExample = null)
 
-    fun dropDownIntoList(): Row {
+    fun stepDownIntoList(): Row {
         if(requestBodyJSONExample == null)
             return this
 

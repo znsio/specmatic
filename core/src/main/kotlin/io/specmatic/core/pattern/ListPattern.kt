@@ -4,6 +4,8 @@ import io.specmatic.core.*
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.*
 
+const val LIST_BREAD_CRUMB = "[]"
+
 data class ListPattern(
     override val pattern: Pattern,
     override val typeAlias: String? = null,
@@ -136,9 +138,9 @@ data class ListPattern(
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
-        return attempt(breadCrumb = "[]") {
+        return attempt(breadCrumb = LIST_BREAD_CRUMB) {
             resolverWithEmptyType.withCyclePrevention(pattern, true) { cyclePreventedResolver ->
-                val patterns = pattern.newBasedOn(row.dropDownIntoList(), cyclePreventedResolver)
+                val patterns = pattern.newBasedOn(row.stepDownIntoList(), cyclePreventedResolver)
                 try {
                     patterns.firstOrNull()?.value
                     patterns.map {
@@ -156,7 +158,7 @@ data class ListPattern(
 
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
-        return attempt(breadCrumb = "[]") {
+        return attempt(breadCrumb = LIST_BREAD_CRUMB) {
             resolverWithEmptyType.withCyclePrevention(pattern) { cyclePreventedResolver ->
                 pattern.newBasedOn(cyclePreventedResolver).map { ListPattern(it) }
             }
@@ -168,12 +170,12 @@ data class ListPattern(
         resolver: Resolver,
         config: NegativePatternConfiguration
     ): Sequence<ReturnValue<Pattern>> {
-        return attempt(breadCrumb = "[]") {
-            pattern.negativeBasedOn(row, resolver, config)
+        return attempt(breadCrumb = LIST_BREAD_CRUMB) {
+            pattern.negativeBasedOn(row.stepDownIntoList(), resolver, config)
                 .map { negativePatternValue ->
                     negativePatternValue.ifValue { pattern ->
                         ListPattern(pattern) as Pattern
-                    }.breadCrumb("[]")
+                    }.breadCrumb(LIST_BREAD_CRUMB)
                 }
         }
     }

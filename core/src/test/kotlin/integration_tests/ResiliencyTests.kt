@@ -2298,6 +2298,40 @@ class GenerativeTests {
     }
 
     @Test
+    fun `should generate negative tests for a specification where the request body is an array and there exists a named example for the same`() {
+        val feature = OpenApiSpecification.fromFile(
+            "src/test/resources/openapi/spec_with_array_request_body_and_named_example.yaml"
+        ).toFeature().enableGenerativeTesting()
+
+        val testDescriptions: MutableList<String> = mutableListOf()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                println(scenario.testDescription())
+                println(request.toLogString())
+
+                testDescriptions.add(scenario.descriptionFromPlugin.orEmpty())
+            }
+        })
+
+        assertThat(results.testCount).isPositive()
+
+        assertThat(testDescriptions.sorted().distinct()).containsExactlyInAnyOrder(
+            "POST /items -> 201",
+            "POST /items -> 4xx [REQUEST.BODY.[].name string mutated to boolean]",
+            "POST /items -> 4xx [REQUEST.BODY.[].name string mutated to null]",
+            "POST /items -> 4xx [REQUEST.BODY.[].name string mutated to number]",
+            "POST /items -> 4xx [REQUEST.BODY.[].quantity number mutated to boolean]",
+            "POST /items -> 4xx [REQUEST.BODY.[].quantity number mutated to null]",
+            "POST /items -> 4xx [REQUEST.BODY.[].quantity number mutated to string]"
+        )
+    }
+
+    @Test
     fun `no tests should have any prefix when generative tests are NOT switched on`() {
         val feature = OpenApiSpecification.fromYAML(
             """

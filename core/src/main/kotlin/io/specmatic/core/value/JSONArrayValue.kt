@@ -21,7 +21,7 @@ data class JSONArrayValue(override val list: List<Value>) : Value, ListValue, JS
     }
 
     private fun typeDeclaration(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations, typeDeclarationsStoreCall: TypeDeclarationsCallType): Pair<TypeDeclaration, ExampleDeclarations> = when {
-        list.isEmpty() -> Pair(TypeDeclaration("[]", types), exampleDeclarations)
+        list.isEmpty() -> Pair(TypeDeclaration(LIST_BREAD_CRUMB, types), exampleDeclarations)
         else -> {
             val declarations = list.map {
                 val (typeDeclaration, newExamples) = typeDeclarationsStoreCall(it, key, types, exampleDeclarations)

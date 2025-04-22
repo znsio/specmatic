@@ -1,9 +1,12 @@
 package io.specmatic.core
 
+import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.module.kotlin.readValue
 import io.specmatic.core.config.v3.Consumes
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import io.specmatic.core.config.v2.ContractConfig
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
@@ -16,6 +19,7 @@ import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
@@ -263,7 +267,7 @@ internal class SpecmaticConfigKtTest {
     }
 
     @Nested
-    inner class StubBaseUrlConfigTests {
+    inner class StubConfigTests {
         @Test
         fun `should return all stub baseUrls from sources`() {
             val source1 = Source(
@@ -362,6 +366,65 @@ internal class SpecmaticConfigKtTest {
                     "9002_second.yaml"
                 )
             )
+        }
+    }
+
+    @Nested
+    inner class StubSerializeAndDeSerializeTests {
+
+        private val mapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
+
+        @ParameterizedTest
+        @CsvSource(
+            "./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2_stub.json",
+            "./src/test/resources/specmaticConfigFiles/v2/specmatic_config_v2_stub.yaml"
+        )
+        fun `should be able to deserialize stub consumes config with simple and object value`(specmaticConfigFilePath: String) {
+            val specmaticConfig = loadSpecmaticConfig(specmaticConfigFilePath)
+            val sources = SpecmaticConfig.getSources(specmaticConfig)
+
+            assertThat(sources).hasSize(1)
+            assertThat(sources.single().stub).containsExactly(
+                Consumes.StringValue("com/order.yaml"),
+                Consumes.ObjectValue.BaseUrl(baseUrl = "http://127.0.0.1:8080/api/v2", specs = listOf("com/order.yaml")),
+                Consumes.ObjectValue.Host(host = "127.0.0.1", specs = listOf("com/order.yaml")),
+                Consumes.ObjectValue.Port(port = 8080, specs = listOf("com/order.yaml")),
+                Consumes.ObjectValue.BasePath(basePath = "/api/v2", specs = listOf("com/order.yaml"))
+            )
+        }
+
+        @Test
+        fun `should complain unexpectedKey is passed in consumes object value`() {
+            val consumesString = """
+            consumes:
+              - url: "http://127.0.0.1:8080/api/v2"
+                specs:
+                - "com/order.yaml"
+            """.trimIndent()
+            val exception = assertThrows<JsonMappingException> {
+                mapper.readValue<ContractConfig>(consumesString)
+            }
+
+            assertThat(exception.originalMessage).isEqualToNormalizingWhitespace("""   
+            Object value must contain one of: baseUrl, host, port, or basePath
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should complain when specs array is missing or empty`() {
+            val consumesString = """
+            consumes:
+              - baseUrl: "http://127.0.0.1:8080/api/v2"
+                specs: []
+              - port: 9001
+            """.trimIndent()
+            val exception = assertThrows<JsonMappingException> {
+                mapper.readValue<ContractConfig>(consumesString)
+            }
+
+            assertThat(exception.originalMessage).isEqualToNormalizingWhitespace("""
+            Missing `specs` array or `specs` is empty
+            """.trimIndent())
         }
     }
 }

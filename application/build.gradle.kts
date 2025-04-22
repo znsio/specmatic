@@ -15,7 +15,7 @@ dependencies {
     implementation("org.assertj:assertj-core:3.27.3")
     implementation("org.junit.jupiter:junit-jupiter-api:5.11.4")
 
-    implementation("info.picocli:picocli:4.7.6")
+    implementation("info.picocli:picocli:4.7.7")
     implementation("io.ktor:ktor-client-core-jvm:2.3.13")
     implementation("io.ktor:ktor-network-tls:2.3.13")
     implementation("io.ktor:ktor-network-tls-certificates:2.3.13")

@@ -311,7 +311,7 @@ data class SpecmaticConfig(
             it.stub.orEmpty().map { consumes ->
                 when(consumes) {
                     is Consumes.StringValue -> defaultBaseUrl
-                    is Consumes.ObjectValue -> consumes.baseUrl
+                    is Consumes.ObjectValue -> consumes.value
                 }
             }
         }.distinct()
@@ -323,7 +323,7 @@ data class SpecmaticConfig(
             source.stub.orEmpty().flatMap { consumes ->
                 when (consumes) {
                     is Consumes.StringValue -> listOf(consumes.value to defaultBaseUrl)
-                    is Consumes.ObjectValue -> consumes.specs.map { it to consumes.baseUrl }
+                    is Consumes.ObjectValue -> consumes.specs.map { it to consumes.value }
                 }
             }
         }
@@ -687,7 +687,7 @@ data class Source(
             when (it) {
                 is Consumes.StringValue -> listOf(it.value to null)
                 is Consumes.ObjectValue -> it.specs.map { specPath ->
-                    specPath to it.baseUrl
+                    specPath to it.value
                 }
             }
         }.toMap()

@@ -270,11 +270,11 @@ internal class SpecmaticConfigKtTest {
                 stub = listOf(
                     Consumes.StringValue("9000_first.yaml"),
                     Consumes.StringValue("9000_second.yaml"),
-                    Consumes.ObjectValue(
+                    Consumes.ObjectValue.BaseUrl(
                         specs = listOf("9001_first.yaml", "9001_second.yaml"),
                         baseUrl = "http://localhost:9001"
                     ),
-                    Consumes.ObjectValue(
+                    Consumes.ObjectValue.BaseUrl(
                         specs = listOf("9002_first.yaml"),
                         baseUrl = "http://localhost:9002"
                     ),
@@ -284,11 +284,11 @@ internal class SpecmaticConfigKtTest {
             val source2 = Source(
                 stub = listOf(
                     Consumes.StringValue("9000_third.yaml"),
-                    Consumes.ObjectValue(
+                    Consumes.ObjectValue.BaseUrl(
                         specs = listOf("9001_third.yaml", "9001_fourth.yaml"),
                         baseUrl = "http://localhost:9001"
                     ),
-                    Consumes.ObjectValue(
+                    Consumes.ObjectValue.BaseUrl(
                         specs = listOf("9002_second.yaml"),
                         baseUrl = "http://localhost:9002"
                     ),
@@ -318,11 +318,11 @@ internal class SpecmaticConfigKtTest {
                 stub = listOf(
                     Consumes.StringValue("9000_first.yaml"),
                     Consumes.StringValue("9000_second.yaml"),
-                    Consumes.ObjectValue(
+                    Consumes.ObjectValue.BaseUrl(
                         specs = listOf("9001_first.yaml", "9001_second.yaml"),
                         baseUrl = "http://localhost:9001"
                     ),
-                    Consumes.ObjectValue(
+                    Consumes.ObjectValue.BaseUrl(
                         specs = listOf("9002_first.yaml"),
                         baseUrl = "http://localhost:9002"
                     ),
@@ -332,11 +332,11 @@ internal class SpecmaticConfigKtTest {
             val source2 = Source(
                 stub = listOf(
                     Consumes.StringValue("9000_third.yaml"),
-                    Consumes.ObjectValue(
+                    Consumes.ObjectValue.BaseUrl(
                         specs = listOf("9001_third.yaml", "9001_fourth.yaml"),
                         baseUrl = "http://localhost:9001"
                     ),
-                    Consumes.ObjectValue(
+                    Consumes.ObjectValue.BaseUrl(
                         specs = listOf("9002_second.yaml"),
                         baseUrl = "http://localhost:9002",
                     ),

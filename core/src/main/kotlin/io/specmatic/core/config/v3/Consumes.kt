@@ -1,6 +1,5 @@
 package io.specmatic.core.config.v3
 
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonValue
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
@@ -16,7 +15,10 @@ sealed class Consumes {
     sealed class ObjectValue : Consumes() {
         abstract val specs: List<String>
         private val defaultBaseUrl: URI get() = URI(Flags.getStringValue(Flags.SPECMATIC_BASE_URL) ?: DEFAULT_BASE_URL)
-        @get:JsonIgnore open val value: String get() = transformUrl(defaultBaseUrl).toString()
+        fun toBaseUrl(defaultBaseUrl: String? = null): String {
+            val baseUrl = defaultBaseUrl?.let(::URI) ?: this.defaultBaseUrl
+            return transformUrl(baseUrl).toString()
+        }
 
         abstract fun transformUrl(defaultBaseUrl: URI): URI
 

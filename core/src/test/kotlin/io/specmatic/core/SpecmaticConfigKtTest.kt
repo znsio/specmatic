@@ -375,12 +375,8 @@ internal class SpecmaticConfigKtTest {
         @ParameterizedTest
         @MethodSource("io.specmatic.core.SpecmaticConfigKtTest#consumesProvider")
         fun `should return a complete baseUrl when accessing value of a consumes object`(consumes: Consumes.ObjectValue, defaultBaseUrl: String?, expectedValue: String) {
-            try {
-                defaultBaseUrl?.let { System.setProperty(Flags.SPECMATIC_BASE_URL, it) }
-                assertThat(consumes.value).isEqualTo(expectedValue)
-            } finally {
-                System.clearProperty(Flags.SPECMATIC_BASE_URL)
-            }
+            val finalBaseUrl = consumes.toBaseUrl(defaultBaseUrl)
+            assertThat(finalBaseUrl).isEqualTo(expectedValue)
         }
     }
 

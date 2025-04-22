@@ -347,7 +347,7 @@ internal class SpecmaticConfigAllTest {
         assertThat((contractConfig.consumes?.get(0) as Consumes.StringValue).value)
             .isEqualTo("com/petstore/payment.yaml")
         val consumesObjectValue = contractConfig.consumes?.get(1) as Consumes.ObjectValue
-        assertThat(consumesObjectValue.value).isEqualTo("http://localhost:9001")
+        assertThat(consumesObjectValue.toBaseUrl()).isEqualTo("http://localhost:9001")
         assertThat(consumesObjectValue.specs).containsOnly("com/petstore/order.yaml")
     }
 
@@ -388,7 +388,7 @@ internal class SpecmaticConfigAllTest {
         assertThat((contractConfig.consumes?.get(0) as Consumes.StringValue).value)
             .isEqualTo("com/petstore/payment.yaml")
         val consumesObjectValue = contractConfig.consumes?.get(1) as Consumes.ObjectValue
-        assertThat(consumesObjectValue.value).isEqualTo("http://localhost:9001")
+        assertThat(consumesObjectValue.toBaseUrl()).isEqualTo("http://localhost:9001")
         assertThat(consumesObjectValue.specs).containsOnly("com/petstore/order.yaml")
     }
 

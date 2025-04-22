@@ -3,9 +3,7 @@ package io.specmatic.core.pattern
 import io.specmatic.core.DefaultMismatchMessages
 import io.specmatic.core.MismatchMessages
 import io.specmatic.core.log.logger
-import io.specmatic.core.utilities.jsonStringToValueArray
-import io.specmatic.core.utilities.jsonStringToValueMap
-import io.specmatic.core.utilities.yamlStringToValue
+import io.specmatic.core.utilities.*
 import io.specmatic.core.value.*
 import java.io.File
 
@@ -403,10 +401,10 @@ private fun processContent(content: String?, extension: String? = null): Value {
 
     return runCatching {
         when {
-            extension == "json" || isJson(trimmedContent) -> parsedJSON(trimmedContent)
-            extension in setOf("yaml", "yml") || isYaml(trimmedContent) -> yamlStringToValue(trimmedContent)
-            extension == "xml" || isXML(trimmedContent) -> toXMLNode(trimmedContent)
-            else -> parsedValue(trimmedContent)
+            isJson(trimmedContent, extension) -> parsedJSON(trimmedContent)
+            isYaml(trimmedContent, extension) -> yamlStringToValue(trimmedContent)
+            isXML(trimmedContent, extension) -> toXMLNode(trimmedContent)
+            else -> parsedScalarValue(trimmedContent)
         }
     }.getOrElse { e ->
         logger.debug(e)
@@ -414,19 +412,28 @@ private fun processContent(content: String?, extension: String? = null): Value {
     }
 }
 
-private fun isXML(content: String): Boolean {
-    return content.startsWith("<")
-}
-
-private fun isJson(content: String): Boolean {
-    return content.startsWith("{") || content.startsWith("[")
-}
-
-private fun isYaml(content: String): Boolean {
+private fun isXML(content: String, extension: String?): Boolean {
+    if (extension == "xml") return true
     return when {
-        content.startsWith("---") || content.endsWith("...") -> true
-        content.startsWith("-") -> true
-        content.lineSequence().firstOrNull(String::isNotBlank).orEmpty().contains(":") -> true
-        else -> false
+        extension != null -> false
+        else -> content.startsWith("<")
+    }
+}
+
+private fun isJson(content: String, extension: String?): Boolean {
+    if (extension == "json") return true
+    return when {
+        extension != null -> false
+        !content.startsWith("{") && !content.startsWith("[") -> false
+        else -> runCatching { lenientJson.decodeFromString<Any>(content) }.isSuccess
+    }
+}
+
+private fun isYaml(content: String, extension: String?): Boolean {
+    if (extension in setOf("yml", "yaml")) return true
+    return when {
+        extension != null -> false
+        content.startsWith("---") || content.endsWith("...") || content.startsWith("-") -> true
+        else -> runCatching { yamlMapper.readValue(content, Any::class.java) }.isSuccess
     }
 }

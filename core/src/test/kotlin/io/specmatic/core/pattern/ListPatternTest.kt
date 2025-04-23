@@ -159,7 +159,9 @@ Feature: Recursive test
         val negativePatterns =
             ListPattern(StringPattern()).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
         assertThat(negativePatterns.map { it.typeName }).containsExactlyInAnyOrder(
-            "null"
+            "list of null",
+            "list of number",
+            "list of boolean"
         )
     }
 
@@ -194,7 +196,7 @@ Feature: Recursive test
         }
         """.trimIndent()))
 
-            val matchingValue = parsedValue("[]".trimIndent())
+            val matchingValue = parsedValue(LIST_BREAD_CRUMB.trimIndent())
             val result = pattern.matches(matchingValue, Resolver().withAllPatternsAsMandatory())
             println(result.reportString())
 
@@ -524,7 +526,7 @@ Feature: Recursive test
                 "Test.topLevelOptionalKey" to NumberValue(10)
             )
 
-            val emptyList = parsedValue("[]")
+            val emptyList = parsedValue(LIST_BREAD_CRUMB)
             val fixedValue = pattern.fixValue(emptyList, Resolver(dictionary = patternDictionary).withAllPatternsAsMandatory())
             println(fixedValue.toStringLiteral())
 

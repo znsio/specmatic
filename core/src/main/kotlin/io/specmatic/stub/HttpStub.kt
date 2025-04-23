@@ -156,7 +156,7 @@ class HttpStub(
         else
             SpecmaticConfig()
 
-    val specToBaseUrlMap = getValidatedBaseUrlsOrExit(
+    val specToBaseUrlMap: Map<String, String> = getValidatedBaseUrlsOrExit(
         features.associate {
             val baseUrl = specToStubBaseUrlMap[it.path] ?: endPointFromHostAndPort(host, port, keyData)
             it.path to baseUrl

@@ -1,9 +1,7 @@
 package application
 
 import io.specmatic.core.*
-import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.examples.module.ExampleModule
-import io.specmatic.core.examples.module.ExampleValidationModule
+import io.specmatic.core.examples.module.*
 import io.specmatic.core.examples.server.ScenarioFilter
 import io.specmatic.core.log.CompositePrinter
 import io.specmatic.core.log.ConsolePrinter
@@ -128,10 +126,10 @@ For example, to filter by HTTP methods:
             if (contractFile != null && examplesDir != null) {
                 val (exitCode, validationResults) = validateExamplesDir(contractFile!!, examplesDir)
 
-                printValidationResult(validationResults, "Example directory")
+                printValidationResult(validationResults.ofExamples, "Example directory")
                 if (exitCode == 1) return FAILURE_EXIT_CODE
-                if (validationResults.containsOnlyCompleteFailures()) return FAILURE_EXIT_CODE
-                return SUCCESS_EXIT_CODE
+                if (validationResults.ofExamples.containsOnlyCompleteFailures()) return FAILURE_EXIT_CODE
+                return validationResults.exitCodeBasedOnHookResult()
             }
 
             if (contractFile != null) return validateImplicitExamplesFrom(contractFile!!)
@@ -150,15 +148,10 @@ For example, to filter by HTTP methods:
                 val summaryTitle = "- Validation summary across all example directories:"
                 logger.log("_".repeat(summaryTitle.length))
                 logger.log("- Validation summary across all example directories:")
-                printValidationResult(implicitExampleValidationResults + externalExampleValidationResults, "")
+                val allResults = implicitExampleValidationResults + externalExampleValidationResults
+                printValidationResult(allResults.ofAllExamples(), "")
 
-                if (
-                    externalExampleValidationResults.exitCode() == FAILURE_EXIT_CODE
-                    || implicitExampleValidationResults.exitCode() == FAILURE_EXIT_CODE
-                ) {
-                    return FAILURE_EXIT_CODE
-                }
-                return SUCCESS_EXIT_CODE
+                return allResults.exitCode()
             }
 
             if (specsDir != null) {
@@ -176,9 +169,10 @@ For example, to filter by HTTP methods:
             }
 
             try {
-                exampleValidationModule.validateExample(contractFile, exampleFile).throwOnFailure()
+                val result = exampleValidationModule.validateExample(contractFile, exampleFile)
+                result.ofExample.throwOnFailure()
                 logger.log("The provided example ${exampleFile.name} is valid.")
-                return SUCCESS_EXIT_CODE
+                return result.exitCodeBasedOnHookResult()
             } catch (e: ContractException) {
                 logger.log("The provided example ${exampleFile.name} is invalid. Reason:\n")
                 logger.log(exceptionCauseMessage(e))
@@ -186,54 +180,47 @@ For example, to filter by HTTP methods:
             }
         }
 
-        private fun validateExamplesDir(contractFile: File, examplesDir: File): Pair<Int, Map<String, Result>> =
+        private fun validateExamplesDir(contractFile: File, examplesDir: File): Pair<Int, ValidationResults> =
             validateExamplesDir(parseContractFileWithNoMissingConfigWarning(contractFile), examplesDir)
 
-        private fun validateExamplesDir(feature: Feature, examplesDir: File): Pair<Int, Map<String, Result>> {
+        private fun validateExamplesDir(feature: Feature, examplesDir: File): Pair<Int, ValidationResults> {
             val (externalExampleDir, externalExamples) = ExampleModule().loadExternalExamples(examplesDir = examplesDir)
             if (!externalExampleDir.exists()) {
                 logger.log("$externalExampleDir does not exist, did not find any files to validate")
-                return FAILURE_EXIT_CODE to emptyMap()
+                return FAILURE_EXIT_CODE to ValidationResults.forNoExamples()
             }
             if (externalExamples.isEmpty()) {
                 logger.log("No example files found in $externalExampleDir")
-                return SUCCESS_EXIT_CODE to emptyMap()
+                return SUCCESS_EXIT_CODE to ValidationResults.forNoExamples()
             }
             return SUCCESS_EXIT_CODE to validateExternalExamples(feature, externalExamples)
         }
 
-        private fun validateAllExamplesAssociatedToEachSpecIn(specsDir: File, examplesBaseDir: File): Map<String, Result> {
+        private fun validateAllExamplesAssociatedToEachSpecIn(specsDir: File, examplesBaseDir: File): List<ValidationResults> {
             var ordinal = 1
 
-            val validationResults = specsDir.walk().filter { it.isFile && it.extension in CONTRACT_EXTENSIONS }.flatMap { specFile ->
+            val validationResults = specsDir.walk().filter { it.isFile && it.extension in CONTRACT_EXTENSIONS }.map { specFile ->
                 val relativeSpecPath = specsDir.toPath().relativize(specFile.toPath()).toString()
                 val associatedExamplesDir =
                     examplesBaseDir.resolve(relativeSpecPath.substringBeforeLast(".").plus("_examples"))
 
                 if (associatedExamplesDir.exists().not() || associatedExamplesDir.isDirectory.not()) {
-                    return@flatMap emptyList()
+                    return@map ValidationResults.forNoExamples()
                 }
 
                 logger.log("$ordinal. Validating examples in '${associatedExamplesDir}' associated to '$relativeSpecPath'...${System.lineSeparator()}")
                 ordinal++
 
-                val results = validateExamplesDir(specFile, associatedExamplesDir).second.entries.map { entry ->
-                    entry.toPair()
-                }
-
-                printValidationResult(results.toMap(), "")
+                val results = validateExamplesDir(specFile, associatedExamplesDir).second
+                printValidationResult(results.ofExamples, "")
                 logger.log(System.lineSeparator())
                 results
-            }.toMap()
+            }.toList()
 
             logger.log("Summary:")
-            printValidationResult(validationResults, "Overall")
+            printValidationResult(validationResults.ofAllExamples(), "Overall")
 
             return validationResults
-        }
-
-        private fun Map<String, Result>.exitCode(): Int {
-            return if (this.containsOnlyCompleteFailures()) FAILURE_EXIT_CODE else SUCCESS_EXIT_CODE
         }
 
         private fun validateImplicitExamplesFrom(contractFile: File): Int {
@@ -244,7 +231,7 @@ For example, to filter by HTTP methods:
             val inlineExampleValidationResults = if (!validateInline) emptyMap()
             else validateInlineExamples(feature)
 
-            val externalExampleValidationResults = if (!validateExternal) emptyMap()
+            val externalExampleValidationResults = if (!validateExternal) ValidationResults.forNoExamples()
             else {
                 val (exitCode, validationResults)
                         = validateExamplesDir(feature, ExampleModule().defaultExternalExampleDirFrom(contractFile))
@@ -253,13 +240,14 @@ For example, to filter by HTTP methods:
             }
 
             val hasFailures =
-                inlineExampleValidationResults.containsOnlyCompleteFailures() || externalExampleValidationResults.containsOnlyCompleteFailures()
+                inlineExampleValidationResults.containsOnlyCompleteFailures()
+                        || externalExampleValidationResults.ofExamples.containsOnlyCompleteFailures()
 
             printValidationResult(inlineExampleValidationResults, "Inline example")
-            printValidationResult(externalExampleValidationResults, "Example file")
+            printValidationResult(externalExampleValidationResults.ofExamples, "Example file")
 
             if (hasFailures) return FAILURE_EXIT_CODE
-            return SUCCESS_EXIT_CODE
+            return externalExampleValidationResults.exitCodeBasedOnHookResult()
         }
 
         private fun validateInlineExamples(feature: Feature): Map<String, Result> {
@@ -274,7 +262,7 @@ For example, to filter by HTTP methods:
             )
         }
 
-        private fun validateExternalExamples(feature: Feature, externalExamples: List<File>): Map<String, Result> {
+        private fun validateExternalExamples(feature: Feature, externalExamples: List<File>): ValidationResults {
             return exampleValidationModule.validateExamples(
                 feature,
                 examples = externalExamples,

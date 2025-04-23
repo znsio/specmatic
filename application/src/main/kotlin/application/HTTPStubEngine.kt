@@ -9,7 +9,6 @@ import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpClientFactory
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.contractInfoToHttpExpectations
-import io.specmatic.stub.endPointFromHostAndPort
 
 class HTTPStubEngine {
     fun runHTTPStub(
@@ -52,7 +51,7 @@ class HTTPStubEngine {
         }
     }
 
-    fun serverStartupMessage(specToStubBaseUrlMap: Map<String, String>): String {
+    private fun serverStartupMessage(specToStubBaseUrlMap: Map<String, String>): String {
         val baseUrlToSpecsMap = specToStubBaseUrlMap.entries.groupBy({ it.value }, { it.key })
 
         return buildString {

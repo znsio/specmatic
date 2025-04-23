@@ -269,14 +269,18 @@ internal class StubCommandTest {
             httpStubEngine.runHTTPStub(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
         } returns mockk { every { close() } returns Unit }
 
-        val args = buildList {
-            add("--host=localhost")
-            add("--port=5000")
-        }
-        val exitStatus = CommandLine(stubCommand).execute(*args.toTypedArray())
-        val specmaticBaseUrl = Flags.getStringValue(Flags.SPECMATIC_BASE_URL)
+        try {
+            val args = buildList {
+                add("--host=localhost")
+                add("--port=5000")
+            }
+            val exitStatus = CommandLine(stubCommand).execute(*args.toTypedArray())
+            val specmaticBaseUrl = Flags.getStringValue(Flags.SPECMATIC_BASE_URL)
 
-        assertThat(exitStatus).isZero()
-        assertThat(specmaticBaseUrl).isEqualTo("http://localhost:5000")
+            assertThat(exitStatus).isZero()
+            assertThat(specmaticBaseUrl).isEqualTo("http://localhost:5000")
+        } finally {
+            System.clearProperty(Flags.SPECMATIC_BASE_URL)
+        }
     }
 }

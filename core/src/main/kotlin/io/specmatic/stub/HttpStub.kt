@@ -15,11 +15,7 @@ import io.ktor.util.*
 import io.ktor.util.pipeline.*
 import io.specmatic.core.*
 import io.specmatic.core.loadSpecmaticConfig
-import io.specmatic.core.log.HttpLogMessage
-import io.specmatic.core.log.LogMessage
-import io.specmatic.core.log.LogTail
-import io.specmatic.core.log.dontPrintToConsole
-import io.specmatic.core.log.logger
+import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
@@ -156,9 +152,10 @@ class HttpStub(
         else
             SpecmaticConfig()
 
-    private val specToBaseUrlMap = getValidatedBaseUrlsOrExit(
-        specToStubBaseUrlMap.mapValues { (_, value) ->
-            value ?: endPointFromHostAndPort(host, port, keyData)
+    val specToBaseUrlMap: Map<String, String> = getValidatedBaseUrlsOrExit(
+        features.associate {
+            val baseUrl = specToStubBaseUrlMap[it.path] ?: endPointFromHostAndPort(host, port, keyData)
+            it.path to baseUrl
         }
     )
 
@@ -754,6 +751,32 @@ class HttpStub(
         if (validationResult is Result.Failure) exitWithMessage(validationResult.reportString())
         return specToBaseUrlMap
     }
+
+    fun printStartupMessage() {
+        consoleLog(NewLineLogMessage)
+        consoleLog(
+            StringLog(
+                serverStartupMessage(specToBaseUrlMap)
+            )
+        )
+        consoleLog(StringLog("Press Ctrl + C to stop."))
+    }
+
+    private fun serverStartupMessage(specToStubBaseUrlMap: Map<String, String>): String {
+        val baseUrlToSpecsMap = specToStubBaseUrlMap.entries.groupBy({ it.value }, { it.key })
+
+        return buildString {
+            appendLine("Stub server is running on the following URLs:")
+            baseUrlToSpecsMap.entries.sortedBy { it.key }.forEachIndexed { urlIndex, (url, specs) ->
+                appendLine("- $url serving endpoints from specs:")
+                specs.sorted().forEachIndexed { index, spec ->
+                    appendLine("\t${index + 1}. $spec")
+                }
+                if (urlIndex < baseUrlToSpecsMap.size - 1) appendLine()
+            }
+        }
+    }
+
 }
 
 class CouldNotParseRequest(innerException: Throwable) : Exception(exceptionCauseMessage(innerException))

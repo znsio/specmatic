@@ -170,32 +170,38 @@ class OpenApiSpecification(
         }
 
         fun loadDictionary(openApiFilePath: String, dictionaryPathFromConfig: String?): Map<String, Value> {
-            val dictionaryFile =
-                (dictionaryPathFromConfig ?: Flags.getStringValue(SPECMATIC_STUB_DICTIONARY))?.let { File(it) }
-                    ?: File(openApiFilePath).let {
-                        it.canonicalFile.parentFile.resolve(it.nameWithoutExtension + "_dictionary.json")
-                }
+            val dictionaryFile = getDictionaryFile(File(openApiFilePath), dictionaryPathFromConfig) ?: return emptyMap()
 
-            if(!dictionaryFile.exists())
-                return emptyMap()
+            if (!dictionaryFile.exists()) throw ContractException(
+                breadCrumb = dictionaryFile.path,
+                errorMessage = "Expected dictionary file at ${dictionaryFile.path}, but it does not exist"
+            )
 
-            if(dictionaryFile.exists() && !dictionaryFile.isFile) {
-                logger.log("Found dictionary file ${dictionaryFile.path} but it was empty")
+            if (!dictionaryFile.isFile) throw ContractException(
+                breadCrumb = dictionaryFile.path,
+                errorMessage = "Expected dictionary file at ${dictionaryFile.path} to be a file"
+            )
 
-                return emptyMap()
-            }
-
-            try {
-                val dictionary = parsedJSONObject(dictionaryFile.readText()).jsonObject
+            return runCatching {
                 logger.log("Using dictionary file ${dictionaryFile.path}")
-
-                return dictionary
-            } catch(e: Throwable) {
-                logger.log("Could not parse dictionary file ${dictionaryFile.path} due to error")
-                logger.log(e)
-
-                throw e
+                readValueAs<JSONObjectValue>(dictionaryFile).jsonObject
+            }.getOrElse { e ->
+                logger.debug(e)
+                throw ContractException(
+                    breadCrumb = dictionaryFile.path,
+                    errorMessage = "Could not parse dictionary file ${dictionaryFile.path}, it must be a valid JSON/YAML object"
+                )
             }
+        }
+
+        private fun getDictionaryFile(openApiFile: File, dictionaryPathFromConfig: String?): File? {
+            val explicitDictionaryPath = dictionaryPathFromConfig ?: Flags.getStringValue(SPECMATIC_STUB_DICTIONARY)
+            if (!explicitDictionaryPath.isNullOrEmpty()) return File(explicitDictionaryPath)
+
+            val implicitPaths = sequenceOf("_dictionary.yml", "_dictionary.yaml", "_dictionary.json")
+            return implicitPaths.map {
+                openApiFile.canonicalFile.parentFile.resolve(openApiFile.nameWithoutExtension + it)
+            }.firstOrNull(File::exists)
         }
 
         private fun printMessages(parseResult: SwaggerParseResult, filePath: String, loggerForErrors: LogStrategy) {

@@ -15,39 +15,30 @@ sealed class Consumes {
     sealed class ObjectValue : Consumes() {
         abstract val specs: List<String>
         private val defaultBaseUrl: URI get() = URI(Flags.getStringValue(Flags.SPECMATIC_BASE_URL) ?: DEFAULT_BASE_URL)
+
         fun toBaseUrl(defaultBaseUrl: String? = null): String {
             val baseUrl = defaultBaseUrl?.let(::URI) ?: this.defaultBaseUrl
-            return transformUrl(baseUrl).toString()
+            return toUrl(baseUrl).toString()
         }
 
-        abstract fun transformUrl(defaultBaseUrl: URI): URI
+        abstract fun toUrl(default: URI): URI
 
-        internal fun URI.withComponents(host: String? = null, port: Int? = null, path: String? = null): URI {
-            return URI(
-                this.scheme,
-                null,
-                host ?: this.host,
-                port ?: this.port,
-                path,
-                this.query,
-                this.fragment
-            )
+        data class FullUrl(val baseUrl: String, override val specs: List<String>) : ObjectValue() {
+            override fun toUrl(default: URI) = URI(baseUrl)
         }
 
-        data class BaseUrl(val baseUrl: String, override val specs: List<String>) : ObjectValue() {
-            override fun transformUrl(defaultBaseUrl: URI) = URI(baseUrl)
-        }
-
-        data class Host(val host: String, override val specs: List<String>) : ObjectValue() {
-            override fun transformUrl(defaultBaseUrl: URI) = defaultBaseUrl.withComponents(host = host)
-        }
-
-        data class Port(val port: Int, override val specs: List<String>) : ObjectValue() {
-            override fun transformUrl(defaultBaseUrl: URI) = defaultBaseUrl.withComponents(port = port)
-        }
-
-        data class BasePath(val basePath: String, override val specs: List<String>) : ObjectValue() {
-            override fun transformUrl(defaultBaseUrl: URI) = defaultBaseUrl.withComponents(path = basePath)
+        data class PartialUrl(val host: String? = null, val port: Int? = null, val basePath: String? = null, override val specs: List<String>) : ObjectValue() {
+            override fun toUrl(default: URI): URI {
+                return URI(
+                    default.scheme,
+                    default.userInfo,
+                    host ?: default.host,
+                    port ?: default.port,
+                    basePath ?: default.path,
+                    default.query,
+                    default.fragment
+                )
+            }
         }
     }
 }
@@ -64,15 +55,45 @@ class ConsumesDeserializer : JsonDeserializer<List<Consumes>>() {
     }
 
     private fun JsonNode.parseObjectValue(p: JsonParser): Consumes.ObjectValue {
-        val specs = get("specs")?.takeIf(JsonNode::isArray)?.map(JsonNode::asText)?.takeIf(List<String>::isNotEmpty)
-            ?: throw JsonMappingException(p, "Missing `specs` array or `specs` is empty")
+        val validatedJsonNode = this.getValidatedJsonNode(p)
+        val specs = validatedJsonNode.get("specs").map(JsonNode::asText)
 
         return when {
-            has("baseUrl") -> Consumes.ObjectValue.BaseUrl(get("baseUrl").asText(), specs)
-            has("host") -> Consumes.ObjectValue.Host(get("host").asText(), specs)
-            has("port") -> Consumes.ObjectValue.Port(get("port").asInt(), specs)
-            has("basePath") -> Consumes.ObjectValue.BasePath(get("basePath").asText(), specs)
-            else -> throw JsonMappingException(p, "Object value must contain one of: baseUrl, host, port, or basePath")
+            has("baseUrl") -> Consumes.ObjectValue.FullUrl(get("baseUrl").asText(), specs)
+            else -> Consumes.ObjectValue.PartialUrl(
+                host = get("host")?.asText(),
+                port = get("port")?.asInt(),
+                basePath = get("basePath")?.asText(),
+                specs = specs
+            )
         }
+    }
+
+    private fun JsonNode.getValidatedJsonNode(p: JsonParser): JsonNode {
+        val allowedFields = setOf("baseUrl", "host", "port", "basePath", "specs")
+        val unknownFields = fieldNames().asSequence().filterNot(allowedFields::contains).toSet()
+        if (unknownFields.isNotEmpty()) {
+            throw JsonMappingException(p,
+                "Unknown fields: ${unknownFields.joinToString(", ")}\nAllowed fields: ${allowedFields.joinToString(", ")}"
+            )
+        }
+
+        val specsField = get("specs")
+        when {
+            specsField == null -> throw JsonMappingException(p, "Missing required field 'specs'")
+            !specsField.isArray -> throw JsonMappingException(p, "'specs' must be an array")
+            specsField.isEmpty -> throw JsonMappingException(p, "'specs' array cannot be empty")
+            specsField.any { !it.isTextual } -> throw JsonMappingException(p, "'specs' must contain only strings")
+        }
+
+        val partialFields = listOf("host", "port", "basePath").filter(::has)
+        val hasBaseUrl = has("baseUrl")
+        val hasPartialFields = partialFields.isNotEmpty()
+        when {
+            hasBaseUrl && hasPartialFields -> throw JsonMappingException(p, "Cannot combine baseUrl with ${partialFields.joinToString(", ")}")
+            !hasBaseUrl && !hasPartialFields -> throw JsonMappingException(p, "Must provide baseUrl or one or combination of host, port, and basePath")
+        }
+
+        return this
     }
 }

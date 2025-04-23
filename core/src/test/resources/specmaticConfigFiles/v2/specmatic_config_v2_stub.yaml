@@ -16,3 +16,20 @@ contracts:
       - basePath: "/api/v2"
         specs:
           - "com/order.yaml"
+      - host: "127.0.0.1"
+        port: 8080
+        specs:
+          - "com/order.yaml"
+      - host: "127.0.0.1"
+        basePath: "/api/v2"
+        specs:
+          - "com/order.yaml"
+      - port: 8080
+        basePath: "/api/v2"
+        specs:
+          - "com/order.yaml"
+      - host: "127.0.0.1"
+        port: 8080
+        basePath: "/api/v2"
+        specs:
+          - "com/order.yaml"

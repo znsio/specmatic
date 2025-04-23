@@ -127,7 +127,7 @@ internal class SpecmaticConfigAllTest {
                 test = listOf("com/petstore/1.yaml"),
                 stub = listOf(
                     Consumes.StringValue("com/petstore/payment.yaml"),
-                    Consumes.ObjectValue.BaseUrl(
+                    Consumes.ObjectValue.FullUrl(
                         specs = listOf("com/petstore/order1.yaml", "com/petstore/order2.yaml"),
                         baseUrl = "http://localhost:9001"
                     )
@@ -245,7 +245,7 @@ internal class SpecmaticConfigAllTest {
         assertThat(contracts[1].provides).containsOnly("com/petstore/1.yaml")
         assertThat(contracts[1].consumes).containsOnly(
             Consumes.StringValue("com/petstore/payment.yaml"),
-            Consumes.ObjectValue.BaseUrl(
+            Consumes.ObjectValue.FullUrl(
                 specs = listOf("com/petstore/order1.yaml", "com/petstore/order2.yaml"),
                 baseUrl = "http://localhost:9001"
             )
@@ -291,7 +291,7 @@ internal class SpecmaticConfigAllTest {
                 provides = listOf("com/petstore/1.yaml"),
                 consumes = listOf(
                     Consumes.StringValue("com/petstore/payment.yaml"),
-                    Consumes.ObjectValue.BaseUrl(
+                    Consumes.ObjectValue.FullUrl(
                         specs = listOf("com/petstore/order.yaml"),
                         baseUrl = "http://localhost:9001"
                     )

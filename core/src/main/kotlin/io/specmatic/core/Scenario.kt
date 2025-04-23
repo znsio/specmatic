@@ -101,8 +101,7 @@ data class Scenario(
         sourceRepository = scenarioInfo.sourceRepository,
         sourceRepositoryBranch = scenarioInfo.sourceRepositoryBranch,
         specification = scenarioInfo.specification,
-        serviceType = scenarioInfo.serviceType,
-        exampleName = scenarioInfo.examples.firstOrNull()?.rows?.firstOrNull()?.name
+        serviceType = scenarioInfo.serviceType
     )
 
     val apiIdentifier: String
@@ -875,7 +874,8 @@ data class Scenario(
             statusCode = this.status,
             header = this.httpRequestPattern.getHeaderKeys(),
             query = this.httpRequestPattern.getQueryParamKeys(),
-            exampleName = this.exampleName.orEmpty()
+            exampleName = this.exampleName.orEmpty(),
+            examples = this.examples
         )
     }
 

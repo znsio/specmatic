@@ -380,15 +380,6 @@ fun parsedScalarValue(content: String?): Value {
 
 fun readValue(file: File): Value = processContent(file.readText(), file.extension)
 
-fun readValue(content: String?): Value = processContent(content)
-
-inline fun <reified T : Value> readValueAs(content: String): T {
-    return when (val parsedValue = readValue(content)) {
-        is T -> parsedValue
-        else -> throw ClassCastException("Expected ${T::class.simpleName} but got ${parsedValue::class.simpleName}")
-    }
-}
-
 inline fun <reified T : Value> readValueAs(file: File): T {
     return when (val parsedValue = readValue(file)) {
         is T -> parsedValue
@@ -396,44 +387,18 @@ inline fun <reified T : Value> readValueAs(file: File): T {
     }
 }
 
-private fun processContent(content: String?, extension: String? = null): Value {
+private fun processContent(content: String?, extension: String): Value {
     val trimmedContent = content?.trim()?.removePrefix(UTF_BYTE_ORDER_MARK) ?: return EmptyString
 
     return runCatching {
-        when {
-            isJson(trimmedContent, extension) -> parsedJSON(trimmedContent)
-            isYaml(trimmedContent, extension) -> yamlStringToValue(trimmedContent)
-            isXML(trimmedContent, extension) -> toXMLNode(trimmedContent)
+        when(extension.lowercase()) {
+            "json" -> parsedJSON(trimmedContent)
+            "yaml" -> yamlStringToValue(trimmedContent)
+            "xml" -> toXMLNode(trimmedContent)
             else -> parsedScalarValue(trimmedContent)
         }
     }.getOrElse { e ->
         logger.debug(e)
         StringValue(trimmedContent)
-    }
-}
-
-private fun isXML(content: String, extension: String?): Boolean {
-    if (extension == "xml") return true
-    return when {
-        extension != null -> false
-        else -> content.startsWith("<")
-    }
-}
-
-private fun isJson(content: String, extension: String?): Boolean {
-    if (extension == "json") return true
-    return when {
-        extension != null -> false
-        !content.startsWith("{") && !content.startsWith("[") -> false
-        else -> runCatching { lenientJson.decodeFromString<Any>(content) }.isSuccess
-    }
-}
-
-private fun isYaml(content: String, extension: String?): Boolean {
-    if (extension in setOf("yml", "yaml")) return true
-    return when {
-        extension != null -> false
-        content.startsWith("---") || content.endsWith("...") || content.startsWith("-") -> true
-        else -> runCatching { yamlMapper.readValue(content, Any::class.java) }.isSuccess
     }
 }

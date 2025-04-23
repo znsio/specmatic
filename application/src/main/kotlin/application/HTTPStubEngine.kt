@@ -9,6 +9,7 @@ import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpClientFactory
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.contractInfoToHttpExpectations
+import io.specmatic.stub.endPointFromHostAndPort
 
 class HTTPStubEngine {
     fun runHTTPStub(
@@ -44,25 +45,36 @@ class HTTPStubEngine {
             consoleLog(NewLineLogMessage)
             consoleLog(
                 StringLog(
-                    serverStartupMessage(it.specToBaseUrlMap)
+                    serverStartupMessage(
+                        specToBaseUrlMap,
+                        endPointFromHostAndPort(host, port, keyData)
+                    )
                 )
             )
             consoleLog(StringLog("Press Ctrl + C to stop."))
         }
     }
 
-    private fun serverStartupMessage(specToStubBaseUrlMap: Map<String, String>): String {
-        val baseUrlToSpecsMap = specToStubBaseUrlMap.entries.groupBy({ it.value }, { it.key })
+    private fun serverStartupMessage(
+        specToStubBaseUrlMap: Map<String, String?>,
+        defaultBaseUrl: String
+    ): String {
+        val newLine = System.lineSeparator()
+        val baseUrlToSpecs: Map<String, List<String>> = specToStubBaseUrlMap.entries
+            .groupBy({ it.value ?: defaultBaseUrl }, { it.key })
 
-        return buildString {
-            appendLine("Stub server is running on the following URLs:")
-            baseUrlToSpecsMap.entries.sortedBy { it.key }.forEachIndexed { urlIndex, (url, specs) ->
-                appendLine("- $url serving endpoints from specs:")
+        val messageBuilder = StringBuilder("Stub server is running on the following URLs:")
+
+        baseUrlToSpecs.entries
+            .sortedBy { it.key }
+            .forEach { (baseUrl, specs) ->
+                messageBuilder.append("${newLine}- $baseUrl serving endpoints from specs:")
                 specs.sorted().forEachIndexed { index, spec ->
-                    appendLine("\t${index + 1}. $spec")
+                    messageBuilder.append("$newLine    ${index.inc()}. $spec")
                 }
-                if (urlIndex < baseUrlToSpecsMap.size - 1) appendLine()
+                messageBuilder.append(newLine)
             }
-        }
+
+        return messageBuilder.toString()
     }
 }

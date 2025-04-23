@@ -393,7 +393,7 @@ private fun processContent(content: String?, extension: String): Value {
     return runCatching {
         when(extension.lowercase()) {
             "json" -> parsedJSON(trimmedContent)
-            "yaml" -> yamlStringToValue(trimmedContent)
+            "yaml", "yml" -> yamlStringToValue(trimmedContent)
             "xml" -> toXMLNode(trimmedContent)
             else -> parsedScalarValue(trimmedContent)
         }

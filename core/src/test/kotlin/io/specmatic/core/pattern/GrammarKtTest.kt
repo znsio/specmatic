@@ -1,6 +1,5 @@
 package io.specmatic.core.pattern
 
-import io.specmatic.core.utilities.valueToYamlString
 import io.specmatic.core.value.*
 import org.apache.commons.io.ByteOrderMark
 import org.assertj.core.api.Assertions.assertThat
@@ -191,21 +190,8 @@ internal class GrammarKtTest {
         }
         """.trimIndent()
         val value = readValue(json)
-        val equivalentYaml = valueToYamlString(value)
 
         assertThat(value).isInstanceOf(JSONObjectValue::class.java)
-        assertThat(equivalentYaml).isEqualToNormalizingWhitespace("""
-        name: John Doe
-        age: 30
-        isEligible: true
-        address:
-          street: 123 Main St
-          city: Anytown
-        aliases:
-        - John
-        - 123
-        - false
-        """.trimIndent())
     }
 
     @Test

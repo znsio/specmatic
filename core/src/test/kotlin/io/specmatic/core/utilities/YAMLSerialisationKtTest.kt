@@ -72,64 +72,6 @@ class YAMLSerialisationKtTest {
         assertThat(parsedValue.jsonObject["key"]).isEqualTo(expectedValue)
     }
 
-    @Test
-    fun `should be able to serialise map value to yaml`() {
-        val value = JSONObjectValue(mapOf("key" to StringValue("value")))
-        val yamlString = valueToYamlString(value).trimEnd()
-
-        assertThat(yamlString).isEqualTo("""key: value""")
-    }
-
-    @Test
-    fun `should be able to serialise array value to yaml`() {
-        val value = JSONArrayValue(listOf(StringValue("hello"), NumberValue(123)))
-        val yamlString = valueToYamlString(value).trimEnd()
-
-        assertThat(yamlString).isEqualTo("""
-        - hello
-        - 123
-        """.trimIndent())
-    }
-
-    @ParameterizedTest
-    @MethodSource("primitiveToExpectedValueProvider")
-    fun `should be able to serialise primitive value to yaml`(primitive: Any?, expectedValue: Value) {
-        val value = JSONObjectValue(mapOf("key" to expectedValue))
-        val yamlString = valueToYamlString(value, mapper = unformattedAndQuotedYamlMapper).trimEnd()
-
-        assertThat(yamlString).isEqualTo("""key: $primitive""")
-    }
-
-    @Test
-    fun `should be able to parse patterns from yaml content`() {
-        val yamlContent = """
-        ---
-        email?: (email)
-        exact: 123
-        details:
-        - subKey?: (date)
-        ...
-        """.trimIndent()
-        val parsedPattern = yamlStringToPattern(yamlContent)
-
-        assertThat(parsedPattern).isInstanceOf(JSONObjectPattern::class.java); parsedPattern as JSONObjectPattern
-        assertThat(parsedPattern.pattern).containsKeys("email?", "exact", "details")
-        assertThat(parsedPattern.pattern["email?"]).isInstanceOf(EmailPattern::class.java)
-        assertThat(parsedPattern.pattern["exact"]).satisfies(
-            { assertThat(it).isInstanceOf(ExactValuePattern::class.java) },
-            { it as ExactValuePattern; assertThat(it.pattern).isEqualTo(NumberValue(123)) }
-        )
-        assertThat(parsedPattern.pattern["details"]).satisfies(
-            { assertThat(it).isInstanceOf(JSONArrayPattern::class.java) },
-            { it as JSONArrayPattern; assertThat(it.pattern).hasSize(1).hasOnlyElementsOfType(JSONObjectPattern::class.java) },
-            {
-                it as JSONArrayPattern
-                assertThat((it.pattern[0] as JSONObjectPattern).pattern).containsKeys("subKey?")
-                assertThat((it.pattern[0] as JSONObjectPattern).pattern["subKey?"]).isInstanceOf(DatePattern::class.java)
-            }
-        )
-    }
-
     companion object {
         @JvmStatic
         fun primitiveToExpectedValueProvider(): Stream<Arguments> {

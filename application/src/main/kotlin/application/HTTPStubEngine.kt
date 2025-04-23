@@ -41,28 +41,7 @@ class HTTPStubEngine {
             timeoutMillis = gracefulRestartTimeoutInMs,
             specToStubBaseUrlMap = specToBaseUrlMap
         ).also {
-            consoleLog(NewLineLogMessage)
-            consoleLog(
-                StringLog(
-                    serverStartupMessage(it.specToBaseUrlMap)
-                )
-            )
-            consoleLog(StringLog("Press Ctrl + C to stop."))
-        }
-    }
-
-    private fun serverStartupMessage(specToStubBaseUrlMap: Map<String, String>): String {
-        val baseUrlToSpecsMap = specToStubBaseUrlMap.entries.groupBy({ it.value }, { it.key })
-
-        return buildString {
-            appendLine("Stub server is running on the following URLs:")
-            baseUrlToSpecsMap.entries.sortedBy { it.key }.forEachIndexed { urlIndex, (url, specs) ->
-                appendLine("- $url serving endpoints from specs:")
-                specs.sorted().forEachIndexed { index, spec ->
-                    appendLine("\t${index + 1}. $spec")
-                }
-                if (urlIndex < baseUrlToSpecsMap.size - 1) appendLine()
-            }
+            it.printStartupMessage()
         }
     }
 }

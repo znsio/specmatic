@@ -414,7 +414,7 @@ class HttpStub(
     }
 
     private fun getHostAndPortList(): List<Pair<String, Int>> {
-        val defaultBaseUrl = endPointFromHostAndPort(this.host, this.port, null)
+        val defaultBaseUrl = endPointFromHostAndPort(this.host, this.port, this.keyData)
         val specsWithMultipleBaseUrls = specmaticConfig.stubToBaseUrlList(defaultBaseUrl).groupBy(
             keySelector = { it.first }, valueTransform = { it.second }
         ).filterValues { it.size > 1 }

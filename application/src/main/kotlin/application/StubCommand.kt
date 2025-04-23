@@ -6,12 +6,14 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.ContractPathData.Companion.specToBaseUrlMap
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_BASE_URL
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.exitIfAnyDoNotExist
 import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.HttpClientFactory
+import io.specmatic.stub.endPointFromHostAndPort
 import picocli.CommandLine.*
 import java.io.File
 import java.util.concurrent.Callable
@@ -114,6 +116,14 @@ class StubCommand(
             Configuration.configFilePath = getConfigFilePath()
         }
 
+        val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
+        port = when (isDefaultPort(port)) {
+            true -> if (portIsInUse(host, port)) findRandomFreePort() else port
+            false -> port
+        }
+        val baseUrl = endPointFromHostAndPort(host, port, keyData = certInfo.getHttpsCert())
+        System.setProperty(SPECMATIC_BASE_URL, baseUrl)
+
         try {
             contractSources = when (contractPaths.isEmpty()) {
                 true -> {
@@ -174,13 +184,8 @@ class StubCommand(
         val workingDirectory = WorkingDirectory()
         if(strictMode) throwExceptionIfDirectoriesAreInvalid(exampleDirs, "example directories")
         val stubData = stubLoaderEngine.loadStubs(contractSources, exampleDirs, specmaticConfigPath, strictMode)
-
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 
-        port = when (isDefaultPort(port)) {
-            true -> if (portIsInUse(host, port)) findRandomFreePort() else port
-            false -> port
-        }
         httpStub = httpStubEngine.runHTTPStub(
             stubs = stubData,
             host = host,

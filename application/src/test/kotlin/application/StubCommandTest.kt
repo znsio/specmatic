@@ -7,6 +7,7 @@ import io.mockk.impl.annotations.MockK
 import io.specmatic.core.CONTRACT_EXTENSION
 import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.StubServerWatcher
 import io.specmatic.mock.ScenarioStub
 import org.assertj.core.api.Assertions.assertThat
@@ -255,6 +256,31 @@ internal class StubCommandTest {
             }
         } finally {
             file.delete()
+        }
+    }
+
+    @Test
+    fun `should set specmatic_base_url property in accordance to passed host and port`() {
+        every { stubLoaderEngine.loadStubs(any(), any(), any(), any()) } returns emptyList()
+        every { watchMaker.make(any()) } returns watcher
+        every { specmaticConfig.contractStubPaths() } returns emptyList()
+        every { specmaticConfig.contractStubPathData() } returns emptyList()
+        every {
+            httpStubEngine.runHTTPStub(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } returns mockk { every { close() } returns Unit }
+
+        try {
+            val args = buildList {
+                add("--host=localhost")
+                add("--port=5000")
+            }
+            val exitStatus = CommandLine(stubCommand).execute(*args.toTypedArray())
+            val specmaticBaseUrl = Flags.getStringValue(Flags.SPECMATIC_BASE_URL)
+
+            assertThat(exitStatus).isZero()
+            assertThat(specmaticBaseUrl).isEqualTo("http://localhost:5000")
+        } finally {
+            System.clearProperty(Flags.SPECMATIC_BASE_URL)
         }
     }
 }

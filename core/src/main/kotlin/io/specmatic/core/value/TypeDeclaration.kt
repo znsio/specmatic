@@ -83,14 +83,14 @@ fun withoutVariable(type: String): String {
 
 fun selectConcreteArrayType(type1: String, type2: String): DeferredPattern {
     return DeferredPattern(when (type1) {
-        "[]" -> type2
+        LIST_BREAD_CRUMB -> type2
         else -> type1
     })
 }
 
 fun isEmptyArrayAndRepeatingType(type1: String, type2: String): Boolean {
     fun cleanup(type: String): String = "(${withoutOptionality(withoutPatternDelimiters(type.trim()))})"
-    return (isRepeatingPattern(cleanup(type1)) && type2 == "[]") || (type1 == "[]" && isRepeatingPattern(cleanup(type2)))
+    return (isRepeatingPattern(cleanup(type1)) && type2 == LIST_BREAD_CRUMB) || (type1 == LIST_BREAD_CRUMB && isRepeatingPattern(cleanup(type2)))
 }
 
 fun primitiveTypeDeclarationWithKey(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations, displayableType: String, stringValue: String): Pair<TypeDeclaration, ExampleDeclarations> {

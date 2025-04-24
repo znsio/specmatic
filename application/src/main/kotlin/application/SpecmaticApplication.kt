@@ -1,11 +1,8 @@
 package application
 
 import io.specmatic.core.utilities.UncaughtExceptionHandler
+import io.specmatic.specmatic.executable.JULForwarder
 import picocli.CommandLine
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.util.*
-import java.util.logging.LogManager
 import kotlin.system.exitProcess
 
 open class SpecmaticApplication {
@@ -22,7 +19,7 @@ open class SpecmaticApplication {
 
             when {
                 args.isEmpty() -> CommandLine(SpecmaticCommand()).usage(System.out)
-                else ->  {
+                else -> {
                     val exitCode = CommandLine(SpecmaticCommand()).execute(*args)
                     exitProcess(exitCode)
                 }
@@ -30,13 +27,7 @@ open class SpecmaticApplication {
         }
 
         private fun setupLogging() {
-            val logManager = LogManager.getLogManager()
-            val props = Properties()
-            props.setProperty("java.util.logging.ConsoleHandler.level", "FINE")
-            val out = ByteArrayOutputStream(512)
-            props.store(out, "No comment")
-            logManager.readConfiguration(ByteArrayInputStream(out.toByteArray()))
+            JULForwarder.forward()
         }
     }
-
 }

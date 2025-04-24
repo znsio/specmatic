@@ -262,20 +262,12 @@ data class Resolver(
     }
 
     private fun lookupPath(typeAlias: String?, lookupKey: String): String {
-        val lookupPath = if (typeAlias.isNullOrBlank()) {
-            if (lookupKey.isBlank())
-                ""
-            else if (lookupKey == "[*]")
-                "$dictionaryLookupPath$lookupKey"
-            else
-                "$dictionaryLookupPath.$lookupKey"
-        } else {
-            if (lookupKey.isBlank())
-                "${withoutPatternDelimiters(typeAlias)}"
-            else
-                "${withoutPatternDelimiters(typeAlias)}.$lookupKey"
+        val base = typeAlias?.trim()?.let(::withoutPatternDelimiters)?.takeIf(String::isNotBlank) ?: dictionaryLookupPath
+        return when (lookupKey) {
+            "" -> base
+            "[*]" -> "$base[*]"
+            else -> "$base.$lookupKey"
         }
-        return lookupPath
     }
 
     fun lookupPathSeen(lookupPath: String): Boolean {

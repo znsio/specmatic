@@ -119,10 +119,12 @@ class VirtualServiceCommand  : Callable<Int> {
         val errors: MutableList<String> = mutableListOf()
         val supportedMethods = setOf("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS")
         scenario.forEach{ s ->
+            // Check if the scenario is a valid HTTP method
             if(s.httpRequestPattern.method !in supportedMethods){
                 errors.add("Invalid HTTP method ${s.httpRequestPattern.method} in path ${s.path}, The supported methods are ${supportedMethods.joinToString {", "}}")
             }
 
+            // Check if the scenario is a POST with 2xx then it should contain an id in the response
             if (s.httpRequestPattern.method?.uppercase() == "POST" && s.isA2xxScenario()) {
                 val responsePattern = when (val body = s.httpResponsePattern.body) {
                     is DeferredPattern -> s.patterns[body.pattern]
@@ -134,7 +136,39 @@ class VirtualServiceCommand  : Callable<Int> {
                     errors.add("Operation: ${s.apiDescription}, does not contains <id> key in the response section as a required field")
                 }
             }
+
+            // Check if path is a valid REST path
+            if (!isValidRestPath(s.path)) {
+                errors.add("Invalid path: ${s.path}. Path should start with '/' and follow the REST conventions (e.g., /resources/{id})")
+            }
+
+            // Check if path contains any invalid resource names
+            val pathSegments = s.path.split("/").filter { it.isNotEmpty() }
+            pathSegments.forEach{ subPath ->
+                if (!subPath.startsWith("{") && !subPath.endsWith("}") && !isValidResourceName(subPath)) {
+                    errors.add("Invalid resource name in path ${s.path}: '$subPath' should be in lowercase with hyphens for separators")
+                }
+            }
+
+            // Check if path contains nested resources
+            if (pathSegments.size > 2) {
+                val potentialId = pathSegments[1]
+                if (!potentialId.startsWith("{") && !potentialId.endsWith("}")) {
+                    errors.add("Invalid nested resource in path ${s.path}: Resources should follow flat structure like /resource or /resource/{id}")
+                }
+            }
         }
         return errors
+    }
+
+    private fun isValidRestPath(path: String): Boolean {
+        return path.startsWith("/") &&
+                !path.contains("//") &&
+                !path.endsWith("/") &&
+                path.all { it.isLetterOrDigit() || it == '/' || it == '-' || it == '{' || it == '}' || it == '_' }
+    }
+
+    private fun isValidResourceName(segment: String): Boolean {
+        return segment.matches(Regex("^[a-z][a-z0-9-]*$"))
     }
 }

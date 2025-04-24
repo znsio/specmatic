@@ -5,9 +5,12 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.DEFAULT_WORKING_DIRECTORY
 import io.specmatic.core.Feature
+import io.specmatic.core.Scenario
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
+import io.specmatic.core.pattern.DeferredPattern
+import io.specmatic.core.pattern.JSONObjectPattern
 import io.specmatic.core.utilities.*
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.stateful.StatefulHttpStub
@@ -88,6 +91,14 @@ class VirtualServiceCommand  : Callable<Int> {
             false
         )
 
+        val validateSpec = virtualServiceValidationRuleset(stubData.map{it.first}.flatMap{it.scenarios})
+
+        if (validateSpec.isNotEmpty()) {
+            logger.log("\n\nThe following errors were found in the specifications:")
+            validateSpec.forEach { logger.log(it) }
+            return
+        }
+
         server = StatefulHttpStub(
             host,
             port,
@@ -103,21 +114,27 @@ class VirtualServiceCommand  : Callable<Int> {
         logger.log("${newLine}Injecting the data read from the following stub files into the stub server's state..".prependIndent("  "))
         this.forEach { logger.log(it.filePath.orEmpty().prependIndent("  ")) }
     }
+
+    private fun virtualServiceValidationRuleset(scenario: List<Scenario>): MutableList<String> {
+        val errors: MutableList<String> = mutableListOf()
+        val supportedMethods = setOf("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS")
+        scenario.forEach{ s ->
+            if(s.httpRequestPattern.method !in supportedMethods){
+                errors.add("Invalid HTTP method ${s.httpRequestPattern.method} in path ${s.path}, The supported methods are ${supportedMethods.joinToString {", "}}")
+            }
+
+            if (s.httpRequestPattern.method?.uppercase() == "POST" && s.isA2xxScenario()) {
+                val responsePattern = when (val body = s.httpResponsePattern.body) {
+                    is DeferredPattern -> s.patterns[body.pattern]
+                    is JSONObjectPattern -> body
+                    else -> null
+                }
+
+                if (responsePattern is JSONObjectPattern && !responsePattern.pattern.keys.contains("id")) {
+                    errors.add("Operation: ${s.apiDescription}, does not contains <id> key in the response section as a required field")
+                }
+            }
+        }
+        return errors
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

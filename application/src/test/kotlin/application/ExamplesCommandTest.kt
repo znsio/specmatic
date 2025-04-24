@@ -1,5 +1,6 @@
 package application
 
+import io.specmatic.core.Result
 import io.specmatic.core.lifecycle.AfterLoadingStaticExamples
 import io.specmatic.core.lifecycle.LifecycleHooks
 import io.specmatic.core.log.logger
@@ -355,6 +356,7 @@ paths:
                 logger.log("implicit example: '${feature.stubsFromExamples.map { (k, _) -> k }.sorted().joinToString(",")}'")
                 logger.log("external stub: '${stubs.map { File(it.filePath!!).name }.sorted().joinToString(",") }'")
             }
+            Result.Success()
         }
 
         @BeforeEach

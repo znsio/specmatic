@@ -3149,6 +3149,106 @@ Then status 200
     }
 
     @Nested
+    inner class ConfigStubTest {
+        private val simpleProductIdSpec = File("src/test/resources/openapi/simple_products_spec.yaml")
+
+        @Test
+        fun `should server requests from specified baseUrl in specmatic config`() {
+            stubTest(
+                configYaml = """
+                version: 2
+                contracts:
+                - consumes:
+                  - baseUrl: http://localhost:8080/api/v2
+                    specs:
+                    - ${simpleProductIdSpec.path}
+                """.trimIndent()
+            ) {
+                val client = HttpClient("http://localhost:8080/api/v2")
+                assertGetProductResponse(client)
+            }
+        }
+
+        @Test
+        fun `should server requests from specified host filling in missing scheme and port with defaults in specmatic config`() {
+            stubTest(
+                configYaml = """
+                version: 2
+                contracts:
+                - consumes:
+                  - host: 0.0.0.0
+                    specs:
+                    - ${simpleProductIdSpec.path}
+                """.trimIndent()
+            ) {
+                val client = HttpClient("http://0.0.0.0:9000")
+                assertGetProductResponse(client)
+            }
+        }
+
+        @Test
+        fun `should server requests from specified port filling in missing scheme and host with defaults in specmatic config`() {
+            stubTest(
+                configYaml = """
+                version: 2
+                contracts:
+                - consumes:
+                  - port: 5000
+                    specs:
+                    - ${simpleProductIdSpec.path}
+                """.trimIndent()
+            ) {
+                val client = HttpClient("http://0.0.0.0:5000")
+                assertGetProductResponse(client)
+            }
+        }
+
+        @Test
+        fun `should server requests from specified basePath filling in missing scheme, host and port with defaults in specmatic config`() {
+            stubTest(
+                configYaml = """
+                version: 2
+                contracts:
+                - consumes:
+                  - basePath: /api/v2
+                    specs:
+                    - ${simpleProductIdSpec.path}
+                """.trimIndent()
+            ) {
+                val client = HttpClient("http://0.0.0.0:9000/api/v2")
+                assertGetProductResponse(client)
+            }
+        }
+
+        @Test
+        fun `should server requests from combination of host, port and basePath`() {
+            stubTest(
+                configYaml = """
+                version: 2
+                contracts:
+                - consumes:
+                  - host: 0.0.0.0
+                    port: 5000
+                    basePath: /api/v2
+                    specs:
+                    - ${simpleProductIdSpec.path}
+                """.trimIndent()
+            ) {
+                val client = HttpClient("http://0.0.0.0:5000/api/v2")
+                assertGetProductResponse(client)
+            }
+        }
+
+        private fun assertGetProductResponse(client: HttpClient) {
+            val request = HttpRequest(method = "GET", path = "/products/123")
+            val response = client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body).isInstanceOf(StringValue::class.java)
+        }
+    }
+
+    @Nested
     inner class OverrideInlineExampleTest {
         @Test
         fun `should override inline example with an explicit external example with the same name`() {

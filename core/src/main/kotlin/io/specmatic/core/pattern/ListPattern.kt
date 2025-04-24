@@ -4,6 +4,8 @@ import io.specmatic.core.*
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.*
 
+const val LIST_BREAD_CRUMB = "[]"
+
 data class ListPattern(
     override val pattern: Pattern,
     override val typeAlias: String? = null,
@@ -134,17 +136,11 @@ data class ListPattern(
         return resolver.generateList(pattern)
     }
 
-    private fun generateRandomValue(resolver: Resolver): Value {
-        return pattern.listOf(0.until(randomNumber(3)).mapIndexed{ index, _ ->
-            attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolver) }
-        }, resolver)
-    }
-
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
-        return attempt(breadCrumb = "[]") {
+        return attempt(breadCrumb = LIST_BREAD_CRUMB) {
             resolverWithEmptyType.withCyclePrevention(pattern, true) { cyclePreventedResolver ->
-                val patterns = pattern.newBasedOn(row.dropDownIntoList(), cyclePreventedResolver)
+                val patterns = pattern.newBasedOn(row.stepDownIntoList(), cyclePreventedResolver)
                 try {
                     patterns.firstOrNull()?.value
                     patterns.map {
@@ -162,14 +158,27 @@ data class ListPattern(
 
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
-        return attempt(breadCrumb = "[]") {
+        return attempt(breadCrumb = LIST_BREAD_CRUMB) {
             resolverWithEmptyType.withCyclePrevention(pattern) { cyclePreventedResolver ->
                 pattern.newBasedOn(cyclePreventedResolver).map { ListPattern(it) }
             }
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(NullPattern))
+    override fun negativeBasedOn(
+        row: Row,
+        resolver: Resolver,
+        config: NegativePatternConfiguration
+    ): Sequence<ReturnValue<Pattern>> {
+        return attempt(breadCrumb = LIST_BREAD_CRUMB) {
+            pattern.negativeBasedOn(row.stepDownIntoList(), resolver, config)
+                .map { negativePatternValue ->
+                    negativePatternValue.ifValue { pattern ->
+                        ListPattern(pattern) as Pattern
+                    }.breadCrumb(LIST_BREAD_CRUMB)
+                }
+        }
+    }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONArray(value, resolver.mismatchMessages)
 

@@ -2,9 +2,10 @@ package io.specmatic.core.pattern
 
 import io.specmatic.core.DefaultMismatchMessages
 import io.specmatic.core.MismatchMessages
-import io.specmatic.core.utilities.jsonStringToValueArray
-import io.specmatic.core.utilities.jsonStringToValueMap
+import io.specmatic.core.log.logger
+import io.specmatic.core.utilities.*
 import io.specmatic.core.value.*
+import java.io.File
 
 const val XML_ATTR_OPTIONAL_SUFFIX = ".opt"
 const val DEFAULT_OPTIONAL_SUFFIX = "?"
@@ -374,5 +375,30 @@ fun parsedScalarValue(content: String?): Value {
         trimmed.toDoubleOrNull() != null -> NumberValue(trimmed.toDouble())
         trimmed.lowercase() in setOf("true", "false") -> BooleanValue(trimmed.toBoolean())
         else -> StringValue(trimmed)
+    }
+}
+
+fun readValue(file: File): Value = processContent(file.readText(), file.extension)
+
+inline fun <reified T : Value> readValueAs(file: File): T {
+    return when (val parsedValue = readValue(file)) {
+        is T -> parsedValue
+        else -> throw ClassCastException("Expected ${T::class.simpleName} but got ${parsedValue::class.simpleName}")
+    }
+}
+
+private fun processContent(content: String?, extension: String): Value {
+    val trimmedContent = content?.trim()?.removePrefix(UTF_BYTE_ORDER_MARK) ?: return EmptyString
+
+    return runCatching {
+        when(extension.lowercase()) {
+            "json" -> parsedJSON(trimmedContent)
+            "yaml", "yml" -> yamlStringToValue(trimmedContent)
+            "xml" -> toXMLNode(trimmedContent)
+            else -> parsedScalarValue(trimmedContent)
+        }
+    }.getOrElse { e ->
+        logger.debug(e)
+        StringValue(trimmedContent)
     }
 }

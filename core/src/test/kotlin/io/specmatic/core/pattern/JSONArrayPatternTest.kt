@@ -40,7 +40,7 @@ internal class JSONArrayPatternTest {
 
     @Test
     fun `An empty array should not match an populated array pattern`() {
-        val value = parsedValue("[]")
+        val value = parsedValue(LIST_BREAD_CRUMB)
         val pattern = parsedPattern("""["(number)"]""")
 
         value shouldNotMatch pattern
@@ -56,7 +56,7 @@ internal class JSONArrayPatternTest {
 
     @Test
     fun `An empty array should match an array pattern`() {
-        val value = parsedValue("[]")
+        val value = parsedValue(LIST_BREAD_CRUMB)
         val pattern = parsedPattern("""["(number*)"]""")
 
         value shouldMatch pattern

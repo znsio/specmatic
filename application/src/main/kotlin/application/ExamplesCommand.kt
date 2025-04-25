@@ -8,9 +8,7 @@ import io.specmatic.core.log.ConsolePrinter
 import io.specmatic.core.log.NonVerbose
 import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.capitalizeFirstChar
-import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.mock.ScenarioStub
 import picocli.CommandLine.*
 import java.io.File
@@ -169,13 +167,15 @@ For example, to filter by HTTP methods:
             }
 
             try {
-                val result = exampleValidationModule.validateExample(contractFile, exampleFile)
-                result.ofExample.throwOnFailure()
-                logger.log("The provided example ${exampleFile.name} is valid.")
-                return result.exitCodeBasedOnHookResult()
-            } catch (e: ContractException) {
-                logger.log("The provided example ${exampleFile.name} is invalid. Reason:\n")
-                logger.log(exceptionCauseMessage(e))
+                val validationResult = exampleValidationModule.validateExample(contractFile, exampleFile)
+
+                validationResult.errorMessage?.let {
+                    logger.log(it)
+                }
+
+                return validationResult.exitCode
+            } catch (e: Throwable) {
+                logger.log(e, "The provided example ${exampleFile.name} is invalid.")
                 return FAILURE_EXIT_CODE
             }
         }

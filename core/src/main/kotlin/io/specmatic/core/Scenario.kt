@@ -337,7 +337,7 @@ data class Scenario(
                 mismatchMessages = mismatchMessages,
                 findKeyErrorCheck = if (isPartial) resolver.getPartialKeyCheck() else resolver.findKeyErrorCheck
             )
-        )
+        ).disableOverrideUnexpectedKeycheck()
 
         val updatedScenario = newBasedOnAttributeSelectionFields(httpRequest.queryParams)
         val requestMatch = when(httpResponse.status in invalidRequestStatuses) {

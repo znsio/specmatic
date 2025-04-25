@@ -367,12 +367,18 @@ class ResponseMonitorTest {
             }
         })
 
-        assertThat(result).isInstanceOf(HasValue::class.java); result as HasValue
+        assertThatExtraHeaderWasAccepted(result)
+
+        result as HasValue
         assertThat(result.value.status).isEqualTo(201)
         assertThat(result.value.headers).isEqualTo(mapOf(
             "Content-Type" to "application/json",
             "X-Extra" to "Extra-Value"
         ))
         assertThat(result.value.body).isEqualTo(response.jsonObject["body"])
+    }
+
+    private fun assertThatExtraHeaderWasAccepted(result: ReturnValue<HttpResponse>) {
+        assertThat(result).isInstanceOf(HasValue::class.java)
     }
 }

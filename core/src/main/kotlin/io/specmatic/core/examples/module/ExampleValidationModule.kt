@@ -38,7 +38,9 @@ class ExampleValidationModule {
     fun validateExamples(
         feature: Feature,
         examples: List<File> = emptyList(),
-        scenarioFilter: ScenarioFilter = ScenarioFilter()
+        scenarioFilter: ScenarioFilter = ScenarioFilter(),
+        considerOnlyInlineExamples: Boolean = false,
+        considerOnlyExternalExamples: Boolean = false
     ): ValidationResults {
         val updatedFeature = scenarioFilter.filter(feature)
         return ValidationResults(
@@ -46,15 +48,20 @@ class ExampleValidationModule {
                 logger.debug("Validating ${exampleFile.name}")
                 exampleFile.canonicalPath to validateExample(updatedFeature, exampleFile)
             },
-            callLifecycleHook(updatedFeature, ExampleModule().getExamplesFromFiles(examples))
+            callLifecycleHook(updatedFeature, ExampleModule().getExamplesFromFiles(examples),
+                considerOnlyInlineExamples, considerOnlyExternalExamples)
         )
     }
 
-    fun validateExample(contractFile: File, exampleFile: File): ValidationResult {
+    fun validateExample(contractFile: File, exampleFile: File,
+                        considerOnlyInlineExamples: Boolean = false,
+                        considerOnlyExternalExamples: Boolean = false
+                        ): ValidationResult {
         val feature = parseContractFileWithNoMissingConfigWarning(contractFile)
         return ValidationResult(
             validateExample(feature, exampleFile),
-            callLifecycleHook(feature, ExampleModule().getExamplesFromFiles(listOf(exampleFile)))
+            callLifecycleHook(feature, ExampleModule().getExamplesFromFiles(listOf(exampleFile)),
+                considerOnlyInlineExamples, considerOnlyExternalExamples)
         )
     }
 
@@ -101,11 +108,22 @@ class ExampleValidationModule {
         )
     }
 
-    private fun callLifecycleHook(feature: Feature, examples: List<ExampleFromFile>): Result {
+    private fun callLifecycleHook(feature: Feature,
+                                  examples: List<ExampleFromFile>,
+                                  considerOnlyInlineExamples: Boolean,
+                                  considerOnlyExternalExamples: Boolean): Result {
         val scenarioStubs = examples.map { ScenarioStub(request = it.request, filePath = it.file.path) }
+        val updatedFeature = when (considerOnlyExternalExamples) {
+            true -> feature.copy(stubsFromExamples = emptyMap())
+            else -> feature
+        }
+        val updatedScenarioStubs = when (considerOnlyInlineExamples) {
+            true -> emptyList()
+            false -> scenarioStubs
+        }
         return LifecycleHooks.afterLoadingStaticExamples.call(
             ExamplesUsedFor.Validation,
-            listOf(Pair(feature, scenarioStubs))
+            listOf(Pair(updatedFeature, updatedScenarioStubs))
         )
     }
 }

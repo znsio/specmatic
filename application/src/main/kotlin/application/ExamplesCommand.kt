@@ -165,7 +165,9 @@ For example, to filter by HTTP methods:
             }
 
             try {
-                val validationResult = exampleValidationModule.validateExample(contractFile, exampleFile)
+                val validationResult = exampleValidationModule.validateExample(contractFile, exampleFile,
+                    considerOnlyInlineExamples = examplesToValidate == ExamplesToValidate.INLINE,
+                    considerOnlyExternalExamples = examplesToValidate == ExamplesToValidate.EXTERNAL)
 
                 validationResult.errorMessage?.let {
                     logger.log(it)
@@ -263,11 +265,16 @@ For example, to filter by HTTP methods:
             )
         }
 
-        private fun validateExternalExamples(feature: Feature, externalExamples: List<File>): ValidationResults {
+        private fun validateExternalExamples(
+            feature: Feature,
+            externalExamples: List<File>
+        ): ValidationResults {
             return exampleValidationModule.validateExamples(
                 feature,
                 examples = externalExamples,
-                scenarioFilter = ScenarioFilter(filterName, filterNotName, filter)
+                scenarioFilter = ScenarioFilter(filterName, filterNotName, filter),
+                considerOnlyInlineExamples = examplesToValidate == ExamplesToValidate.INLINE,
+                considerOnlyExternalExamples = examplesToValidate == ExamplesToValidate.EXTERNAL
             )
         }
 

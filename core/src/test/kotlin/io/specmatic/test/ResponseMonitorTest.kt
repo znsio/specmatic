@@ -2,6 +2,10 @@ package io.specmatic.test
 
 import io.specmatic.core.*
 import io.specmatic.core.pattern.*
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NumberValue
+import io.specmatic.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -332,5 +336,49 @@ class ResponseMonitorTest {
         >> MONITOR.RESPONSE.BODY.age
         Expected number, actual was "John"
         """.trimIndent())
+    }
+
+    @Test
+    fun `extraHeaders from monitor response payload should be allowed`() {
+        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
+        val response = JSONObjectValue(mapOf(
+            "statusCode" to NumberValue(201),
+            "body" to JSONObjectValue(mapOf("name" to StringValue("John"), "age" to NumberValue(20))),
+            "header" to JSONArrayValue(listOf(
+                JSONObjectValue(mapOf("name" to StringValue("Content-Type"), "value" to StringValue("application/json"))),
+                JSONObjectValue(mapOf("name" to StringValue("X-Extra"), "value" to StringValue("Extra-Value"))),
+            ))
+        ))
+
+        val result = ResponseMonitor(feature, postScenario, response = HttpResponse(
+            status = 202,
+            headers = mapOf("Link" to "</monitor/123>;rel=related;title=monitor")
+        ), backOffDelay = 0).waitForResponse(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.path).isEqualTo("/monitor/123")
+                assertThat(request.method).isEqualTo("GET")
+                return HttpResponse(
+                    status = 200,
+                    body = JSONObjectValue(mapOf(
+                        "request" to postScenario.generateHttpRequest().updateHeader("EXTRA-HEADER", "Extra-Value").toJSON(),
+                        "response" to response
+                    ))
+                )
+            }
+        })
+
+        assertThatExtraHeaderWasAccepted(result)
+
+        result as HasValue
+        assertThat(result.value.status).isEqualTo(201)
+        assertThat(result.value.headers).isEqualTo(mapOf(
+            "Content-Type" to "application/json",
+            "X-Extra" to "Extra-Value"
+        ))
+        assertThat(result.value.body).isEqualTo(response.jsonObject["body"])
+    }
+
+    private fun assertThatExtraHeaderWasAccepted(result: ReturnValue<HttpResponse>) {
+        assertThat(result).isInstanceOf(HasValue::class.java)
     }
 }

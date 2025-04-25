@@ -740,7 +740,17 @@ class StatefulHttpStub(
                     return@forEach
                 }
 
-                val responseBodies = (it.response.body as JSONArrayValue).list.filterIsInstance<JSONObjectValue>()
+                val responseBodies = when (responseBody) {
+                    is JSONArrayValue -> responseBody.list.filterIsInstance<JSONObjectValue>()
+                    is JSONObjectValue -> responseBody.jsonObject.entries
+                        .filter { (_, value) -> value is JSONArrayValue }
+                        .map { (_, value) ->
+                            (value as JSONArrayValue).list.filterIsInstance<JSONObjectValue>()
+                        }
+                        .flatten()
+                    else -> emptyList()
+                }
+
                 responseBodies.forEach { body ->
                     stubCache.addResponse(
                         path = resourcePath,

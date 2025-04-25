@@ -13,97 +13,96 @@ import org.junit.jupiter.params.provider.CsvSource
 class AssertExistenceTest {
     @ParameterizedTest
     @CsvSource(
-        "REQUEST.BODY.name, name, exists",
-        "REQUEST.BODY,      name, not_exists",
-        "REQUEST.BODY.name, name, is_null",
-        "REQUEST.BODY,      name, is_not_null",
+        "REQUEST.BODY, name, exists",
+        "REQUEST.BODY, name, not_exists",
+        "REQUEST.BODY, name, is_null",
+        "REQUEST.BODY, name, is_not_null",
     )
     fun `should be able to parse assertions`(prefix: String, key: String, checkTypeString: String) {
         val checkType = ExistenceCheckType.fromString(checkTypeString)!!
         val value = StringValue("\$${checkType.value}()")
 
         println("value: $value, prefix: $prefix, key: $key, checkType: $checkType")
-        val assert = AssertExistence.parse(prefix, key, value)
-        assertThat(assert).isNotNull.isInstanceOf(AssertExistence::class.java)
-        assertThat(assert!!.prefix).isEqualTo("REQUEST.BODY")
-        assertThat(assert.key).isEqualTo(key)
+        val assert = parsedAssert(prefix, key, value)
+        assertThat(assert).isNotNull.isInstanceOf(AssertExistence::class.java); assert as AssertExistence
+        assertThat(assert.keys).containsExactly("REQUEST", "BODY", "name")
         assertThat(assert.checkType).isEqualTo(checkType)
     }
 
     @Test
     fun `should return failure when actual value does not exist and check type is exists`() {
-        val assert = AssertExistence(prefix = "REQUEST.BODY", key = "name", checkType = ExistenceCheckType.EXISTS)
+        val assert = AssertExistence(keys = listOf("BODY", "name"), checkType = ExistenceCheckType.EXISTS)
 
         val bodyValue = JSONObjectValue(emptyMap())
-        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+        val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, emptyMap())
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
-        >> REQUEST.BODY.name
-        Expected "REQUEST.BODY.name" to exist
+        >> BODY.name
+        Expected "BODY.name" to exist
         """.trimIndent())
     }
 
     @Test
     fun `should return failure when actual value exists and check type is not_exists`() {
-        val assert = AssertExistence(prefix = "REQUEST.BODY", key = "name", checkType = ExistenceCheckType.NOT_EXISTS)
+        val assert = AssertExistence(keys = listOf("BODY", "name"), checkType = ExistenceCheckType.NOT_EXISTS)
 
         val bodyValue = JSONObjectValue(mapOf("name" to StringValue("John")))
-        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+        val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, emptyMap())
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
-        >> REQUEST.BODY.name
-        Expected "REQUEST.BODY.name" to not exist
+        >> BODY.name
+        Expected "BODY.name" to not exist
         """.trimIndent())
     }
 
     @Test
     fun `should return failure when actual value is null and check type is is_not_null`() {
-        val assert = AssertExistence(prefix = "REQUEST.BODY", key = "name", checkType = ExistenceCheckType.NOT_NULL)
+        val assert = AssertExistence(keys = listOf("BODY", "name"), checkType = ExistenceCheckType.NOT_NULL)
 
         val bodyValue = JSONObjectValue(mapOf("name" to NullValue))
-        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+        val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, emptyMap())
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
-        >> REQUEST.BODY.name
-        Expected "REQUEST.BODY.name" to not be null
+        >> BODY.name
+        Expected "BODY.name" to not be null
         """.trimIndent())
     }
 
     @Test
     fun `should return failure when actual value is not null check type is is_null`() {
-        val assert = AssertExistence(prefix = "REQUEST.BODY", key = "name", checkType = ExistenceCheckType.IS_NULL)
+        val assert = AssertExistence(keys = listOf("BODY", "name"), checkType = ExistenceCheckType.IS_NULL)
 
         val bodyValue = JSONObjectValue(mapOf("name" to StringValue("John")))
-        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+        val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, emptyMap())
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
-        >> REQUEST.BODY.name
-        Expected "REQUEST.BODY.name" to be null
+        >> BODY.name
+        Expected "BODY.name" to be null
         """.trimIndent())
     }
 
     @Test
     fun `should not combine key if key is empty with prefix`() {
-        val assert = AssertExistence(prefix = "REQUEST.BODY", key = "", checkType = ExistenceCheckType.EXISTS)
+        val assert = AssertExistence(keys = listOf("BODY", ""), checkType = ExistenceCheckType.EXISTS)
         val actualStore = mapOf("ENTITY.name" to StringValue("John"))
         val bodyValue = StringValue("John")
-        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+        val currentStore = bodyValue.toFactStore("BODY")
 
         val result = assert.assert(currentStore, actualStore)
         println(result.reportString())

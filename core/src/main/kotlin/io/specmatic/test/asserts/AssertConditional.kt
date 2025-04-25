@@ -1,68 +1,77 @@
 package io.specmatic.test.asserts
 
-import io.ktor.http.*
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.Value
 
-class AssertConditional(override val prefix: String, val conditionalAsserts: List<Assert>, val thenAsserts: List<Assert>, val elseAsserts: List<Assert>): Assert {
-
-    override fun assert(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
-        val prefixValue = currentFactStore[prefix] ?: return Result.Failure(breadCrumb = prefix, message = "Could not resolve ${prefix.quote()} in current fact store")
-
-        val dynamicAsserts = this.dynamicAsserts(prefixValue)
-        val results = dynamicAsserts.map {
-            val mainResult = it.conditionalAsserts.map { assert -> assert.assert(currentFactStore, actualFactStore) }.toResult()
-            when (mainResult) {
-                is Result.Success -> it.thenAsserts.map { assert ->  assert.assert(currentFactStore, actualFactStore) }.toResult()
-                else -> it.elseAsserts.map { assert ->  assert.assert(currentFactStore, actualFactStore) }.toResult()
-            }
+class AssertConditional(override val keys: List<String>, val conditionalAsserts: List<Assert>, val thenAsserts: List<Assert>, val elseAsserts: List<Assert>): Assert {
+    override fun execute(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
+        val mainResult = conditionalAsserts.executeAsserts(currentFactStore, actualFactStore)
+        return when (mainResult) {
+            is Result.Success -> thenAsserts.executeAsserts(currentFactStore, actualFactStore)
+            else -> elseAsserts.executeAsserts(currentFactStore, actualFactStore)
         }
-
-        return results.toResult()
     }
 
-    private fun collectDynamicAsserts(prefixValue: Value, asserts: List<Assert>): Map<String, List<Assert>> {
-        return asserts.flatMap { it.dynamicAsserts(prefixValue) }.groupBy { it.prefix }
+    private fun List<Assert>.executeAsserts(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
+        return Result.fromResults(map { it.execute(currentFactStore, actualFactStore) })
     }
 
-    override fun dynamicAsserts(prefixValue: Value): List<AssertConditional> {
-        val newConditionalAsserts = collectDynamicAsserts(prefixValue, conditionalAsserts)
-        val newThenAsserts = collectDynamicAsserts(prefixValue, thenAsserts)
-        val newElseAsserts = collectDynamicAsserts(prefixValue, elseAsserts)
+    private fun collectDynamicAsserts(currentFactStore: Map<String, Value>, asserts: List<Assert>, dynamicPaths: List<List<String>>): List<List<Assert>> {
+        if (asserts.isEmpty()) return emptyList()
+        val dynamicAsserts = asserts.flatMap { it.dynamicAsserts(currentFactStore) { NullValue } }
+        return dynamicPaths.map { path -> dynamicAsserts.filter { assert -> assert.keys.withWildCardStartsWith(path) } }
+    }
 
-        return newConditionalAsserts.keys.map { prefix ->
+    private fun List<String>.withWildCardStartsWith(prefix: List<String>): Boolean {
+        return this.take(prefix.size).zip(prefix).all { (current, expected) ->
+            current == expected || current.isWildcardMatch(expected)
+        }
+    }
+
+    private fun String.isWildcardMatch(other: String): Boolean {
+        return (this.startsWith("[") && other == WILDCARD_INDEX) || (other.startsWith("[") && this == WILDCARD_INDEX)
+    }
+
+    override fun dynamicAsserts(currentFactStore: Map<String, Value>, ifNotExists: (String) -> Value): List<AssertConditional> {
+        val dynamicPaths = generateDynamicPaths(keys, currentFactStore)
+        val dynamicConditionalAsserts = collectDynamicAsserts(currentFactStore, conditionalAsserts, dynamicPaths)
+        val dynamicThenAsserts = collectDynamicAsserts(currentFactStore, thenAsserts, dynamicPaths)
+        val dynamicElseAsserts = collectDynamicAsserts(currentFactStore, elseAsserts, dynamicPaths)
+
+        return dynamicPaths.mapIndexed { index, newKeys ->
             AssertConditional(
-                prefix = prefix,
-                conditionalAsserts = newConditionalAsserts[prefix].orEmpty(),
-                thenAsserts = newThenAsserts[prefix].orEmpty(),
-                elseAsserts = newElseAsserts[prefix].orEmpty()
+                keys = newKeys,
+                conditionalAsserts = dynamicConditionalAsserts.getOrNull(index).orEmpty(),
+                thenAsserts = dynamicThenAsserts.getOrNull(index).orEmpty(),
+                elseAsserts = dynamicElseAsserts.getOrNull(index).orEmpty()
             )
         }
     }
 
-    override val key: String = ""
-
     companion object {
-        private fun toAsserts(prefix: String, jsonObjectValue: JSONObjectValue?, resolver: Resolver): List<Assert> {
-            return jsonObjectValue?.jsonObject?.entries?.mapNotNull { (key, value) ->
-                parsedAssert(prefix, key, value, resolver)
+        private fun toAsserts(keys: List<String>, jsonObjectValue: JSONObjectValue?, resolver: Resolver): List<Assert> {
+            return jsonObjectValue?.jsonObject?.mapNotNull { (key, value) ->
+                Assert.parse(keys + key, value, resolver)
             }.orEmpty()
         }
 
-        fun parse(prefix: String, key: String, value: Value, resolver: Resolver): AssertConditional? {
-            val conditions = (value as? JSONObjectValue)?.findFirstChildByPath("\$conditions") as? JSONObjectValue ?: return null
-            val thenConditions = (value as? JSONObjectValue)?.findFirstChildByPath("\$then") as? JSONObjectValue
-            val elseConditions = (value as? JSONObjectValue)?.findFirstChildByPath("\$else") as? JSONObjectValue
+        fun parse(keys: List<String>, value: Value, resolver: Resolver): AssertConditional? {
+            val jsonObject = value as? JSONObjectValue ?: return null
+
+            val conditions = jsonObject.findFirstChildByPath("\$conditions") as? JSONObjectValue ?: return null
+            val thenConditions = jsonObject.findFirstChildByPath("\$then") as? JSONObjectValue
+            val elseConditions = jsonObject.findFirstChildByPath("\$else") as? JSONObjectValue
 
             if (thenConditions == null && elseConditions == null) return null
-
+            val keysToConsider = keys.dropLast(1)
             return AssertConditional(
-                prefix = prefix,
-                conditionalAsserts = toAsserts(prefix, conditions, resolver),
-                thenAsserts = toAsserts(prefix, thenConditions, resolver),
-                elseAsserts = toAsserts(prefix, elseConditions, resolver)
+                keys = keysToConsider,
+                conditionalAsserts = toAsserts(keysToConsider, conditions, resolver),
+                thenAsserts = toAsserts(keysToConsider, thenConditions, resolver),
+                elseAsserts = toAsserts(keysToConsider, elseConditions, resolver)
             )
         }
     }

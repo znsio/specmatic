@@ -299,8 +299,9 @@ private fun <T> JSONArrayValue.traverse(
     prefix: String = "", onScalar: (Value, String) -> Map<String, T>,
     onComposite: ((Value, String) -> Map<String, T>)? = null, onAssert: ((Value, String) ->  Map<String, T>)? = null
 ): Map<String, T> {
-    return this.list.mapIndexed { index, value ->
-        val fullKey = if (onAssert != null) { prefix } else "$prefix[$index]"
-        value.traverse(fullKey, onScalar, onComposite, onAssert)
+    val listToTraverse = if (onAssert == null) this.list else this.list.lastOrNull()?.let { listOf(it) }.orEmpty()
+    return listToTraverse.mapIndexed { index, value ->
+        val indexToUse = if (onAssert == null) index else "*"
+        value.traverse("$prefix[$indexToUse]", onScalar, onComposite, onAssert)
     }.flatMap { it.entries }.associate { it.toPair() } + onComposite?.invoke(this, prefix).orEmpty()
 }

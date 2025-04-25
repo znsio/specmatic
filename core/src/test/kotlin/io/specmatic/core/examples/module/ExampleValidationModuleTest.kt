@@ -2,6 +2,7 @@ package io.specmatic.core.examples.module
 
 import io.specmatic.core.*
 import io.specmatic.core.pattern.*
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
@@ -396,6 +397,89 @@ class ExampleValidationModuleTest {
         >> RESPONSE.BODY[0].extra
         Key named "extra" was unexpected
         """.trimIndent())
+    }
+
+    @Test
+    fun `should complain if additional out-of-spec headers are included in the example`(@TempDir tempDir: File) {
+        val scenario = Scenario(ScenarioInfo(
+            httpRequestPattern = HttpRequestPattern(
+                method = "GET",
+                httpPathPattern = buildHttpPathPattern("/test"),
+                headersPattern = HttpHeadersPattern(mapOf("REQUEST-HEADER" to StringPattern()))
+            ),
+            httpResponsePattern = HttpResponsePattern(
+                status = 200,
+                headersPattern = HttpHeadersPattern(mapOf("RESPONSE-HEADER" to StringPattern()))
+            )
+        ))
+        val feature = Feature(listOf(scenario), name = "")
+        val example = ScenarioStub(
+            request = HttpRequest("GET", "/test", headers = mapOf("REQUEST-HEADER" to "request-value", "EXTRA-HEADER" to "extra-value")),
+            response = HttpResponse(status = 200, headers = mapOf("RESPONSE-HEADER" to "response-value", "EXTRA-HEADER" to "extra-value"))
+        ).toExample(tempDir)
+        val result = exampleValidationModule.validateExample(feature, example)
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        >> REQUEST.HEADERS.EXTRA-HEADER
+        Header EXTRA-HEADER in the example is not in the specification
+        >> RESPONSE.HEADERS.EXTRA-HEADER
+        Header EXTRA-HEADER in the example is not in the specification
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should validate additional headers if the example is partial`(@TempDir tempDir: File) {
+        val scenario = Scenario(ScenarioInfo(
+            httpRequestPattern = HttpRequestPattern(
+                method = "GET",
+                httpPathPattern = buildHttpPathPattern("/test"),
+                headersPattern = HttpHeadersPattern(mapOf("REQUEST-HEADER" to StringPattern()))
+            ),
+            httpResponsePattern = HttpResponsePattern(
+                status = 200,
+                headersPattern = HttpHeadersPattern(mapOf("RESPONSE-HEADER" to StringPattern()))
+            )
+        ))
+        val feature = Feature(listOf(scenario), name = "")
+        val example = ScenarioStub(
+            request = HttpRequest("GET", "/test", headers = mapOf("REQUEST-HEADER" to "request-value", "EXTRA-HEADER" to "extra-value")),
+            response = HttpResponse(status = 200, headers = mapOf("RESPONSE-HEADER" to "response-value", "EXTRA-HEADER" to "extra-value"))
+        ).toPartialExample(tempDir)
+        val result = exampleValidationModule.validateExample(feature, example)
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        >> REQUEST.HEADERS.EXTRA-HEADER
+        Header EXTRA-HEADER in the example is not in the specification
+        >> RESPONSE.HEADERS.EXTRA-HEADER
+        Header EXTRA-HEADER in the example is not in the specification
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should allow additional headers if extensible schema is set`(@TempDir tempDir: File) {
+        val scenario = Scenario(ScenarioInfo(
+            httpRequestPattern = HttpRequestPattern(
+                method = "GET",
+                httpPathPattern = buildHttpPathPattern("/test"),
+                headersPattern = HttpHeadersPattern(mapOf("REQUEST-HEADER" to StringPattern()))
+            ),
+            httpResponsePattern = HttpResponsePattern(
+                status = 200,
+                headersPattern = HttpHeadersPattern(mapOf("RESPONSE-HEADER" to StringPattern()))
+            )
+        ))
+        val example = ScenarioStub(
+            request = HttpRequest("GET", "/test", headers = mapOf("REQUEST-HEADER" to "request-value", "EXTRA-HEADER" to "extra-value")),
+            response = HttpResponse(status = 200, headers = mapOf("RESPONSE-HEADER" to "response-value", "EXTRA-HEADER" to "extra-value"))
+        ).toExample(tempDir)
+
+        Flags.using(Flags.EXTENSIBLE_SCHEMA to "true") {
+            val feature = Feature(listOf(scenario), name = "")
+            val result = exampleValidationModule.validateExample(feature, example)
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
     }
 
     private fun ScenarioStub.toPartialExample(tempDir: File): File {

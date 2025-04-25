@@ -5,39 +5,29 @@ import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.pattern.DeferredPattern
 import io.specmatic.core.pattern.Pattern
-import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
-class AssertPattern(override val prefix: String, override val key: String, val pattern: Pattern, val resolver: Resolver) : Assert {
-    override fun assert(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
-        val prefixValue = currentFactStore[prefix] ?: return Result.Failure(breadCrumb = prefix, message = "Could not resolve ${prefix.quote()} in current fact store")
-
-        val dynamicList = dynamicAsserts(prefixValue)
-        val results = dynamicList.map { newAssert ->
-            val finalKey = newAssert.combinedKey
-            val actualValue = currentFactStore[finalKey] ?: return@map Result.Failure(breadCrumb = finalKey, message = "Could not resolve ${finalKey.quote()} in current fact store")
-            runCatching {
-                pattern.matches(actualValue, resolver).breadCrumb(finalKey)
-            }.getOrElse { e -> Result.Failure(exceptionCauseMessage(e)) }
-        }
-
-        return results.toResult()
+class AssertPattern(override val keys: List<String>, val pattern: Pattern, val resolver: Resolver) : Assert {
+    override fun execute(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
+        val actualValue = currentFactStore[combinedKey] ?: return Result.Failure(
+            breadCrumb = combinedKey,
+            message = "Could not resolve ${combinedKey.quote()} in response"
+        )
+        return runCatching { pattern.matches(actualValue, resolver).breadCrumb(combinedKey) }.getOrElse { e -> e.toFailure() }
     }
 
-    override fun dynamicAsserts(prefixValue: Value): List<Assert> {
-        return prefixValue.suffixIfMoreThanOne {suffix, _ ->
-            AssertPattern(prefix = "$prefix$suffix", key = key, pattern = pattern, resolver = resolver)
+    override fun dynamicAsserts(currentFactStore: Map<String, Value>, ifNotExists: (String) -> Value): List<Assert> {
+        return this.generateDynamicPaths(keys, currentFactStore, ifNotExists = ifNotExists).map { keys ->
+            AssertPattern(keys, pattern, resolver)
         }
     }
 
     companion object {
-        fun parse(prefix: String, key: String, value: Value, resolver: Resolver): AssertPattern? {
+        fun parse(keys: List<String>, value: Value, resolver: Resolver): AssertPattern? {
             if (value !is StringValue || value.isPatternToken().not()) return null
-
             val pattern = DeferredPattern(value.string)
-            val keyPrefix = prefix.removeSuffix(".${key}")
-            return AssertPattern(keyPrefix, key, pattern, resolver)
+            return AssertPattern(keys, pattern, resolver)
         }
     }
 }

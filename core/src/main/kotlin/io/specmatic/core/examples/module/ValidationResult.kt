@@ -5,7 +5,7 @@ import io.specmatic.core.Result
 const val SUCCESS_EXIT_CODE = 0
 const val FAILURE_EXIT_CODE = 1
 
-class ValidationResult(private val exampleValidationResult: Result, private val hookValidationResult: Result) {
+class ValidationResult(val exampleValidationResult: Result, private val hookValidationResult: Result) {
     private val success: Boolean
         get() {
             if(exampleValidationResult is Result.Failure && !exampleValidationResult.isPartialFailure()) {

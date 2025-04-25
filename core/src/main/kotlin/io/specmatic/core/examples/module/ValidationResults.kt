@@ -3,31 +3,23 @@ package io.specmatic.core.examples.module
 import io.specmatic.core.Result
 
 class ValidationResults(val exampleValidationResults: Map<String, Result>, private val hookValidationResult: Result) {
-    val exitCode: Int
+    val success: Boolean
         get() {
             if(exampleValidationResults.containsOnlyCompleteFailures())
-                return FAILURE_EXIT_CODE
+                return false
 
             if(hookValidationResult is Result.Failure && !hookValidationResult.isPartialFailure())
-                return FAILURE_EXIT_CODE
+                return false
 
-            return SUCCESS_EXIT_CODE
+            return true
+
         }
 
-    val errorMessage: String?
+    val exitCode: Int
         get() {
-            TODO()
+            if(success) return SUCCESS_EXIT_CODE
+            return FAILURE_EXIT_CODE
         }
-
-    fun exitCode(): Int = when (exampleValidationResults.containsOnlyCompleteFailures()) {
-        true -> FAILURE_EXIT_CODE
-        false -> exitCodeBasedOnHookResult()
-    }
-
-    fun exitCodeBasedOnHookResult() = when (hookValidationResult.isSuccess()) {
-        true -> SUCCESS_EXIT_CODE
-        false -> FAILURE_EXIT_CODE
-    }
 
     private fun Map<String, Result>.containsOnlyCompleteFailures(): Boolean {
         return this.any { it.value is Result.Failure && !it.value.isPartialFailure() }
@@ -43,7 +35,9 @@ class ValidationResults(val exampleValidationResults: Map<String, Result>, priva
 fun List<ValidationResults>.ofAllExamples() =
     flatMap { it.exampleValidationResults.entries }.associate { entry -> entry.toPair() }
 
-fun List<ValidationResults>.exitCode() = when(any { it.exitCode() == FAILURE_EXIT_CODE }) {
-    true -> FAILURE_EXIT_CODE
-    else -> SUCCESS_EXIT_CODE
+fun List<ValidationResults>.exitCode(): Int {
+    return if (any { !it.success })
+        FAILURE_EXIT_CODE
+    else
+        SUCCESS_EXIT_CODE
 }

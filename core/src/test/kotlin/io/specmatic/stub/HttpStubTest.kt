@@ -3204,13 +3204,13 @@ Then status 200
                 contracts:
                 - consumes:
                   - host: 0.0.0.0
-                    port: 5000
+                    port: 20000
                     basePath: /api/v2
                     specs:
                     - ${simpleProductIdSpec.path}
                 """.trimIndent()
             ) {
-                val client = HttpClient("http://0.0.0.0:5000/api/v2")
+                val client = HttpClient("http://0.0.0.0:20000/api/v2")
                 assertGetProductResponse(client)
             }
         }

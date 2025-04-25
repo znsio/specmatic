@@ -39,23 +39,23 @@ class ExampleValidationModule {
         feature: Feature,
         examples: List<File> = emptyList(),
         scenarioFilter: ScenarioFilter = ScenarioFilter()
-    ): Map<String, Result> {
+    ): ValidationResults {
         val updatedFeature = scenarioFilter.filter(feature)
-
-        val results = examples.associate { exampleFile ->
-            logger.debug("Validating ${exampleFile.name}")
-            exampleFile.canonicalPath to validateExample(updatedFeature, exampleFile)
-        }
-
-        callLifecycleHook(updatedFeature, ExampleModule().getExamplesFromFiles(examples))
-        return results
+        return ValidationResults(
+            examples.associate { exampleFile ->
+                logger.debug("Validating ${exampleFile.name}")
+                exampleFile.canonicalPath to validateExample(updatedFeature, exampleFile)
+            },
+            callLifecycleHook(updatedFeature, ExampleModule().getExamplesFromFiles(examples))
+        )
     }
 
-    fun validateExample(contractFile: File, exampleFile: File): Result {
+    fun validateExample(contractFile: File, exampleFile: File): ValidationResult {
         val feature = parseContractFileWithNoMissingConfigWarning(contractFile)
-        val result = validateExample(feature, exampleFile)
-        callLifecycleHook(feature, ExampleModule().getExamplesFromFiles(listOf(exampleFile)))
-        return result
+        return ValidationResult(
+            validateExample(feature, exampleFile),
+            callLifecycleHook(feature, ExampleModule().getExamplesFromFiles(listOf(exampleFile)))
+        )
     }
 
     fun validateExample(feature: Feature, scenarioStub: ScenarioStub): Results {
@@ -101,9 +101,9 @@ class ExampleValidationModule {
         )
     }
 
-    private fun callLifecycleHook(feature: Feature, examples: List<ExampleFromFile>) {
+    private fun callLifecycleHook(feature: Feature, examples: List<ExampleFromFile>): Result {
         val scenarioStubs = examples.map { ScenarioStub(request = it.request, filePath = it.file.path) }
-        LifecycleHooks.afterLoadingStaticExamples.call(
+        return LifecycleHooks.afterLoadingStaticExamples.call(
             ExamplesUsedFor.Validation,
             listOf(Pair(feature, scenarioStubs))
         )

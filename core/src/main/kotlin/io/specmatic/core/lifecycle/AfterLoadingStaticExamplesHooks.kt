@@ -1,6 +1,7 @@
 package io.specmatic.core.lifecycle
 
 import io.specmatic.core.Feature
+import io.specmatic.core.Result
 import io.specmatic.mock.ScenarioStub
 
 class AfterLoadingStaticExamplesHooks : AfterLoadingStaticExamples {
@@ -14,9 +15,10 @@ class AfterLoadingStaticExamplesHooks : AfterLoadingStaticExamples {
         afterLoadingStaticExamples.remove(hook)
     }
 
-    override fun call(examplesUsedFor: ExamplesUsedFor, examples: List<Pair<Feature, List<ScenarioStub>>>) {
-        afterLoadingStaticExamples.forEach {
+    override fun call(examplesUsedFor: ExamplesUsedFor, examples: List<Pair<Feature, List<ScenarioStub>>>): Result {
+        val results = afterLoadingStaticExamples.map {
             it.call(examplesUsedFor, examples)
         }
+        return Result.fromResults(results)
     }
 }

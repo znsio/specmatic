@@ -100,7 +100,12 @@ specmatic {
         }
     }
 }
-tasks.getByName("beforeReleaseBuild").dependsOn("check")
-tasks.getByName("afterReleaseBuild").dependsOn("publishAllPublicationsToSpecmaticPrivateRepository")
-tasks.getByName("afterReleaseBuild").dependsOn("publishAllPublicationsToMavenCentralRepository")
-tasks.getByName("afterReleaseBuild").dependsOn(":specmatic-executable:dockerBuildxPublish")
+tasks.beforeReleaseBuild {
+    dependsOn("check")
+}
+
+tasks.afterReleaseBuild {
+    dependsOn("publishAllPublicationsToSpecmaticPrivateRepository")
+    dependsOn("publishAllPublicationsToMavenCentralRepository")
+    dependsOn("dockerBuildxPublish")
+}

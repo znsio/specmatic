@@ -124,9 +124,9 @@ For example, to filter by HTTP methods:
             if (contractFile != null && examplesDir != null) {
                 val (exitCode, validationResults) = validateExamplesDir(contractFile!!, examplesDir)
 
-                printValidationResult(validationResults.ofExamples, "Example directory")
+                printValidationResult(validationResults.exampleValidationResults, "Example directory")
                 if (exitCode == 1) return FAILURE_EXIT_CODE
-                if (validationResults.ofExamples.containsOnlyCompleteFailures()) return FAILURE_EXIT_CODE
+                if (validationResults.exampleValidationResults.containsOnlyCompleteFailures()) return FAILURE_EXIT_CODE
                 return validationResults.exitCodeBasedOnHookResult()
             }
 
@@ -212,7 +212,7 @@ For example, to filter by HTTP methods:
                 ordinal++
 
                 val results = validateExamplesDir(specFile, associatedExamplesDir).second
-                printValidationResult(results.ofExamples, "")
+                printValidationResult(results.exampleValidationResults, "")
                 logger.log(System.lineSeparator())
                 results
             }.toList()
@@ -228,23 +228,28 @@ For example, to filter by HTTP methods:
 
             val (validateInline, validateExternal) = getValidateInlineAndValidateExternalFlags()
 
-            val inlineExampleValidationResults = if (!validateInline) emptyMap()
-            else validateInlineExamples(feature)
+            val inlineExampleValidationResults =
+                if (!validateInline)
+                    emptyMap()
+                else
+                    validateInlineExamples(feature)
 
-            val externalExampleValidationResults = if (!validateExternal) ValidationResults.forNoExamples()
-            else {
-                val (exitCode, validationResults)
-                        = validateExamplesDir(feature, ExampleModule().defaultExternalExampleDirFrom(contractFile))
-                if(exitCode == 1) exitProcess(1)
-                validationResults
-            }
+            val externalExampleValidationResults =
+                if (!validateExternal)
+                    ValidationResults.forNoExamples()
+                else {
+                    val (exitCode, validationResults)
+                            = validateExamplesDir(feature, ExampleModule().defaultExternalExampleDirFrom(contractFile))
+                    if(exitCode == 1) exitProcess(1)
+                    validationResults
+                }
 
             val hasFailures =
                 inlineExampleValidationResults.containsOnlyCompleteFailures()
-                        || externalExampleValidationResults.ofExamples.containsOnlyCompleteFailures()
+                        || externalExampleValidationResults.exampleValidationResults.containsOnlyCompleteFailures()
 
             printValidationResult(inlineExampleValidationResults, "Inline example")
-            printValidationResult(externalExampleValidationResults.ofExamples, "Example file")
+            printValidationResult(externalExampleValidationResults.exampleValidationResults, "Example file")
 
             if (hasFailures) return FAILURE_EXIT_CODE
             return externalExampleValidationResults.exitCodeBasedOnHookResult()

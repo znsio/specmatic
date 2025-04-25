@@ -8,6 +8,9 @@ import com.ezylang.evalex.functions.FunctionParameter
 import com.ezylang.evalex.parser.Token
 import io.specmatic.core.filters.ScenarioFilterTags.PATH
 import io.specmatic.core.filters.ScenarioFilterTags.STATUS_CODE
+import io.specmatic.core.filters.ScenarioFilterTags.HEADER
+import io.specmatic.core.filters.ScenarioFilterTags.QUERY
+import io.specmatic.core.filters.ScenarioFilterTags.EXAMPLE_NAME
 import java.util.regex.Pattern
 
 @FunctionParameter(name = "value")
@@ -30,15 +33,18 @@ class EnhancedRHSValueEvalFunction : AbstractFunction() {
             return when (label) {
                 STATUS_CODE.key -> value == scenarioValue || isInRange(value, scenarioValue)
                 PATH.key -> value == scenarioValue || matchesPath(value, scenarioValue)
+                HEADER.key -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
+                QUERY.name -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
+                EXAMPLE_NAME.key -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
                 else -> value == scenarioValue
             }
         }
 
         return when (operator) {
-                "=" -> values.any { checkCondition(it) }
-                "!=" -> values.all { !checkCondition(it) }
-                else -> throw IllegalArgumentException("Unsupported operator: $operator")
-            }
+            "=" -> values.any { checkCondition(it) }
+            "!=" -> values.all { !checkCondition(it) }
+            else -> throw IllegalArgumentException("Unsupported operator: $operator")
+        }
     }
 
     private fun matchesPath(value: String, scenarioValue: String): Boolean {
@@ -71,5 +77,10 @@ class EnhancedRHSValueEvalFunction : AbstractFunction() {
         val len = multiplier.toString().length - 1
         val rangeStart = range.dropLast(len).toIntOrNull()?.times(multiplier)
         return rangeStart?.let { value in it until it + multiplier -1 } ?: false
+    }
+
+    private fun matchMultipleExpressions(value: String, scenarioValue: String): Boolean {
+        val matchValue = scenarioValue.split(",").map { it.trim().removeSuffix("?") }
+        return matchValue.any { it == value }
     }
 }

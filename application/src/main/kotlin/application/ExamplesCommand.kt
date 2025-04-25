@@ -191,8 +191,7 @@ For example, to filter by HTTP methods:
                 logger.log("No example files found in $externalExampleDir")
                 return SUCCESS_EXIT_CODE to ValidationResults.forNoExamples()
             }
-            val externalExampleValidationResult = validateExternalExamples(feature, externalExamples)
-            return externalExampleValidationResult.exitCode to externalExampleValidationResult
+            return SUCCESS_EXIT_CODE to validateExternalExamples(feature, externalExamples)
         }
 
         private fun validateAllExamplesAssociatedToEachSpecIn(specsDir: File, examplesBaseDir: File): List<ValidationResults> {
@@ -239,7 +238,7 @@ For example, to filter by HTTP methods:
                 else {
                     val (exitCode, validationResults)
                             = validateExamplesDir(feature, ExampleModule().defaultExternalExampleDirFrom(contractFile))
-                    if(exitCode == 1) exitProcess(1)
+                    if(exitCode == 1) exitProcess(exitCode)
                     validationResults
                 }
 

@@ -1,26 +1,35 @@
 package io.specmatic.core.pattern
 
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.toXMLNode
+import io.specmatic.core.value.*
 import org.apache.commons.io.ByteOrderMark
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertDoesNotThrow
-import org.junit.jupiter.api.fail
+import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.io.File
 import java.nio.charset.Charset
 import java.util.function.Consumer
+import java.util.stream.Stream
 
 internal class GrammarKtTest {
     companion object {
         @JvmStatic
         fun bomProvider(): List<ByteOrderMark> {
             return ByteOrderMark::class.java.fields.mapNotNull { it.get(null) as? ByteOrderMark }
+        }
+
+        @JvmStatic
+        fun contentToFormatProvider(): Stream<Arguments> {
+            val expectedValue = JSONObjectValue(mapOf("hello" to StringValue("world")))
+            val expectedXmlValue = XMLNode("hello", "hello", emptyMap(), listOf(StringValue("world")), "", emptyMap())
+            return Stream.of(
+                Arguments.of("{\"hello\": \"world\"}", "json", expectedValue),
+                Arguments.of("hello: world", "yaml", expectedValue),
+                Arguments.of("hello: world", "yml", expectedValue),
+                Arguments.of("<hello>world</hello>", "xml", expectedXmlValue),
+            )
         }
     }
 
@@ -142,5 +151,13 @@ internal class GrammarKtTest {
     fun `email pattern should be recognized as a built-in pattern`() {
         val pattern = getBuiltInPattern("(email)")
         assertThat(pattern).isInstanceOf(EmailPattern::class.java)
+    }
+
+    @ParameterizedTest
+    @MethodSource("contentToFormatProvider")
+    fun `readValue should be able to read various file formats`(content: String, extension: String, expected: Value) {
+        val contentFile = File.createTempFile("content", ".$extension").apply { writeText(content) }
+        val value = readValue(contentFile)
+        assertThat(value).isEqualTo(expected)
     }
 }

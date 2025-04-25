@@ -42,5 +42,7 @@ class Configuration {
         const val DEFAULT_HTTP_STUB_PORT = "9000"
         const val DEFAULT_PROXY_PORT = DEFAULT_HTTP_STUB_PORT
         const val DEFAULT_PROXY_HOST = ALL_IPV4_ADDRESS_ON_LOCAL_MACHINE
+        const val DEFAULT_HTTP_SCHEME = "http"
+        const val DEFAULT_BASE_URL = "$DEFAULT_HTTP_SCHEME://$DEFAULT_HTTP_STUB_HOST:$DEFAULT_HTTP_STUB_PORT"
     }
 }

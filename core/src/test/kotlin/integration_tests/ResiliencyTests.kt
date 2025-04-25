@@ -1068,6 +1068,7 @@ class GenerativeTests {
             components:
               schemas:
                 Address:
+                  type: object
                   properties:
                     street:
                       type: "string"
@@ -1076,7 +1077,7 @@ class GenerativeTests {
 
         val requestBodiesSeen = mutableListOf<Value>()
 
-        val results = specification.enableGenerativeTesting().executeTests(object : TestExecutor {
+        val results = specification.enableGenerativeTesting(onlyPositive = true).executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 println(request.body)
                 requestBodiesSeen.add(request.body)
@@ -1088,7 +1089,7 @@ class GenerativeTests {
         })
         println(results.report())
 
-        assertThat(requestBodiesSeen).hasSize(3)
+        assertThat(requestBodiesSeen).hasSize(2)
     }
 
     @Test
@@ -1155,7 +1156,7 @@ class GenerativeTests {
             }
         })
 
-        assertThat(results.results).hasSize(9)
+        assertThat(results.results).hasSize(11)
     }
 
     private fun runGenerativeTests(
@@ -2294,6 +2295,40 @@ class GenerativeTests {
         val testDescriptionsWithNoPrefix = testDescriptions.filterNot { it.startsWith("+ve") || it.startsWith("-ve") }
 
         assertThat(testDescriptionsWithNoPrefix).isEmpty()
+    }
+
+    @Test
+    fun `should generate negative tests for a specification where the request body is an array and there exists a named example for the same`() {
+        val feature = OpenApiSpecification.fromFile(
+            "src/test/resources/openapi/spec_with_array_request_body_and_named_example.yaml"
+        ).toFeature().enableGenerativeTesting()
+
+        val testDescriptions: MutableList<String> = mutableListOf()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                println(scenario.testDescription())
+                println(request.toLogString())
+
+                testDescriptions.add(scenario.descriptionFromPlugin.orEmpty())
+            }
+        })
+
+        assertThat(results.testCount).isPositive()
+
+        assertThat(testDescriptions.sorted().distinct()).containsExactlyInAnyOrder(
+            "POST /items -> 201",
+            "POST /items -> 4xx [REQUEST.BODY.[].name string mutated to boolean]",
+            "POST /items -> 4xx [REQUEST.BODY.[].name string mutated to null]",
+            "POST /items -> 4xx [REQUEST.BODY.[].name string mutated to number]",
+            "POST /items -> 4xx [REQUEST.BODY.[].quantity number mutated to boolean]",
+            "POST /items -> 4xx [REQUEST.BODY.[].quantity number mutated to null]",
+            "POST /items -> 4xx [REQUEST.BODY.[].quantity number mutated to string]"
+        )
     }
 
     @Test

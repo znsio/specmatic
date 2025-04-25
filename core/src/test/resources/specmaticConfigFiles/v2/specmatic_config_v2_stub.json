@@ -1,0 +1,66 @@
+{
+  "version": "2",
+  "contracts": [
+    {
+      "filesystem": {
+        "directory": "contracts"
+      },
+      "consumes": [
+        "com/order.yaml",
+        {
+          "baseUrl": "http://127.0.0.1:8080/api/v2",
+          "specs": [
+            "com/order.yaml"
+          ]
+        },
+        {
+          "host": "127.0.0.1",
+          "specs": [
+            "com/order.yaml"
+          ]
+        },
+        {
+          "port": 8080,
+          "specs": [
+            "com/order.yaml"
+          ]
+        },
+        {
+          "basePath": "/api/v2",
+          "specs": [
+            "com/order.yaml"
+          ]
+        },
+        {
+          "host": "127.0.0.1",
+          "port": 8080,
+          "specs": [
+            "com/order.yaml"
+          ]
+        },
+        {
+          "host": "127.0.0.1",
+          "basePath": "/api/v2",
+          "specs": [
+            "com/order.yaml"
+          ]
+        },
+        {
+          "port": 8080,
+          "basePath": "/api/v2",
+          "specs": [
+            "com/order.yaml"
+          ]
+        },
+        {
+          "host": "127.0.0.1",
+          "port": 8080,
+          "basePath": "/api/v2",
+          "specs": [
+            "com/order.yaml"
+          ]
+        }
+      ]
+    }
+  ]
+}

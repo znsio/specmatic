@@ -96,9 +96,6 @@ data class Row(
         return !isOptional(key)
     }
 
-    private fun keyisNotOmitted(it: Map.Entry<String, Pattern>) =
-        this.getField(withoutOptionality(it.key)) !in OMIT
-
     fun stepDownOneLevelInJSONHierarchy(key: String): Row {
         if(requestBodyJSONExample == null)
             return this
@@ -116,7 +113,7 @@ data class Row(
 
     private fun withNoJSONObjectExample() = this.copy(requestBodyJSONExample = null)
 
-    fun dropDownIntoList(): Row {
+    fun stepDownIntoList(): Row {
         if(requestBodyJSONExample == null)
             return this
 
@@ -131,9 +128,6 @@ data class Row(
 
         return this.copy(requestBodyJSONExample = null)
     }
-
-    private fun thisFieldHasAnExample(key: String) =
-        this.containsField(withoutOptionality(key))
 
     fun addFields(params: Map<String, String>): Row {
         return params.entries.fold(this) { row, (key, value) ->

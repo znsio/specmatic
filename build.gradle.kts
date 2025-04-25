@@ -105,7 +105,17 @@ tasks.beforeReleaseBuild {
 }
 
 tasks.afterReleaseBuild {
-    dependsOn(subprojects.map { it.tasks.named("publishAllPublicationsToSpecmaticPrivateRepository") })
-    dependsOn(subprojects.map { it.tasks.named("publishAllPublicationsToMavenCentralRepository") })
+    dependsOn(
+        "specmatic-executable:publishAllPublicationsToSpecmaticPrivateRepository",
+        "junit5-support:publishAllPublicationsToSpecmaticPrivateRepository",
+        "specmatic-core:publishAllPublicationsToSpecmaticPrivateRepository"
+    )
+
+    dependsOn(
+        "specmatic-executable:publishAllPublicationsToMavenCentralRepository",
+        "junit5-support:publishAllPublicationsToMavenCentralRepository",
+        "specmatic-core:publishAllPublicationsToMavenCentralRepository"
+    )
+
     dependsOn("specmatic-executable:dockerBuildxPublish")
 }

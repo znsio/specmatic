@@ -322,7 +322,7 @@ data class Scenario(
 
     fun matches(
         httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages,
-        flagsBased: FlagsBased, isPartial: Boolean = false
+        flagsBased: FlagsBased, isPartial: Boolean = false, disableOverrideKeyCheck: Boolean = true
     ): Result {
         if (httpResponsePattern.status == DEFAULT_RESPONSE_CODE || httpResponse.status != httpResponsePattern.status) {
             return Result.Failure(
@@ -337,7 +337,9 @@ data class Scenario(
                 mismatchMessages = mismatchMessages,
                 findKeyErrorCheck = if (isPartial) resolver.getPartialKeyCheck() else resolver.findKeyErrorCheck
             )
-        ).disableOverrideUnexpectedKeycheck()
+        ).let {
+            if (disableOverrideKeyCheck) it.disableOverrideUnexpectedKeycheck() else it
+        }
 
         val updatedScenario = newBasedOnAttributeSelectionFields(httpRequest.queryParams)
         val requestMatch = when(httpResponse.status in invalidRequestStatuses) {

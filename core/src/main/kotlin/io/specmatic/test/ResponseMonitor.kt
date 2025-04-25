@@ -43,14 +43,7 @@ class ResponseMonitor(
                 monitorScenario.matches(response).throwOnFailure()
 
                 val monitorComplete = response.checkCompletion()
-                if (monitorComplete is HasValue) {
-                    val (requestFromMonitor, responseFromMonitor) = monitorComplete.value
-                    val result = originalScenario.matches(requestFromMonitor, responseFromMonitor, DefaultMismatchMessages, feature.flagsBased)
-                    if (result is Result.Failure) {
-                        return HasFailure(result.breadCrumb("MONITOR"), message = "Monitor request / response doesn't match scenario")
-                    }
-                    return HasValue(responseFromMonitor)
-                }
+                if (monitorComplete is HasValue) return validateMonitorResponse(monitorComplete)
 
                 val delay = getBackOffDelay(count)
                 if (count < maxRetry - 1) sleeper.sleep(delay)
@@ -58,6 +51,20 @@ class ResponseMonitor(
         }
 
         return HasFailure("Max retries exceeded, monitor link: $monitorLink")
+    }
+
+    private fun validateMonitorResponse(monitorValue: HasValue<Pair<HttpRequest, HttpResponse>>): ReturnValue<HttpResponse> {
+        val (requestFromMonitor, responseFromMonitor) = monitorValue.value
+        val result = originalScenario.matches(
+            httpRequest = requestFromMonitor,
+            httpResponse = responseFromMonitor,
+            mismatchMessages = DefaultMismatchMessages,
+            flagsBased = feature.flagsBased,
+            disableOverrideKeyCheck = false
+        ).breadCrumb("MONITOR")
+
+        return if (result is Result.Failure) HasFailure(result, message = "Monitor request / response doesn't match scenario")
+        else HasValue(responseFromMonitor)
     }
 
     private fun getScenarioAndLink(): ReturnValue<Pair<Scenario, Link>> {

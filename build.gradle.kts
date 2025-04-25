@@ -103,4 +103,4 @@ specmatic {
 tasks.getByName("beforeReleaseBuild").dependsOn("check")
 tasks.getByName("afterReleaseBuild").dependsOn("publishAllPublicationsToSpecmaticPrivateRepository")
 tasks.getByName("afterReleaseBuild").dependsOn("publishAllPublicationsToMavenCentralRepository")
-tasks.getByName("afterReleaseBuild").dependsOn("dockerBuildxPublish")
+tasks.getByName("afterReleaseBuild").dependsOn(":specmatic-executable:dockerBuildxPublish")

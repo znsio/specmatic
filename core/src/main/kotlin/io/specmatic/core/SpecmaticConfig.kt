@@ -1015,7 +1015,8 @@ fun toUserFriendlyMessage(e: Exception): String {
         is UnrecognizedPropertyException -> {
             val path = e.path
             val fieldPath = readablePath(path)
-            "$fieldPath is not a valid property in the configuration file."
+            val knownProperties = e.knownPropertyIds.joinToString(", ")
+            "$fieldPath is not a valid property in the configuration file. Known properties are: $knownProperties."
         }
         is MismatchedInputException -> {
             val path = e.path

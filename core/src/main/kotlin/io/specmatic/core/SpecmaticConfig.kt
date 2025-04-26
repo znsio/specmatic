@@ -9,7 +9,9 @@ import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.exc.IgnoredPropertyException
 import com.fasterxml.jackson.databind.exc.InvalidFormatException
+import com.fasterxml.jackson.databind.exc.InvalidNullException
 import com.fasterxml.jackson.databind.exc.MismatchedInputException
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException
 import io.specmatic.core.Configuration.Companion.configFilePath
@@ -992,12 +994,28 @@ fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
 
 fun toUserFriendlyMessage(e: Exception): String {
     return when (e) {
+        is InvalidNullException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            val expectedType = e.targetType?.simpleName?.lowercase() ?: "specific type"
+            "$fieldPath must not be null, but found null."
+        }
         is InvalidFormatException -> {
             val path = e.path
             val fieldPath = readablePath(path)
             val expectedType = e.targetType?.simpleName?.lowercase() ?: "specific format"
             val actualValue = e.value?.javaClass?.simpleName?.lowercase() ?: "invalid value"
             "$fieldPath must be $expectedType, but found $actualValue."
+        }
+        is IgnoredPropertyException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            "$fieldPath is not a valid property in the configuration file."
+        }
+        is UnrecognizedPropertyException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            "$fieldPath is not a valid property in the configuration file."
         }
         is MismatchedInputException -> {
             val path = e.path

@@ -6,8 +6,11 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
+import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.exc.InvalidFormatException
+import com.fasterxml.jackson.databind.exc.MismatchedInputException
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.SourceProvider.filesystem
@@ -979,7 +982,43 @@ fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
         logger.log("A dependency version conflict has been detected. If you are using Spring in a maven project, a common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.")
         throw e
     }
+    catch(e: Exception) {
+        throw Exception(toUserFriendlyMessage(e))
+    }
     catch (e: Throwable) {
         throw e
     }
 }
+
+fun toUserFriendlyMessage(e: Exception): String {
+    return when (e) {
+        is InvalidFormatException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            val expectedType = e.targetType?.simpleName?.lowercase() ?: "specific format"
+            val actualValue = e.value?.javaClass?.simpleName?.lowercase() ?: "invalid value"
+            "$fieldPath must be $expectedType, but found $actualValue."
+        }
+        is MismatchedInputException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            val expectedType = when (e.targetType?.simpleName) {
+                "ArrayList" -> "a list of strings"
+                "String" -> "a string"
+                "Integer" -> "a number"
+                else -> "a ${e.targetType?.simpleName?.lowercase() ?: "specific type"}"
+            }
+            val actualValue = when {
+                e.originalMessage.contains("from String value") -> "a string"
+                e.originalMessage.contains("from Number value") -> "a number"
+                e.originalMessage.contains("from Object value") -> "an object"
+                else -> "an invalid value"
+            }
+            "$fieldPath accepts $expectedType, not $actualValue."
+        }
+        else -> "Invalid YAML configuration: ${e.message}"
+    }.let { "Error parsing config: $it" }
+}
+
+private fun readablePath(path: MutableList<JsonMappingException.Reference>) =
+    path.joinToString(".") { it.fieldName ?: "[${it.index}]" }.replace(".[", "[")

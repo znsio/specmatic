@@ -991,9 +991,8 @@ fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
     } catch (e: InvalidFormatException) {
         val path = e.path
         val fieldPath = readablePath(path)
-        val expectedType = e.targetType?.simpleName?.lowercase() ?: "specific format"
-        val actualValue = e.value?.javaClass?.simpleName?.lowercase() ?: "invalid value"
-        throw Exception("$errorPrefix: $fieldPath must be $expectedType, but found $actualValue.")
+        val actualValueClause = e.value?.let { " ($it is invalid)" }
+        throw Exception("$errorPrefix: $fieldPath accepts ${expectedType(e)}$actualValueClause")
     } catch (e: IgnoredPropertyException) {
         val path = e.path
         val fieldPath = readablePath(path)

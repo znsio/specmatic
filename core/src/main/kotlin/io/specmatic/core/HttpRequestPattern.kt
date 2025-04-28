@@ -98,13 +98,12 @@ data class HttpRequestPattern(
     private fun matchSecurityScheme(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver, failures) = parameters
 
-        val (modifiedHttpRequest, results) = securitySchemes.fold(
-            initial = Pair(httpRequest, emptyList<Result>()))
-        { (request, results), securityScheme ->
+        val (modifiedHttpRequest, results) = securitySchemes.fold(Pair(httpRequest, emptyList<Result>())) { (request, results), securityScheme ->
             securityScheme.removeParam(request) to results.plus(securityScheme.matches(request, resolver))
         }
 
-        val newFailures = results.filterIsInstance<Failure>()
+        val hasSuccess = results.any { it is Success }
+        val newFailures = if (hasSuccess) emptyList() else results.filterIsInstance<Failure>()
         return MatchSuccess(Triple(modifiedHttpRequest, resolver, failures.plus(newFailures)))
     }
 

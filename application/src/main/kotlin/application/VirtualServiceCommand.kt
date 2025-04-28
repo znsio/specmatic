@@ -116,10 +116,10 @@ class VirtualServiceCommand  : Callable<Int> {
     }
 
     companion object {
-        fun virtualServiceValidationRuleset(scenario: List<Scenario>): MutableList<String> {
+        fun virtualServiceValidationRuleset(scenarios: List<Scenario>): MutableList<String> {
             val errors: MutableList<String> = mutableListOf()
             val supportedMethods = setOf("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS")
-            scenario.forEach{ s ->
+            scenarios.forEach{ s ->
                 // Check if the scenario is a valid HTTP method
                 if(s.httpRequestPattern.method !in supportedMethods){
                     errors.add("Invalid HTTP method ${s.httpRequestPattern.method} in path ${s.path}, The supported methods are ${supportedMethods.joinToString(", ")}")
@@ -127,12 +127,7 @@ class VirtualServiceCommand  : Callable<Int> {
 
                 // Check if the scenario is a POST with 2xx then it should contain an id in the response
                 if (s.httpRequestPattern.method?.uppercase() == "POST" && s.isA2xxScenario()) {
-                    val responsePattern = when (val body = s.httpResponsePattern.body) {
-                        is DeferredPattern -> s.patterns[body.pattern]
-                        is JSONObjectPattern -> body
-                        else -> null
-                    }
-
+                    val responsePattern = s.resolvedResponseBodyPattern()
                     if (responsePattern is JSONObjectPattern && !responsePattern.pattern.keys.contains("id")) {
                         errors.add("Operation: ${s.apiDescription}, does not contains <id> key in the response section as a required field")
                     }

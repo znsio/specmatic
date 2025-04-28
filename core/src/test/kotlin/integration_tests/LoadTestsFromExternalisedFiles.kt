@@ -441,6 +441,39 @@ class LoadTestsFromExternalisedFiles {
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 
+    @Test
+    fun `should be able to load and use multi-value dictionary when making requests`() {
+        val openApiFile = File("src/test/resources/openapi/spec_with_multi_value_dict/api.yaml")
+        val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature()
+        val assertNumberValue: (Collection<String>) -> Unit = { values ->
+            assertThat(values).allSatisfy {
+                assertThat(it.toInt()).isIn(123, 456)
+            }
+        }
+
+        val results = feature.executeTests(object: TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val body = (request.body as JSONObjectValue).jsonObject
+                assertNumberValue(request.path!!.split("/").filter { it.isNotBlank() && it !in setOf("creators", "pets") })
+                assertNumberValue(request.queryParams.asMap().values)
+                assertNumberValue(request.headers.filterKeys { it in setOf("CREATOR-ID", "PET-ID") }.values)
+                assertNumberValue(body["creatorId"]!!.let(Value::toStringLiteral).let(::listOf))
+                assertThat(body["name"]?.toStringLiteral()).isIn("Tom", "Jerry")
+
+                return HttpResponse(
+                    status = 201,
+                    body = JSONObjectValue(
+                        body + mapOf("id" to NumberValue(123), "petId" to NumberValue(456))
+                    )
+                ).also {
+                    println(listOf(request.toLogString(), it.toLogString()).joinToString(separator = "\n\n"))
+                }
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
     @Nested
     inner class AttributeSelection {
         @BeforeEach

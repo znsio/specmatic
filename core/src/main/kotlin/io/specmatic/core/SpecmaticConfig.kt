@@ -976,7 +976,6 @@ fun loadSpecmaticConfigOrDefault(configFileName: String? = null): SpecmaticConfi
 
 fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
     val configFile = File(configFileName ?: configFilePath)
-    val errorPrefix = "Error parsing config"
 
     if (!configFile.exists()) {
         throw ContractException("Could not find the Specmatic configuration at path ${configFile.canonicalPath}")
@@ -984,45 +983,81 @@ fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
 
     try {
         return configFile.toSpecmaticConfig()
-    } catch (e: InvalidNullException) {
-        val path = e.path
-        val fieldPath = readablePath(path)
-        throw Exception("$errorPrefix: $fieldPath must not be null, but found null.")
-    } catch (e: InvalidFormatException) {
-        val path = e.path
-        val fieldPath = readablePath(path)
-        val actualValueClause = e.value?.let { " ($it is invalid)" }
-        throw Exception("$errorPrefix: $fieldPath accepts ${expectedType(e)}$actualValueClause")
-    } catch (e: IgnoredPropertyException) {
-        val path = e.path
-        val fieldPath = readablePath(path)
-        throw Exception("$errorPrefix: $fieldPath is not a valid property in the configuration file.")
-    } catch (e: UnrecognizedPropertyException) {
-        val path = e.path
-        val fieldPath = readablePath(path)
-        val knownProperties = e.knownPropertyIds.joinToString(", ")
-        throw Exception("$errorPrefix: $fieldPath is not a valid property in the configuration file. Known properties are: $knownProperties.")
-    } catch (e: MismatchedInputException) {
-        val path = e.path
-        val fieldPath = readablePath(path)
-        throw Exception("$errorPrefix: $fieldPath accepts ${expectedType(e)}")
-    } catch (e: JsonMappingException) {
-        val path = e.path
-        val fieldPath = readablePath(path)
-        throw Exception("$errorPrefix at $fieldPath: ${e.originalMessage}")
+    } catch(e: DatabindException) {
+        throw Exception(configErrorMessage(e))
     } catch (e: Throwable) {
-        throw Exception("$errorPrefix: ${e.message}")
+        throw Exception("Error parsing config: ${e.message}")
     }
 }
 
-private fun expectedType(e: MismatchedInputException) = if (e.targetType?.isEnum == true) {
-    "one of the following: ${e.targetType?.enumConstants.orEmpty().joinToString(", ") { it.toString() }}"
-} else if (e.targetType?.isPrimitive == true) {
-    e.targetType?.simpleName?.lowercase().orEmpty()
-} else if (e.targetType?.simpleName == "ArrayList") {
-    "a list"
-} else {
-    "an object"
+fun configErrorMessage(e: DatabindException): String {
+    val location = if(e.location?.lineNr != null && e.location?.columnNr != null) {
+        " (line ${e.location.lineNr}, column ${e.location.columnNr})"
+    } else {
+        ""
+    }
+
+    val errorPrefix = "Error parsing config$location"
+
+    return when (e) {
+        is InvalidNullException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            "$errorPrefix: $fieldPath must not be null, but found null."
+        }
+
+        is InvalidFormatException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            val actualValueClause = e.value?.let { " ($it is invalid)" }
+            "$errorPrefix: $fieldPath accepts ${expectedType(e)}$actualValueClause"
+        }
+
+        is IgnoredPropertyException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            "$errorPrefix: $fieldPath is not a valid property in the configuration file."
+        }
+
+        is UnrecognizedPropertyException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            val knownProperties = e.knownPropertyIds.joinToString(", ")
+            "$errorPrefix: $fieldPath is not a valid property in the configuration file. Known properties are: $knownProperties."
+        }
+
+        is MismatchedInputException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            "$errorPrefix: $fieldPath accepts ${expectedType(e)}"
+        }
+
+        is JsonMappingException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            "$errorPrefix at $fieldPath: ${e.originalMessage}"
+        }
+
+        else -> {
+            "$errorPrefix: ${e.originalMessage}"
+        }
+    }
+}
+
+private fun expectedType(e: MismatchedInputException): String {
+    val targetType = e.targetType ?: return "an object"
+
+    return if (targetType.isEnum) {
+        "one of the following: ${targetType.enumConstants.orEmpty().joinToString(", ") { it.toString() }}"
+    } else if (targetType.isPrimitive) {
+        targetType.simpleName.orEmpty().lowercase()
+    } else if(targetType.genericSuperclass in listOf(java.lang.Number::class.java, java.lang.String::class.java, java.lang.Boolean::class.java)) {
+        targetType.simpleName.orEmpty().lowercase()
+    } else if (targetType.simpleName == "ArrayList") {
+        "a list"
+    } else {
+        "an object"
+    }
 }
 
 private fun readablePath(path: MutableList<JsonMappingException.Reference>) =

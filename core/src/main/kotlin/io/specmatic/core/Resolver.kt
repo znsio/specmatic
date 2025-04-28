@@ -201,23 +201,23 @@ data class Resolver(
     }
 
     fun generate(pattern: Pattern): Value {
-        val value = getDictionaryValue(dictionaryLookupPath, pattern) ?: return pattern.generate(this)
-
-        return value.realise(
-            hasValue = { dictValue, _ -> dictValue },
-            orFailure = { hasF -> throw ContractException(hasF.toFailure().toFailureReport()) },
-            orException = { hasE -> throw ContractException(hasE.toHasFailure().toFailure().toFailureReport()) }
-        )
-    }
-
-    private fun defaultPatternValueFromDictionary(pattern: Pattern): Value? {
-        val defaultPatternValue = dictionary[withPatternDelimiters(pattern.typeName)]
-        val valueToMatch = when {
-            defaultPatternValue !is ListValue || pattern is SequenceType -> defaultPatternValue
-            else -> defaultPatternValue.list.randomOrNull() ?: return null
+        val valueFromDict = getValueFromDictionary(dictionaryLookupPath, pattern)
+        if (valueFromDict != null) {
+            return valueFromDict.unwrapOrContractException()
         }
 
-        return pattern.matches(valueToMatch, this).onSuccessElseNull { valueToMatch }
+        val defaultValueFromDict = getDefaultValueFromDictionary(pattern)
+        if (defaultValueFromDict != null) {
+            return defaultValueFromDict
+        }
+
+        return pattern.generate(this)
+    }
+
+    private fun getDefaultValueFromDictionary(pattern: Pattern): Value? {
+        val lookupKey = withPatternDelimiters(pattern.typeName)
+        val defaultPatternValue = getValueFromDictionary(lookupKey, pattern)
+        return defaultPatternValue?.withDefault(null) { it }
     }
 
     fun generate(typeAlias: String?, rawLookupKey: String, pattern: Pattern): Value {
@@ -285,28 +285,18 @@ data class Resolver(
     }
 
     fun generateList(pattern: ListPattern): Value {
-        val indexLookupKey = dictionaryLookupPath.trim() + "[*]"
-
-        getDictionaryValue(dictionaryLookupPath, pattern)?.let {
-            return when (it) {
-                is ReturnFailure -> throw ContractException(it.toFailure().toFailureReport())
-                else -> it.value
-            }
+        val lookupPath = lookupPath(pattern.typeAlias, "")
+        val valueFromDict = getValueFromDictionary(lookupPath, pattern)
+        if (valueFromDict != null) {
+            return valueFromDict.unwrapOrContractException()
         }
 
-        getDictionaryValue(indexLookupKey, pattern.pattern)?.let {
-            return when (it) {
-                is ReturnFailure -> throw ContractException(it.toFailure().toFailureReport())
-                else -> it.value.let(::listOf).let(::JSONArrayValue)
-            }
-        }
-
-        return copy(dictionaryLookupPath = indexLookupKey).generateRandomList(pattern.pattern)
+        return updateLookupPath(pattern.typeAlias, "[*]").generateRandomList(pattern.pattern)
     }
 
     private fun generateRandomList(pattern: Pattern): Value {
         return pattern.listOf(0.until(randomNumber(3)).mapIndexed{ index, _ ->
-            attempt(breadCrumb = "[$index (random)]") { pattern.generate(this) }
+            attempt(breadCrumb = "[$index (random)]") { generate(pattern) }
         }, this)
     }
 
@@ -433,18 +423,32 @@ data class Resolver(
         return findKeyErrorCheck.toPartialKeyCheck()
     }
 
-    private fun getDictionaryValue(lookupKey: String, pattern: Pattern): ReturnValue<Value>? {
-        val dictionaryValue = dictionary[lookupKey] ?: defaultPatternValueFromDictionary(pattern) ?: return null
-        val valueToMatch = when {
-            dictionaryValue !is ListValue || pattern is SequenceType -> dictionaryValue
-            else -> dictionaryValue.list.randomOrNull() ?: return null
-        }
+    private fun getValueFromDictionary(lookupKey: String, pattern: Pattern): ReturnValue<Value>? {
+        val dictionaryValue = dictionary[lookupKey] ?: return null
+        val valueToMatch = getValueToMatch(dictionaryValue, pattern) ?: return null
 
         return runCatching {
             val result = pattern.matches(valueToMatch, this)
             if (result is Result.Failure && this.isNegative) return@runCatching null
             result.toReturnValue(valueToMatch, "Invalid Dictionary value at \"$lookupKey\"")
         }.getOrElse(::HasException)
+    }
+
+    private fun <T> calculateDepth(data: T, getChildren: (T) -> List<T>?): Int {
+        val children = getChildren(data)?.takeUnless(List<T>::isEmpty) ?: return 0
+        return 1 + calculateDepth(children.first(), getChildren)
+    }
+
+    private fun getValueToMatch(value: Value, pattern: Pattern): Value? {
+        if (value !is JSONArrayValue) return value
+        if (pattern !is ListPattern) return value.list.randomOrNull()
+
+        val patternDepth = calculateDepth<Pattern>(pattern) { (it as? ListPattern)?.pattern?.let(::listOf) }
+        val valueDepth = calculateDepth<Value>(value) { (it as? JSONArrayValue)?.list }
+        return when {
+            valueDepth > patternDepth -> value.list.randomOrNull()
+            else -> value
+        }
     }
 }
 

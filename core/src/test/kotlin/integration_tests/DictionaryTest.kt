@@ -572,7 +572,7 @@ class DictionaryTest {
             val value = pattern.generate(resolver)
 
             assertThat(value.jsonObject["array"]).isInstanceOf(JSONArrayValue::class.java)
-            assertThat((value.jsonObject["array"] as JSONArrayValue).list).hasSizeLessThanOrEqualTo(1).hasSizeLessThanOrEqualTo(3)
+            assertThat((value.jsonObject["array"] as JSONArrayValue).list).hasSizeGreaterThanOrEqualTo(1).hasSizeLessThanOrEqualTo(3)
             assertThat((value.jsonObject["array"] as JSONArrayValue).list).allSatisfy {
                 assertThat(it).isIn(listOf(1, 2, 3).map(::NumberValue))
             }

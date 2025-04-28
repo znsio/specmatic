@@ -1911,6 +1911,72 @@ data class Feature(
         return featureWithExternalisedExamples to unusedExternalizedExamples
     }
 
+    fun loadExternalisedExamplesAndListLoadedAndUnloadableExamples(): Pair<Feature, Pair<Set<String>, Set<String>>> {
+        val testsDirectory = getTestsDirectory(File(this.path))
+        val externalisedExamplesFromDefaultDirectory = loadExternalisedJSONExamples(testsDirectory)
+        val externalisedExampleDirsFromConfig = specmaticConfig.getExamples()
+
+        val externalisedExamplesFromExampleDirs = externalisedExampleDirsFromConfig.flatMap { directory ->
+            loadExternalisedJSONExamples(File(directory)).entries
+        }.associate { it.toPair() }
+
+        val allExternalisedJSONExamples = externalisedExamplesFromDefaultDirectory + externalisedExamplesFromExampleDirs
+
+        if(allExternalisedJSONExamples.isEmpty())
+            return this to Pair(emptySet(), emptySet())
+
+        val featureWithExternalisedExamples = useExamples(allExternalisedJSONExamples)
+
+        val externalizedExampleFilePaths =
+            allExternalisedJSONExamples.entries.flatMap { (_, rows) ->
+                rows.map {
+                    it.fileSource
+                }
+            }.filterNotNull().sorted().toSet()
+
+        val utilizedFileSources =
+            featureWithExternalisedExamples.scenarios.asSequence().flatMap { scenarioInfo ->
+                scenarioInfo.examples.flatMap { examples ->
+                    examples.rows.map {
+                        it.fileSource
+                    }
+                }
+            }.filterNotNull()
+                .sorted().toSet()
+
+        val unusedExternalizedExamples = (externalizedExampleFilePaths - utilizedFileSources)
+        if (unusedExternalizedExamples.isNotEmpty()) {
+            println()
+            logger.log("The following externalized examples were not used:")
+
+            val errorMessages = unusedExternalizedExamples.sorted().map { externalizedExamplePath: String ->
+                if(strictMode.not()) logger.log("  $externalizedExamplePath")
+
+                try {
+                    val example = ScenarioStub.parse(File(externalizedExamplePath).readText())
+
+                    val method = example.requestMethod()
+                    val path = example.requestPath()
+                    val responseCode = example.responseStatus()
+                    val errorMessage = "    $method $path -> $responseCode does not match any operation in the specification"
+                    if(strictMode.not()) logger.log(errorMessage)
+                    "The example $externalizedExamplePath is unused due to error: $errorMessage"
+                } catch(e: Throwable) {
+                    val errorMessage = "    Could not parse the example: ${exceptionCauseMessage(e)}"
+                    if(strictMode.not()) logger.log(errorMessage)
+                    "The example $externalizedExamplePath is unused due to error: $errorMessage"
+                }
+            }
+            if(strictMode && errorMessages.isNotEmpty()) {
+                throw ContractException(errorMessages.joinToString(System.lineSeparator()))
+            }
+
+            logger.newLine()
+        }
+
+        return featureWithExternalisedExamples to (utilizedFileSources to unusedExternalizedExamples)
+    }
+
     fun loadExternalisedExamples(): Feature {
         return loadExternalisedExamplesAndListUnloadableExamples().first
     }

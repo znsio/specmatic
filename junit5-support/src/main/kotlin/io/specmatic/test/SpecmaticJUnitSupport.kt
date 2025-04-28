@@ -4,8 +4,11 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
+import io.specmatic.core.examples.module.ExampleModule
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
+import io.specmatic.core.lifecycle.ExamplesUsedFor
+import io.specmatic.core.lifecycle.LifecycleHooks
 import io.specmatic.core.log.ignoreLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
@@ -15,6 +18,7 @@ import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
+import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.hasOpenApiFileExtension
 import io.specmatic.stub.isOpenAPI
 import io.specmatic.test.reports.OpenApiCoverageReportProcessor
@@ -435,21 +439,26 @@ open class SpecmaticJUnitSupport {
 
         val contractFile = File(path)
         val strictMode = (System.getProperty(STRICT_MODE) ?: System.getenv(STRICT_MODE)) == "true"
-        val feature =
-            parseContractFileToFeature(
-                contractFile.path,
-                CommandHook(HookName.test_load_contract),
-                sourceProvider,
-                sourceRepository,
-                sourceRepositoryBranch,
-                specificationPath,
-                securityConfiguration,
-                specmaticConfig = specmaticConfig ?: SpecmaticConfig(),
-                overlayContent = overlayContent,
-                strictMode = strictMode
-            ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
+        val featureToExamplesMap = parseContractFileToFeature(
+            contractFile.path,
+            CommandHook(HookName.test_load_contract),
+            sourceProvider,
+            sourceRepository,
+            sourceRepositoryBranch,
+            specificationPath,
+            securityConfiguration,
+            specmaticConfig = specmaticConfig ?: SpecmaticConfig(),
+            overlayContent = overlayContent,
+            strictMode = strictMode
+        ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
+            .loadExternalisedExamplesAndListLoadedAndUnloadableExamples()
 
+        val feature = featureToExamplesMap.first
+        val examples = ExampleModule().getExamplesFromFiles(featureToExamplesMap.second.first.map { File(it) })
+            .map { ScenarioStub(request = it.request, filePath = it.file.path) }
         feature.validateExamplesOrException()
+
+        LifecycleHooks.afterLoadingStaticExamples.call(ExamplesUsedFor.Test, listOf(Pair(feature, examples)))
 
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)

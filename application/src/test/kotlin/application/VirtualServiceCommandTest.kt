@@ -7,6 +7,8 @@ import io.specmatic.core.Scenario
 import io.specmatic.core.pattern.JSONObjectPattern
 import org.junit.jupiter.api.Test
 import application.VirtualServiceCommand.Companion.virtualServiceValidationRuleset
+import io.specmatic.core.pattern.NumberPattern
+import io.specmatic.core.pattern.StringPattern
 
 
 class VirtualServiceCommandTest {
@@ -30,9 +32,7 @@ class VirtualServiceCommandTest {
                 every { path } returns "/resource"
                 every { httpRequestPattern.method } returns "POST"
                 every { isA2xxScenario() } returns true
-                every { httpResponsePattern.body } returns mockk<JSONObjectPattern> {
-                    every { pattern.keys } returns setOf("name")
-                }
+                every { httpResponsePattern.body } returns JSONObjectPattern(mapOf("name" to StringPattern()))
                 every { apiDescription } returns "POST /resource"
             }
         )
@@ -48,9 +48,7 @@ class VirtualServiceCommandTest {
                 every { path } returns "/resource/add"
                 every { httpRequestPattern.method } returns "POST"
                 every { isA2xxScenario() } returns true
-                every { httpResponsePattern.body } returns mockk<JSONObjectPattern> {
-                    every { pattern.keys } returns setOf("id")
-                }
+                every { httpResponsePattern.body } returns JSONObjectPattern(mapOf("id" to NumberPattern()))
                 every { apiDescription } returns "POST /resource/add"
             }
         )

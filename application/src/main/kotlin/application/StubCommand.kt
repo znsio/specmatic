@@ -3,6 +3,8 @@ package application
 import io.specmatic.core.*
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
+import io.specmatic.core.lifecycle.ExamplesUsedFor
+import io.specmatic.core.lifecycle.LifecycleHooks
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.ContractPathData.Companion.specToBaseUrlMap
@@ -184,6 +186,7 @@ class StubCommand(
         val workingDirectory = WorkingDirectory()
         if(strictMode) throwExceptionIfDirectoriesAreInvalid(exampleDirs, "example directories")
         val stubData = stubLoaderEngine.loadStubs(contractSources, exampleDirs, specmaticConfigPath, strictMode)
+        LifecycleHooks.afterLoadingStaticExamples.call(ExamplesUsedFor.Stub, stubData)
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 
         httpStub = httpStubEngine.runHTTPStub(

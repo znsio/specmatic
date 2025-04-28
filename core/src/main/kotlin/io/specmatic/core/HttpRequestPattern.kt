@@ -98,15 +98,14 @@ data class HttpRequestPattern(
     private fun matchSecurityScheme(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver, failures) = parameters
 
-        val matchFailures = mutableListOf<Failure>()
-        val matchingSecurityScheme: OpenAPISecurityScheme = securitySchemes.firstOrNull {
-            when (val result = it.matches(httpRequest, resolver)) {
-                is Failure -> false.also { matchFailures.add(result) }
-                is Success -> true
-            }
-        } ?: return MatchSuccess(Triple(httpRequest, resolver, failures.plus(matchFailures)))
+        val (modifiedHttpRequest, results) = securitySchemes.fold(
+            initial = Pair(httpRequest, emptyList<Result>()))
+        { (request, results), securityScheme ->
+            securityScheme.removeParam(request) to results.plus(securityScheme.matches(request, resolver))
+        }
 
-        return MatchSuccess(Triple(matchingSecurityScheme.removeParam(httpRequest), resolver, failures))
+        val newFailures = results.filterIsInstance<Failure>()
+        return MatchSuccess(Triple(modifiedHttpRequest, resolver, failures.plus(newFailures)))
     }
 
     fun matchesSignature(other: HttpRequestPattern): Boolean =

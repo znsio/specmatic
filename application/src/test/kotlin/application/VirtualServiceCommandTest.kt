@@ -1,14 +1,12 @@
 package application
 
-import io.mockk.every
-import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
-import io.specmatic.core.Scenario
 import io.specmatic.core.pattern.JSONObjectPattern
 import org.junit.jupiter.api.Test
 import application.VirtualServiceCommand.Companion.virtualServiceValidationRuleset
 import io.specmatic.core.HttpRequestPattern
 import io.specmatic.core.HttpResponsePattern
+import io.specmatic.core.Scenario
 import io.specmatic.core.buildHttpPathPattern
 import io.specmatic.core.pattern.NumberPattern
 import io.specmatic.core.pattern.StringPattern
@@ -18,14 +16,25 @@ class VirtualServiceCommandTest {
     @Test
     fun `returns errors for unsupported HTTP methods`() {
         val scenario: List<Scenario> = listOf(
-            mockk {
-                every { httpRequestPattern.method } returns "TRACE"
-                every { path } returns "/resources"
-            }
+            Scenario(
+                name = "TRACE /resources",
+                httpRequestPattern = HttpRequestPattern(
+                    method = "TRACE",
+                    httpPathPattern = buildHttpPathPattern("/resources")
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    status = 200,
+                    body = JSONObjectPattern(
+                        mapOf(
+                            "name" to StringPattern()
+                        )
+                    )
+                ),
+            )
         )
         val errors = virtualServiceValidationRuleset(scenario)
         assertEquals(1, errors.size)
-        assertEquals("Invalid HTTP method TRACE in path /resources, The supported methods are GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS", errors[0])
+        assertEquals("Invalid HTTP method TRACE in path /resources. Supported methods are: GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS", errors[0])
     }
 
     @Test
@@ -49,7 +58,7 @@ class VirtualServiceCommandTest {
         )
         val errors = virtualServiceValidationRuleset(scenarios)
         assertEquals(1, errors.size)
-        assertEquals("Operation: POST /resources -> 200, does not contains <id> key in the response section as a required field", errors[0])
+        assertEquals("Operation: POST /resources -> 200, must contain 'id' key in the response for POST requests", errors[0])
     }
 
     @Test
@@ -64,7 +73,7 @@ class VirtualServiceCommandTest {
                 httpResponsePattern = HttpResponsePattern(
                     status = 201,
                     body = JSONObjectPattern(
-                mapOf(
+                        mapOf(
                             "id" to NumberPattern(),
                             "name" to StringPattern()
                         )
@@ -74,7 +83,7 @@ class VirtualServiceCommandTest {
         )
         val errors = virtualServiceValidationRuleset(scenario)
         assertEquals(1, errors.size)
-        assertEquals("Operation POST /resources/add -> 201, contains invalid nested resource add, Resources should follow flat structure like /resource or /resource/{id}", errors[0])
+        assertEquals("Operation POST /resources/add -> 201, contains invalid nested resource 'add'. Use flat structure: /resource or /resource/{id}", errors[0])
     }
 
     @Test

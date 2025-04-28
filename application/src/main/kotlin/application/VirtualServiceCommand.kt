@@ -9,7 +9,6 @@ import io.specmatic.core.Scenario
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.DeferredPattern
 import io.specmatic.core.pattern.JSONObjectPattern
 import io.specmatic.core.utilities.*
 import io.specmatic.mock.ScenarioStub
@@ -93,9 +92,9 @@ class VirtualServiceCommand  : Callable<Int> {
 
         val validateSpec = virtualServiceValidationRuleset(stubData.map{it.first}.flatMap{it.scenarios})
 
-        if (validateSpec.isNotEmpty()) {
+        validateSpec.takeIf{it.isNotEmpty()}?.let{
             logger.log("\n\nThe following errors were found in the specifications:")
-            validateSpec.forEach { logger.log(it) }
+            logger.log(it.joinToString(System.lineSeparator()))
             return
         }
 
@@ -116,33 +115,38 @@ class VirtualServiceCommand  : Callable<Int> {
     }
 
     companion object {
-        fun virtualServiceValidationRuleset(scenarios: List<Scenario>): MutableList<String> {
-            val errors: MutableList<String> = mutableListOf()
+        fun virtualServiceValidationRuleset(scenarios: List<Scenario>): List<String> {
             val supportedMethods = setOf("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS")
-            scenarios.forEach{ s ->
-                // Check if the scenario is a valid HTTP method
-                if(s.httpRequestPattern.method !in supportedMethods){
-                    errors.add("Invalid HTTP method ${s.httpRequestPattern.method} in path ${s.path}, The supported methods are ${supportedMethods.joinToString(", ")}")
-                }
-
-                // Check if the scenario is a POST with 2xx then it should contain an id in the response
-                if (s.httpRequestPattern.method?.uppercase() == "POST" && s.isA2xxScenario()) {
-                    val responsePattern = s.resolvedResponseBodyPattern()
-                    if (responsePattern is JSONObjectPattern && !responsePattern.pattern.keys.contains("id")) {
-                        errors.add("Operation: ${s.apiDescription}, does not contains <id> key in the response section as a required field")
-                    }
-                }
-
-                // Check if path contains nested resources
-                val pathSegments = s.path.split("/").filter { it.isNotEmpty() }
-                if (pathSegments.size > 1) {
-                    val potentialId = pathSegments[1]
-                    if (!potentialId.startsWith("(") && !potentialId.endsWith(")")) {
-                        errors.add("Operation ${s.apiDescription}, contains invalid nested resource ${potentialId}, Resources should follow flat structure like /resource or /resource/{id}")
-                    }
+            return scenarios.flatMap { scenario ->
+                buildList {
+                    validateHttpMethod(scenario, supportedMethods)?.let { add(it) }
+                    validatePostResponse(scenario)?.let { add(it) }
+                    validateResourcePath(scenario)?.let { add(it) }
                 }
             }
-            return errors
+        }
+
+        private fun validateHttpMethod(scenario: Scenario, supportedMethods: Set<String>): String? =
+            if (scenario.method !in supportedMethods) {
+                "Invalid HTTP method ${scenario.method} in path ${scenario.path}. Supported methods are: ${supportedMethods.joinToString(", ")}"
+            } else null
+
+        private fun validatePostResponse(scenario: Scenario): String? =
+            if (scenario.method == "POST" && scenario.isA2xxScenario()) {
+                val responsePattern = scenario.resolvedResponseBodyPattern()
+                if (responsePattern is JSONObjectPattern && !responsePattern.pattern.keys.contains("id")) {
+                    "Operation: ${scenario.apiDescription}, must contain 'id' key in the response for POST requests"
+                } else null
+            } else null
+
+        private fun validateResourcePath(scenario: Scenario): String? {
+            val pathSegments = scenario.path.split("/").filter(String::isNotEmpty)
+            return if (pathSegments.size > 1) {
+                val potentialId = pathSegments[1]
+                if (!potentialId.startsWith("(") && !potentialId.endsWith(")")) {
+                    "Operation ${scenario.apiDescription}, contains invalid nested resource '$potentialId'. Use flat structure: /resource or /resource/{id}"
+                } else null
+            } else null
         }
     }
 }

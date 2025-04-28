@@ -862,8 +862,8 @@ internal class JSONObjectPatternTest {
         }
 
         assertThat(exception.report()).isEqualToNormalizingWhitespace("""
-        >> addresses.Person.addresses[*]
-        Invalid Dictionary Value
+        >> addresses[0 (random)]
+        Invalid Dictionary value at "Person.addresses[*]"
         Expected string, actual was 10 (number)
         """.trimIndent())
     }

@@ -14,6 +14,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import java.util.stream.Stream
 
 class DictionaryTest {
     @Test
@@ -568,8 +572,10 @@ class DictionaryTest {
             val value = pattern.generate(resolver)
 
             assertThat(value.jsonObject["array"]).isInstanceOf(JSONArrayValue::class.java)
-            assertThat((value.jsonObject["array"] as JSONArrayValue).list).hasSize(1)
-            assertThat((value.jsonObject["array"] as JSONArrayValue).list.first()).isIn(listOf(1, 2, 3).map(::NumberValue))
+            assertThat((value.jsonObject["array"] as JSONArrayValue).list).hasSizeLessThanOrEqualTo(1).hasSizeLessThanOrEqualTo(3)
+            assertThat((value.jsonObject["array"] as JSONArrayValue).list).allSatisfy {
+                assertThat(it).isIn(listOf(1, 2, 3).map(::NumberValue))
+            }
         }
 
         @Test
@@ -627,6 +633,75 @@ class DictionaryTest {
             assertThat((value.jsonObject["emails"] as JSONArrayValue).list).isEqualTo(
                 listOf("john@mail.com", "jane@mail.com", "bob@mail.com").map(::StringValue)
             )
+        }
+
+        @Nested
+        inner class ListPatternTests {
+
+            @ParameterizedTest
+            @MethodSource("integration_tests.DictionaryTest#listPatternToSingleValueProvider")
+            fun `should use the dictionary value as is when when pattern and value depth matches`(pattern: ListPattern, value: JSONArrayValue) {
+                val testPattern = JSONObjectPattern(mapOf("test" to pattern), typeAlias = "(Test)")
+                val resolver = Resolver(dictionary = mapOf("Test.test" to value))
+                val generatedValue = resolver.generate(testPattern)
+
+                assertThat(generatedValue).isInstanceOf(JSONObjectValue::class.java); generatedValue as JSONObjectValue
+                assertThat(generatedValue.jsonObject["test"]).isEqualTo(value)
+            }
+
+            @ParameterizedTest
+            @MethodSource("integration_tests.DictionaryTest#listPatternToMultiValueProvider")
+            fun `should pick random value from the dictionary when value depth is higher than pattern`(pattern: ListPattern, value: JSONArrayValue) {
+                val testPattern = JSONObjectPattern(mapOf("test" to pattern), typeAlias = "(Test)")
+                val resolver = Resolver(dictionary = mapOf("Test.test" to value))
+                val generatedValue = resolver.generate(testPattern)
+
+                assertThat(generatedValue).isInstanceOf(JSONObjectValue::class.java); generatedValue as JSONObjectValue
+                assertThat(generatedValue.jsonObject["test"]).isIn(value.list)
+            }
+        }
+    }
+
+    companion object {
+        @JvmStatic
+        fun listPatternToSingleValueProvider(): Stream<Arguments> {
+            return Stream.of(
+                // List[Pattern]
+                Arguments.of(
+                    listPatternOf(NumberPattern()), parsedJSONArray("""[1, 2]""")
+                ),
+                // List[List[Pattern]]
+                Arguments.of(
+                    listPatternOf(NumberPattern(), nestedLevel = 1), parsedJSONArray("""[[1, 2], [3, 4]]""")
+                ),
+                // List[List[List[Pattern]]]
+                Arguments.of(
+                    listPatternOf(NumberPattern(), nestedLevel = 2), parsedJSONArray("""[[[1, 2]], [[3, 4]]]""")
+                )
+            )
+        }
+
+        @JvmStatic
+        fun listPatternToMultiValueProvider(): Stream<Arguments> {
+            return Stream.of(
+                // List[Pattern]
+                Arguments.of(
+                    listPatternOf(NumberPattern()), parsedJSONArray("""[[1, 2], [3, 4]]""")
+                ),
+                // List[List[Pattern]]
+                Arguments.of(
+                    listPatternOf(NumberPattern(), nestedLevel = 1), parsedJSONArray("""[[[1, 2]], [[3, 4]]]""")
+                ),
+                // List[List[List[Pattern]]]
+                Arguments.of(
+                    listPatternOf(NumberPattern(), nestedLevel = 2),
+                    parsedJSONArray("""[[[[1, 2]], [[3, 4]]], [[[5, 6]], [[7, 8]]]]""")
+                )
+            )
+        }
+
+        private fun listPatternOf(pattern: Pattern, nestedLevel: Int = 0): ListPattern {
+            return ListPattern((1..nestedLevel).fold(pattern) { acc, _ -> ListPattern(acc) })
         }
     }
 }

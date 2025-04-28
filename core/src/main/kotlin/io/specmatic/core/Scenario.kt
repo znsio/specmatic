@@ -512,7 +512,9 @@ data class Scenario(
         val rowsToValidate = examples.flatMap { it.rows }
 
         val errors = rowsToValidate.mapNotNull { row ->
-            val resolverForExample = flagsBased.update(resolverForValidation(resolver, row))
+            val resolverForExample = flagsBased.update(
+                resolver = resolverForValidation(resolver, row)
+            ).disableOverrideUnexpectedKeycheck()
 
             val requestError = nullOrExceptionString {
                 validateRequestExample(row, resolverForExample)

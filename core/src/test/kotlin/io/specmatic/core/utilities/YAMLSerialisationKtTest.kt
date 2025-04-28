@@ -1,6 +1,5 @@
 package io.specmatic.core.utilities
 
-import io.specmatic.core.pattern.*
 import io.specmatic.core.value.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
@@ -70,6 +69,41 @@ class YAMLSerialisationKtTest {
 
         assertThat(parsedValue).isInstanceOf(JSONObjectValue::class.java); parsedValue as JSONObjectValue
         assertThat(parsedValue.jsonObject["key"]).isEqualTo(expectedValue)
+    }
+
+    @Test
+    fun `should be able to serialise map value to yaml`() {
+        val value = JSONObjectValue(mapOf("key" to StringValue("value")))
+        val yamlString = valueToYamlString(value).trimEnd()
+
+        assertThat(yamlString).isEqualTo("""key: value""")
+    }
+
+    @Test
+    fun `should be able to serialise array value to yaml`() {
+        val value = JSONArrayValue(listOf(StringValue("hello"), NumberValue(123)))
+        val yamlString = valueToYamlString(value).trimEnd()
+
+        assertThat(yamlString).isEqualTo("""
+        - hello
+        - 123
+        """.trimIndent())
+    }
+
+    @ParameterizedTest
+    @MethodSource("primitiveToExpectedValueProvider")
+    fun `should be able to serialise primitive value to yaml`(primitive: Any?, expectedValue: Value) {
+        val value = JSONObjectValue(mapOf("key" to expectedValue))
+        val yamlString = valueToYamlString(value).trimEnd()
+
+        if (primitive is String) {
+            assertThat(yamlString).satisfiesAnyOf(
+                { assertThat(it).isEqualTo("""key: ${primitive.removeSurrounding("\"")}""") },
+                { assertThat(it).isEqualTo("""key: $primitive""") }
+            )
+        } else {
+            assertThat(yamlString).isEqualTo("""key: $primitive""")
+        }
     }
 
     companion object {

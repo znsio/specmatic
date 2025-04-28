@@ -18,6 +18,11 @@ fun yamlStringToValue(stringContent: String): Value {
     return toValue(raw)
 }
 
+fun valueToYamlString(value: Value): String {
+    val raw = valueToRaw(value)
+    return yamlMapper.writeValueAsString(raw)
+}
+
 private fun String.cleanBOM(): String = removePrefix(UTF_BYTE_ORDER_MARK)
 
 private fun <T> convertToMap(data: Map<*, *>, using: (Any?) -> T): Map<String, T> {
@@ -33,5 +38,14 @@ private fun toValue(any: Any?): Value {
         is Boolean -> BooleanValue(any)
         is Number -> NumberValue(any)
         else -> throw ContractException("Unknown value type: ${any::class.simpleName}")
+    }
+}
+
+private fun valueToRaw(value: Value): Any? {
+    return when (value) {
+        is JSONObjectValue -> value.jsonObject.mapValues { valueToRaw(it.value) }
+        is JSONArrayValue -> value.list.map(::valueToRaw)
+        is ScalarValue -> value.nativeValue
+        else -> null
     }
 }

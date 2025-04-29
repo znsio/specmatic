@@ -9,7 +9,7 @@ dependencies {
     implementation("joda-time:joda-time:2.13.1")
     implementation("net.minidev:json-smart:2.5.2")
 
-    implementation("com.ezylang:EvalEx:3.4.0")
+    implementation("com.ezylang:EvalEx:3.5.0")
     implementation("org.apache.commons:commons-lang3:3.17.0")
     implementation("io.cucumber:gherkin:32.1.1")
     implementation("io.ktor:ktor-server-netty:2.3.13")

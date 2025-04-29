@@ -479,7 +479,7 @@ fun requestFromJSON(json: Map<String, Value>) =
                 "body" in json -> {
                     val body = notNull(
                         json.getOrDefault("body", NullValue),
-                        "Either body should have a value or the key should be absent from http-response"
+                        "Either body should have a value or the key should be absent from http-request"
                     )
                     httpRequest.updateBody(body)
                 }

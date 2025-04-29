@@ -2453,7 +2453,7 @@ private fun backgroundWsdl(featureChildren: List<FeatureChild>): Step? {
     }
 }
 
-private fun scenarios(featureChildren: List<FeatureChild>) = featureChildren.filter { it.scenario.isPresent }
+private fun scenarios(featureChildren: List<FeatureChild>) = featureChildren.filter { it.background.isEmpty }
 
 fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature("New Feature", listOf(stub))
 

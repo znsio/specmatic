@@ -4,6 +4,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.specmatic.conversions.*
 import io.specmatic.core.pattern.*
+import io.specmatic.core.utilities.Flags
 import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Nested
@@ -356,6 +357,123 @@ class ScenarioTest {
         >> REQUEST.HEADERS.Authorization
         Authorization header must be prefixed with "Basic"
         """.trimIndent())
+    }
+
+    @Test
+    fun `should throw exception when request-response contains out-of-spec headers`() {
+        val scenario = Scenario(
+            name = "SIMPLE POST",
+            httpRequestPattern = HttpRequestPattern(
+                httpPathPattern = buildHttpPathPattern("/"), method = "POST",
+                headersPattern = HttpHeadersPattern(mapOf("USER-ID" to UUIDPattern))
+            ),
+            httpResponsePattern = HttpResponsePattern(
+                status = 200,
+                headersPattern = HttpHeadersPattern(mapOf("TICKET-ID" to UUIDPattern))
+            ),
+            examples = listOf(
+                Examples(
+                    emptyList(),
+                    listOf(Row(
+                        requestExample = HttpRequest(
+                            path = "/", method = "POST",
+                            headers = mapOf("X-EXTRA-HEADERS" to "ExtraValue", "USER-ID" to "123e4567-e89b-12d3-a456-426655440000")
+                        ),
+                        responseExample = HttpResponse(
+                            status = 200,
+                            headers = mapOf("TICKET-ID" to "123e4567-e89b-12d3-a456-426655440000", "X-EXTRA-HEADERS" to "ExtraValue")
+                        ),
+                        name = "example.json"
+                    ))
+                )
+            )
+        )
+
+        val exception = assertThrows<ContractException> { scenario.validExamplesOrException(DefaultStrategies) }
+        assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+        Error loading example named example.json for POST / -> 200
+        >> REQUEST.HEADERS.X-EXTRA-HEADERS
+        The header X-EXTRA-HEADERS was found in the example example.json but was not in the specification.
+        >> RESPONSE.HEADERS.X-EXTRA-HEADERS
+        The header X-EXTRA-HEADERS was found in the example example.json but was not in the specification.
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should throw exception when request-response contains out-of-spec headers for partials`() {
+        val scenario = Scenario(
+            name = "SIMPLE POST",
+            httpRequestPattern = HttpRequestPattern(
+                httpPathPattern = buildHttpPathPattern("/"), method = "POST",
+                headersPattern = HttpHeadersPattern(mapOf("USER-ID" to UUIDPattern))
+            ),
+            httpResponsePattern = HttpResponsePattern(
+                status = 200,
+                headersPattern = HttpHeadersPattern(mapOf("TICKET-ID" to UUIDPattern))
+            ),
+            examples = listOf(
+                Examples(
+                    emptyList(),
+                    listOf(Row(
+                        requestExample = HttpRequest(
+                            path = "/", method = "POST",
+                            headers = mapOf("X-EXTRA-HEADERS" to "ExtraValue", "USER-ID" to "123e4567-e89b-12d3-a456-426655440000")
+                        ),
+                        responseExample = HttpResponse(
+                            status = 200,
+                            headers = mapOf("TICKET-ID" to "123e4567-e89b-12d3-a456-426655440000", "X-EXTRA-HEADERS" to "ExtraValue")
+                        ),
+                        name = "partial-example.json",
+                        isPartial = true
+                    ))
+                )
+            )
+        )
+
+        val exception = assertThrows<ContractException> { scenario.validExamplesOrException(DefaultStrategies) }
+        assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+        Error loading example named partial-example.json for POST / -> 200
+        >> REQUEST.HEADERS.X-EXTRA-HEADERS
+        The header X-EXTRA-HEADERS was found in the example partial-example.json but was not in the specification.
+        >> RESPONSE.HEADERS.X-EXTRA-HEADERS
+        The header X-EXTRA-HEADERS was found in the example partial-example.json but was not in the specification.
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should allow out-of-spec headers when extensible-schema is enabled`() {
+        val scenario = Scenario(
+            name = "SIMPLE POST",
+            httpRequestPattern = HttpRequestPattern(
+                httpPathPattern = buildHttpPathPattern("/"), method = "POST",
+                headersPattern = HttpHeadersPattern(mapOf("USER-ID" to UUIDPattern))
+            ),
+            httpResponsePattern = HttpResponsePattern(
+                status = 200,
+                headersPattern = HttpHeadersPattern(mapOf("TICKET-ID" to UUIDPattern))
+            ),
+            examples = listOf(
+                Examples(
+                    emptyList(),
+                    listOf(Row(
+                        requestExample = HttpRequest(
+                            path = "/", method = "POST",
+                            headers = mapOf("X-EXTRA-HEADERS" to "ExtraValue", "USER-ID" to "123e4567-e89b-12d3-a456-426655440000")
+                        ),
+                        responseExample = HttpResponse(
+                            status = 200,
+                            headers = mapOf("TICKET-ID" to "123e4567-e89b-12d3-a456-426655440000", "X-EXTRA-HEADERS" to "ExtraValue")
+                        ),
+                        name = "example.json"
+                    ))
+                )
+            )
+        )
+
+        Flags.using(Flags.EXTENSIBLE_SCHEMA to "true") {
+            val flagBased = strategiesFromFlags(SpecmaticConfig())
+            assertDoesNotThrow { scenario.validExamplesOrException(flagBased) }
+        }
     }
 
     @Nested

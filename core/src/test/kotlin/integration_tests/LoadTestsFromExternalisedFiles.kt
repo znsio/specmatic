@@ -442,6 +442,25 @@ class LoadTestsFromExternalisedFiles {
     }
 
     @Test
+    fun `should complain when example request-response contains out-of-spec headers`() {
+        val openApiFile = File("src/test/resources/openapi/apiKeyAuth.yaml")
+        val examplesDir = File("src/test/resources/openapi/apiKeyAuthExtraHeader_examples")
+
+        Flags.using(Flags.EXAMPLE_DIRECTORIES to examplesDir.canonicalPath) {
+            val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
+            val exception = assertThrows<ContractException> { feature.validateExamplesOrException() }
+
+            assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+            Error loading example for GET /hello/(id:number) -> 200 from ${examplesDir.resolve("extra_header.json").canonicalPath}
+            >> REQUEST.HEADERS.X-Extra-Header  
+            The header X-Extra-Header was found in the example extra_header but was not in the specification.
+            >> RESPONSE.HEADERS.X-Extra-Header
+            The header X-Extra-Header was found in the example extra_header but was not in the specification.
+            """.trimIndent())
+        }
+    }
+
+    @Test
     fun `should be able to load and use multi-value dictionary when making requests`() {
         val openApiFile = File("src/test/resources/openapi/spec_with_multi_value_dict/api.yaml")
         val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature()

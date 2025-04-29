@@ -232,7 +232,7 @@ class ContractAsTest {
         val flags = mutableMapOf<String, Boolean>()
 
         val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
-        val suggestions = lex(parseGherkinString(parameters)!!).second
+        val suggestions = lex(parseGherkinString(parameters, "")).second
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {

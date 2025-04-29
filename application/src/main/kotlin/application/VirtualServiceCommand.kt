@@ -110,11 +110,7 @@ class VirtualServiceCommand : Callable<Int> {
     }
 
     private fun List<ScenarioStub>.logExamplesCachedAsSeedData() {
-        logger.log(
-            "${newLine}Injecting the data read from the following stub files into the stub server's state..".prependIndent(
-                "  "
-            )
-        )
+        logger.log("${newLine}Injecting the data read from the following stub files into the stub server's state..".prependIndent("  "))
         this.forEach { logger.log(it.filePath.orEmpty().prependIndent("  ")) }
     }
 
@@ -129,10 +125,10 @@ class VirtualServiceCommand : Callable<Int> {
             fun validate(scenario: Scenario): String?
         }
 
-        val ALL_VALIDATORS = listOf(HttpMethodValidator(), PostResponseValidator(), ValidateResourcePathParams())
+        private val ALL_VALIDATORS = listOf(HttpMethodValidator(), PostResponseValidator(), ValidateResourcePathParams())
 
         class HttpMethodValidator : ScenarioValidator {
-            val supportedMethods = setOf("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS")
+            private val supportedMethods = setOf("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS")
             override fun validate(scenario: Scenario): String? {
                 if (scenario.method !in supportedMethods) {
                     val supportedMethods = supportedMethods.joinToString(", ")

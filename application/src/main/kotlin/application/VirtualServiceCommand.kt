@@ -23,7 +23,7 @@ import java.util.concurrent.CountDownLatch
     mixinStandardHelpOptions = true,
     description = ["Start a stateful virtual service with contract"]
 )
-class VirtualServiceCommand  : Callable<Int> {
+class VirtualServiceCommand : Callable<Int> {
 
     @Option(names = ["--host"], description = ["Host for the virtual service"], defaultValue = DEFAULT_HTTP_STUB_HOST)
     lateinit var host: String
@@ -44,7 +44,7 @@ class VirtualServiceCommand  : Callable<Int> {
 
         try {
             startServer()
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             logger.log("An error occurred while starting the virtual service: ${e.message}")
             return 1
         }
@@ -77,8 +77,8 @@ class VirtualServiceCommand  : Callable<Int> {
     }
 
     private fun stubContractPathData(): List<ContractPathData> {
-        return contractFilePathsFrom(Configuration.configFilePath, DEFAULT_WORKING_DIRECTORY) {
-                source -> source.stubContracts
+        return contractFilePathsFrom(Configuration.configFilePath, DEFAULT_WORKING_DIRECTORY) { source ->
+            source.stubContracts
         }
     }
 
@@ -90,9 +90,9 @@ class VirtualServiceCommand  : Callable<Int> {
             false
         )
 
-        val validateSpec = virtualServiceValidationRuleset(stubData.map{it.first}.flatMap{it.scenarios})
+        val validateSpec = virtualServiceValidationRuleset(stubData.map { it.first }.flatMap { it.scenarios })
 
-        validateSpec.takeIf{it.isNotEmpty()}?.let{
+        validateSpec.takeIf { it.isNotEmpty() }?.let {
             logger.log("\n\nThe following errors were found in the specifications:")
             logger.log(it.joinToString(System.lineSeparator()))
             return
@@ -110,43 +110,61 @@ class VirtualServiceCommand  : Callable<Int> {
     }
 
     private fun List<ScenarioStub>.logExamplesCachedAsSeedData() {
-        logger.log("${newLine}Injecting the data read from the following stub files into the stub server's state..".prependIndent("  "))
+        logger.log(
+            "${newLine}Injecting the data read from the following stub files into the stub server's state..".prependIndent(
+                "  "
+            )
+        )
         this.forEach { logger.log(it.filePath.orEmpty().prependIndent("  ")) }
     }
 
     companion object {
         fun virtualServiceValidationRuleset(scenarios: List<Scenario>): List<String> {
-            val supportedMethods = setOf("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS")
             return scenarios.flatMap { scenario ->
-                buildList {
-                    validateHttpMethod(scenario, supportedMethods)?.let { add(it) }
-                    validatePostResponse(scenario)?.let { add(it) }
-                    validateResourcePath(scenario)?.let { add(it) }
-                }
+                ALL_VALIDATORS.mapNotNull { it.validate(scenario) }
             }
         }
 
-        private fun validateHttpMethod(scenario: Scenario, supportedMethods: Set<String>): String? =
-            if (scenario.method !in supportedMethods) {
-                "Invalid HTTP method ${scenario.method} in path ${scenario.path}. Supported methods are: ${supportedMethods.joinToString(", ")}"
-            } else null
+        interface ScenarioValidator {
+            fun validate(scenario: Scenario): String?
+        }
 
-        private fun validatePostResponse(scenario: Scenario): String? =
-            if (scenario.method == "POST" && scenario.isA2xxScenario()) {
-                val responsePattern = scenario.resolvedResponseBodyPattern()
-                if (responsePattern is JSONObjectPattern && !responsePattern.pattern.keys.contains("id")) {
-                    "Operation: ${scenario.apiDescription}, must contain 'id' key in the response for POST requests"
-                } else null
-            } else null
+        val ALL_VALIDATORS = listOf(HttpMethodValidator(), PostResponseValidator(), ValidateResourcePathParams())
 
-        private fun validateResourcePath(scenario: Scenario): String? {
-            val pathSegments = scenario.path.split("/").filter(String::isNotEmpty)
-            return if (pathSegments.size > 1) {
-                val potentialId = pathSegments[1]
-                if (!potentialId.startsWith("(") && !potentialId.endsWith(")")) {
-                    "Operation ${scenario.apiDescription}, contains invalid nested resource '$potentialId'. Use flat structure: /resource or /resource/{id}"
-                } else null
-            } else null
+        class HttpMethodValidator : ScenarioValidator {
+            val supportedMethods = setOf("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS")
+            override fun validate(scenario: Scenario): String? {
+                if (scenario.method !in supportedMethods) {
+                    val supportedMethods = supportedMethods.joinToString(", ")
+                    return "Invalid HTTP method ${scenario.method} in path ${scenario.path}. Supported methods are: $supportedMethods"
+                }
+                return null
+            }
+        }
+
+        class PostResponseValidator : ScenarioValidator {
+            override fun validate(scenario: Scenario): String? {
+                if (scenario.method == "POST" && scenario.isA2xxScenario()) {
+                    val responsePattern = scenario.resolvedResponseBodyPattern()
+                    if (responsePattern is JSONObjectPattern && !responsePattern.pattern.keys.contains("id")) {
+                        return "Operation: ${scenario.apiDescription}, must contain 'id' key in the response for POST requests"
+                    }
+                }
+                return null
+            }
+        }
+
+        class ValidateResourcePathParams : ScenarioValidator {
+            override fun validate(scenario: Scenario): String? {
+                val pathSegments = scenario.path.split("/").filter(String::isNotEmpty)
+                if (pathSegments.size > 1) {
+                    val potentialId = pathSegments[1]
+                    if (!potentialId.startsWith("(") && !potentialId.endsWith(")")) {
+                        return "Operation ${scenario.apiDescription}, contains invalid nested resource '$potentialId'. Use flat structure: /resource or /resource/{id}"
+                    }
+                }
+                return null
+            }
         }
     }
 }

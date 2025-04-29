@@ -209,10 +209,16 @@ For example, to filter by HTTP methods:
                 logger.log("$ordinal. Validating examples in '${associatedExamplesDir}' associated to '$relativeSpecPath'...${System.lineSeparator()}")
                 ordinal++
 
-                val results = validateExamplesDir(specFile, associatedExamplesDir).second
-                printValidationResult(results.exampleValidationResults, "")
+                val feature = parseContractFileWithNoMissingConfigWarning(specFile)
+                val inlineExampleValidationResults = validateInlineExamples(feature)
+                printValidationResult(inlineExampleValidationResults.exampleValidationResults, "Inline example")
                 logger.log(System.lineSeparator())
-                results
+
+                val externalExampleValidationResult = validateExamplesDir(feature, associatedExamplesDir).second
+                printValidationResult(externalExampleValidationResult.exampleValidationResults, "Example file")
+                logger.log(System.lineSeparator())
+
+                listOf(inlineExampleValidationResults, externalExampleValidationResult).mergedAsOne()
             }.toList()
 
             logger.log("Summary:")
@@ -228,7 +234,7 @@ For example, to filter by HTTP methods:
 
             val inlineExampleValidationResults =
                 if (!validateInline)
-                    emptyMap()
+                    ValidationResults.forNoExamples()
                 else
                     validateInlineExamples(feature)
 
@@ -242,16 +248,16 @@ For example, to filter by HTTP methods:
                     validationResults
                 }
 
-            printValidationResult(inlineExampleValidationResults, "Inline example")
+            printValidationResult(inlineExampleValidationResults.exampleValidationResults, "Inline example")
             printValidationResult(externalExampleValidationResults.exampleValidationResults, "Example file")
 
-            if (inlineExampleValidationResults.containsOnlyCompleteFailures())
+            if (inlineExampleValidationResults.exampleValidationResults.containsOnlyCompleteFailures())
                 return FAILURE_EXIT_CODE
 
             return externalExampleValidationResults.exitCode
         }
 
-        private fun validateInlineExamples(feature: Feature): Map<String, Result> {
+        private fun validateInlineExamples(feature: Feature): ValidationResults {
             return exampleValidationModule.validateInlineExamples(
                 feature,
                 examples = feature.stubsFromExamples.mapValues { (_, stub) ->

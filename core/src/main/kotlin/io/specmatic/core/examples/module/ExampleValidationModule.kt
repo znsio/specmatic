@@ -18,7 +18,7 @@ class ExampleValidationModule {
         feature: Feature,
         examples: Map<String, List<ScenarioStub>> = emptyMap(),
         scenarioFilter: ScenarioFilter = ScenarioFilter()
-    ): Map<String, Result> {
+    ): ValidationResults {
         val updatedFeature = scenarioFilter.filter(feature)
 
         val results = examples.mapValues { (name, exampleList) ->
@@ -32,7 +32,8 @@ class ExampleValidationModule {
             }
         }
 
-        return results
+        //TODO - When inline/external/both are decided for each param-wise execution code paths, evaluate if adding a lifecycle hook here is appropriate. And if so, Result.Success() need to be replaced with the result of the hook
+        return ValidationResults(results, Result.Success())
     }
 
     fun validateExamples(

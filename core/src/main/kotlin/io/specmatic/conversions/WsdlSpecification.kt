@@ -5,6 +5,8 @@ import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.value.toXMLNode
 import io.specmatic.core.wsdl.parser.WSDL
 import io.cucumber.messages.types.FeatureChild
+import io.cucumber.messages.types.GherkinDocument
+import io.cucumber.messages.types.Background
 import io.cucumber.messages.types.Step
 import io.swagger.v3.parser.util.ClasspathHelper
 import java.net.URI
@@ -104,10 +106,21 @@ class WsdlSpecification(private val wsdlFile: WSDLContent) : IncludedSpecificati
         val wsdlContent = wsdlFile.read() ?: throw ContractException("Could not read WSDL file $wsdlFile")
         val wsdl = WSDL(toXMLNode(wsdlContent), wsdlFile.path)
         val gherkin = wsdl.convertToGherkin().trim()
-        val feature = parseGherkinString(gherkin, wsdlFile.path).feature
-        return feature.children
+        val gherkinDocument = parseGherkinString(gherkin, wsdlFile.path)
+        return gherkinDocument.unwrapFeature().children
     }
+}
 
+fun GherkinDocument.unwrapFeature(): io.cucumber.messages.types.Feature {
+    return feature.orElseThrow {
+        IllegalStateException("Expected a Feature in GherkinDocument, but none was present.")
+    }
+}
+
+fun FeatureChild.unwrapBackground(): Background {
+    return background.orElseThrow {
+        IllegalStateException("Expected a Background in FeatureChild, but none was present.")
+    }
 }
 
 fun wsdlContentToFeature(

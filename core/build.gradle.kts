@@ -6,7 +6,7 @@ plugins {
 
 dependencies {
     implementation("io.netty:netty-codec-http:4.1.118.Final")
-    implementation("joda-time:joda-time:2.13.1")
+    implementation("joda-time:joda-time:2.14.0")
     implementation("net.minidev:json-smart:2.5.2")
 
     implementation("com.ezylang:EvalEx:3.5.0")

@@ -40,7 +40,6 @@ paths:
                   - name
                   - status
                   - type
-                  - email
                 properties:
                   id:
                     type: number
@@ -50,9 +49,6 @@ paths:
                     type: string
                   status:
                     type: string
-                  email:
-                    type: string
-                    format: email
               examples:
                 SCOOBY_200_OK:
                   value:
@@ -60,14 +56,12 @@ paths:
                     name: Scooby
                     type: Golden Retriever
                     status: Adopted
-                    email: hello@hello.com
                 ROCKY_200_OK:
                   value:
                     id: 3
                     name: Rocky
                     type: Golden Retriever
                     status: Adopted
-                    email: world@world.com
         '404':
           description: Pet not found
           content:

@@ -13,7 +13,12 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.shouldMatch
 import io.specmatic.trimmedLinesList
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.util.function.Consumer
+import java.util.stream.Stream
 
 internal class ScenarioStubKtTest {
     @Test
@@ -956,6 +961,57 @@ paths:
 
         assertThat(withUpdatedResponse.response()).isEqualTo(updatedResponse)
         assertThat(withUpdatedResponse.partial?.response).isEqualTo(updatedResponse)
+    }
+
+    @ParameterizedTest
+    @MethodSource("io.specmatic.mock.ScenarioStubKtTest#invalidExampleToMessageProvider")
+    fun `should provide appropriate error message when example is invalid with missing or invalid keys`(mockString: String, expectedMessage: String) {
+        val exception = assertThrows<ContractException> { ScenarioStub.parse(mockString) }
+        assertThat(exception.report()).isEqualToNormalizingWhitespace(expectedMessage)
+    }
+
+    companion object {
+        @JvmStatic
+        fun invalidExampleToMessageProvider(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of("""{
+                    "supposed-to-be-http-request": { "path": "/add", "method": "POST" },
+                    "http-response": { "status": 200 }
+                    }""".trimIndent(),
+                    "Stub does not contain http-request/mock-http-request as a top level key."
+                ),
+                Arguments.of("""{
+                    "http-request": { "path": "/add", "method": "POST" },
+                    "supposed-to-be-http-response": { "status": 200 }
+                    }""".trimIndent(),
+                    "Stub does not contain http-response/mock-http-response as a top level key."
+                ),
+                Arguments.of("""{
+                    "http-request": { "path": "/add", "supposed-to-be-method": "POST" },
+                    "http-response": { "status": 200 }
+                    }""".trimIndent(),
+                    "http-request must contain a key named method whose value is the method in the request"
+                ),
+                Arguments.of("""{
+                    "http-request": { "path": "/add", "method": "POST", body: null },
+                    "http-response": { "status": 200 }
+                    }""".trimIndent(),
+                    "Either body should have a value or the key should be absent from http-request"
+                ),
+                Arguments.of("""{
+                    "http-request": { "path": "/add", "method": "POST" },
+                    "http-response": { "supposed-to-be-status": 200 }
+                    }""".trimIndent(),
+                    "http-response must contain a key named status, whose value is the http status in the response"
+                ),
+                Arguments.of("""{
+                    "http-request": { "path": "/add", "method": "POST" },
+                    "http-response": { "status": 200,  body: null }
+                    }""".trimIndent(),
+                    "Either body should have a value or the key should be absent from http-response"
+                )
+            )
+        }
     }
 }
 

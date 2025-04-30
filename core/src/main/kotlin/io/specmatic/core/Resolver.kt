@@ -1,6 +1,5 @@
 package io.specmatic.core
 
-import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.*
 import io.specmatic.test.ExampleProcessor
@@ -202,23 +201,23 @@ data class Resolver(
     }
 
     fun generate(pattern: Pattern): Value {
-        val value = dictionary[dictionaryLookupPath] ?: defaultPatternValueFromDictionary(pattern) ?: return pattern.generate(this)
+        val valueFromDict = getValueFromDictionary(dictionaryLookupPath, pattern)
+        if (valueFromDict != null) {
+            return valueFromDict.unwrapOrContractException()
+        }
 
-        val dictionaryValueMatchResult = pattern.matches(value, this)
-        if (dictionaryValueMatchResult is Result.Failure && isNegative) return pattern.generate(this)
-        dictionaryValueMatchResult.throwOnFailure()
+        val defaultValueFromDict = getDefaultValueFromDictionary(pattern)
+        if (defaultValueFromDict != null) {
+            return defaultValueFromDict
+        }
 
-        return value
+        return pattern.generate(this)
     }
 
-    private fun defaultPatternValueFromDictionary(pattern: Pattern): Value? {
-        val defaultPatternValue = dictionary[withPatternDelimiters(pattern.typeName)]
-
-        return pattern
-            .matches(defaultPatternValue, this)
-            .onSuccessElseNull {
-                defaultPatternValue
-            }
+    private fun getDefaultValueFromDictionary(pattern: Pattern): Value? {
+        val lookupKey = withPatternDelimiters(pattern.typeName)
+        val defaultPatternValue = getValueFromDictionary(lookupKey, pattern)
+        return defaultPatternValue?.withDefault(null) { it }
     }
 
     fun generate(typeAlias: String?, rawLookupKey: String, pattern: Pattern): Value {
@@ -263,20 +262,12 @@ data class Resolver(
     }
 
     private fun lookupPath(typeAlias: String?, lookupKey: String): String {
-        val lookupPath = if (typeAlias.isNullOrBlank()) {
-            if (lookupKey.isBlank())
-                ""
-            else if (lookupKey == "[*]")
-                "$dictionaryLookupPath$lookupKey"
-            else
-                "$dictionaryLookupPath.$lookupKey"
-        } else {
-            if (lookupKey.isBlank())
-                "${withoutPatternDelimiters(typeAlias)}"
-            else
-                "${withoutPatternDelimiters(typeAlias)}.$lookupKey"
+        val base = typeAlias?.trim()?.let(::withoutPatternDelimiters)?.takeIf(String::isNotBlank) ?: dictionaryLookupPath
+        return when (lookupKey) {
+            "" -> base
+            "[*]" -> "$base[*]"
+            else -> "$base.$lookupKey"
         }
-        return lookupPath
     }
 
     fun lookupPathSeen(lookupPath: String): Boolean {
@@ -293,32 +284,19 @@ data class Resolver(
         return false
     }
 
-    fun generateList(pattern: Pattern): Value {
-        val lookupKey = dictionaryLookupPath.trim() + "[*]"
+    fun generateList(pattern: ListPattern): Value {
+        val lookupPath = lookupPath(pattern.typeAlias, "")
+        val valueFromDict = getValueFromDictionary(lookupPath, pattern)
+        if (valueFromDict != null) {
+            return valueFromDict.unwrapOrContractException()
+        }
 
-        val value = dictionary[lookupKey] ?: return this.copy(dictionaryLookupPath = lookupKey).generateRandomList(pattern)
-
-        val matchResult = pattern.matches(value, this)
-
-        if(matchResult.isSuccess())
-            return JSONArrayValue(listOf(value))
-
-        val errorReport = """
->> $lookupKey
-
-Dictionary value did not match the spec
-
-${matchResult.reportString()}
-        """.trimIndent()
-
-        logger.log(errorReport)
-
-        return generateRandomList(pattern)
+        return updateLookupPath(pattern.typeAlias, "[*]").generateRandomList(pattern.pattern)
     }
 
     private fun generateRandomList(pattern: Pattern): Value {
         return pattern.listOf(0.until(randomNumber(3)).mapIndexed{ index, _ ->
-            attempt(breadCrumb = "[$index (random)]") { pattern.generate(this) }
+            attempt(breadCrumb = "[$index (random)]") { generate(pattern) }
         }, this)
     }
 
@@ -443,6 +421,37 @@ ${matchResult.reportString()}
 
     fun getPartialKeyCheck(): KeyCheck {
         return findKeyErrorCheck.toPartialKeyCheck()
+    }
+
+    private fun getValueFromDictionary(lookupKey: String, pattern: Pattern): ReturnValue<Value>? {
+        val dictionaryValue = dictionary[lookupKey] ?: return null
+        val valueToMatch = getValueToMatch(dictionaryValue, pattern) ?: return null
+
+        return runCatching {
+            val result = pattern.matches(valueToMatch, this)
+            if (result is Result.Failure && this.isNegative) return@runCatching null
+            result.toReturnValue(valueToMatch, "Invalid Dictionary value at \"$lookupKey\"")
+        }.getOrElse(::HasException)
+    }
+
+    private fun <T> calculateDepth(data: T, getChildren: (T) -> List<T>?): Int {
+        val children = getChildren(data) ?: return 0
+        return when {
+            children.isEmpty() -> 1
+            else -> 1 + children.maxOf { calculateDepth(it, getChildren) }
+        }
+    }
+
+    private fun getValueToMatch(value: Value, pattern: Pattern): Value? {
+        if (value !is JSONArrayValue) return value
+        if (pattern !is ListPattern) return value.list.randomOrNull()
+
+        val patternDepth = calculateDepth<Pattern>(pattern) { (resolvedHop(it, this) as? ListPattern)?.pattern?.let(::listOf) }
+        val valueDepth = calculateDepth<Value>(value) { (it as? JSONArrayValue)?.list }
+        return when {
+            valueDepth > patternDepth -> value.list.randomOrNull()
+            else -> value
+        }
     }
 }
 

@@ -157,3 +157,11 @@ fun <T> Throwable.asReturnValue(
     is ContractException -> HasFailure(this.failure(), message = message)
     else -> HasException(this, message = message, breadCrumb = "")
 }
+
+fun <T> ReturnValue<T>.unwrapOrContractException(): T {
+    return this.realise(
+        hasValue = { value, _ -> value },
+        orFailure = { hasF -> throw ContractException(hasF.toFailure().toFailureReport()) },
+        orException = { hasE -> throw ContractException(hasE.toHasFailure().toFailure().toFailureReport()) }
+    )
+}

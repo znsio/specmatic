@@ -435,15 +435,18 @@ data class Resolver(
     }
 
     private fun <T> calculateDepth(data: T, getChildren: (T) -> List<T>?): Int {
-        val children = getChildren(data)?.takeUnless(List<T>::isEmpty) ?: return 0
-        return 1 + calculateDepth(children.first(), getChildren)
+        val children = getChildren(data) ?: return 0
+        return when {
+            children.isEmpty() -> 1
+            else -> 1 + children.maxOf { calculateDepth(it, getChildren) }
+        }
     }
 
     private fun getValueToMatch(value: Value, pattern: Pattern): Value? {
         if (value !is JSONArrayValue) return value
         if (pattern !is ListPattern) return value.list.randomOrNull()
 
-        val patternDepth = calculateDepth<Pattern>(pattern) { (it as? ListPattern)?.pattern?.let(::listOf) }
+        val patternDepth = calculateDepth<Pattern>(pattern) { (resolvedHop(it, this) as? ListPattern)?.pattern?.let(::listOf) }
         val valueDepth = calculateDepth<Value>(value) { (it as? JSONArrayValue)?.list }
         return when {
             valueDepth > patternDepth -> value.list.randomOrNull()

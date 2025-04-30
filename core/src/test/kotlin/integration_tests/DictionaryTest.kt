@@ -635,6 +635,19 @@ class DictionaryTest {
             )
         }
 
+        @Test
+        fun `should prioritise schema keys over default values in dictionary`() {
+            val dictionary = jsonStringToValueMap("""{
+            "Schema.number": [10, 20, 30],
+            "(number)": [1, 2, 3]
+            }""".trimIndent())
+            val pattern = parsedPattern("""{ "number": "(number)" }""".trimIndent(), typeAlias = "(Schema)")
+            val resolver = Resolver(dictionary = dictionary)
+            val value = pattern.generate(resolver) as JSONObjectValue
+
+            assertThat(value.jsonObject["number"]).isIn(listOf(10, 20, 30).map(::NumberValue))
+        }
+
         @Nested
         inner class ListPatternTests {
 
@@ -670,13 +683,22 @@ class DictionaryTest {
                 Arguments.of(
                     listPatternOf(NumberPattern()), parsedJSONArray("""[1, 2]""")
                 ),
+                Arguments.of(
+                    listPatternOf(NumberPattern()), parsedJSONArray("""[]""")
+                ),
                 // List[List[Pattern]]
                 Arguments.of(
                     listPatternOf(NumberPattern(), nestedLevel = 1), parsedJSONArray("""[[1, 2], [3, 4]]""")
                 ),
+                Arguments.of(
+                    listPatternOf(NumberPattern(), nestedLevel = 1), parsedJSONArray("""[[], [3, 4]]""")
+                ),
                 // List[List[List[Pattern]]]
                 Arguments.of(
                     listPatternOf(NumberPattern(), nestedLevel = 2), parsedJSONArray("""[[[1, 2]], [[3, 4]]]""")
+                ),
+                Arguments.of(
+                    listPatternOf(NumberPattern(), nestedLevel = 2), parsedJSONArray("""[[[]], [[3, 4]]]""")
                 )
             )
         }
@@ -688,14 +710,24 @@ class DictionaryTest {
                 Arguments.of(
                     listPatternOf(NumberPattern()), parsedJSONArray("""[[1, 2], [3, 4]]""")
                 ),
+                Arguments.of(
+                    listPatternOf(NumberPattern()), parsedJSONArray("""[[], [3, 4]]""")
+                ),
                 // List[List[Pattern]]
                 Arguments.of(
                     listPatternOf(NumberPattern(), nestedLevel = 1), parsedJSONArray("""[[[1, 2]], [[3, 4]]]""")
+                ),
+                Arguments.of(
+                    listPatternOf(NumberPattern(), nestedLevel = 1), parsedJSONArray("""[[[1, 2]], [[]]]""")
                 ),
                 // List[List[List[Pattern]]]
                 Arguments.of(
                     listPatternOf(NumberPattern(), nestedLevel = 2),
                     parsedJSONArray("""[[[[1, 2]], [[3, 4]]], [[[5, 6]], [[7, 8]]]]""")
+                ),
+                Arguments.of(
+                    listPatternOf(NumberPattern(), nestedLevel = 2),
+                    parsedJSONArray("""[[[[1, 2]], [[3, 4]]], [[[]], [[7, 8]]]]""")
                 )
             )
         }

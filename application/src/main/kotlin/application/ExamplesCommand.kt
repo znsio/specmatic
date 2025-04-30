@@ -211,14 +211,14 @@ For example, to filter by HTTP methods:
 
                 val feature = parseContractFileWithNoMissingConfigWarning(specFile)
                 val inlineExampleValidationResults = validateInlineExamples(feature)
-                printValidationResult(inlineExampleValidationResults.exampleValidationResults, "Inline example")
+                printValidationResult(inlineExampleValidationResults, "Inline example")
                 logger.log(System.lineSeparator())
 
                 val externalExampleValidationResult = validateExamplesDir(feature, associatedExamplesDir).second
                 printValidationResult(externalExampleValidationResult.exampleValidationResults, "Example file")
                 logger.log(System.lineSeparator())
 
-                listOf(inlineExampleValidationResults, externalExampleValidationResult).mergedAsOne()
+                externalExampleValidationResult.withAdditional(inlineExampleValidationResults)
             }.toList()
 
             logger.log("Summary:")
@@ -234,7 +234,7 @@ For example, to filter by HTTP methods:
 
             val inlineExampleValidationResults =
                 if (!validateInline)
-                    ValidationResults.forNoExamples()
+                    emptyMap()
                 else
                     validateInlineExamples(feature)
 
@@ -248,16 +248,16 @@ For example, to filter by HTTP methods:
                     validationResults
                 }
 
-            printValidationResult(inlineExampleValidationResults.exampleValidationResults, "Inline example")
+            printValidationResult(inlineExampleValidationResults, "Inline example")
             printValidationResult(externalExampleValidationResults.exampleValidationResults, "Example file")
 
-            if (inlineExampleValidationResults.exampleValidationResults.containsOnlyCompleteFailures())
+            if (inlineExampleValidationResults.containsOnlyCompleteFailures())
                 return FAILURE_EXIT_CODE
 
             return externalExampleValidationResults.exitCode
         }
 
-        private fun validateInlineExamples(feature: Feature): ValidationResults {
+        private fun validateInlineExamples(feature: Feature): Map<String, Result> {
             return exampleValidationModule.validateInlineExamples(
                 feature,
                 examples = feature.stubsFromExamples.mapValues { (_, stub) ->

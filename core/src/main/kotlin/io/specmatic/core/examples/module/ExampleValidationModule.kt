@@ -18,7 +18,7 @@ class ExampleValidationModule {
         feature: Feature,
         examples: Map<String, List<ScenarioStub>> = emptyMap(),
         scenarioFilter: ScenarioFilter = ScenarioFilter()
-    ): ValidationResults {
+    ): Map<String, Result> {
         val updatedFeature = scenarioFilter.filter(feature)
 
         val results = examples.mapValues { (name, exampleList) ->
@@ -32,7 +32,7 @@ class ExampleValidationModule {
             }
         }
 
-        return ValidationResults.forOnlyExamples(results)
+        return results
     }
 
     fun validateExamples(

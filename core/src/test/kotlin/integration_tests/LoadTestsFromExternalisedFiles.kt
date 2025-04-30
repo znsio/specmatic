@@ -173,7 +173,7 @@ class LoadTestsFromExternalisedFiles {
                 OpenApiSpecification
                     .fromFile("src/test/resources/openapi/has_irrelevant_externalized_test.yaml")
                     .toFeature()
-                    .loadExternalisedExamplesAndListUnloadableExamples()
+                    .loadExternalisedExamplesAndListLoadedAndUnloadableExamples().second
 
             assertThat(unusedExamplesFilePaths).hasSize(2)
             assertThat(unusedExamplesFilePaths.any {

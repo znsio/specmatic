@@ -144,7 +144,8 @@ class BackwardCompatibilityCheckCommandV2: BackwardCompatibilityCheckBaseCommand
 
     override fun getUnusedExamples(feature: IFeature): Set<String> {
         feature as Feature
-        return feature.loadExternalisedExamplesAndListUnloadableExamples().second
+        val (_, loadedAndUnloadedExamples) = feature.loadExternalisedExamplesAndListLoadedAndUnloadableExamples()
+        return loadedAndUnloadedExamples.second
     }
 
     private fun findSpecFiles(path: Path): List<Path> {

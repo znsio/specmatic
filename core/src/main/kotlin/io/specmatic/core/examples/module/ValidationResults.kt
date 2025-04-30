@@ -29,6 +29,10 @@ class ValidationResults(val exampleValidationResults: Map<String, Result>, val h
         fun forNoExamples(): ValidationResults {
             return ValidationResults(emptyMap(), Result.Success())
         }
+
+        fun forOnlyExamples(exampleValidationResults: Map<String, Result>): ValidationResults {
+            return ValidationResults(exampleValidationResults, Result.Success())
+        }
     }
 }
 

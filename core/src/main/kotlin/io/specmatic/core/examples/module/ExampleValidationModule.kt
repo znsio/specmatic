@@ -32,8 +32,7 @@ class ExampleValidationModule {
             }
         }
 
-        //TODO - When inline/external/both are decided for each param-wise execution code paths, evaluate if adding a lifecycle hook here is appropriate. And if so, Result.Success() need to be replaced with the result of the hook
-        return ValidationResults(results, Result.Success())
+        return ValidationResults.forOnlyExamples(results)
     }
 
     fun validateExamples(

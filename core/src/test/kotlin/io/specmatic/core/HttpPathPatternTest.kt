@@ -336,6 +336,15 @@ internal class HttpPathPatternTest {
         }
     }
 
+    @Test
+    fun `should be able to match path parameter as pattern token with key when in mockMode`() {
+        val urlPattern = buildHttpPathPattern("/pets/(id:number)")
+        val path = "/pets/(id:number)"
+        val result = urlPattern.matches(URI(path), Resolver(mockMode = true))
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
     @Nested
     inner class FixValueTests {
         @Test
@@ -383,11 +392,22 @@ internal class HttpPathPatternTest {
             val urlPattern = buildHttpPathPattern("/pets/(id:number)")
             val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999))
             val resolver = Resolver(dictionary = dictionary, mockMode = true)
-            val validValue = "/pets/(number)"
+            val validValue = "/pets/(id:number)"
 
             val fixedPath = urlPattern.fixValue(validValue, resolver)
             println(fixedPath)
             assertThat(fixedPath).isEqualTo(validValue)
+        }
+
+        @Test
+        fun `should fix pattern token if it does not match`() {
+            val urlPattern = buildHttpPathPattern("/pets/(id:number)")
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999))
+            val resolver = Resolver(dictionary = dictionary, mockMode = true)
+            val validValue = "/pets/(id:string)"
+
+            val fixedPath = urlPattern.fixValue(validValue, resolver)
+            assertThat(fixedPath).isEqualTo("/pets/999")
         }
 
         @Test

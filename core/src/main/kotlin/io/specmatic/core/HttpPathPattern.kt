@@ -287,13 +287,15 @@ data class HttpPathPattern(
     fun fixValue(path: String?, resolver: Resolver): String {
         if (path == null) return this.generate(resolver)
 
-        val pathSegments = path.split("/".toRegex()).filter { it.isNotEmpty() }.map(::removeKeyFromParameterToken)
+        val pathSegments = path.split("/".toRegex()).filter { it.isNotEmpty() }
         if (pathSegmentPatterns.size != pathSegments.size) return this.generate(resolver)
 
         val pathHadPrefix = path.startsWith("/")
         return pathSegmentPatterns.zip(pathSegments).map { (urlPathPattern, token) ->
+            val tokenWithoutParameter = removeKeyFromParameterToken(token)
             val updatedResolver = resolver.updateLookupPath("PATH-PARAMS", urlPathPattern.key.orEmpty())
-            urlPathPattern.fixValue(urlPathPattern.tryParse(token, updatedResolver), updatedResolver)
+            val result = urlPathPattern.fixValue(urlPathPattern.tryParse(tokenWithoutParameter, updatedResolver), updatedResolver)
+            token.takeIf { isPatternToken(tokenWithoutParameter) && isPatternToken(result) } ?: result
         }.joinToString("/", prefix = "/".takeIf { pathHadPrefix }.orEmpty() )
     }
 

@@ -71,7 +71,7 @@ data class HttpRequestPattern(
         }
     }
 
-    fun matchesPathAndMethod(
+    private fun matchesPathAndMethod(
         incomingHttpRequest: HttpRequest,
         resolver: Resolver
     ): Result {
@@ -93,6 +93,18 @@ data class HttpRequestPattern(
             ).breadCrumb("REQUEST")
             else -> result
         }
+    }
+
+    fun matchesPathStructureMethodAndContentType(incomingHttpRequest: HttpRequest, resolver: Resolver): Result {
+        val contentTypeMatches = headersPattern.matchContentType(incomingHttpRequest.headers to resolver)
+        if (contentTypeMatches is MatchFailure<*>) {
+            return contentTypeMatches.error.breadCrumb("REQUEST.HEADERS")
+        }
+
+        val pathAndMethodMatch = matchesPathAndMethod(incomingHttpRequest, resolver)
+        return pathAndMethodMatch.takeUnless {
+            it is Failure && it.hasReason(FailureReason.URLPathParamMismatchButSameStructure)
+        } ?: Success()
     }
 
     private fun matchSecurityScheme(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
@@ -857,12 +869,6 @@ data class HttpRequestPattern(
             queryParams = httpQueryParamPattern.fixValue(request.queryParams, resolver),
             headers = headersPattern.fixValue(request.headers, resolver),
             body = body.fixValue(request.body, resolver)
-        )
-    }
-
-    fun withWildcardPathPattern(): HttpRequestPattern {
-        return this.copy(
-            httpPathPattern = this.httpPathPattern?.withWildcardPathSegments()
         )
     }
 

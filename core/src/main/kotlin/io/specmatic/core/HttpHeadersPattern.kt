@@ -52,7 +52,7 @@ data class HttpHeadersPattern(
         }
     }
 
-    private fun matchContentType(parameters: Pair<Map<String, String>, Resolver>):  MatchingResult<Pair<Map<String, String>, Resolver>> {
+    fun matchContentType(parameters: Pair<Map<String, String>, Resolver>):  MatchingResult<Pair<Map<String, String>, Resolver>> {
 
         val (headers, resolver) = parameters
 

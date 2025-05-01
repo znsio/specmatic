@@ -344,9 +344,7 @@ data class Scenario(
         val updatedScenario = newBasedOnAttributeSelectionFields(httpRequest.queryParams)
         val requestMatch = when(httpResponse.status in invalidRequestStatuses) {
             false -> updatedScenario.matches(httpRequest, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
-            else -> updatedScenario.httpRequestPattern.matchesPathAndMethod(httpRequest, updatedResolver).let {
-                it.takeUnless { it is Result.Failure && it.hasReason(FailureReason.URLPathParamMismatchButSameStructure) } ?: Result.Success()
-            }
+            else -> updatedScenario.httpRequestPattern.matchesPathStructureMethodAndContentType(httpRequest, updatedResolver)
         }
 
         val fieldsSelected = fieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams)
@@ -699,9 +697,7 @@ data class Scenario(
 
             val requestMatchResult = attempt(breadCrumb = "REQUEST") {
                 if (response.status !in invalidRequestStatuses) return@attempt httpRequestPattern.matches(request, resolver)
-                httpRequestPattern.matchesPathAndMethod(request, resolver).takeUnless {
-                    it is Result.Failure && it.hasReason(FailureReason.URLPathParamMismatchButSameStructure)
-                } ?: Result.Success()
+                httpRequestPattern.matchesPathStructureMethodAndContentType(request, resolver)
             }
 
             if (requestMatchResult is Result.Failure)
@@ -851,9 +847,7 @@ data class Scenario(
             if (template.response.status !in invalidRequestStatuses) {
                 return@attempt httpRequestPattern.matches(template.request, updatedResolver, updatedResolver)
             }
-            httpRequestPattern.matchesPathAndMethod(template.request, updatedResolver).takeUnless {
-                it is Result.Failure && it.hasReason(FailureReason.URLPathParamMismatchButSameStructure)
-            } ?: Result.Success()
+            httpRequestPattern.matchesPathStructureMethodAndContentType(template.request, updatedResolver)
         }
 
         val responseMatch = attempt(breadCrumb = "RESPONSE") {

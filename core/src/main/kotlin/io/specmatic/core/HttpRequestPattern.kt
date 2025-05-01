@@ -323,7 +323,11 @@ data class HttpRequestPattern(
                     resolver
                 )
 
-                requestPattern.copy(headersPattern = HttpHeadersPattern(headersFromRequest, ancestorHeaders = this.headersPattern.pattern))
+                requestPattern.copy(
+                    headersPattern = headersPattern.copy(
+                        pattern = headersFromRequest, ancestorHeaders = this.headersPattern.pattern
+                    )
+                )
             }
 
             requestPattern = attempt(breadCrumb = "BODY") {

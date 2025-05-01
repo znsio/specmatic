@@ -1,15 +1,27 @@
 package io.specmatic.core
 
+import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.Value
 
 fun testBackwardCompatibility(older: Feature, newer: Feature): Results {
+    val cache = mutableSetOf<String>()
+
     return older.generateBackwardCompatibilityTestScenarios().filter { !it.ignoreFailure }.fold(Results()) { results, olderScenario ->
+        val olderScenarioDescription = olderScenario.testDescription()
+        if (olderScenarioDescription !in cache) {
+            logger.newLine()
+            logger.log("[Compatibility Check] ${olderScenarioDescription.trim()}")
+            cache.add(olderScenarioDescription)
+        }
+
         val scenarioResults: List<Result> = testBackwardCompatibility(olderScenario, newer)
         results.copy(results = results.results.plus(scenarioResults))
-    }.distinct()
+    }.distinct().also {
+        logger.newLine()
+    }
 }
 
 fun testBackwardCompatibility(

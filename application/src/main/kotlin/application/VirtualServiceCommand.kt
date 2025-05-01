@@ -125,7 +125,7 @@ class VirtualServiceCommand : Callable<Int> {
             fun validate(scenario: Scenario): String?
         }
 
-        private val ALL_VALIDATORS = listOf(HttpMethodValidator(), PostResponseValidator(), ValidateResourcePathParams())
+        private val ALL_VALIDATORS = listOf(HttpMethodValidator(), PostResponseValidator())
 
         class HttpMethodValidator : ScenarioValidator {
             private val supportedMethods = setOf("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS")
@@ -142,7 +142,7 @@ class VirtualServiceCommand : Callable<Int> {
             override fun validate(scenario: Scenario): String? {
                 if (scenario.method == "POST" && scenario.isA2xxScenario()) {
                     val responsePattern = scenario.resolvedResponseBodyPattern()
-                    if (responsePattern is JSONObjectPattern && !responsePattern.pattern.keys.contains("id")) {
+                    if (responsePattern is JSONObjectPattern && !responsePattern.pattern.keys.any { it in setOf("id", "id?") }) {
                         return "Operation: ${scenario.apiDescription}, must contain 'id' key in the response for POST requests"
                     }
                 }

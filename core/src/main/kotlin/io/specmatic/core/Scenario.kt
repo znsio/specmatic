@@ -344,7 +344,9 @@ data class Scenario(
         val updatedScenario = newBasedOnAttributeSelectionFields(httpRequest.queryParams)
         val requestMatch = when(httpResponse.status in invalidRequestStatuses) {
             false -> updatedScenario.matches(httpRequest, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
-            else -> updatedScenario.httpRequestPattern.withWildcardPathPattern().matchesPathAndMethod(httpRequest, updatedResolver)
+            else -> updatedScenario.httpRequestPattern.matchesPathAndMethod(httpRequest, updatedResolver).let {
+                it.takeUnless { it is Result.Failure && it.hasReason(FailureReason.URLPathParamMismatchButSameStructure) } ?: Result.Success()
+            }
         }
 
         val fieldsSelected = fieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams)

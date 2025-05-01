@@ -872,12 +872,6 @@ data class HttpRequestPattern(
         )
     }
 
-    fun withWildcardPathPattern(): HttpRequestPattern {
-        return this.copy(
-            httpPathPattern = this.httpPathPattern?.withWildcardPathSegments()
-        )
-    }
-
     fun fillInTheBlanks(request: HttpRequest, resolver: Resolver): HttpRequest {
         val sanitizedRequest = withoutSecuritySchemes(request)
         val path = httpPathPattern?.fillInTheBlanks(sanitizedRequest.path, resolver)?.breadCrumb("PATH-PARAMS") ?: HasValue(null)

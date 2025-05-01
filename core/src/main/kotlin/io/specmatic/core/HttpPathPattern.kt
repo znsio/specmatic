@@ -207,15 +207,6 @@ data class HttpPathPattern(
         return pathSegmentPatterns.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
     }
 
-    fun withWildcardPathSegments(): HttpPathPattern {
-        return this.copy(
-            pathSegmentPatterns = this.pathSegmentPatterns.map {
-                if (it.pattern is ExactValuePattern) it
-                else it.copy(pattern = AnythingPattern)
-            }
-        )
-    }
-
     private fun negatively(
         patterns: List<URLPathSegmentPattern>,
         row: Row,

@@ -493,6 +493,33 @@ class LoadTestsFromExternalisedFiles {
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 
+    @Test
+    fun `should be able to load and run tests with form-fields and multipart form-data from examples`() {
+        val openApiSpec = File("src/test/resources/openapi/has_form_fields_and_form_data/api.yaml")
+        val feature = OpenApiSpecification.fromFile(openApiSpec.canonicalPath).toFeature().loadExternalisedExamples()
+        assertDoesNotThrow { feature.validateExamplesOrException() }
+
+        val results = feature.executeTests(object: TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.toLogString())
+                when(request.path) {
+                    "/formData" -> {
+                        val formData = request.multiPartFormData.associate { it.name to it.toRowValue() }
+                        assertThat(formData).containsExactlyInAnyOrderEntriesOf(mapOf("data" to "DATA123", "id" to "123"))
+                    }
+                    "/formFields" -> {
+                        val formFields = request.formFields
+                        assertThat(formFields).containsExactlyInAnyOrderEntriesOf(mapOf("data" to "DATA123", "id" to "123"))
+                    }
+                    else -> throw Exception("Unknown path ${request.path}")
+                }
+                return HttpResponse(status = 200)
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
     @Nested
     inner class AttributeSelection {
         @BeforeEach

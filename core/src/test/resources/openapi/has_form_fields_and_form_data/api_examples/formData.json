@@ -1,0 +1,25 @@
+{
+    "http-request": {
+        "path": "/formData",
+        "method": "POST",
+        "headers": {
+            "Content-Type": "multipart/form-data"
+        },
+        "multipart-formdata": [
+            {
+                "name": "data",
+                "content": "DATA123",
+                "contentType": "text/plain"
+            },
+            {
+                "name": "id",
+                "content": 123,
+                "contentType": "text/plain"
+            }
+        ]
+    },
+    "http-response": {
+        "status": 200,
+        "status-text": "OK"
+    }
+}

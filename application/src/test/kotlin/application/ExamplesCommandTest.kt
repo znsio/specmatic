@@ -348,6 +348,59 @@ paths:
     }
 
     @Nested
+    inner class CLIBasedValidateTests {
+        private val cli = CommandLine(ExamplesCommand.Validate(), CommandLine.defaultFactory())
+
+        @Test
+        fun `should validate both inline and external examples when --specs-dir is provided`() {
+            val (stdOut, exitCode) = captureStandardOutput {
+                cli.execute("--specs-dir", "src/test/resources/examples/multiple/products")
+            }
+
+            assertThat(exitCode).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            =============== Inline Example Validation Summary ===============
+            All 1 example(s) are valid.
+            =================================================================
+            """.trimIndent())
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            =============== Example File Validation Summary ===============
+            All 2 example(s) are valid.
+            ===============================================================
+            """.trimIndent())
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            =============== Overall Validation Summary ===============
+            All 3 example(s) are valid.
+            ==========================================================
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should validate both inline and external examples when --specs-dir and --examples-base-dir is provided`() {
+            val (stdOut, exitCode) = captureStandardOutput {
+                cli.execute("--specs-dir", "src/test/resources/examples/only_specs/products",
+                    "--examples-base-dir", "src/test/resources/examples/only_examples/products")
+            }
+
+            assertThat(exitCode).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            =============== Inline Example Validation Summary ===============
+            All 1 example(s) are valid.
+            =================================================================
+            """.trimIndent())
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            =============== Example File Validation Summary ===============
+            All 2 example(s) are valid.
+            ===============================================================
+            """.trimIndent())
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            =============== Overall Validation Summary ===============
+            All 3 example(s) are valid.
+            ==========================================================
+            """.trimIndent())
+        }
+    }
+    @Nested
     inner class ValidateLifeCycleTests {
         private val hook = AfterLoadingStaticExamples { examplesUsedFor, examples ->
             logger.log("life cycle hook called for '$examplesUsedFor'")

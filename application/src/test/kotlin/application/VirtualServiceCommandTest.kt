@@ -61,30 +61,31 @@ class VirtualServiceCommandTest {
         assertEquals("Operation: POST /resources -> 200, must contain 'id' key in the response for POST requests", errors[0])
     }
 
-    @Test
-    fun `returns errors for nested resources in path`() {
-        val scenario: List<Scenario> = listOf(
-            Scenario(
-                name = "POST /resources/add",
-                httpRequestPattern = HttpRequestPattern(
-                    method = "POST",
-                    httpPathPattern = buildHttpPathPattern("/resources/add")
-                ),
-                httpResponsePattern = HttpResponsePattern(
-                    status = 201,
-                    body = JSONObjectPattern(
-                        mapOf(
-                            "id" to NumberPattern(),
-                            "name" to StringPattern()
-                        )
-                    )
-                ),
-            )
-        )
-        val errors = virtualServiceValidationRuleset(scenario)
-        assertEquals(1, errors.size)
-        assertEquals("Operation POST /resources/add -> 201, contains invalid nested resource 'add'. Use flat structure: /resource or /resource/{id}", errors[0])
-    }
+//    This test is commented out because the validation is temporarily removed
+//    @Test
+//    fun `returns errors for nested resources in path`() {
+//        val scenario: List<Scenario> = listOf(
+//            Scenario(
+//                name = "POST /resources/add",
+//                httpRequestPattern = HttpRequestPattern(
+//                    method = "POST",
+//                    httpPathPattern = buildHttpPathPattern("/resources/add")
+//                ),
+//                httpResponsePattern = HttpResponsePattern(
+//                    status = 201,
+//                    body = JSONObjectPattern(
+//                        mapOf(
+//                            "id" to NumberPattern(),
+//                            "name" to StringPattern()
+//                        )
+//                    )
+//                ),
+//            )
+//        )
+//        val errors = virtualServiceValidationRuleset(scenario)
+//        assertEquals(1, errors.size)
+//        assertEquals("Operation POST /resources/add -> 201, contains invalid nested resource 'add'. Use flat structure: /resource or /resource/{id}", errors[0])
+//    }
 
     @Test
     fun `returns no errors for valid scenarios`() {

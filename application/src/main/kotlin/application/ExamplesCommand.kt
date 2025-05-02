@@ -212,13 +212,13 @@ For example, to filter by HTTP methods:
                 val feature = parseContractFileWithNoMissingConfigWarning(specFile)
                 val inlineExampleValidationResults = validateInlineExamples(feature)
                 printValidationResult(inlineExampleValidationResults, "Inline example")
-                logger.log(System.lineSeparator())
+                logger.boundary()
 
                 val externalExampleValidationResult = validateExamplesDir(feature, associatedExamplesDir).second
                 printValidationResult(externalExampleValidationResult.exampleValidationResults, "Example file")
-                logger.log(System.lineSeparator())
+                logger.boundary()
 
-                externalExampleValidationResult.withAdditional(inlineExampleValidationResults)
+                externalExampleValidationResult.plus(inlineExampleValidationResults)
             }.toList()
 
             logger.log("Summary:")

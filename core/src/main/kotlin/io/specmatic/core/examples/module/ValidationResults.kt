@@ -25,7 +25,7 @@ class ValidationResults(val exampleValidationResults: Map<String, Result>, priva
         return this.any { it.value is Result.Failure && !it.value.isPartialFailure() }
     }
 
-    fun withAdditional(exampleValidationResults: Map<String, Result>) =
+    fun plus(exampleValidationResults: Map<String, Result>) =
         ValidationResults(this.exampleValidationResults + exampleValidationResults, hookValidationResult)
 
     companion object {

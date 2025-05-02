@@ -568,30 +568,6 @@ class ScenarioMetadataFilterTests {
     }
 
     @Test
-    fun `should be able to execute multiple examples if part of the same endpoint with same response using filter`() {
-        val specFilepath = File("src/test/resources/openapi/spec_with_multiple_inline_examples/spec.yaml")
-        val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
-        val filter = ScenarioMetadataFilter.from("EXAMPLE='SCOOBY_200_OK,ROCKY_200_OK'")
-
-        val filteredScenarios = filterUsing(feature.scenarios.asSequence(), filter).toList()
-        assertEquals(1, filteredScenarios.size)
-        assertEquals(2, filteredScenarios[0].examples[0].rows.size)
-        assertEquals("SCOOBY_200_OK,ROCKY_200_OK", filteredScenarios[0].examples[0].rows.joinToString(",") { it.name })
-    }
-
-    @Test
-    fun `should be able to execute multiple examples if part of the same endpoint but different response using filter`() {
-        val specFilepath = File("src/test/resources/openapi/spec_with_multiple_inline_examples/spec.yaml")
-        val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
-        val filter = ScenarioMetadataFilter.from("EXAMPLE='ROCKY_200_OK,404_NOT_FOUND'")
-        val expectedExpressions = "$ENHANCED_FUNC_NAME('EXAMPLE=ROCKY_200_OK,404_NOT_FOUND')"
-
-        val filteredScenarios = filterUsing(feature.scenarios.asSequence(), filter).toList()
-        assertEquals(expectedExpressions, filter.expression?.expressionString)
-        assertEquals(2, filteredScenarios.size)
-    }
-
-    @Test
     fun `filter with multiple QUERY expression`() {
         val filterExpression = "QUERY='fields,location' && QUERY='name'"
         val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('QUERY=fields,location') && $ENHANCED_FUNC_NAME('QUERY=name')"

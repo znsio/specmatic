@@ -26,6 +26,7 @@ sealed class MultiPartFormDataValue(open val name: String, open val contentType:
         newTypes: Map<String, Pattern>,
         examples: ExampleDeclarations
     ): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations>
+    abstract fun toRowValue(): String
 }
 
 data class MultiPartContentValue(override val name: String, val content: Value, val boundary: String = "#####", val specifiedContentType: String? = null) : MultiPartFormDataValue(name,
@@ -69,6 +70,10 @@ $content
             GherkinSection.When
         )
         return Triple(clauses.plus(newGherkinClause), typeDeclaration.types, examples.plus(newExamples))
+    }
+
+    override fun toRowValue(): String {
+        return content.toStringLiteral()
     }
 }
 
@@ -186,5 +191,9 @@ $headerString
                 )
             ), newTypes, newExamples
         )
+    }
+
+    override fun toRowValue(): String {
+        return "${name}_${filename}"
     }
 }

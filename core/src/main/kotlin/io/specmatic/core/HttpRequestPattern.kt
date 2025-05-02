@@ -882,15 +882,34 @@ data class HttpRequestPattern(
         val queryParams = httpQueryParamPattern.fillInTheBlanks(sanitizedRequest.queryParams, resolver).breadCrumb("QUERY-PARAMS")
         val headers = headersPattern.fillInTheBlanks(sanitizedRequest.headers, resolver).breadCrumb("HEADERS")
         val body = body.fillInTheBlanks(sanitizedRequest.body, resolver).breadCrumb("BODY")
+        val formFields = fillInFormFields(sanitizedRequest, resolver).breadCrumb("FORM-FIELDS")
 
         return HasValue(request)
             .combine(path) { req, it -> req.copy(path = it) }
             .combine(queryParams) { req, it -> req.copy(queryParams = it) }
             .combine(headers) { req, it -> req.copy(headers = it) }
             .combine(body) { req, it -> req.copy(body = it) }
+            .combine(formFields) { req, it -> req.copy(formFields = it) }
             .ifValue { copySecuritySchemes(request, it) }
             .breadCrumb("REQUEST")
             .value
+    }
+
+    private fun fillInFormFields(request: HttpRequest, resolver: Resolver): ReturnValue<Map<String, String>> {
+        val formFields = request.formFields.mapValues { (key, value) ->
+            val pattern = formFieldsPattern[key] ?: formFieldsPattern["$key?"] ?: return@mapValues StringValue(value)
+            runCatching { pattern.parse(value, resolver) }.getOrDefault(StringValue(value))
+        }
+
+        return fill(
+            jsonPatternMap = formFieldsPattern,
+            jsonValueMap = formFields,
+            resolver = resolver,
+            typeAlias = "(${FORM_FIELDS_BREADCRUMB})"
+        ).realise(
+            hasValue = { valuesMap, _ -> HasValue(valuesMap.mapValues { it.value.toStringLiteral() }) },
+            orException = { e -> e.cast() }, orFailure = { f -> f.cast() }
+        )
     }
 
     private fun copySecuritySchemes(originalRequest: HttpRequest, request: HttpRequest): HttpRequest {

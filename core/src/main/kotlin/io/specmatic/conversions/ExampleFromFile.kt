@@ -3,14 +3,7 @@ package io.specmatic.conversions
 import io.specmatic.core.*
 import io.specmatic.core.examples.server.SchemaExample
 import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.HasFailure
-import io.specmatic.core.pattern.HasValue
-import io.specmatic.core.pattern.ResponseExample
-import io.specmatic.core.pattern.ResponseValueExample
-import io.specmatic.core.pattern.ReturnValue
-import io.specmatic.core.pattern.Row
-import io.specmatic.core.pattern.attempt
-import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.URIUtils.parseQuery
 import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.JSONObjectValue
@@ -35,7 +28,9 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
 
         val examples: Map<String, String> = headers
             .plus(queryParams)
-            .plus(requestBody?.let { mapOf("(REQUEST-BODY)" to it.toStringLiteral()) } ?: emptyMap())
+            .plus(formFields)
+            .plus(requestBody?.let { mapOf("(REQUEST-BODY)" to it.toStringLiteral()) }.orEmpty())
+            .plus(request.multiPartFormData.associate { it.name to it.toRowValue() })
 
         val (columnNames, values) = examples.entries.let { entry ->
             entry.map { it.key } to entry.map { it.value }

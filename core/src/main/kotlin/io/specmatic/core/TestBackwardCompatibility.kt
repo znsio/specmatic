@@ -7,21 +7,25 @@ import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.Value
 
 fun testBackwardCompatibility(older: Feature, newer: Feature): Results {
-    val cache = mutableSetOf<String>()
+    logger.boundary()
 
-    return older.generateBackwardCompatibilityTestScenarios().filter { !it.ignoreFailure }.fold(Results()) { results, olderScenario ->
+    val (results, _) = older
+        .generateBackwardCompatibilityTestScenarios()
+        .filter { !it.ignoreFailure }
+        .fold(Results() to emptySet<String>()) { (results, olderScenariosTested), olderScenario ->
         val olderScenarioDescription = olderScenario.testDescription()
-        if (olderScenarioDescription !in cache) {
-            logger.newLine()
+        if (olderScenarioDescription !in olderScenariosTested) {
             logger.log("[Compatibility Check] ${olderScenarioDescription.trim()}")
-            cache.add(olderScenarioDescription)
+            logger.boundary()
         }
 
         val scenarioResults: List<Result> = testBackwardCompatibility(olderScenario, newer)
-        results.copy(results = results.results.plus(scenarioResults))
-    }.distinct().also {
-        logger.newLine()
+        results.copy(results = results.results.plus(scenarioResults)) to olderScenariosTested.plus(olderScenarioDescription)
     }
+
+    logger.boundary()
+
+    return results.distinct()
 }
 
 fun testBackwardCompatibility(

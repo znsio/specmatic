@@ -6,11 +6,7 @@ import com.ezylang.evalex.data.EvaluationValue
 import com.ezylang.evalex.functions.AbstractFunction
 import com.ezylang.evalex.functions.FunctionParameter
 import com.ezylang.evalex.parser.Token
-import io.specmatic.core.filters.ScenarioFilterTags.PATH
-import io.specmatic.core.filters.ScenarioFilterTags.STATUS_CODE
-import io.specmatic.core.filters.ScenarioFilterTags.HEADER
-import io.specmatic.core.filters.ScenarioFilterTags.QUERY
-import io.specmatic.core.filters.ScenarioFilterTags.EXAMPLE_NAME
+import io.specmatic.core.filters.ScenarioFilterTags.*
 import java.util.regex.Pattern
 
 @FunctionParameter(name = "value")
@@ -31,11 +27,11 @@ class EnhancedRHSValueEvalFunction : AbstractFunction() {
 
         fun checkCondition(value: String): Boolean {
             return when (label) {
-                STATUS_CODE.key -> value == scenarioValue || isInRange(value, scenarioValue)
+                STATUS.key -> value == scenarioValue || isInRange(value, scenarioValue)
                 PATH.key -> value == scenarioValue || matchesPath(value, scenarioValue)
-                HEADER.key -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
-                QUERY.name -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
-                EXAMPLE_NAME.key -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
+                HEADERS.key -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
+                QUERY.key -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
+                EXAMPLE.key -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
                 else -> value == scenarioValue
             }
         }

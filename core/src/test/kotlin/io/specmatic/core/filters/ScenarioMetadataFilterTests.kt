@@ -51,24 +51,11 @@ class ScenarioMetadataFilterTests {
     }
 
     @Test
-    fun `wrong filter syntaxes fails silently and includes everything`() {
-        val filter = ScenarioMetadataFilter.from("PATH='/products' &| METHOD='GET,POST'")
-
-        val getProducts = createScenarioMetadata(method = "GET", path = "/products")
-        val postProducts = createScenarioMetadata(method = "POST", path = "/products")
-        val putProducts = createScenarioMetadata(method = "PUT", path = "/products")
-        val getUsers = createScenarioMetadata(method = "GET", path = "/users")
-        val scenarios = listOf(
-            getProducts,
-            postProducts,
-            putProducts,
-            getUsers
-        )
-       assertThrows<Exception>(){
-              scenarios.forEach { scenario ->
-                filter.isSatisfiedBy(scenario)
-              }
-       }
+    fun `wrong filter syntaxes fails with a message`() {
+        val exception = assertThrows<IllegalArgumentException> {
+            ScenarioMetadataFilter.from("PATH='/products' &| METHOD='GET,POST'")
+        }
+        assertEquals("Expected an operator for the given expression: PATH='/products' &| METHOD='GET,POST' at position 17", exception.message)
     }
 
     @Test
@@ -384,7 +371,7 @@ class ScenarioMetadataFilterTests {
     }
 
     @Test
-    fun `exclude scenarios with wildcard only for last digit including tildle`() {
+    fun `exclude scenarios with wildcard only for last digit including tilde`() {
         val filter = ScenarioMetadataFilter.from("STATUS~'50x'")
 
         assertThrows<Exception>(){
@@ -428,7 +415,7 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `test enhanced expression with multiple METHOD and single PATH expression`() {
         val filterExpression = "(METHOD='POST' && PATH='/users') || (METHOD='POST' && PATH='/products')"
-        val expectedEnhancedExpression = "(eFunc('METHOD=POST') && eFunc('PATH=/users')) || (eFunc('METHOD=POST') && eFunc('PATH=/products'))"
+        val expectedEnhancedExpression = "( eFunc('METHOD=POST') && eFunc('PATH=/users') ) || ( eFunc('METHOD=POST') && eFunc('PATH=/products') )"
         val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
         assertEquals(expectedEnhancedExpression, enhancedExpression)
     }
@@ -444,9 +431,10 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `test enhanced expression with PATH expression`() {
         val filterExpression = "STATUS!=202 && PATH!='/hub,/hub/(id:string)'"
-        val expectedEnhancedExpression = "STATUS!=202 && $ENHANCED_FUNC_NAME('PATH!=/hub,/hub/(id:string)')"
-        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
-        assertEquals(expectedEnhancedExpression, enhancedExpression)
+        val exception = assertThrows<IllegalArgumentException> {
+            ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        }
+        assertEquals("Expected quote for the given expression: STATUS!=202 && PATH!='/hub,/hub/(id:string)' at position 8", exception.message)
     }
 
     @Test
@@ -507,8 +495,9 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `test enhanced expression does not handle spaces around =`() {
         val filterExpression = "METHOD = 'GET, POST' && STATUS = '200, 400'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('METHOD=GET, POST') && $ENHANCED_FUNC_NAME('STATUS=200, 400')"
         val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
-        assertEquals(filterExpression, enhancedExpression)
+        assertEquals(expectedEnhancedExpression, enhancedExpression)
     }
 
     @Test
@@ -530,9 +519,10 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `test enhanced expression with single quotes inside`() {
         val filterExpression = "METHOD='GET' && STATUS='2'00'"
-        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('METHOD=GET') && $ENHANCED_FUNC_NAME('STATUS=2')00'"
-        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
-        assertEquals(expectedEnhancedExpression, enhancedExpression)
+        val exception = assertThrows<IllegalArgumentException> {
+            ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        }
+        assertEquals("Expected an operator for the given expression: METHOD='GET' && STATUS='2'00' at position 28", exception.message)
     }
 
     @Test
@@ -599,5 +589,13 @@ class ScenarioMetadataFilterTests {
         val filteredScenarios = filterUsing(feature.scenarios.asSequence(), filter).toList()
         assertEquals(expectedExpressions, filter.expression?.expressionString)
         assertEquals(2, filteredScenarios.size)
+    }
+
+    @Test
+    fun `filter with multiple QUERY expression`() {
+        val filterExpression = "QUERY='fields,location' && QUERY='name'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('QUERY=fields,location') && $ENHANCED_FUNC_NAME('QUERY=name')"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(expectedEnhancedExpression, enhancedExpression)
     }
 }

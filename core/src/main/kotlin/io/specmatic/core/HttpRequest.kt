@@ -458,21 +458,7 @@ fun requestFromJSON(json: Map<String, Value>) =
                 )
 
                 MULTIPART_FORMDATA_JSON_KEY in json -> {
-                    val parts = arrayValue(
-                        json.getValue(MULTIPART_FORMDATA_JSON_KEY),
-                        "$MULTIPART_FORMDATA_JSON_KEY must be a json array."
-                    )
-
-                    val multiPartData: List<MultiPartFormDataValue> = parts.list.map {
-                        val part = objectValue(it, "All multipart parts must be json object values.")
-
-                        val multiPartSpec = part.jsonObject
-                        val name = nativeString(multiPartSpec, "name")
-                            ?: throw ContractException("One of the multipart entries does not have a name key")
-
-                        parsePartType(multiPartSpec, name)
-                    }
-
+                    val multiPartData = multiPartFormDataFromJson(json)
                     httpRequest.copy(multiPartFormData = httpRequest.multiPartFormData.plus(multiPartData))
                 }
 
@@ -487,6 +473,22 @@ fun requestFromJSON(json: Map<String, Value>) =
                 else -> httpRequest
             }
         }
+
+fun multiPartFormDataFromJson(json: Map<String, Value>): List<MultiPartFormDataValue> {
+    if (MULTIPART_FORMDATA_JSON_KEY !in json) return emptyList()
+
+    val parts = arrayValue(
+        value = json.getValue(MULTIPART_FORMDATA_JSON_KEY),
+        errorMessage = "$MULTIPART_FORMDATA_JSON_KEY must be a json array."
+    )
+
+    return parts.list.map {
+        val part = objectValue(it, "All multipart parts must be json object values.")
+        val multiPartSpec = part.jsonObject
+        val name = nativeString(multiPartSpec, "name") ?: throw ContractException("One of the multipart entries does not have a name key")
+        parsePartType(multiPartSpec, name)
+    }
+}
 
 private fun parsePartType(multiPartSpec: Map<String, Value>, name: String): MultiPartFormDataValue {
     return when {

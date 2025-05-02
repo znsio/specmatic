@@ -1,10 +1,6 @@
 package io.specmatic.conversions
 
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.NoBodyValue
-import io.specmatic.core.QueryParameters
-import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.*
 import io.specmatic.core.examples.server.SchemaExample
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.HasFailure
@@ -105,6 +101,8 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
                 headers = headers,
                 body = requestBody ?: NoBodyValue,
                 queryParams = QueryParameters(queryParams),
+                formFields = formFields,
+                multiPartFormData = multiPartFormData
             )
         }
 
@@ -172,6 +170,18 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         (json.findByPath("http-request.headers") as JSONObjectValue?)?.jsonObject?.mapValues { (_, value) ->
             value.toStringLiteral()
         } ?: emptyMap()
+    }
+
+    val formFields: Map<String, String> = attempt("Error reading form fields in file ${file.canonicalPath}") {
+        (json.findByPath("http-request.$FORM_FIELDS_JSON_KEY") as JSONObjectValue?)?.jsonObject?.mapValues { (_, value) ->
+            value.toStringLiteral()
+        }.orEmpty()
+    }
+
+    val multiPartFormData: List<MultiPartFormDataValue> = attempt("Error reading multipart form data in file ${file.canonicalPath}") {
+        (json.findByPath("http-request") as JSONObjectValue?)?.let {
+            multiPartFormDataFromJson(it.jsonObject)
+        }.orEmpty()
     }
 
     val requestBody: Value? = attempt("Error reading request body in file ${file.canonicalPath}") {

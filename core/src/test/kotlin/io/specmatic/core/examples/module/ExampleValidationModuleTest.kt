@@ -614,6 +614,62 @@ class ExampleValidationModuleTest {
         """.trimIndent())
     }
 
+    @Test
+    fun `should be able to validate examples with form-fields`(@TempDir tempDir: File) {
+        val openApiContent = """
+        openapi: 3.0.3
+        info:
+          title: Test
+          version: 1.0.0
+        paths:
+          /test:
+            post:
+              requestBody:
+                content:
+                  application/x-www-form-urlencoded:
+                    schema:
+                      type: object
+                      properties:
+                        data:
+                          type: string
+                        id:
+                          type: integer
+                      required:
+                      - data
+                      - id
+              responses:
+                200:
+                  description: OK
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(openApiContent, "").toFeature()
+        val exampleContent = """{
+        "http-request": {
+            "method": "POST",
+            "path": "/test",
+            "headers": {
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            "$FORM_FIELDS_JSON_KEY": {
+                "id": "ABC123"
+            }
+        },
+        "http-response": {
+            "status": 200,
+            "status-text": "OK"
+        }
+        }""".trimIndent()
+        val example = tempDir.resolve("example.json").apply { writeText(exampleContent) }
+        val result = exampleValidationModule.validateExample(feature, example)
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        >> REQUEST.FORM-FIELDS.data
+        Form field data in the specification is missing from the example
+        >> REQUEST.FORM-FIELDS.id
+        Specification expected number but example contained "ABC123"
+        """.trimIndent())
+    }
+
     private fun ScenarioStub.toPartialExample(tempDir: File): File {
         val example = JSONObjectValue(mapOf("partial" to this.toJSON()))
         val exampleFile = tempDir.resolve("example.json")

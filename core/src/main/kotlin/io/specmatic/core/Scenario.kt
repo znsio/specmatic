@@ -101,8 +101,7 @@ data class Scenario(
         sourceRepository = scenarioInfo.sourceRepository,
         sourceRepositoryBranch = scenarioInfo.sourceRepositoryBranch,
         specification = scenarioInfo.specification,
-        serviceType = scenarioInfo.serviceType,
-        exampleName = scenarioInfo.examples.map{it.rows}.map{ it.map { row -> row.name } }.flatten().joinToString(","),
+        serviceType = scenarioInfo.serviceType
     )
 
     val apiIdentifier: String

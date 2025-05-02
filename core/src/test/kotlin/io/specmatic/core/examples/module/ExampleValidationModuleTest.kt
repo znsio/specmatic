@@ -1,5 +1,6 @@
 package io.specmatic.core.examples.module
 
+import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.Flags
@@ -500,6 +501,117 @@ class ExampleValidationModuleTest {
         val result = exampleValidationModule.validateExample(feature, example)
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `should be able to validate examples with multipart form data in request`(@TempDir tempDir: File) {
+        val openApiContent = """
+        openapi: 3.0.3
+        info:
+          title: Test
+          version: 1.0.0
+        paths:
+          /test:
+            post:
+              requestBody:
+                content:
+                  multipart/form-data:
+                    schema:
+                      type: object
+                      properties:
+                        data:
+                          type: string
+                      required:
+                      - data
+              responses:
+                200:
+                  description: OK
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(openApiContent, "").toFeature()
+        val exampleContent = """{
+        "http-request": {
+            "method": "POST",
+            "path": "/test",
+            "headers": {
+                "Content-Type": "multipart/form-data"
+            },
+            "$MULTIPART_FORMDATA_JSON_KEY": [
+                {
+                    "name": "data",
+                    "content": "abc123",
+                    "contentType": "text/plain"
+                }
+            ]
+        },
+        "http-response": {
+            "status": 200,
+            "status-text": "OK"
+        }
+        }""".trimIndent()
+        val example = tempDir.resolve("example.json").apply { writeText(exampleContent) }
+        val result = exampleValidationModule.validateExample(feature, example)
+
+        assertThat(result).withFailMessage(result.reportString()).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should complain when multipart form data is invalid in the example`(@TempDir tempDir: File) {
+        val openApiContent = """
+        openapi: 3.0.3
+        info:
+          title: Test
+          version: 1.0.0
+        paths:
+          /test:
+            post:
+              requestBody:
+                content:
+                  multipart/form-data:
+                    schema:
+                      type: object
+                      properties:
+                        data:
+                          type: string
+                        id:
+                          type: string
+                      required:
+                      - data
+                      - id
+              responses:
+                200:
+                  description: OK
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(openApiContent, "").toFeature()
+        val exampleContent = """{
+        "http-request": {
+            "method": "POST",
+            "path": "/test",
+            "headers": {
+                "Content-Type": "multipart/form-data"
+            },
+            "$MULTIPART_FORMDATA_JSON_KEY": [
+                {
+                    "name": "id",
+                    "content": false,
+                    "contentType": "text/plain"
+                }
+            ]
+        },
+        "http-response": {
+            "status": 200,
+            "status-text": "OK"
+        }
+        }""".trimIndent()
+        val example = tempDir.resolve("example.json").apply { writeText(exampleContent) }
+        val result = exampleValidationModule.validateExample(feature, example)
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        >> REQUEST.MULTIPART-FORMDATA.data
+        Part data in the specification is missing from the example
+        >> REQUEST.MULTIPART-FORMDATA.id
+        Specification expected string but example contained false (boolean)
+        """.trimIndent())
     }
 
     private fun ScenarioStub.toPartialExample(tempDir: File): File {

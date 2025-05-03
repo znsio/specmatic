@@ -1,0 +1,23 @@
+openapi: 3.0.3
+info:
+  title: Test
+  version: 1.0.0
+paths:
+  /formFields:
+    post:
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: string
+                id:
+                  type: integer
+              required:
+                - data
+                - id
+      responses:
+        '200':
+          description: OK

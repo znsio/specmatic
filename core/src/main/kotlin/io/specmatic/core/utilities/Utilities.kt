@@ -446,3 +446,20 @@ fun validateTestOrStubUri(uri: String): URIValidationResult {
         else -> URIValidationResult.Success
     }
 }
+
+internal fun Map<String, String>.performPatternOp(
+    patternMap: Map<String, Pattern>,
+    resolver: Resolver,
+    operation: (valueMap: Map<String, Value>, patternMap: Map<String, Pattern>) -> ReturnValue<Map<String,Value>>
+): ReturnValue<Map<String, String>> {
+    val parsedMap = this.mapValues { (key, value) ->
+        val pattern = patternMap[key] ?: patternMap["$key?"] ?: return@mapValues StringValue(value)
+        runCatching { pattern.parse(value, resolver) }.getOrDefault(StringValue(value))
+    }
+
+    return operation(parsedMap, patternMap).realise(
+        hasValue = { valuesMap, _ -> HasValue(valuesMap.mapValues { it.value.toStringLiteral() }) },
+        orException = { e -> e.cast() },
+        orFailure = { f -> f.cast() }
+    )
+}

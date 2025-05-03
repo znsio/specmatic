@@ -42,6 +42,7 @@ class ExampleFromFile(private val scenarioStub: ScenarioStub, val json: JSONObje
 
         val examples: Map<String, String> = request.headers
             .plus(queryParams)
+            .plus(request.formFields)
             .plus(requestBody?.let { mapOf("(REQUEST-BODY)" to it.toStringLiteral()) } ?: emptyMap())
 
         val (columnNames, values) = examples.entries.let { entry ->

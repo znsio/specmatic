@@ -168,7 +168,14 @@ data class Row(
         val bodyEntry = if (request.body !is NoBodyValue) {
             mapOf(REQUEST_BODY_FIELD to request.body.toStringLiteral())
         } else emptyMap()
+        val formFields = request.formFields
 
-        return this.copy(columnNames = emptyList(), values = emptyList()).addFields(path + headers + queryParams + bodyEntry).copy(requestExample = request)
+        return this.copy(
+            columnNames = emptyList(), values = emptyList()
+        ).addFields(
+            path + headers + queryParams + bodyEntry + formFields
+        ).copy(
+            requestExample = request
+        )
     }
 }

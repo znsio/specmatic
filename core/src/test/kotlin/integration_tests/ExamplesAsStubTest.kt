@@ -8,6 +8,7 @@ import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
+import io.specmatic.stub.SPECMATIC_RESPONSE_CODE_HEADER
 import io.specmatic.stub.captureStandardOutput
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
@@ -696,6 +697,37 @@ paths:
         }
 
         assertThat(output).withFailMessage(output).contains("EXAMPLE_OF_SUCCESS")
+    }
+
+    @Test
+    fun `should use multi-value dictionary when serving requests with no examples`() {
+        val openApiFile = File("src/test/resources/openapi/spec_with_multi_value_dict/api.yaml")
+        val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature()
+        val assertNumberValue: (String) -> Unit = { it ->
+            assertThat(it.toInt()).isIn(123, 456)
+        }
+
+        HttpStub(feature).use { stub ->
+            val request201 = feature.scenarios.first().generateHttpRequest(DefaultStrategies)
+            val response201 = stub.client.execute(request201)
+            val response201Body = (response201.body as JSONObjectValue).jsonObject
+
+            assertThat(response201.status).isEqualTo(201)
+            assertNumberValue(response201Body["id"]!!.toStringLiteral())
+            assertNumberValue(response201Body["petId"]!!.toStringLiteral())
+            assertNumberValue(response201Body["creatorId"]!!.toStringLiteral())
+            assertThat(response201Body["name"]!!.toStringLiteral()).isIn("Tom", "Jerry")
+        }
+
+        HttpStub(feature).use { stub ->
+            val request400 = feature.scenarios.first().generateHttpRequest(DefaultStrategies)
+            val response400 = stub.client.execute(request400.updateHeader(SPECMATIC_RESPONSE_CODE_HEADER, "400"))
+            val response400Body = (response400.body as JSONObjectValue).jsonObject
+
+            assertThat(response400.status).isEqualTo(400)
+            assertNumberValue(response400Body["code"]!!.toStringLiteral())
+            assertThat(response400Body["message"]!!.toStringLiteral()).isIn("Bad Request", "Internal Server Error")
+        }
     }
 
     @Nested

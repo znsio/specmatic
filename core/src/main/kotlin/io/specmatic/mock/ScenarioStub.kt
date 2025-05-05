@@ -375,7 +375,7 @@ fun validateMock(mockSpec: Map<String, Any?>) {
     if (MOCK_HTTP_REQUEST_ALL_KEYS.none { mockSpec.containsKey(it) })
         throw ContractException(errorMessage = "Stub does not contain http-request/mock-http-request as a top level key.")
     if (MOCK_HTTP_RESPONSE_ALL_KEYS.none { mockSpec.containsKey(it) })
-        throw ContractException(errorMessage = "Stub does not contain http-request/mock-http-request as a top level key.")
+        throw ContractException(errorMessage = "Stub does not contain http-response/mock-http-response as a top level key.")
 }
 
 fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {

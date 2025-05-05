@@ -153,7 +153,7 @@ data class HttpResponse(
         fun fromJSON(jsonObject: Map<String, Value>): HttpResponse {
             val body = jsonObject["body"]
             if (body is NullValue)
-                throw ContractException("Either body should have a value or the key should be absent from http-request")
+                throw ContractException("Either body should have a value or the key should be absent from http-response")
 
             return HttpResponse(
                 nativeInteger(jsonObject, "status")

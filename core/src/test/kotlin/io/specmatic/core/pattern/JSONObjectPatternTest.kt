@@ -838,7 +838,7 @@ internal class JSONObjectPatternTest {
     }
 
     @Test
-    fun `should log errors when dictionary values in an array do not match`() {
+    fun `should throw an exception when dictionary values in an array do not match`() {
         val personTypeAlias = "(Person)"
 
         val personPattern = JSONObjectPattern(
@@ -857,16 +857,15 @@ internal class JSONObjectPatternTest {
             dictionary = dictionary
         )
 
-        val (output, _) = captureStandardOutput {
-            val value = resolver.generate(DeferredPattern("(Person)")) as JSONObjectValue
-            println(value.toStringLiteral())
+        val exception = assertThrows<ContractException> {
+            resolver.generate(DeferredPattern("(Person)"))
         }
 
-        println(output)
-        assertThat(output)
-            .contains("string")
-            .contains("number")
-            .contains("Person.addresses[*]")
+        assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+        >> addresses[0 (random)]
+        Invalid Dictionary value at "Person.addresses[*]"
+        Expected string, actual was 10 (number)
+        """.trimIndent())
     }
 
     @Test

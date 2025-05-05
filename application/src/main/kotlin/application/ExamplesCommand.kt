@@ -209,10 +209,16 @@ For example, to filter by HTTP methods:
                 logger.log("$ordinal. Validating examples in '${associatedExamplesDir}' associated to '$relativeSpecPath'...${System.lineSeparator()}")
                 ordinal++
 
-                val results = validateExamplesDir(specFile, associatedExamplesDir).second
-                printValidationResult(results.exampleValidationResults, "")
-                logger.log(System.lineSeparator())
-                results
+                val feature = parseContractFileWithNoMissingConfigWarning(specFile)
+                val inlineExampleValidationResults = validateInlineExamples(feature)
+                printValidationResult(inlineExampleValidationResults, "Inline example")
+                logger.boundary()
+
+                val externalExampleValidationResult = validateExamplesDir(feature, associatedExamplesDir).second
+                printValidationResult(externalExampleValidationResult.exampleValidationResults, "Example file")
+                logger.boundary()
+
+                externalExampleValidationResult.plus(inlineExampleValidationResults)
             }.toList()
 
             logger.log("Summary:")

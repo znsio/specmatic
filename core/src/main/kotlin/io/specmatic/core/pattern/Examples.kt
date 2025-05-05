@@ -18,7 +18,11 @@ data class Examples(val columnNames: List<String> = emptyList(), val rows: List<
             return Examples(columns, rows)
         }
 
-        private fun getColumnNames(examples: Examples) = getValues(examples.tableHeader)
+        private fun getColumnNames(examples: Examples) = getValues(
+            row = examples.tableHeader.orElseThrow {
+                IllegalStateException("Expected a TableRow in Examples, but none was present.")
+            }
+        )
 
         private fun getValues(row: TableRow): ArrayList<String> = ArrayList(row.cells.map { it.value })
 

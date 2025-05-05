@@ -344,7 +344,7 @@ data class Scenario(
         val updatedScenario = newBasedOnAttributeSelectionFields(httpRequest.queryParams)
         val requestMatch = when(httpResponse.status in invalidRequestStatuses) {
             false -> updatedScenario.matches(httpRequest, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
-            else -> updatedScenario.httpRequestPattern.withWildcardPathPattern().matchesPathAndMethod(httpRequest, updatedResolver)
+            else -> updatedScenario.httpRequestPattern.matchesPathStructureMethodAndContentType(httpRequest, updatedResolver)
         }
 
         val fieldsSelected = fieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams)
@@ -512,7 +512,9 @@ data class Scenario(
         val rowsToValidate = examples.flatMap { it.rows }
 
         val errors = rowsToValidate.mapNotNull { row ->
-            val resolverForExample = flagsBased.update(resolverForValidation(resolver, row))
+            val resolverForExample = flagsBased.update(
+                resolver = resolverForValidation(resolver, row)
+            ).disableOverrideUnexpectedKeycheck()
 
             val requestError = nullOrExceptionString {
                 validateRequestExample(row, resolverForExample)
@@ -695,9 +697,7 @@ data class Scenario(
 
             val requestMatchResult = attempt(breadCrumb = "REQUEST") {
                 if (response.status !in invalidRequestStatuses) return@attempt httpRequestPattern.matches(request, resolver)
-                httpRequestPattern.matchesPathAndMethod(request, resolver).takeUnless {
-                    it is Result.Failure && it.hasReason(FailureReason.URLPathParamMismatchButSameStructure)
-                } ?: Result.Success()
+                httpRequestPattern.matchesPathStructureMethodAndContentType(request, resolver)
             }
 
             if (requestMatchResult is Result.Failure)
@@ -847,9 +847,7 @@ data class Scenario(
             if (template.response.status !in invalidRequestStatuses) {
                 return@attempt httpRequestPattern.matches(template.request, updatedResolver, updatedResolver)
             }
-            httpRequestPattern.matchesPathAndMethod(template.request, updatedResolver).takeUnless {
-                it is Result.Failure && it.hasReason(FailureReason.URLPathParamMismatchButSameStructure)
-            } ?: Result.Success()
+            httpRequestPattern.matchesPathStructureMethodAndContentType(template.request, updatedResolver)
         }
 
         val responseMatch = attempt(breadCrumb = "RESPONSE") {

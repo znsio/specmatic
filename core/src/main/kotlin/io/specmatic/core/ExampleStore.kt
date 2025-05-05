@@ -32,7 +32,7 @@ data class ExampleStore(val examples: List<ExampleData>, val size: Int = example
     }
 
     fun filter(predicate: (ExampleData) -> Boolean): ExampleStore {
-        return ExampleStore(examples.filter(predicate))
+        return ExampleStore(examples = examples.filter(predicate))
     }
 }
 

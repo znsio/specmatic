@@ -249,7 +249,7 @@ class OpenApiSpecification(
             )
         }
 
-        return Feature(
+        return Feature.from(
             updatedScenarios, name = name, path = openApiFilePath, sourceProvider = sourceProvider,
             sourceRepository = sourceRepository,
             sourceRepositoryBranch = sourceRepositoryBranch,

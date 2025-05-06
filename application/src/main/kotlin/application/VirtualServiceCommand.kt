@@ -149,18 +149,5 @@ class VirtualServiceCommand : Callable<Int> {
                 return null
             }
         }
-
-        class ValidateResourcePathParams : ScenarioValidator {
-            override fun validate(scenario: Scenario): String? {
-                val pathSegments = scenario.path.split("/").filter(String::isNotEmpty)
-                if (pathSegments.size > 1) {
-                    val potentialId = pathSegments[1]
-                    if (!potentialId.startsWith("(") && !potentialId.endsWith(")")) {
-                        return "Operation ${scenario.apiDescription}, contains invalid nested resource '$potentialId'. Use flat structure: /resource or /resource/{id}"
-                    }
-                }
-                return null
-            }
-        }
     }
 }

@@ -4,12 +4,303 @@ import io.specmatic.core.HttpHeadersPattern
 import io.specmatic.core.NoBodyValue
 import io.specmatic.core.Resolver
 import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.HasFailure
+import io.specmatic.core.pattern.HasValue
 import io.specmatic.core.pattern.parsedJSONObject
-import org.assertj.core.api.Assertions.assertThat
+import io.specmatic.core.value.StringValue
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
 
 class ExampleFromFileTest {
+    private fun createTempFile(content: String): File {
+        val tempFile = Files.createTempFile("test-example", ".json").toFile()
+        tempFile.writeText(content)
+        tempFile.deleteOnExit()
+        return tempFile
+    }
+
+    @Test
+    fun `should parse valid example file`() {
+        val jsonContent = """
+            {
+                "name": "test-example",
+                "http-request": {
+                    "method": "GET",
+                    "path": "/api/users?id=123",
+                    "headers": {
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "name": "John"
+                    }
+                },
+                "http-response": {
+                    "status": 200,
+                    "headers": {
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "id": 123,
+                        "name": "John"
+                    }
+                }
+            }
+        """.trimIndent()
+
+        val file = createTempFile(jsonContent)
+        val example = ExampleFromFile.fromFile(file)
+
+        assertThat(example).isInstanceOf(HasValue::class.java)
+        val exampleFromFile = (example as HasValue).value
+
+        assertThat(exampleFromFile.testName).isEqualTo("test-example")
+        assertThat(exampleFromFile.requestMethod).isEqualTo("GET")
+        assertThat(exampleFromFile.requestPath).isEqualTo("/api/users")
+        assertThat(exampleFromFile.responseStatus).isEqualTo(200)
+        assertThat(exampleFromFile.requestContentType).isEqualTo("application/json")
+        assertThat(exampleFromFile.responseContentType).isEqualTo("application/json")
+        assertThat(exampleFromFile.queryParams).containsExactlyEntriesOf(mapOf("id" to "123"))
+        assertThat(exampleFromFile.headers).containsExactlyEntriesOf(mapOf("Content-Type" to "application/json"))
+        assertThat(exampleFromFile.isPartial()).isFalse()
+        assertThat(exampleFromFile.isInvalid()).isFalse()
+    }
+
+    @Test
+    fun `should handle partial example`() {
+        val jsonContent = """
+            {
+                "name": "partial-example",
+                "partial": {
+                    "http-request": {
+                        "method": "GET",
+                        "path": "/api/users"
+                    }
+                }
+            }
+        """.trimIndent()
+
+        val file = createTempFile(jsonContent)
+        val example = ExampleFromFile.fromFile(file)
+
+        assertThat(example).isInstanceOf(HasValue::class.java)
+        val exampleFromFile = (example as HasValue).value
+
+        assertThat(exampleFromFile.isPartial()).isTrue()
+        assertThat(exampleFromFile.requestMethod).isEqualTo("GET")
+        assertThat(exampleFromFile.requestPath).isEqualTo("/api/users")
+    }
+
+    @Test
+    fun `should detect invalid example`() {
+        val jsonContent = """
+            {
+                "name": "invalid-example",
+                "http-request": {
+                    "headers": {
+                        "Content-Type": "application/json"
+                    }
+                }
+            }
+        """.trimIndent()
+
+        val file = createTempFile(jsonContent)
+        val example = ExampleFromFile.fromFile(file)
+
+        assertThat(example).isInstanceOf(HasValue::class.java)
+        val exampleFromFile = (example as HasValue).value
+
+        assertThat(exampleFromFile.isInvalid()).isTrue()
+        assertThat(exampleFromFile.requestMethod).isNull()
+        assertThat(exampleFromFile.requestPath).isNull()
+        assertThat(exampleFromFile.responseStatus).isNull()
+    }
+
+    @Test
+    fun `should handle empty response`() {
+        val jsonContent = """
+            {
+                "name": "empty-response",
+                "http-request": {
+                    "method": "GET",
+                    "path": "/api/users"
+                },
+                "http-response": {
+                    "status": 204
+                }
+            }
+        """.trimIndent()
+
+        val file = createTempFile(jsonContent)
+        val example = ExampleFromFile.fromFile(file)
+
+        assertThat(example).isInstanceOf(HasValue::class.java)
+        val exampleFromFile = (example as HasValue).value
+
+        val response = exampleFromFile.response
+        assertThat(response.status).isEqualTo(204)
+        assertThat(response.body).isInstanceOf(NoBodyValue::class.java)
+        assertThat(response.headers).isEmpty()
+    }
+
+    @Test
+    fun `should handle complex headers`() {
+        val jsonContent = """
+            {
+                "name": "complex-headers",
+                "http-request": {
+                    "method": "POST",
+                    "path": "/api/users",
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer token123",
+                        "X-Custom-Header": "value"
+                    }
+                }
+            }
+        """.trimIndent()
+
+        val file = createTempFile(jsonContent)
+        val example = ExampleFromFile.fromFile(file)
+
+        assertThat(example).isInstanceOf(HasValue::class.java)
+        val exampleFromFile = (example as HasValue).value
+
+        val expectedHeaders = mapOf(
+            "Content-Type" to "application/json",
+            "Authorization" to "Bearer token123",
+            "X-Custom-Header" to "value"
+        )
+        assertThat(exampleFromFile.headers).containsExactlyEntriesOf(expectedHeaders)
+    }
+
+    @Test
+    fun `should handle JSON request and response bodies`() {
+        val jsonContent = """
+            {
+                "name": "json-bodies",
+                "http-request": {
+                    "method": "POST",
+                    "path": "/api/users",
+                    "body": {
+                        "name": "John",
+                        "age": 30,
+                        "active": true
+                    }
+                },
+                "http-response": {
+                    "status": 201,
+                    "body": {
+                        "id": 123,
+                        "name": "John",
+                        "created": true
+                    }
+                }
+            }
+        """.trimIndent()
+
+        val file = createTempFile(jsonContent)
+        val example = ExampleFromFile.fromFile(file)
+
+        assertThat(example).isInstanceOf(HasValue::class.java)
+        val exampleFromFile = (example as HasValue).value
+
+        assertThat(exampleFromFile.requestBody).isNotNull
+        assertThat(exampleFromFile.responseBody).isNotNull
+    }
+
+    @Test
+    fun `should handle string request and response bodies`() {
+        val jsonContent = """
+            {
+                "name": "string-bodies",
+                "http-request": {
+                    "method": "POST",
+                    "path": "/api/users",
+                    "body": "plain text request"
+                },
+                "http-response": {
+                    "status": 200,
+                    "body": "plain text response"
+                }
+            }
+        """.trimIndent()
+
+        val file = createTempFile(jsonContent)
+        val example = ExampleFromFile.fromFile(file)
+
+        assertThat(example).isInstanceOf(HasValue::class.java)
+        val exampleFromFile = (example as HasValue).value
+
+        assertThat(exampleFromFile.requestBody).isInstanceOf(StringValue::class.java)
+        assertThat(exampleFromFile.responseBody).isInstanceOf(StringValue::class.java)
+    }
+
+    @Test
+    fun `should handle malformed JSON`() {
+        val jsonContent = """
+            {
+                "name": "malformed-json",
+                "http-request": {
+                    "method": "GET",
+                    "path": "/api/users",
+                    "body": {
+                        "invalid": json
+                    }
+                }
+            }
+        """.trimIndent()
+
+        val file = createTempFile(jsonContent)
+
+        assertThatThrownBy {
+            ExampleFromFile.fromFile(file)
+        }.satisfies({
+            assertThat(it).isInstanceOf(ContractException::class.java)
+        })
+    }
+
+    @Test
+    fun `should convert to row with SpecmaticConfig`() {
+        val jsonContent = """
+            {
+                "name": "row-conversion",
+                "http-request": {
+                    "method": "GET",
+                    "path": "/api/users?id=123",
+                    "headers": {
+                        "Content-Type": "application/json"
+                    }
+                },
+                "http-response": {
+                    "status": 200,
+                    "headers": {
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "id": 123
+                    }
+                }
+            }
+        """.trimIndent()
+
+        val file = createTempFile(jsonContent)
+        val example = ExampleFromFile.fromFile(file)
+
+        assertThat(example).isInstanceOf(HasValue::class.java)
+        val exampleFromFile = (example as HasValue).value
+
+        val specmaticConfig = SpecmaticConfig()
+        val row = exampleFromFile.toRow(specmaticConfig)
+
+        assertThat(row.name).isEqualTo("row-conversion")
+        assertThat(row.fileSource).isEqualTo(file.canonicalPath)
+        assertThat(row.isPartial).isFalse()
+    }
+
     @Test
     fun `it should query params from the url if present`() {
         val example = """
@@ -140,5 +431,187 @@ class ExampleFromFileTest {
 
         val generatedHeaders = HttpHeadersPattern().newBasedOn(row, Resolver()).first().value.generate(Resolver())
         assertThat(generatedHeaders).containsEntry("X-Tra", "info")
+    }
+
+    @Test
+    fun `should handle query params only in block when no query in URL`() {
+        val example = """
+            {
+                "http-request": {
+                    "method": "GET",
+                    "path": "/api/users",
+                    "query": {
+                        "page": "1",
+                        "limit": "10"
+                    }
+                },
+                "http-response": {
+                    "status": 200,
+                    "body": "ok"
+                }
+            }
+        """.trimIndent().let {
+            ExampleFromFile(parsedJSONObject(it), File("./data.json"))
+        }
+
+        assertThat(example.queryParams).containsExactlyEntriesOf(mapOf(
+            "page" to "1",
+            "limit" to "10"
+        ))
+    }
+
+    @Test
+    fun `should handle empty query block`() {
+        val example = """
+            {
+                "http-request": {
+                    "method": "GET",
+                    "path": "/api/users?filter=active",
+                    "query": {}
+                },
+                "http-response": {
+                    "status": 200,
+                    "body": "ok"
+                }
+            }
+        """.trimIndent().let {
+            ExampleFromFile(parsedJSONObject(it), File("./data.json"))
+        }
+
+        assertThat(example.queryParams).containsExactlyEntriesOf(mapOf("filter" to "active"))
+    }
+
+    @Test
+    fun `should handle empty request headers block`() {
+        val example = """
+            {
+                "http-request": {
+                    "method": "GET",
+                    "path": "/api/users",
+                    "headers": {}
+                },
+                "http-response": {
+                    "status": 200,
+                    "body": "ok"
+                }
+            }
+        """.trimIndent().let {
+            ExampleFromFile(parsedJSONObject(it), File("./data.json"))
+        }
+
+        assertThat(example.headers).isEmpty()
+    }
+
+    @Test
+    fun `should handle empty response headers block`() {
+        val example = """
+            {
+                "http-request": {
+                    "method": "GET",
+                    "path": "/api/users"
+                },
+                "http-response": {
+                    "status": 200,
+                    "headers": {},
+                    "body": "ok"
+                }
+            }
+        """.trimIndent().let {
+            ExampleFromFile(parsedJSONObject(it), File("./data.json"))
+        }
+
+        val response = example.response
+        assertThat(response.headers).isEmpty()
+    }
+
+    @Test
+    fun `should handle non-content-type response headers`() {
+        val example = """
+            {
+                "http-request": {
+                    "method": "GET",
+                    "path": "/api/users"
+                },
+                "http-response": {
+                    "status": 200,
+                    "headers": {
+                        "X-RateLimit-Limit": "100",
+                        "X-RateLimit-Remaining": "99",
+                        "Cache-Control": "no-cache"
+                    },
+                    "body": "ok"
+                }
+            }
+        """.trimIndent().let {
+            ExampleFromFile(parsedJSONObject(it), File("./data.json"))
+        }
+
+        val response = example.response
+        assertThat(response.headers).containsExactlyEntriesOf(mapOf(
+            "X-RateLimit-Limit" to "100",
+            "X-RateLimit-Remaining" to "99",
+            "Cache-Control" to "no-cache"
+        ))
+    }
+
+    @Test
+    fun `should handle both request and response headers`() {
+        val example = """
+            {
+                "http-request": {
+                    "method": "GET",
+                    "path": "/api/users",
+                    "headers": {
+                        "Authorization": "Bearer token123",
+                        "Accept": "application/json"
+                    }
+                },
+                "http-response": {
+                    "status": 200,
+                    "headers": {
+                        "X-RateLimit-Limit": "100",
+                        "X-RateLimit-Remaining": "99"
+                    },
+                    "body": "ok"
+                }
+            }
+        """.trimIndent().let {
+            ExampleFromFile(parsedJSONObject(it), File("./data.json"))
+        }
+
+        assertThat(example.headers).containsExactlyEntriesOf(mapOf(
+            "Authorization" to "Bearer token123",
+            "Accept" to "application/json"
+        ))
+
+        val response = example.response
+        assertThat(response.headers).containsExactlyEntriesOf(mapOf(
+            "X-RateLimit-Limit" to "100",
+            "X-RateLimit-Remaining" to "99"
+        ))
+    }
+
+    @Test
+    fun `should handle empty headers blocks in both request and response`() {
+        val example = """
+            {
+                "http-request": {
+                    "method": "GET",
+                    "path": "/api/users",
+                    "headers": {}
+                },
+                "http-response": {
+                    "status": 200,
+                    "headers": {},
+                    "body": "ok"
+                }
+            }
+        """.trimIndent().let {
+            ExampleFromFile(parsedJSONObject(it), File("./data.json"))
+        }
+
+        assertThat(example.headers).isEmpty()
+        val response = example.response
+        assertThat(response.headers).isEmpty()
     }
 }

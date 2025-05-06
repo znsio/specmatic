@@ -125,11 +125,19 @@ data class Feature(
     val sourceRepositoryBranch:String? = null,
     val specification:String? = null,
     val serviceType:String? = null,
-    val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
     val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
     val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig),
-    val strictMode: Boolean = false
+    val strictMode: Boolean = false,
+    val exampleStore: ExampleStore = ExampleStore.empty()
 ): IFeature {
+    val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>>
+        get() {
+            return exampleStore.examples.groupBy(
+                keySelector = { it.name },
+                valueTransform = { it.example.request to it.example.response }
+            )
+        }
+
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         return this.copy(flagsBased = this.flagsBased.copy(
             generation = GenerativeTestsEnabled(onlyPositive),
@@ -837,8 +845,8 @@ data class Feature(
 
     fun overrideInlineExamples(externalExampleNames: Set<String>): Feature {
         return this.copy(
-            stubsFromExamples = this.stubsFromExamples.filterKeys { inlineExampleName ->
-                inlineExampleName !in externalExampleNames
+            exampleStore = this.exampleStore.filter { exampleData ->
+                exampleData.name !in externalExampleNames
             }
         )
     }
@@ -1969,6 +1977,42 @@ data class Feature(
                 return null
 
             return examplesDirFor(openApiFilePath, TEST_DIR_SUFFIX)
+        }
+
+        fun from(
+            scenarios: List<Scenario> = emptyList(),
+            serverState: Map<String, Value> = emptyMap(),
+            name: String,
+            testVariables: Map<String, String> = emptyMap(),
+            testBaseURLs: Map<String, String> = emptyMap(),
+            path: String = "",
+            sourceProvider:String? = null,
+            sourceRepository:String? = null,
+            sourceRepositoryBranch:String? = null,
+            specification:String? = null,
+            serviceType:String? = null,
+            stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
+            specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+            flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig),
+            strictMode: Boolean = false
+        ): Feature {
+            return Feature(
+                scenarios = scenarios,
+                serverState = serverState,
+                name = name,
+                testVariables = testVariables,
+                testBaseURLs = testBaseURLs,
+                path = path,
+                sourceProvider = sourceProvider,
+                sourceRepository = sourceRepository,
+                sourceRepositoryBranch = sourceRepositoryBranch,
+                specification = specification,
+                serviceType = serviceType,
+                specmaticConfig = specmaticConfig,
+                flagsBased = flagsBased,
+                strictMode = strictMode,
+                exampleStore = ExampleStore.from(stubsFromExamples, type = ExampleType.INLINE)
+            )
         }
     }
 }

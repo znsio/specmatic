@@ -4,11 +4,12 @@ import io.specmatic.core.HttpHeadersPattern
 import io.specmatic.core.NoBodyValue
 import io.specmatic.core.Resolver
 import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.HasFailure
 import io.specmatic.core.pattern.HasValue
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.StringValue
-import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.io.File
 import java.nio.file.Files
@@ -254,9 +255,12 @@ class ExampleFromFileTest {
         """.trimIndent()
 
         val file = createTempFile(jsonContent)
-        val example = ExampleFromFile.fromFile(file)
 
-        assertThat(example).isInstanceOf(HasFailure::class.java)
+        assertThatThrownBy {
+            ExampleFromFile.fromFile(file)
+        }.satisfies({
+            assertThat(it).isInstanceOf(ContractException::class.java)
+        })
     }
 
     @Test

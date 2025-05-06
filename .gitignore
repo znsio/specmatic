@@ -20,4 +20,4 @@ perfiz/*_data
 .java-version
 gen-kt/
 gen-resources/
-
+.vscode

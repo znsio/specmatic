@@ -528,7 +528,7 @@ class HttpQueryParamPatternTest {
             val queryPattern = HttpQueryParamPattern(mapOf("petId" to NumberPattern(), "owner" to StringPattern()))
             val invalidValue = QueryParameters(listOf("petId" to "123"))
 
-            val dictionary = mapOf("QUERY-PARAMS.owner" to StringValue("TODO"))
+            val dictionary = mapOf("QUERY-PARAMS.owner" to StringValue("TODO")).let(Dictionary::from)
             val fixedValue = queryPattern.fixValue(invalidValue, Resolver(dictionary = dictionary))
             println(fixedValue)
 
@@ -559,7 +559,7 @@ class HttpQueryParamPatternTest {
             val dictionary = mapOf(
                 "QUERY-PARAMS.petId" to NumberValue(123),
                 "QUERY-PARAMS.owner" to StringValue("TODO")
-            )
+            ).let(Dictionary::from)
             val fixedValue = queryPattern.fixValue(invalidValue, Resolver(dictionary = dictionary))
             println(fixedValue)
 
@@ -602,7 +602,9 @@ class HttpQueryParamPatternTest {
         @Test
         fun `should not generate optional keys when initial value is null or empty`() {
             val queryPattern = HttpQueryParamPattern(mapOf("petId" to NumberPattern(), "owner?" to StringPattern()))
-            val dictionary = mapOf("QUERY-PARAMS.owner" to StringValue("TODO"), "QUERY-PARAMS.petId" to NumberValue(999))
+            val dictionary = mapOf(
+                "QUERY-PARAMS.owner" to StringValue("TODO"), "QUERY-PARAMS.petId" to NumberValue(999)
+            ).let(Dictionary::from)
 
             val emptyValue = QueryParameters(emptyList())
             val emptyFixedValue = queryPattern.fixValue(emptyValue, Resolver(dictionary=dictionary))
@@ -647,7 +649,9 @@ class HttpQueryParamPatternTest {
             val httpQueryPattern = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
             val validValue = QueryParameters(mapOf("number" to "(string)", "boolean" to "(string)"))
             val fixedValue = httpQueryPattern.fixValue(validValue, Resolver(
-                mockMode = true, dictionary = mapOf("(number)" to NumberValue(999), "(boolean)" to BooleanValue(true))
+                mockMode = true, dictionary = mapOf(
+                    "(number)" to NumberValue(999), "(boolean)" to BooleanValue(true)
+                ).let(Dictionary::from)
             ))
 
             println(fixedValue)
@@ -659,7 +663,9 @@ class HttpQueryParamPatternTest {
             val httpQueryPattern = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
             val validValue = QueryParameters(mapOf("number" to "(number)", "boolean" to "(boolean)"))
             val fixedValue = httpQueryPattern.fixValue(validValue, Resolver(
-                dictionary = mapOf("(number)" to NumberValue(999), "(boolean)" to BooleanValue(true))
+                dictionary = mapOf(
+                    "(number)" to NumberValue(999), "(boolean)" to BooleanValue(true)
+                ).let(Dictionary::from)
             ))
 
             println(fixedValue)
@@ -669,7 +675,11 @@ class HttpQueryParamPatternTest {
         @Test
         fun `should not add missing mandatory keys when resolver is set to partial`() {
             val httpQueryPattern = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
-            val resolver = Resolver(dictionary = mapOf("(number)" to NumberValue(999), "(boolean)" to BooleanValue(true))).partializeKeyCheck()
+            val resolver = Resolver(
+                dictionary = mapOf(
+                    "(number)" to NumberValue(999), "(boolean)" to BooleanValue(true)
+                ).let(Dictionary::from)
+            ).partializeKeyCheck()
             val partialInvalidValue = QueryParameters(mapOf("number" to "(string)"))
             val fixedValue = httpQueryPattern.fixValue(partialInvalidValue, resolver)
 
@@ -685,7 +695,7 @@ class HttpQueryParamPatternTest {
             val params = QueryParameters(mapOf("number" to "(number)"))
             val dictionary = mapOf(
                 "QUERY-PARAMS.number" to NumberValue(999), "QUERY-PARAMS.boolean" to BooleanValue(true)
-            )
+            ).let(Dictionary::from)
             val filledParams = queryParams.fillInTheBlanks(params, Resolver(dictionary = dictionary)).value
 
             assertThat(filledParams.asMap()).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
@@ -695,7 +705,7 @@ class HttpQueryParamPatternTest {
         fun `should not generate missing optional keys`() {
             val queryParams = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean?" to BooleanPattern()))
             val params = QueryParameters(mapOf("number" to "999"))
-            val dictionary = mapOf("QUERY-PARAMS.boolean" to BooleanValue(true))
+            val dictionary = mapOf("QUERY-PARAMS.boolean" to BooleanValue(true)).let(Dictionary::from)
             val filledParams = queryParams.fillInTheBlanks(params, Resolver(dictionary = dictionary)).value
 
             assertThat(filledParams.asMap()).isEqualTo(mapOf("number" to "999"))
@@ -707,7 +717,7 @@ class HttpQueryParamPatternTest {
             val params = QueryParameters(mapOf("number" to "(anyvalue)"))
             val dictionary = mapOf(
                 "QUERY-PARAMS.number" to NumberValue(999), "QUERY-PARAMS.boolean" to BooleanValue(true)
-            )
+            ).let(Dictionary::from)
             val filledParams = queryParams.fillInTheBlanks(params, Resolver(dictionary = dictionary)).value
 
             assertThat(filledParams.asMap()).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
@@ -729,7 +739,7 @@ class HttpQueryParamPatternTest {
         fun `should generate missing optional keys when allPatternsMandatory is set`() {
             val queryParams = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean?" to BooleanPattern()))
             val params = QueryParameters(mapOf("number" to "999"))
-            val dictionary = mapOf("QUERY-PARAMS.boolean" to BooleanValue(true))
+            val dictionary = mapOf("QUERY-PARAMS.boolean" to BooleanValue(true)).let(Dictionary::from)
             val filledParams = queryParams.fillInTheBlanks(
                 params, Resolver(dictionary = dictionary).withAllPatternsAsMandatory()
             ).value
@@ -753,7 +763,7 @@ class HttpQueryParamPatternTest {
             val dictionary = mapOf(
                 "QUERY-PARAMS.number" to NumberValue(999),
                 "QUERY-PARAMS.extraKey" to StringValue("ExtraValue")
-            )
+            ).let(Dictionary::from)
 
             val negativeResolver = Resolver(dictionary = dictionary, isNegative = true)
             val negativeFilledParams = queryParamsPattern.fillInTheBlanks(QueryParameters(queryParameters), negativeResolver).value

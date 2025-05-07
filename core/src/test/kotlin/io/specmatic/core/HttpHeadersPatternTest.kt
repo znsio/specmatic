@@ -571,7 +571,7 @@ internal class HttpHeadersPatternTest {
             ))
             val invalidValue = mapOf("key" to "value", "type" to  "Invalid", "age" to "invalid")
 
-            val dictionary = mapOf("HEADERS.age" to NumberValue(999))
+            val dictionary = mapOf("HEADERS.age" to NumberValue(999)).let(Dictionary::from)
             val fixedValue = httpHeaders.fixValue(invalidValue, Resolver(dictionary = dictionary))
             println(fixedValue)
 
@@ -696,7 +696,9 @@ internal class HttpHeadersPatternTest {
             val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
             val validValue = mapOf("number" to "(string)", "boolean" to "(string)")
             val fixedValue = httpHeaders.fixValue(validValue, Resolver(
-                mockMode = true, dictionary = mapOf("(number)" to NumberValue(999), "(boolean)" to BooleanValue(true))
+                mockMode = true, dictionary = mapOf(
+                    "(number)" to NumberValue(999), "(boolean)" to BooleanValue(true)
+                ).let(Dictionary::from)
             ))
 
             println(fixedValue)
@@ -708,7 +710,9 @@ internal class HttpHeadersPatternTest {
             val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean" to BooleanPattern()))
             val validValue = mapOf("number" to "(number)", "boolean" to "(boolean)")
             val fixedValue = httpHeaders.fixValue(validValue, Resolver(
-                dictionary = mapOf("(number)" to NumberValue(999), "(boolean)" to BooleanValue(true))
+                dictionary = mapOf(
+                    "(number)" to NumberValue(999), "(boolean)" to BooleanValue(true)
+                ).let(Dictionary::from)
             ))
 
             println(fixedValue)
@@ -718,7 +722,9 @@ internal class HttpHeadersPatternTest {
         @Test
         fun `should not add missing mandatory keys when resolver is set to partial`() {
             val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()))
-            val resolver = Resolver(dictionary = mapOf("(number)" to NumberValue(999), "(string)" to StringValue("TODO"))).partializeKeyCheck()
+            val resolver = Resolver(
+                dictionary = mapOf("(number)" to NumberValue(999), "(string)" to StringValue("TODO")).let(Dictionary::from)
+            ).partializeKeyCheck()
             val partialInvalidValue = mapOf("number" to "(string)")
             val fixedValue = httpHeaders.fixValue(partialInvalidValue, resolver)
 
@@ -787,7 +793,7 @@ internal class HttpHeadersPatternTest {
             val headers = mapOf("number" to "(number)")
             val dictionary = mapOf(
                 "HEADERS.number" to NumberValue(999), "HEADERS.boolean" to BooleanValue(true)
-            )
+            ).let(Dictionary::from)
             val filledHeaders = httpHeaders.fillInTheBlanks(headers, Resolver(dictionary = dictionary)).value
 
             assertThat(filledHeaders).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
@@ -797,7 +803,7 @@ internal class HttpHeadersPatternTest {
         fun `should not generate missing optional keys`() {
             val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean?" to BooleanPattern()))
             val headers = mapOf("number" to "999")
-            val dictionary = mapOf("HEADERS.boolean" to BooleanValue(true))
+            val dictionary = mapOf("HEADERS.boolean" to BooleanValue(true)).let(Dictionary::from)
             val filledHeaders = httpHeaders.fillInTheBlanks(headers, Resolver(dictionary = dictionary)).value
 
             assertThat(filledHeaders).isEqualTo(mapOf("number" to "999"))
@@ -809,7 +815,7 @@ internal class HttpHeadersPatternTest {
             val headers = mapOf("number" to "(anyvalue)")
             val dictionary = mapOf(
                 "HEADERS.number" to NumberValue(999), "HEADERS.boolean" to BooleanValue(true)
-            )
+            ).let(Dictionary::from)
             val filledHeaders = httpHeaders.fillInTheBlanks(headers, Resolver(dictionary = dictionary)).value
 
             assertThat(filledHeaders).isEqualTo(mapOf("number" to "999", "boolean" to "true"))
@@ -833,7 +839,7 @@ internal class HttpHeadersPatternTest {
         fun `should generate missing optional keys when allPatternsMandatory is set`() {
             val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern(), "boolean?" to BooleanPattern()))
             val headers = mapOf("number" to "999")
-            val dictionary = mapOf("HEADERS.boolean" to BooleanValue(true))
+            val dictionary = mapOf("HEADERS.boolean" to BooleanValue(true)).let(Dictionary::from)
             val filledHeaders = httpHeaders.fillInTheBlanks(
                 headers, Resolver(dictionary = dictionary).withAllPatternsAsMandatory()
             ).value
@@ -854,7 +860,9 @@ internal class HttpHeadersPatternTest {
         fun `should allow extra keys when extensible-schema or resolver is negative`() {
             val httpHeaders = HttpHeadersPattern(mapOf("number" to NumberPattern()))
             val headers = mapOf("number" to "(number)", "extraKey" to "(string)")
-            val dictionary = mapOf("HEADERS.number" to NumberValue(999), "(string)" to StringValue("ExtraValue"))
+            val dictionary = mapOf(
+                "HEADERS.number" to NumberValue(999), "(string)" to StringValue("ExtraValue")
+            ).let(Dictionary::from)
             val resolvers = listOf(
                 Resolver(dictionary = dictionary, isNegative = true),
                 Resolver(dictionary = dictionary).withUnexpectedKeyCheck(IgnoreUnexpectedKeys)

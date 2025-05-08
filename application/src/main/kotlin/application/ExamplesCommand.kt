@@ -10,9 +10,11 @@ import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.isOpenAPI
 import picocli.CommandLine.*
 import java.io.File
 import java.util.concurrent.Callable
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.exitProcess
 
 private const val SUCCESS_EXIT_CODE = 0
@@ -195,26 +197,24 @@ For example, to filter by HTTP methods:
         }
 
         private fun validateAllExamplesAssociatedToEachSpecIn(specsDir: File, examplesBaseDir: File): List<ValidationResults> {
-            var ordinal = 1
+            val ordinal = AtomicInteger(1)
+            val allSpecFiles = specsDir.walk().filter(File::isFile).filter { isOpenAPI(it.canonicalPath) }
 
-            val validationResults = specsDir.walk().filter { it.isFile && it.extension in CONTRACT_EXTENSIONS }.map { specFile ->
+            val validationResults = allSpecFiles.map { specFile ->
                 val relativeSpecPath = specsDir.toPath().relativize(specFile.toPath()).toString()
-                val associatedExamplesDir =
-                    examplesBaseDir.resolve(relativeSpecPath.substringBeforeLast(".").plus("_examples"))
-
-                if (associatedExamplesDir.exists().not() || associatedExamplesDir.isDirectory.not()) {
-                    return@map ValidationResults.forNoExamples()
-                }
-
-                logger.log("$ordinal. Validating examples in '${associatedExamplesDir}' associated to '$relativeSpecPath'...${System.lineSeparator()}")
-                ordinal++
+                logger.log("${ordinal.getAndIncrement()}. Validating examples associated to '$relativeSpecPath'...")
+                logger.boundary()
 
                 val feature = parseContractFileWithNoMissingConfigWarning(specFile)
                 val inlineExampleValidationResults = validateInlineExamples(feature)
                 printValidationResult(inlineExampleValidationResults, "Inline example")
                 logger.boundary()
 
-                val externalExampleValidationResult = validateExamplesDir(feature, associatedExamplesDir).second
+                val associatedExamplesDir = examplesBaseDir.resolve(relativeSpecPath.substringBeforeLast(".").plus("_examples"))
+                val externalExampleValidationResult = when {
+                    associatedExamplesDir.exists() -> validateExamplesDir(feature, associatedExamplesDir).second
+                    else -> ValidationResults.forNoExamples()
+                }
                 printValidationResult(externalExampleValidationResult.exampleValidationResults, "Example file")
                 logger.boundary()
 
@@ -223,7 +223,6 @@ For example, to filter by HTTP methods:
 
             logger.log("Summary:")
             printValidationResult(validationResults.ofAllExamples(), "Overall")
-
             return validationResults
         }
 
@@ -286,32 +285,23 @@ For example, to filter by HTTP methods:
         }
 
         private fun printValidationResult(validationResults: Map<String, Result>, tag: String) {
-            if (validationResults.isEmpty()) {
-                val message = "No associated examples found."
-                logger.log("=".repeat(message.length))
-                logger.log(message)
-                logger.log("=".repeat(message.length))
-                return
-            }
-
             val titleTag = tag.split(" ").joinToString(" ") { if (it.isBlank()) it else it.capitalizeFirstChar() }
 
             if (validationResults.containsFailuresOrPartialFailures()) {
-                println()
+                logger.boundary()
                 logger.log("=============== $titleTag Validation Results ===============")
-
                 validationResults.forEach { (exampleFileName, result) ->
                     if (!result.isSuccess()) {
                         val errorPrefix = if (result.isPartialFailure()) "Warning" else "Error"
-
-                        logger.log("\n$errorPrefix(s) found in the example file - '$exampleFileName':")
+                        logger.boundary()
+                        logger.log("$errorPrefix(s) found in the $tag - '$exampleFileName':")
                         logger.log(result.reportString())
                     }
                 }
             }
 
-            println()
             val summaryTitle = "=============== $titleTag Validation Summary ==============="
+            logger.boundary()
             logger.log(summaryTitle)
             logger.log(Results(validationResults.values.toList()).summary())
             logger.log("=".repeat(summaryTitle.length))

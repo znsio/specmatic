@@ -73,10 +73,6 @@ paths:
           schema:
             type: integer
           description: The ID of the product to retrieve
-          examples:
-            PRODUCT_200_OK:
-              summary: Example ID of a product
-              value: 199
         - in: query
           name: columns
           schema:
@@ -89,15 +85,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Product'
-              examples:
-                PRODUCT_200_OK:
-                  summary: Example response for a single product
-                  value:
-                    id: 199
-                    name: "MacBook Pro"
-                    description: "Apple MacBook Pro with 64GB RAM"
-                    price: 360000
-                    inStock: true
         '404':
           description: Product not found
           content:
@@ -179,6 +166,9 @@ paths:
           required: true
           schema:
             type: number
+          examples:
+            TODO_200_OK:
+              value: 55
       responses:
         "200":
           description: Fetched todo successfully
@@ -186,6 +176,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Todo_ResponseBody"
+              examples:
+                TODO_200_OK:
+                  value:
+                    id: 55
+                    todo: "Buy groceries"
+                    completed: false
+                    userId: 1
         "404":
           description: Todo not found
           content:

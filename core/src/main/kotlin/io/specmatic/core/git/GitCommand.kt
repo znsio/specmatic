@@ -35,11 +35,8 @@ interface GitCommand {
     fun getFilesChangedInCurrentBranch(baseBranch: String): List<String>
     fun getFileInBranch(fileName: String, currentBranch: String, baseBranch: String): File?
     fun currentRemoteBranch(): String
+    fun getOriginDefaultBranchName(): String
     fun currentBranch(): String {
-        return ""
-    }
-
-    fun defaultBranch(): String {
         return ""
     }
 

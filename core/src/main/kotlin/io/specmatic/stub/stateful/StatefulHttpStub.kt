@@ -771,10 +771,10 @@ class StatefulHttpStub(
         }
 
         if (responseBody !is JSONObjectValue) return
-        if(request.method == "POST" && request.body !is JSONObjectValue) return
+        if (request.method == "POST" && request.body !is JSONObjectValue) return
 
         val requestBody = request.body
-        if(requestBody is JSONObjectValue) {
+        if (requestBody is JSONObjectValue) {
             cache.addResponse(
                 path = resourcePath,
                 responseBody = requestBody.mergeWith(responseBody) as JSONObjectValue,

@@ -180,22 +180,15 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         return currentBranch()
     }
 
-    override fun defaultBranch(): String {
-        System.getenv("LOCAL_GIT_BRANCH")?.let {
-            return it
+    override fun getOriginDefaultBranchName(): String {
+        val defaultBranchRef = execute(Configuration.gitCommand, "symbolic-ref", "refs/remotes/origin/HEAD", "--short")
+
+        val parts = defaultBranchRef.split("/").filterNot(String::isEmpty)
+        if (parts.size < 2) {
+            throw ContractException(errorMessage = "Could not parse symbolic-ref value '$defaultBranchRef'. Expected format: 'origin/branch'")
         }
 
-        val defaultBranchName = System.getenv("GITHUB_BASE_REF") ?: defaultBranchFromGit()
-        return "origin/${defaultBranchName}"
-    }
-
-    private fun defaultBranchFromGit(): String {
-        val symbolicRef = System.getenv("GITHUB_BASE_REF") ?: execute(Configuration.gitCommand, "symbolic-ref", "refs/remotes/origin/HEAD", "--short")
-
-        if ("/" !in symbolicRef)
-            throw ContractException("Could not understand symbolic-ref value $symbolicRef, expected it to be of the format remote/branch name.")
-
-        return symbolicRef.split("/")[1].trim()
+        return parts[1]
     }
 
     private fun getStashListSize(): Int {

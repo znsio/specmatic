@@ -108,9 +108,10 @@ data class GitRepo(
     }
 
     private fun isNotOnBranch(contractRepoDir: File): Boolean {
-        if (branchName == null) return false
         val sourceGit = getSystemGit(contractRepoDir.path)
-        return sourceGit.currentBranch() != branchName
+        val expectedBranch = branchName ?: sourceGit.getOriginDefaultBranchName()
+        val currentBranch = sourceGit.currentBranch()
+        return expectedBranch != currentBranch
     }
 
     private fun isClean(contractsRepoDir: File): Boolean {

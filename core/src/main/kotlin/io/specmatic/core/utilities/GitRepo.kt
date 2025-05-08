@@ -64,11 +64,15 @@ data class GitRepo(
                         logger.log("Contract repo does not exist.")
                         cloneRepoAndCheckoutBranch(reposBaseDir, this)
                     }
-                    contractsRepoDir.exists() && isBehind(contractsRepoDir) -> {
+                    isNotOnBranch(contractsRepoDir) -> {
+                        logger.log("Contract repo exists but is not on the correct branch.")
+                        cloneRepoAndCheckoutBranch(reposBaseDir, this)
+                    }
+                    isBehind(contractsRepoDir) -> {
                         logger.log("Contract repo exists but is behind the remote.")
                         cloneRepoAndCheckoutBranch(reposBaseDir, this)
                     }
-                    contractsRepoDir.exists() && isClean(contractsRepoDir) -> {
+                    isClean(contractsRepoDir) -> {
                         logger.log("Contract repo exists, is clean, and is up to date with remote.")
                         contractsRepoDir
                     }
@@ -101,6 +105,12 @@ data class GitRepo(
 
             directory to contractSourceEntry.path
         }
+    }
+
+    private fun isNotOnBranch(contractRepoDir: File): Boolean {
+        if (branchName == null) return false
+        val sourceGit = getSystemGit(contractRepoDir.path)
+        return sourceGit.currentBranch() != branchName
     }
 
     private fun isClean(contractsRepoDir: File): Boolean {

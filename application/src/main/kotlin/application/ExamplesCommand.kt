@@ -285,14 +285,6 @@ For example, to filter by HTTP methods:
         }
 
         private fun printValidationResult(validationResults: Map<String, Result>, tag: String) {
-            if (validationResults.isEmpty()) {
-                val message = "No associated ${tag}s found."
-                logger.log("=".repeat(message.length))
-                logger.log(message)
-                logger.log("=".repeat(message.length))
-                return
-            }
-
             val titleTag = tag.split(" ").joinToString(" ") { if (it.isBlank()) it else it.capitalizeFirstChar() }
 
             if (validationResults.containsFailuresOrPartialFailures()) {

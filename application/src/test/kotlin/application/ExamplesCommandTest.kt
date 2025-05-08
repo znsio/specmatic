@@ -287,8 +287,10 @@ paths:
             All 1 example(s) are valid.
             =================================================================
             """.trimIndent())
-            assertThat(stdOut).doesNotContain("""
+            assertThat(stdOut).containsIgnoringWhitespaces("""
             =============== Example File Validation Summary ===============
+            No examples found
+            ===============================================================
             """.trimIndent())
         }
 
@@ -307,8 +309,10 @@ paths:
             All 1 example(s) are valid.
             ===============================================================
             """.trimIndent())
-            assertThat(stdOut).doesNotContain("""
-            =============== Inline Example Validation Summary =============
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            =============== Inline Example Validation Summary ===============
+            No examples found
+            =================================================================
             """.trimIndent())
         }
 
@@ -417,9 +421,9 @@ paths:
             =================================================================
             """.trimIndent())
             assertThat(stdOut).containsIgnoringWhitespaces("""
-            ==================================
-            No associated Example files found.
-            ==================================
+            =============== Example File Validation Summary ===============
+            No examples found
+            ===============================================================
             """.trimIndent())
             assertThat(stdOut).containsIgnoringWhitespaces("""
             Summary:
@@ -465,12 +469,12 @@ paths:
 
                 assertThat(exitCode).isEqualTo(0)
                 assertThat(stdOut).containsIgnoringWhitespaces("""
-                ====================================
-                No associated Inline examples found.
-                ====================================
-                ==================================
-                No associated Example files found.
-                ==================================
+                =============== Inline Example Validation Summary ===============
+                No examples found
+                =================================================================
+                =============== Example File Validation Summary ===============
+                No examples found
+                ===============================================================
                 """.trimIndent())
             } finally {
                 emptyExamplesDir.deleteRecursively()

@@ -54,7 +54,7 @@ class GitRepoTest {
         )
         gitRepo.loadContracts(workingDirectory = tempDir.canonicalPath, configFilePath = "", selector = { it.stubContracts })
 
-        verify(exactly = 1) { clone(tempDir.resolve("repos"), gitRepo) }
+        verify(exactly = 1) { clone(tempDir.canonicalFile.resolve("repos"), gitRepo) }
         verify(exactly = 1) { checkout(tempDir,"main") }
     }
 
@@ -78,7 +78,7 @@ class GitRepoTest {
         )
         gitRepo.loadContracts(workingDirectory = tempDir.canonicalPath, configFilePath = "", selector = { it.stubContracts })
 
-        verify(exactly = 1) { clone(tempDir.resolve("repos"), gitRepo) }
+        verify(exactly = 1) { clone(tempDir.canonicalFile.resolve("repos"), gitRepo) }
         verify(exactly = 0) { checkout(tempDir,"main") }
     }
 

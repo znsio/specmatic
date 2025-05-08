@@ -211,9 +211,9 @@ For example, to filter by HTTP methods:
                 logger.boundary()
 
                 val associatedExamplesDir = examplesBaseDir.resolve(relativeSpecPath.substringBeforeLast(".").plus("_examples"))
-                val externalExampleValidationResult = when (associatedExamplesDir.exists()) {
-                    true -> validateExamplesDir(feature, associatedExamplesDir).second
-                    false -> ValidationResults.forNoExamples()
+                val externalExampleValidationResult = when {
+                    associatedExamplesDir.exists() -> validateExamplesDir(feature, associatedExamplesDir).second
+                    else -> ValidationResults.forNoExamples()
                 }
                 printValidationResult(externalExampleValidationResult.exampleValidationResults, "Example file")
                 logger.boundary()

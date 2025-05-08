@@ -5,9 +5,7 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.cors.*
 import io.ktor.server.plugins.cors.CORS
-import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -723,67 +721,74 @@ class StatefulHttpStub(
     private fun stubCacheWithExampleSeedData(): StubCache {
         val stubCache = StubCache()
 
-        scenarioStubs.forEach {
-            val httpRequest = it.request
-            if (httpRequest.method !in setOf("GET", "POST")) return@forEach
-            if (isUnsupportedResponseBodyForCaching(
-                    generatedResponse = it.response,
-                    method = httpRequest.method,
-                    pathSegments = httpRequest.pathSegments()
-                )
-            ) return@forEach
+        scenarioStubs.forEach { (request, response) ->
+            cacheSeedData(stubCache, request, response)
+        }
 
-            val (resourcePath, _) = resourcePathAndIdFrom(httpRequest)
-            val responseBody = it.response.body
-            if (httpRequest.method == "GET" && httpRequest.pathSegments().size == 1) {
-                if (httpRequest.queryParams.asMap().containsKey(specmaticConfig.attributeSelectionQueryParamKey())) {
-                    return@forEach
-                }
-
-                val responseBodies = when (responseBody) {
-                    is JSONArrayValue -> responseBody.list.filterIsInstance<JSONObjectValue>()
-                    is JSONObjectValue -> responseBody.jsonObject.entries
-                        .filter { (_, value) -> value is JSONArrayValue }
-                        .map { (_, value) ->
-                            (value as JSONArrayValue).list.filterIsInstance<JSONObjectValue>()
-                        }
-                        .flatten()
-                    else -> emptyList()
-                }
-
-                responseBodies.forEach { body ->
-                    stubCache.addResponse(
-                        path = resourcePath,
-                        responseBody = body,
-                        idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
-                        idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, body)
-                    )
-                }
-                return@forEach
-            }
-
-            if (responseBody !is JSONObjectValue) return@forEach
-            if(httpRequest.method == "POST" && httpRequest.body !is JSONObjectValue) return@forEach
-
-            val requestBody = httpRequest.body
-            if(requestBody is JSONObjectValue) {
-                stubCache.addResponse(
-                    path = resourcePath,
-                    responseBody = requestBody.mergeWith(responseBody) as JSONObjectValue,
-                    idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
-                    idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, responseBody)
-                )
-            } else {
-                stubCache.addResponse(
-                    path = resourcePath,
-                    responseBody = responseBody,
-                    idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
-                    idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, responseBody)
-                )
+        features.flatMap { it.stubsFromExamples.values }.forEach {
+            it.forEach { (request, response) ->
+                cacheSeedData(stubCache, request, response)
             }
         }
 
         return stubCache
+    }
+
+    private fun cacheSeedData(cache: StubCache, request: HttpRequest, response: HttpResponse) {
+        if (request.method !in setOf("GET", "POST")) return
+        if (isUnsupportedResponseBodyForCaching(
+                generatedResponse = response,
+                method = request.method,
+                pathSegments = request.pathSegments()
+            )
+        ) return
+
+        val (resourcePath, _) = resourcePathAndIdFrom(request)
+        val responseBody = response.body
+        if (request.method == "GET" && request.pathSegments().size == 1) {
+            if (request.queryParams.asMap().containsKey(specmaticConfig.attributeSelectionQueryParamKey())) return
+
+            val responseBodies = when (responseBody) {
+                is JSONArrayValue -> responseBody.list.filterIsInstance<JSONObjectValue>()
+                is JSONObjectValue -> responseBody.jsonObject.entries
+                    .filter { (_, value) -> value is JSONArrayValue }
+                    .map { (_, value) ->
+                        (value as JSONArrayValue).list.filterIsInstance<JSONObjectValue>()
+                    }
+                    .flatten()
+                else -> emptyList()
+            }
+
+            responseBodies.forEach { body ->
+                cache.addResponse(
+                    path = resourcePath,
+                    responseBody = body,
+                    idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
+                    idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, body)
+                )
+            }
+            return
+        }
+
+        if (responseBody !is JSONObjectValue) return
+        if(request.method == "POST" && request.body !is JSONObjectValue) return
+
+        val requestBody = request.body
+        if(requestBody is JSONObjectValue) {
+            cache.addResponse(
+                path = resourcePath,
+                responseBody = requestBody.mergeWith(responseBody) as JSONObjectValue,
+                idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
+                idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, responseBody)
+            )
+        } else {
+            cache.addResponse(
+                path = resourcePath,
+                responseBody = responseBody,
+                idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
+                idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, responseBody)
+            )
+        }
     }
 
     private fun responseDetailsFrom(features: List<Feature>, httpRequest: HttpRequest): Map<Int, ResponseDetails> {

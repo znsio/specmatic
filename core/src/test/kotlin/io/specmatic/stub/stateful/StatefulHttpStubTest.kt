@@ -853,6 +853,25 @@ class StatefulHttpStubSeedDataFromExamplesTest {
     }
 
     @Test
+    fun `should store an inline example`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products/199"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        val responseBody = response.body as JSONObjectValue
+
+        assertThat(responseBody.getStringValue("id")).isEqualTo("199")
+        assertThat(responseBody.getStringValue("name")).isEqualTo("MacBook Pro")
+        assertThat(responseBody.getStringValue("description")).isEqualTo("Apple MacBook Pro with 64GB RAM")
+        assertThat(responseBody.getStringValue("price")).isEqualTo("360000")
+        assertThat(responseBody.getStringValue("inStock")).isEqualTo("true")
+    }
+
+    @Test
     fun `should able to handle array inside the object and cache the data`() {
         val response = httpStub.client.execute(
             HttpRequest(

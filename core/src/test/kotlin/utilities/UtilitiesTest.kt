@@ -115,9 +115,13 @@ internal class UtilitiesTest {
         every { mockGitCommand.fetch() }.returns("")
         every { mockGitCommand.revisionsBehindCount() }.returns(0)
         every { mockGitCommand.statusPorcelain() }.returns("")
+        every { mockGitCommand.currentBranch() } returns "main"
+        every { mockGitCommand.getOriginDefaultBranchName() } returns "main"
+
         mockkStatic("io.specmatic.core.utilities.Utilities")
         every { loadSources("/configFilePath") }.returns(sources)
         every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
+        every { getSystemGit(any()) }.returns(mockGitCommand)
 
         val contractPaths = contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
         val expectedContractPaths = listOf(
@@ -160,9 +164,13 @@ internal class UtilitiesTest {
         every { mockGitCommand.fetch() }.returns("")
         every { mockGitCommand.revisionsBehindCount() }.returns(0)
         every { mockGitCommand.statusPorcelain() }.returns("someDir/someFile")
+        every { mockGitCommand.currentBranch() } returns "main"
+        every { mockGitCommand.getOriginDefaultBranchName() } returns "main"
+
         mockkStatic("io.specmatic.core.utilities.Utilities")
         every { loadSources("/configFilePath") }.returns(sources)
         every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
+        every { getSystemGit(any()) }.returns(mockGitCommand)
 
         mockkStatic("io.specmatic.core.git.GitOperations")
         every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
@@ -187,9 +195,13 @@ internal class UtilitiesTest {
         every { mockGitCommand.statusPorcelain() }.returns("")
         every { mockGitCommand.fetch() }.returns("changes")
         every { mockGitCommand.revisionsBehindCount() }.returns(1)
+        every { mockGitCommand.currentBranch() } returns "main"
+        every { mockGitCommand.getOriginDefaultBranchName() } returns "main"
+
         mockkStatic("io.specmatic.core.utilities.Utilities")
         every { loadSources("/configFilePath") }.returns(sources)
         every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
+        every { getSystemGit(any()) }.returns(mockGitCommand)
 
         mockkStatic("io.specmatic.core.git.GitOperations")
         every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
@@ -558,6 +570,7 @@ internal class UtilitiesTest {
     @AfterEach
     fun tearDownAfterEach() {
         deleteGitIgnoreFile()
+        unmockkAll()
     }
 
     companion object {

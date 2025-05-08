@@ -183,7 +183,7 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     override fun getOriginDefaultBranchName(): String {
         val defaultBranchRef = execute(Configuration.gitCommand, "symbolic-ref", "refs/remotes/origin/HEAD", "--short")
 
-        val parts = defaultBranchRef.split("/").filterNot(String::isEmpty)
+        val parts = defaultBranchRef.split("/").map(String::trim).filterNot(String::isEmpty)
         if (parts.size < 2) {
             throw ContractException(errorMessage = "Could not parse symbolic-ref value '$defaultBranchRef'. Expected format: 'origin/branch'")
         }

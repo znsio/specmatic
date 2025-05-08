@@ -2,9 +2,10 @@ package io.specmatic.core.utilities
 
 import io.mockk.*
 import io.specmatic.core.git.GitCommand
-import io.specmatic.core.git.SystemGit
 import io.specmatic.core.git.checkout
 import io.specmatic.core.git.clone
+import io.specmatic.stub.captureStandardOutput
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
@@ -79,5 +80,36 @@ class GitRepoTest {
 
         verify(exactly = 1) { clone(tempDir.resolve("repos"), gitRepo) }
         verify(exactly = 0) { checkout(tempDir,"main") }
+    }
+
+    @Test
+    fun `should not re-clone when current branch matches origin default while config branch is not set`(@TempDir tempDir: File) {
+        tempDir.resolve("repos").resolve("specmatic").mkdirs()
+        val fakeGit = mockk<GitCommand>()
+        every { fakeGit.currentBranch() } returns "main"
+        every { fakeGit.getOriginDefaultBranchName() } returns "main"
+        every { fakeGit.fetch() } returns ""
+        every { fakeGit.revisionsBehindCount() } returns 0
+        every { fakeGit.statusPorcelain() } returns ""
+
+        every { getSystemGit(any()) } returns fakeGit
+        every { getSystemGitWithAuth(any()) } returns fakeGit
+        every { clone(any(), any()) } returns tempDir
+        every { checkout(any(), any()) } returns Unit
+
+        val gitRepo = GitRepo(
+            gitRepositoryURL = "https://github.com/specmatic/specmatic.git",
+            branchName = null,
+            testContracts = emptyList(),
+            stubContracts = emptyList(),
+            type = null
+        )
+        val (stdOut, _) = captureStandardOutput {
+            gitRepo.loadContracts(workingDirectory = tempDir.canonicalPath, configFilePath = "", selector = { it.stubContracts })
+        }
+
+        verify(exactly = 0) { clone(tempDir.resolve("repos"), gitRepo) }
+        verify(exactly = 0) { checkout(tempDir,"main") }
+        assertThat(stdOut).containsIgnoringWhitespaces("Contract repo exists, is clean, and is up to date with remote.")
     }
 }

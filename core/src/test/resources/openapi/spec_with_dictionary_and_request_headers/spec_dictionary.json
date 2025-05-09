@@ -1,4 +1,8 @@
 {
-  "HEADERS.X-LoginID": "abc123",
-  "OutputData.data": "output123"
+  "HEADERS": {
+    "X-LoginID": "abc123"
+  },
+  "OutputData": {
+    "data": "output123"
+  }
 }

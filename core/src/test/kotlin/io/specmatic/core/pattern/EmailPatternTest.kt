@@ -114,7 +114,8 @@ class EmailPatternTest {
     @Test
     fun `should be able to fix invalid values`() {
         val pattern = JSONObjectPattern(mapOf("email" to EmailPattern()), typeAlias = "(Test)")
-        val resolver = Resolver(dictionary = mapOf("Test.email" to StringValue("SomeDude@example.com")).let(Dictionary::from))
+        val dictionary = "Test: { email: SomeDude@example.com }".let(Dictionary::fromYaml)
+        val resolver = Resolver(dictionary = dictionary)
         val invalidValues = listOf(
             StringValue("Unknown"),
             NumberValue(999),

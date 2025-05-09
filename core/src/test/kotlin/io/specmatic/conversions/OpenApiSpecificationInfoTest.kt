@@ -104,13 +104,15 @@ class OpenApiSpecificationInfoTest {
     fun `should be able to load dictionary in yaml format`(@TempDir tempDir: File) {
         val apiFile = tempDir.resolve("api.yaml")
         val yamlDictionary = """
-        Schema.stringKey: stringValue
-        Schema.numberKey: 123
-        Schema.booleanKey: true
-        Schema.nullKey: null
-        Schema.nested.key: value
-        Schema.array: 
-        - value
+        Schema:
+            stringKey: stringValue
+            numberKey: 123
+            booleanKey: true
+            nullKey: null
+            nested:
+                key: value
+            array: 
+            - value
         """.trimIndent()
         tempDir.resolve("api_dictionary.yaml").writeText(yamlDictionary)
         val dictionary = OpenApiSpecification.loadDictionary(apiFile.canonicalPath, null)

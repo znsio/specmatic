@@ -1,4 +1,8 @@
 {
-  "InputData.name": "James Shannon",
-  "OutputData.data": "output123"
+  "InputData": {
+    "name": "James Shannon"
+  },
+  "OutputData": {
+    "data": "output123"
+  }
 }

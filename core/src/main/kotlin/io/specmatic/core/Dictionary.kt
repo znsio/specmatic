@@ -3,6 +3,7 @@ package io.specmatic.core
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.yamlStringToValue
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
@@ -129,9 +130,21 @@ data class Dictionary(private val data: Map<String, Value>, private val focusedD
             }
         }
 
-        fun from(valueMap: Map<String, Value>): Dictionary {
-            val nestedFormat = DataRepresentation.from(valueMap).toValue()
-            return Dictionary(data = nestedFormat.jsonObject)
+        fun fromYaml(content: String): Dictionary {
+            return runCatching  {
+                val value = yamlStringToValue(content)
+                if (value !is JSONObjectValue) throw ContractException("Expected dictionary file to be a YAML object")
+                from(value.jsonObject)
+            }.getOrElse { e ->
+                throw ContractException(
+                    breadCrumb = "Error while parsing YAML dictionary content",
+                    errorMessage = exceptionCauseMessage(e)
+                )
+            }
+        }
+
+        fun from(data: Map<String, Value>): Dictionary {
+            return Dictionary(data = data)
         }
 
         fun empty(): Dictionary {

@@ -37,7 +37,7 @@ data class Resolver(
     val cyclePreventionStack: List<Pattern> = listOf(),
     val defaultExampleResolver: DefaultExampleResolver = DoNotUseDefaultExample,
     val generation: GenerationStrategies = NonGenerativeTests,
-    val dictionary: Map<String, Value> = emptyMap(),
+    val dictionary: Dictionary = Dictionary.empty(),
     val dictionaryLookupPath: String = "",
     val jsonObjectResolver: JSONObjectResolver = JSONObjectResolver(),
     val allPatternsAreMandatory: Boolean = false,
@@ -201,23 +201,17 @@ data class Resolver(
     }
 
     fun generate(pattern: Pattern): Value {
-        val valueFromDict = getValueFromDictionary(dictionaryLookupPath, pattern)
+        val valueFromDict = dictionary.getValueFor(dictionaryLookupPath, pattern, this)
         if (valueFromDict != null) {
             return valueFromDict.unwrapOrContractException()
         }
 
-        val defaultValueFromDict = getDefaultValueFromDictionary(pattern)
+        val defaultValueFromDict = dictionary.getDefaultValueFor(pattern, this)
         if (defaultValueFromDict != null) {
             return defaultValueFromDict
         }
 
         return pattern.generate(this)
-    }
-
-    private fun getDefaultValueFromDictionary(pattern: Pattern): Value? {
-        val lookupKey = withPatternDelimiters(pattern.typeName)
-        val defaultPatternValue = getValueFromDictionary(lookupKey, pattern)
-        return defaultPatternValue?.withDefault(null) { it }
     }
 
     fun generate(typeAlias: String?, rawLookupKey: String, pattern: Pattern): Value {
@@ -286,7 +280,7 @@ data class Resolver(
 
     fun generateList(pattern: ListPattern): Value {
         val lookupPath = lookupPath(pattern.typeAlias, "")
-        val valueFromDict = getValueFromDictionary(lookupPath, pattern)
+        val valueFromDict = dictionary.getValueFor(lookupPath, pattern, this)
         if (valueFromDict != null) {
             return valueFromDict.unwrapOrContractException()
         }
@@ -384,11 +378,11 @@ data class Resolver(
     }
 
     fun hasDictionaryToken(key: String): Boolean {
-        return key in dictionary
+        return dictionary.containsKey(key)
     }
 
     fun getDictionaryToken(key: String): Value {
-        return dictionary.getValue(key)
+        return dictionary.getRawValue(key)
     }
 
     fun hasSeenPattern(pattern: Pattern): Boolean {
@@ -421,37 +415,6 @@ data class Resolver(
 
     fun getPartialKeyCheck(): KeyCheck {
         return findKeyErrorCheck.toPartialKeyCheck()
-    }
-
-    private fun getValueFromDictionary(lookupKey: String, pattern: Pattern): ReturnValue<Value>? {
-        val dictionaryValue = dictionary[lookupKey] ?: return null
-        val valueToMatch = getValueToMatch(dictionaryValue, pattern) ?: return null
-
-        return runCatching {
-            val result = pattern.matches(valueToMatch, this)
-            if (result is Result.Failure && this.isNegative) return@runCatching null
-            result.toReturnValue(valueToMatch, "Invalid Dictionary value at \"$lookupKey\"")
-        }.getOrElse(::HasException)
-    }
-
-    private fun <T> calculateDepth(data: T, getChildren: (T) -> List<T>?): Int {
-        val children = getChildren(data) ?: return 0
-        return when {
-            children.isEmpty() -> 1
-            else -> 1 + children.maxOf { calculateDepth(it, getChildren) }
-        }
-    }
-
-    private fun getValueToMatch(value: Value, pattern: Pattern): Value? {
-        if (value !is JSONArrayValue) return value
-        if (pattern !is ListPattern) return value.list.randomOrNull()
-
-        val patternDepth = calculateDepth<Pattern>(pattern) { (resolvedHop(it, this) as? ListPattern)?.pattern?.let(::listOf) }
-        val valueDepth = calculateDepth<Value>(value) { (it as? JSONArrayValue)?.list }
-        return when {
-            valueDepth > patternDepth -> value.list.randomOrNull()
-            else -> value
-        }
     }
 }
 

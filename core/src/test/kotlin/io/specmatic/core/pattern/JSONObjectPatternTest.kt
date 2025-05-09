@@ -737,7 +737,7 @@ internal class JSONObjectPatternTest {
 
         val address = StringValue("22B Baker Street")
 
-        val dictionary = mapOf("Address.address" to address)
+        val dictionary = mapOf("Address.address" to address).let(Dictionary::from)
 
         val resolver = Resolver(
             newPatterns = mapOf(addressTypeAlias to addressPattern),
@@ -765,7 +765,7 @@ internal class JSONObjectPatternTest {
 
         val resolver = Resolver(
             newPatterns = mapOf(addressTypeAlias to addressPattern),
-            dictionary = dictionary
+            dictionary = dictionary.let(Dictionary::from)
         )
 
         val value = resolver.generate(addressPattern) as JSONObjectValue
@@ -789,7 +789,7 @@ internal class JSONObjectPatternTest {
         val dictionary = mapOf(".address" to expectedAddress)
 
         val resolver = Resolver(
-            dictionary = dictionary
+            dictionary = dictionary.let(Dictionary::from)
         )
 
         val value = resolver.generate(addressPattern) as JSONObjectValue
@@ -824,7 +824,7 @@ internal class JSONObjectPatternTest {
 
         val resolver = Resolver(
             newPatterns = mapOf(personTypeAlias to personPattern, addressTypeAlias to addressPattern),
-            dictionary = dictionary
+            dictionary = dictionary.let(Dictionary::from)
         )
 
         val value = resolver.generate(DeferredPattern("(Person)")) as JSONObjectValue
@@ -854,7 +854,7 @@ internal class JSONObjectPatternTest {
 
         val resolver = Resolver(
             newPatterns = mapOf(personTypeAlias to personPattern),
-            dictionary = dictionary
+            dictionary = dictionary.let(Dictionary::from)
         )
 
         val exception = assertThrows<ContractException> {
@@ -885,7 +885,7 @@ internal class JSONObjectPatternTest {
 
         val resolver = Resolver(
             newPatterns = mapOf(addressTypeAlias to addressPattern),
-            dictionary = dictionary
+            dictionary = dictionary.let(Dictionary::from)
         )
 
         var value: JSONObjectValue
@@ -920,7 +920,7 @@ internal class JSONObjectPatternTest {
 
         val resolver = Resolver(
             newPatterns = mapOf(typeAlias to personPattern),
-            dictionary = dictionary
+            dictionary = dictionary.let(Dictionary::from)
         )
 
         val value = resolver.generate(personPattern)
@@ -964,7 +964,7 @@ internal class JSONObjectPatternTest {
 
         val resolver = Resolver(
             newPatterns = mapOf(personTypeAlias to personPattern, addressTypeAlias to addressPattern),
-            dictionary = dictionary
+            dictionary = dictionary.let(Dictionary::from)
         )
 
         val value = resolver.generate(DeferredPattern("(Person)"))
@@ -1009,7 +1009,7 @@ internal class JSONObjectPatternTest {
 
         val resolver = Resolver(
             newPatterns = mapOf(personTypeAlias to personPattern, addressTypeAlias to addressPattern),
-            dictionary = dictionary
+            dictionary = dictionary.let(Dictionary::from)
         )
 
         val value = resolver.generate(DeferredPattern("(Person)"))
@@ -1042,7 +1042,7 @@ internal class JSONObjectPatternTest {
 
         val resolver = Resolver(
             newPatterns = mapOf(personTypeAlias to personPattern),
-            dictionary = dictionary
+            dictionary = dictionary.let(Dictionary::from)
         )
 
         assertThatThrownBy {
@@ -1882,7 +1882,7 @@ components:
             val patternDictionary = mapOf(
                 "Test.topLevelKey" to StringValue("Fixed"),
                 "Test.nested.nestedKey" to StringValue("2025-01-01")
-            )
+            ).let(Dictionary::from)
 
             val invalidValue = JSONArrayValue(emptyList())
             val fixedValue = pattern.fixValue(invalidValue, Resolver(dictionary = patternDictionary))
@@ -1913,7 +1913,7 @@ components:
             val patternDictionary = mapOf(
                 "Test.topLevelKey" to StringValue("Fixed"),
                 "Test.nested.nestedOptionalKey" to BooleanValue(booleanValue = true)
-            )
+            ).let(Dictionary::from)
 
             val invalidValue = parsedValue("""
             {
@@ -1956,7 +1956,7 @@ components:
                 "Test.topLevelKey" to StringValue("Fixed"),
                 "Test.nested.nestedOptionalKey" to BooleanValue(booleanValue = true),
                 "Test.nested.nestedKey" to StringValue("2025-01-01")
-            )
+            ).let(Dictionary::from)
 
             val invalidValue = parsedValue("""
             {
@@ -2027,7 +2027,7 @@ components:
             val patternDictionary = mapOf(
                 "Test.topLevelKey" to StringValue("Fixed"),
                 "Test.topLevelOptionalKey" to NumberValue(999),
-            )
+            ).let(Dictionary::from)
 
             val value = parsedValue("""
             {
@@ -2064,7 +2064,7 @@ components:
             val patternDictionary = mapOf(
                 "Test.topLevelKey" to StringValue("Fixed"),
                 "Test.topLevelOptionalKey" to NumberValue(999),
-            )
+            ).let(Dictionary::from)
             val value = parsedValue("""
             {
                 "topLevelOptionalKey": 999
@@ -2173,7 +2173,7 @@ components:
 
             val resolver = Resolver(
                 newPatterns = mapOf("(A)" to patternA, "(B)" to patternB),
-                dictionary = mapOf("(string)" to StringValue("TODO"))
+                dictionary = mapOf("(string)" to StringValue("TODO")).let(Dictionary::from)
             ).withAllPatternsAsMandatory()
 
             val generatedValue = patternA.generate(resolver)
@@ -2206,7 +2206,7 @@ components:
             val pattern = JSONObjectPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()))
             val resolver = Resolver(
                 mockMode = true, newPatterns = mapOf("(Test)" to pattern),
-                dictionary = mapOf("(number)" to NumberValue(999), "(string)" to StringValue("TODO"))
+                dictionary = mapOf("(number)" to NumberValue(999), "(string)" to StringValue("TODO")).let(Dictionary::from)
             )
             val invalidValues = listOf(
                 StringValue("(string)"),
@@ -2227,7 +2227,7 @@ components:
             val pattern = JSONObjectPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()), typeAlias = "(Test)")
             val resolver = Resolver(
                 newPatterns = mapOf("(Test)" to pattern),
-                dictionary = mapOf("(number)" to NumberValue(999), "(string)" to StringValue("TODO"))
+                dictionary = mapOf("(number)" to NumberValue(999), "(string)" to StringValue("TODO")).let(Dictionary::from)
             )
             val values = listOf(
                 StringValue("(Test)"),
@@ -2254,7 +2254,9 @@ components:
                 "age" to StringValue("10"),
                 "extraKey" to StringValue("extraValue")
             ))
-            val fixedValue = pattern.fixValue(value, Resolver(dictionary = mapOf("(number)" to NumberValue(999))))
+            val fixedValue = pattern.fixValue(value, Resolver(
+                dictionary = mapOf("(number)" to NumberValue(999)).let(Dictionary::from)
+            ))
 
             assertThat(fixedValue).isInstanceOf(JSONObjectValue::class.java)
             fixedValue as JSONObjectValue
@@ -2276,7 +2278,9 @@ components:
                 "age" to StringValue("10"),
                 "extraKey" to StringValue("extraValue")
             ))
-            val fixedValue = pattern.fixValue(value, Resolver(dictionary = mapOf("(number)" to NumberValue(999))))
+            val fixedValue = pattern.fixValue(value, Resolver(
+                dictionary = mapOf("(number)" to NumberValue(999)).let(Dictionary::from)
+            ))
 
             assertThat(fixedValue).isInstanceOf(JSONObjectValue::class.java)
             fixedValue as JSONObjectValue
@@ -2304,7 +2308,9 @@ components:
                 "age" to StringValue("10"),
                 "extraKey" to StringValue("extraValue")
             ))
-            val fixedValue = pattern.fixValue(value, Resolver(dictionary = mapOf("(number)" to NumberValue(999))))
+            val fixedValue = pattern.fixValue(value, Resolver(
+                dictionary = mapOf("(number)" to NumberValue(999)).let(Dictionary::from)
+            ))
             println(fixedValue.toStringLiteral())
 
             assertThat(fixedValue).isInstanceOf(JSONObjectValue::class.java)
@@ -2326,7 +2332,11 @@ components:
         @Test
         fun `should not add missing mandatory keys when resolver is set to partial`() {
             val pattern = JSONObjectPattern(mapOf("number" to NumberPattern(), "string" to StringPattern()), typeAlias = "(Test)")
-            val resolver = Resolver(dictionary = mapOf("(number)" to NumberValue(999), "(string)" to StringValue("TODO"))).partializeKeyCheck()
+            val resolver = Resolver(
+                dictionary = mapOf(
+                    "(number)" to NumberValue(999), "(string)" to StringValue("TODO")
+                ).let(Dictionary::from)
+            ).partializeKeyCheck()
             val partialInvalidValue = JSONObjectValue(mapOf("number" to StringValue("(string)")))
             val fixedValue = pattern.fixValue(partialInvalidValue, resolver)
 
@@ -2355,7 +2365,7 @@ components:
             val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern()), typeAlias="Test")
             val jsonObject = JSONObjectValue(mapOf("name" to StringValue("(string)")))
             val dictionary = mapOf("Test.id" to NumberValue(123), "Test.name" to StringValue("John Doe"))
-            val resolver = Resolver(dictionary = dictionary)
+            val resolver = Resolver(dictionary = dictionary.let(Dictionary::from))
 
             val filledJsonObject = jsonObjectPattern.fillInTheBlanks(jsonObject, resolver).value as JSONObjectValue
             assertThat(filledJsonObject.jsonObject).isEqualTo(
@@ -2382,7 +2392,7 @@ components:
             val jsonObjectPattern = JSONObjectPattern(mapOf("name" to StringPattern()), typeAlias="Test")
             val jsonObject = JSONObjectValue(mapOf("name" to StringValue("(anyvalue)")))
             val dictionary = mapOf("Test.name" to StringValue("John Doe"))
-            val resolver = Resolver(dictionary = dictionary)
+            val resolver = Resolver(dictionary = dictionary.let(Dictionary::from))
 
             val filledJsonObject = jsonObjectPattern.fillInTheBlanks(jsonObject, resolver).value as JSONObjectValue
             assertThat(filledJsonObject.jsonObject).isEqualTo(mapOf("name" to StringValue("John Doe")))
@@ -2393,7 +2403,7 @@ components:
             val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern()), typeAlias="Test")
             val jsonObject = StringValue("(Test)")
             val dictionary = mapOf("Test.id" to NumberValue(123), "Test.name" to StringValue("John Doe"))
-            val resolver = Resolver(dictionary = dictionary, newPatterns = mapOf("(Test)" to jsonObjectPattern))
+            val resolver = Resolver(dictionary = dictionary.let(Dictionary::from), newPatterns = mapOf("(Test)" to jsonObjectPattern))
 
             val filledJsonObject = jsonObjectPattern.fillInTheBlanks(jsonObject, resolver).value as JSONObjectValue
             assertThat(filledJsonObject.jsonObject).isEqualTo(
@@ -2427,7 +2437,7 @@ components:
         fun `should generate missing optional keys when allPatternsMandatory is set`() {
             val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "name?" to StringPattern()), typeAlias="Test")
             val jsonObject = JSONObjectValue(mapOf("id" to NumberValue(123)))
-            val resolver = Resolver(dictionary = mapOf("Test.name" to StringValue("John Doe"))).withAllPatternsAsMandatory()
+            val resolver = Resolver(dictionary = mapOf("Test.name" to StringValue("John Doe")).let(Dictionary::from)).withAllPatternsAsMandatory()
 
             val filledJsonObject = jsonObjectPattern.fillInTheBlanks(jsonObject, resolver).value as JSONObjectValue
             assertThat(filledJsonObject.jsonObject).isEqualTo(
@@ -2449,7 +2459,7 @@ components:
         fun `should fill in the blanks if value is any-value of json-object when resolver is negative`() {
             val jsonObjectPattern = JSONObjectPattern(mapOf("id" to NumberPattern(), "name" to StringPattern()), typeAlias="Test")
             val dictionary = mapOf("Test.id" to NumberValue(123), "Test.name" to StringValue("John Doe"))
-            val resolver = Resolver(dictionary = dictionary, newPatterns = mapOf("(Test)" to jsonObjectPattern), isNegative = true)
+            val resolver = Resolver(dictionary = dictionary.let(Dictionary::from), newPatterns = mapOf("(Test)" to jsonObjectPattern), isNegative = true)
             val values = listOf(
                 StringValue("(anyvalue)"),
                 StringValue("(Test)"),
@@ -2474,8 +2484,8 @@ components:
 
             val jsonObject = JSONObjectValue(mapOf("id" to StringValue("(number)"), "extraKey" to StringValue("(string)")))
             val resolvers = listOf(
-                Resolver(dictionary = dictionary, isNegative = true),
-                Resolver(dictionary = dictionary).withUnexpectedKeyCheck(IgnoreUnexpectedKeys)
+                Resolver(dictionary = dictionary.let(Dictionary::from), isNegative = true),
+                Resolver(dictionary = dictionary.let(Dictionary::from)).withUnexpectedKeyCheck(IgnoreUnexpectedKeys)
             )
 
             assertThat(resolvers).allSatisfy {

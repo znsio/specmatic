@@ -1,76 +1,94 @@
 package io.specmatic.core
 
+import io.specmatic.core.log.logger
+import io.specmatic.core.pattern.*
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
+import java.io.File
 
-class Dictionary(private val map: Map<String, Value> = emptyMap()) {
-    private fun substituteDictionaryValues(value: JSONArrayValue, paths: List<String> = emptyList(), forceSubstitution: Boolean = false): Value {
-        val newList = value.list.mapIndexed { index, valueInArray ->
-            val indexesToAdd = listOf("[$index]", "[*]")
+data class Dictionary(private val value: Map<String, Value>) {
 
-            val updatedPaths = paths.flatMap { path ->
-                indexesToAdd.map { indexToAdd ->
-                    path + indexToAdd
-                }
-            }.ifEmpty {
-                indexesToAdd
-            }
-
-            substituteDictionaryValues(valueInArray, updatedPaths, forceSubstitution)
-        }
-
-        return value.copy(list = newList)
+    fun plus(other: Map<String, Value>): Dictionary {
+        return copy(value + other)
     }
 
-    private fun substituteDictionaryValues(value: JSONObjectValue, paths: List<String> = emptyList(), forceSubstitution: Boolean = false): Value {
-        val newMap = value.jsonObject.mapValues { (key, value) ->
-
-            val updatedPaths = paths.map { path ->
-                "$path.$key"
-            }.ifEmpty { listOf(key) }
-
-            val pathFoundInDictionary = updatedPaths.firstOrNull { it in map }
-            if(value is StringValue && (isVanillaPatternToken(value.string) || forceSubstitution) && pathFoundInDictionary != null) {
-                map.getValue(pathFoundInDictionary)
-            } else {
-                substituteDictionaryValues(value, updatedPaths, forceSubstitution)
-            }
-        }
-
-        return value.copy(jsonObject = newMap)
+    fun containsKey(key: String): Boolean {
+        return key in value
     }
 
-    private fun substituteDictionaryValues(value: Value, paths: List<String> = emptyList(), forceSubstitution: Boolean = false): Value {
-        return when (value) {
-            is JSONObjectValue -> {
-                substituteDictionaryValues(value, paths, forceSubstitution)
-            }
-            is JSONArrayValue -> {
-                substituteDictionaryValues(value, paths, forceSubstitution)
-            }
+    fun getRawValue(key: String): Value {
+        if (key !in value) throw IllegalArgumentException("Dictionary does not contain key: $key")
+        return value.getValue(key)
+    }
+
+    fun getDefaultValueFor(pattern: Pattern, resolver: Resolver): Value? {
+        val lookupKey = withPatternDelimiters(pattern.typeName)
+        return getValueFor(lookupKey, pattern, resolver)?.withDefault(null) { it }
+    }
+
+    fun getValueFor(lookup: String, pattern: Pattern, resolver: Resolver): ReturnValue<Value>? {
+        val dictionaryValue = value[lookup] ?: return null
+        val valueToMatch = getValueToMatch(dictionaryValue, pattern, resolver) ?: return null
+
+        return runCatching {
+            val result = pattern.matches(valueToMatch, resolver)
+            if (result is Result.Failure && resolver.isNegative) return@runCatching null
+            result.toReturnValue(valueToMatch, "Invalid Dictionary value at \"$lookup\"")
+        }.getOrElse(::HasException)
+    }
+
+    private fun getValueToMatch(value: Value, pattern: Pattern, resolver: Resolver): Value? {
+        if (value !is JSONArrayValue) return value
+        if (pattern !is ListPattern) return value.list.randomOrNull()
+
+        val patternDepth = calculateDepth<Pattern>(pattern) { (resolvedHop(it, resolver) as? ListPattern)?.pattern?.let(::listOf) }
+        val valueDepth = calculateDepth<Value>(value) { (it as? JSONArrayValue)?.list }
+        return when {
+            valueDepth > patternDepth -> value.list.randomOrNull()
             else -> value
         }
     }
 
-    fun substituteDictionaryValues(value: Map<String, String>, forceSubstitution: Boolean = false): Map<String, String> {
-        return value.mapValues { (key, value) ->
-            substituteDictionaryValues(key, value, forceSubstitution)
+    private fun <T> calculateDepth(data: T, getChildren: (T) -> List<T>?): Int {
+        val children = getChildren(data) ?: return 0
+        return when {
+            children.isEmpty() -> 1
+            else -> 1 + children.maxOf { calculateDepth(it, getChildren) }
         }
     }
 
-    private fun substituteDictionaryValues(name: String, value: String, forceSubstitution: Boolean = false): String {
-        return if((isVanillaPatternToken(value) || forceSubstitution) && name in map) {
-            map.getValue(name).toStringLiteral()
-        } else value
-    }
+    companion object {
+        fun from(file: File): Dictionary {
+            if (!file.exists()) throw ContractException(
+                breadCrumb = file.path,
+                errorMessage = "Expected dictionary file at ${file.path}, but it does not exist"
+            )
 
-    fun lookup(key: String): Value? {
-        return map[key]
-    }
+            if (!file.isFile) throw ContractException(
+                breadCrumb = file.path,
+                errorMessage = "Expected dictionary file at ${file.path} to be a file"
+            )
 
-    fun contains(key: String): Boolean {
-        return key in map
+            return runCatching {
+                logger.log("Using dictionary file ${file.path}")
+                val dictionaryContent = readValueAs<JSONObjectValue>(file).jsonObject
+                Dictionary(dictionaryContent)
+            }.getOrElse { e ->
+                logger.debug(e)
+                throw ContractException(
+                    breadCrumb = file.path,
+                    errorMessage = "Could not parse dictionary file ${file.path}, it must be a valid JSON/YAML object"
+                )
+            }
+        }
+
+        fun from(valueMap: Map<String, Value>): Dictionary {
+            return Dictionary(valueMap)
+        }
+
+        fun empty(): Dictionary {
+            return Dictionary(emptyMap())
+        }
     }
 }

@@ -363,7 +363,7 @@ class DictionaryTest {
 
         @Test
         fun `negative based path parameters should still be generated when dictionary contains substitutions`() {
-            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(123))
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(123)).let(Dictionary::from)
             val scenario = Scenario(ScenarioInfo(
                 httpRequestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/orders/(id:number)"), method = "GET"),
                 httpResponsePattern = HttpResponsePattern(status = 200)
@@ -390,7 +390,7 @@ class DictionaryTest {
 
         @Test
         fun `negative based query parameters should still be generated when dictionary contains substitutions`() {
-            val dictionary = mapOf("QUERY-PARAMS.id" to NumberValue(123))
+            val dictionary = mapOf("QUERY-PARAMS.id" to NumberValue(123)).let(Dictionary::from)
             val scenario = Scenario(ScenarioInfo(
                 httpRequestPattern = HttpRequestPattern(
                     httpPathPattern = buildHttpPathPattern("/orders"), method = "GET",
@@ -422,7 +422,7 @@ class DictionaryTest {
 
         @Test
         fun `negative based headers should still be generated when dictionary contains substitutions`() {
-            val dictionary = mapOf("HEADERS.ID" to NumberValue(123))
+            val dictionary = mapOf("HEADERS.ID" to NumberValue(123)).let(Dictionary::from)
             val scenario = Scenario(ScenarioInfo(
                 httpRequestPattern = HttpRequestPattern(
                     httpPathPattern = buildHttpPathPattern("/orders"), method = "GET",
@@ -454,7 +454,7 @@ class DictionaryTest {
 
         @Test
         fun `negative based bodies should still be generated when dictionary contains substitutions`() {
-            val dictionary = mapOf("OBJECT.id" to NumberValue(123))
+            val dictionary = mapOf("OBJECT.id" to NumberValue(123)).let(Dictionary::from)
             val scenario = Scenario(ScenarioInfo(
                 httpRequestPattern = HttpRequestPattern(
                     httpPathPattern = buildHttpPathPattern("/orders"), method = "GET",
@@ -499,7 +499,7 @@ class DictionaryTest {
                 ), typeAlias = "(OBJECT)")
             ),
             httpResponsePattern = HttpResponsePattern(status = 200)
-        )).copy(dictionary = dictionary)
+        )).copy(dictionary = dictionary.let(Dictionary::from))
         val feature = Feature(listOf(scenario), name = "")
 
 
@@ -536,7 +536,7 @@ class DictionaryTest {
             val dictionary = jsonStringToValueMap("""{
             "Schema.number": [10, 20, 30],
             "Schema.string": ["a", "b", "c"]
-            }""".trimIndent())
+            }""".trimIndent()).let(Dictionary::from)
             val pattern = parsedPattern("""{
                 "number": "(number)",
                 "string": "(string)"
@@ -553,7 +553,7 @@ class DictionaryTest {
             val dictionary = jsonStringToValueMap("""{
             "Schema.array": [10, 20, 30],
             "Schema.array[*]": [1, 2, 3]
-            }""".trimIndent())
+            }""".trimIndent()).let(Dictionary::from)
             val pattern = JSONObjectPattern(mapOf("array" to ListPattern(NumberPattern())), typeAlias = "(Schema)")
             val resolver = Resolver(dictionary = dictionary)
             val value = pattern.generate(resolver)
@@ -566,7 +566,7 @@ class DictionaryTest {
         fun `should use wildcard index key if exists in dictionary when array key is missing and pattern is an array`() {
             val dictionary = jsonStringToValueMap("""{
             "Schema.array[*]": [1, 2, 3]
-            }""".trimIndent())
+            }""".trimIndent()).let(Dictionary::from)
             val pattern = JSONObjectPattern(mapOf("array" to ListPattern(NumberPattern())), typeAlias = "(Schema)")
             val resolver = Resolver(dictionary = dictionary)
             val value = pattern.generate(resolver)
@@ -582,7 +582,7 @@ class DictionaryTest {
         fun `should throw an exception when array key contains invalid value and pattern is an array`() {
             val dictionary = jsonStringToValueMap("""{
             "Schema.array": [1, "abc", 3]
-            }""".trimIndent())
+            }""".trimIndent()).let(Dictionary::from)
             val pattern = JSONObjectPattern(mapOf("array" to ListPattern(NumberPattern())), typeAlias = "(Schema)")
             val resolver = Resolver(dictionary = dictionary)
             val exception = assertThrows<ContractException> { pattern.generate(resolver) }
@@ -599,7 +599,7 @@ class DictionaryTest {
             val dictionary = jsonStringToValueMap("""{
             "(number)": [1, 2, 3],
             "(string)": ["a", "b", "c"]
-            }""".trimIndent())
+            }""".trimIndent()).let(Dictionary::from)
             val pattern = parsedPattern("""{
             "numberKey": "(number)",
             "stringKey": "(string)"
@@ -616,7 +616,7 @@ class DictionaryTest {
             val dictionary = jsonStringToValueMap("""{
             "(list of number)": [1, 2, 3],
             "(list of email)": ["john@mail.com", "jane@mail.com", "bob@mail.com"]
-            }""".trimIndent())
+            }""".trimIndent()).let(Dictionary::from)
             val pattern = JSONObjectPattern(mapOf(
                 "numbers" to ListPattern(NumberPattern()),
                 "emails" to ListPattern(EmailPattern())
@@ -640,7 +640,7 @@ class DictionaryTest {
             val dictionary = jsonStringToValueMap("""{
             "Schema.number": [10, 20, 30],
             "(number)": [1, 2, 3]
-            }""".trimIndent())
+            }""".trimIndent()).let(Dictionary::from)
             val pattern = parsedPattern("""{ "number": "(number)" }""".trimIndent(), typeAlias = "(Schema)")
             val resolver = Resolver(dictionary = dictionary)
             val value = pattern.generate(resolver) as JSONObjectValue
@@ -655,7 +655,7 @@ class DictionaryTest {
             @MethodSource("integration_tests.DictionaryTest#listPatternToSingleValueProvider")
             fun `should use the dictionary value as is when when pattern and value depth matches`(pattern: ListPattern, value: JSONArrayValue) {
                 val testPattern = JSONObjectPattern(mapOf("test" to pattern), typeAlias = "(Test)")
-                val resolver = Resolver(dictionary = mapOf("Test.test" to value))
+                val resolver = Resolver(dictionary = mapOf("Test.test" to value).let(Dictionary::from))
                 val generatedValue = resolver.generate(testPattern)
 
                 assertThat(generatedValue).isInstanceOf(JSONObjectValue::class.java); generatedValue as JSONObjectValue
@@ -666,7 +666,7 @@ class DictionaryTest {
             @MethodSource("integration_tests.DictionaryTest#listPatternToMultiValueProvider")
             fun `should pick random value from the dictionary when value depth is higher than pattern`(pattern: ListPattern, value: JSONArrayValue) {
                 val testPattern = JSONObjectPattern(mapOf("test" to pattern), typeAlias = "(Test)")
-                val resolver = Resolver(dictionary = mapOf("Test.test" to value))
+                val resolver = Resolver(dictionary = mapOf("Test.test" to value).let(Dictionary::from))
                 val generatedValue = resolver.generate(testPattern)
 
                 assertThat(generatedValue).isInstanceOf(JSONObjectValue::class.java); generatedValue as JSONObjectValue

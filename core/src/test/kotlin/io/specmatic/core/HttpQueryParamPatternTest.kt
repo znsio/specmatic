@@ -599,7 +599,7 @@ class HttpQueryParamPatternTest {
         @Test
         fun `should not generate optional keys when initial value is null or empty`() {
             val queryPattern = HttpQueryParamPattern(mapOf("petId" to NumberPattern(), "owner?" to StringPattern()))
-            val dictionary = "QUERY-PARAMS: { (number): 999, (boolean): true }".let(Dictionary::fromYaml)
+            val dictionary = "{ (number): 999, (boolean): true }".let(Dictionary::fromYaml)
 
             val emptyValue = QueryParameters(emptyList())
             val emptyFixedValue = queryPattern.fixValue(emptyValue, Resolver(dictionary=dictionary))

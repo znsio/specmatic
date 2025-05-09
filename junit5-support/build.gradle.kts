@@ -5,7 +5,7 @@ plugins {
 }
 
 dependencies {
-    implementation("io.netty:netty-codec-http:4.1.118.Final")
+    implementation("io.netty:netty-codec-http:4.2.0.Final")
     implementation("net.minidev:json-smart:2.5.2")
 
     api(project(":specmatic-core"))

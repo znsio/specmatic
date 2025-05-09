@@ -1,5 +1,6 @@
 package io.specmatic.core
 
+import io.specmatic.core.pattern.AnyValuePattern
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import io.specmatic.core.pattern.ContractException
@@ -17,7 +18,7 @@ internal class ResolverKtTest {
     @ParameterizedTest
     @MethodSource("typeAliasToLookupKeyProvider")
     fun `should be able to combine typeAlias and lookupKey to a lookupPath`(typeAlias: String?, lookupKey: String, expectedLookupPath: String) {
-        val resolver = Resolver().updateLookupPath(typeAlias, lookupKey)
+        val resolver = Resolver().updateLookupPath(typeAlias, lookupKey, AnyValuePattern)
         assertThat(resolver.dictionaryLookupPath).isEqualTo(expectedLookupPath)
     }
 

@@ -44,7 +44,7 @@ sealed interface DataRepresentation {
     }
 
     fun String.toSegments(): List<String> {
-        return this.split(".").filterNot(String::isEmpty)
+        return this.split(".").map { it.takeIf(String::isNotEmpty) ?: "*" }
     }
 
     companion object {
@@ -55,9 +55,9 @@ sealed interface DataRepresentation {
             }
         }
 
-        fun from(map: Map<String, Value>): DataRepresentation {
-            return map.entries.fold(NodeData() as DataRepresentation) { acc, data ->
-                acc.insert(data.key, data.value)
+        fun from(map: Map<String, Value>): NodeData {
+            return map.entries.fold(NodeData()) { acc, data ->
+                acc.insert(data.key, data.value) as NodeData
             }
         }
     }

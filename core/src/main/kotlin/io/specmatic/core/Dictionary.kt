@@ -7,10 +7,10 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import java.io.File
 
-class Dictionary private constructor(private val value: Map<String, Value>) {
+data class Dictionary(private val value: Map<String, Value>) {
 
     fun plus(other: Map<String, Value>): Dictionary {
-        return Dictionary(value + other)
+        return copy(value + other)
     }
 
     fun containsKey(key: String): Boolean {

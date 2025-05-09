@@ -140,6 +140,10 @@ data class Resolver(
             else -> throw ContractException("$patternValue is not a type")
         }
 
+    private fun getPatternOrElse(patternValue: String, orElse: Pattern): Pattern {
+        return runCatching { getPattern(patternValue) }.getOrDefault(orElse)
+    }
+
     fun <T> withCyclePrevention(pattern: Pattern, toResult: (r: Resolver) -> T) : T {
         return withCyclePrevention(pattern, false, toResult)!!
     }
@@ -224,7 +228,7 @@ data class Resolver(
         if (factStore.has(lookupKey))
             return generate(lookupKey, pattern)
 
-        val updatedResolver = updateLookupPath(typeAlias, lookupKey)
+        val updatedResolver = updateLookupPath(typeAlias, lookupKey, pattern)
 
         return updatedResolver.generate(pattern)
     }
@@ -233,26 +237,29 @@ data class Resolver(
         val resolvedPattern = resolvedHop(pattern, this)
         if (resolvedPattern is ExactValuePattern) return resolvedPattern.generate(this)
 
-        val updatedResolver = updateLookupPath(typeAlias, lookupKey)
+        val updatedResolver = updateLookupPath(typeAlias, lookupKey, pattern)
         return pattern.fixValue(value, updatedResolver)
     }
 
-    fun updateLookupPath(typeAlias: String?, lookupKey: String): Resolver {
-        val lookupPath = lookupPath(typeAlias, lookupKey)
+    fun updateLookupPath(typeAlias: String?, key: String, keyPattern: Pattern): Resolver {
+        val lookupPath = lookupPath(typeAlias, key).takeIf(String::isNotBlank) ?: return this
 
-        val updatedResolver = if (lookupPath.isNotBlank()) {
-            val updatedLookupPathsSeenSoFar =
-                if(lookupKey.isNotBlank())
-                    lookupPathsSeenSoFar.plus(lookupPath)
-                else
-                    lookupPathsSeenSoFar
-
-            this.copy(dictionaryLookupPath = lookupPath, lookupPathsSeenSoFar = updatedLookupPathsSeenSoFar)
-        } else {
-            this
+        val patternFocused = dictionary.applyWith(typeAlias, "*") { patternName ->
+            val pattern = getPatternOrElse(patternName, AnyValuePattern)
+            focusIntoSchema(pattern, withoutPatternDelimiters(patternName), this@Resolver)
         }
 
-        return updatedResolver
+        val key = key.takeIf(String::isNotBlank)
+        val keyFocused = patternFocused.applyWith(key) { key ->
+            val focusKey = if (key == "[*]") "${dictionaryLookupPath.substringAfterLast(".")}[*]" else key
+            focusIntoProperty(keyPattern, focusKey, this@Resolver)
+        }
+
+        return this.copy(
+            dictionaryLookupPath = lookupPath,
+            lookupPathsSeenSoFar = lookupPathsSeenSoFar.plus(lookupPath),
+            dictionary = keyFocused
+        )
     }
 
     private fun lookupPath(typeAlias: String?, lookupKey: String): String {
@@ -285,7 +292,9 @@ data class Resolver(
             return valueFromDict.unwrapOrContractException()
         }
 
-        return updateLookupPath(pattern.typeAlias, "[*]").generateRandomList(pattern.pattern)
+        return updateLookupPath(
+            typeAlias = pattern.typeAlias, key = "[*]", keyPattern = pattern.pattern
+        ).generateRandomList(pattern.pattern)
     }
 
     private fun generateRandomList(pattern: Pattern): Value {
@@ -363,20 +372,6 @@ data class Resolver(
         return generation.generateKeySubLists(key, subList)
     }
 
-    fun plusDictionaryLookupDetails(typeAlias: String?, key: String): Resolver {
-        val newDictionaryLookupPath = addToDictionaryLookupPath(typeAlias, key)
-
-        return this.copy(dictionaryLookupPath = newDictionaryLookupPath)
-    }
-
-    private fun addToDictionaryLookupPath(typeAlias: String?, key: String): String {
-        return when {
-            !typeAlias.isNullOrBlank() -> "${withoutPatternDelimiters(typeAlias)}.$key"
-            key.startsWith("[") -> "$dictionaryLookupPath$key"
-            else -> "$dictionaryLookupPath.$key"
-        }
-    }
-
     fun hasDictionaryToken(key: String): Boolean {
         return dictionary.containsKey(key)
     }
@@ -422,3 +417,7 @@ private fun ExactValuePattern.hasPatternToken(): Boolean {
     return this.pattern is StringValue && isPatternToken(this.pattern.string)
 }
 
+private fun <T, U> T.applyWith(original: U?, default: U? = null, block: T.(U) -> T): T {
+    val value: U = original ?: default ?: return this
+    return block(value)
+}

@@ -3119,6 +3119,30 @@ Then status 200
             assertThat(responseBody.findFirstChildByPath("id")?.toStringLiteral()).isEqualTo("123")
         }
 
+        @Test
+        fun `should be able to start multiple stubs on same port but different hosts without bind conflicts`() {
+            stubTest(configYaml = """
+            version: 2
+            contracts:
+            - consumes:
+              - baseUrl: http://0.0.0.0:8080/api/v1
+                specs:
+                - src/test/resources/multi_base_url_default_http_port/hello.yaml
+              - baseUrl: http://localhost:8080/api/v2
+                specs:
+                - src/test/resources/multi_port_stub_with_invalid_url/hello.yaml
+            """.trimIndent()
+            ) {
+                val clientV1 = HttpClient("http://localhost:8080/api/v1")
+                val clientV2 = HttpClient("http://localhost:8080/api/v2")
+
+                assertThat(listOf(clientV1, clientV2)).allSatisfy {
+                    val response = it.execute(HttpRequest("GET", "/hello"))
+                    assertThat(response.status).isEqualTo(200)
+                }
+            }
+        }
+
         private fun Map<String, Int>.toBaseUrlMap(): Map<String, String> {
             return this.mapValues { "http://localhost:${it.value}" }
         }

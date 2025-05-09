@@ -42,9 +42,13 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledOnOs
 import org.junit.jupiter.api.condition.OS
 import org.junit.jupiter.api.fail
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.security.KeyStore
 import java.util.*
 import java.util.function.Consumer
+import java.util.stream.Stream
 
 internal class HttpStubKtTest {
 
@@ -1064,6 +1068,49 @@ paths:
     fun `should default to port 80 if the port is not found in the base url`() {
         extractPort("http://localhost/api").let {
             assertThat(it).isEqualTo(80)
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("testCases")
+    fun `should be able to de-duplicate host port list and choose host that encompasses rest or first`(input: List<Pair<String, Int>>, expected: Map<Int, String>) {
+        val result = input.deDuplicateByHostAndPort()
+        assertThat(result).isEqualTo(expected)
+    }
+
+    companion object {
+        @JvmStatic
+        fun testCases(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(
+                    listOf("localhost" to 8080),
+                    mapOf(8080 to "localhost")
+                ),
+                Arguments.of(
+                    listOf("127.0.0.1" to 8080, "localhost" to 8080),
+                    mapOf(8080 to "localhost")
+                ),
+                Arguments.of(
+                    listOf("0.0.0.0" to 8080, "127.0.0.1" to 8080),
+                    mapOf(8080 to "0.0.0.0")
+                ),
+                Arguments.of(
+                    listOf("localhost" to 8080, "127.0.0.1" to 8080, "0.0.0.0" to 9090, "::" to 9090),
+                    mapOf(8080 to "localhost", 9090 to "::")
+                ),
+                Arguments.of(
+                    listOf("192.168.1.1" to 80, "10.0.0.1" to 80),
+                    mapOf(80 to "192.168.1.1")
+                ),
+                Arguments.of(
+                    listOf("::1" to 8080, "::" to 8080, "localhost" to 8080),
+                    mapOf(8080 to "::")
+                ),
+                Arguments.of(
+                    emptyList<Pair<String, Int>>(),
+                    emptyMap<Int, String>()
+                )
+            )
         }
     }
 }

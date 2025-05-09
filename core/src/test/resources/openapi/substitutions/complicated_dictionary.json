@@ -1,6 +1,7 @@
 {
   "PersonDetails": {
     "person": {
+      "name": "Jackie",
       "addresses": [
         {
           "street": "Baker Street"
@@ -12,6 +13,5 @@
         }
       ]
     }
-  },
-  "PersonDetails.person.name": "Jackie"
+  }
 }

@@ -1,5 +1,7 @@
 {
-  ".id": "999",
-  ".name": "Nokia",
-  ".senderName": "Payne"
+  "*": {
+    "id": "999",
+    "name": "Nokia",
+    "senderName": "Payne"
+  }
 }

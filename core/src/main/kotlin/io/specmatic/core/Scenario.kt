@@ -508,13 +508,13 @@ data class Scenario(
         }
     }
 
-    fun validExamplesOrException(flagsBased: FlagsBased) {
+    fun validExamplesOrException(flagsBased: FlagsBased, disallowExtraHeaders: Boolean = true) {
         val rowsToValidate = examples.flatMap { it.rows }
 
         val errors = rowsToValidate.mapNotNull { row ->
             val resolverForExample = flagsBased.update(
                 resolver = resolverForValidation(resolver, row)
-            ).disableOverrideUnexpectedKeycheck()
+            ).let { if(disallowExtraHeaders) it.disableOverrideUnexpectedKeycheck() else it }
 
             val requestError = nullOrExceptionString {
                 validateRequestExample(row, resolverForExample)

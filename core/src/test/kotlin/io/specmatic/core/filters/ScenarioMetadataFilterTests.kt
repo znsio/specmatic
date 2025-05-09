@@ -1,6 +1,7 @@
 package io.specmatic.core.filters
 
-import io.specmatic.core.TestResult
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.*
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.ENHANCED_FUNC_NAME
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.test.TestResultRecord
@@ -8,6 +9,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.io.File
 
 class ScenarioMetadataFilterTests {
     private fun createScenarioMetadata(
@@ -15,7 +17,8 @@ class ScenarioMetadataFilterTests {
         path: String = "/default",
         statusCode: Int = 200,
         header: Set<String> = emptySet(),
-        query: Set<String> = emptySet()
+        query: Set<String> = emptySet(),
+        exampleName: String = ""
     ): ScenarioMetadata {
         return ScenarioMetadata(
             method = method,
@@ -23,7 +26,7 @@ class ScenarioMetadataFilterTests {
             statusCode = statusCode,
             header = header,
             query = query,
-            exampleName = "example"
+            exampleName = exampleName
         )
     }
 
@@ -48,24 +51,11 @@ class ScenarioMetadataFilterTests {
     }
 
     @Test
-    fun `wrong filter syntaxes fails silently and includes everything`() {
-        val filter = ScenarioMetadataFilter.from("PATH='/products' &| METHOD='GET,POST'")
-
-        val getProducts = createScenarioMetadata(method = "GET", path = "/products")
-        val postProducts = createScenarioMetadata(method = "POST", path = "/products")
-        val putProducts = createScenarioMetadata(method = "PUT", path = "/products")
-        val getUsers = createScenarioMetadata(method = "GET", path = "/users")
-        val scenarios = listOf(
-            getProducts,
-            postProducts,
-            putProducts,
-            getUsers
-        )
-       assertThrows<Exception>(){
-              scenarios.forEach { scenario ->
-                filter.isSatisfiedBy(scenario)
-              }
-       }
+    fun `wrong filter syntaxes fails with a message`() {
+        val exception = assertThrows<IllegalArgumentException> {
+            ScenarioMetadataFilter.from("PATH='/products' &| METHOD='GET,POST'")
+        }
+        assertEquals("Expected an operator for the given expression: PATH='/products' &| METHOD='GET,POST' at position 17", exception.message)
     }
 
     @Test
@@ -381,7 +371,7 @@ class ScenarioMetadataFilterTests {
     }
 
     @Test
-    fun `exclude scenarios with wildcard only for last digit including tildle`() {
+    fun `exclude scenarios with wildcard only for last digit including tilde`() {
         val filter = ScenarioMetadataFilter.from("STATUS~'50x'")
 
         assertThrows<Exception>(){
@@ -393,14 +383,15 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `test enhanced expression with only METHOD expression`() {
         val filterExpression = "METHOD='GET'"
+        val expectedEnhancedExpression = "eFunc('METHOD=GET')"
         val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
-        assertEquals(filterExpression, enhancedExpression)
+        assertEquals(expectedEnhancedExpression, enhancedExpression)
     }
 
     @Test
     fun `test enhanced expression with METHOD and STATUS expression`() {
         val filterExpression = "METHOD='GET' && STATUS='200,400'"
-        val expectedEnhancedExpression = "METHOD='GET' && $ENHANCED_FUNC_NAME('STATUS=200,400')"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('METHOD=GET') && $ENHANCED_FUNC_NAME('STATUS=200,400')"
         val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
         assertEquals(expectedEnhancedExpression,enhancedExpression)
     }
@@ -424,8 +415,9 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `test enhanced expression with multiple METHOD and single PATH expression`() {
         val filterExpression = "(METHOD='POST' && PATH='/users') || (METHOD='POST' && PATH='/products')"
+        val expectedEnhancedExpression = "( eFunc('METHOD=POST') && eFunc('PATH=/users') ) || ( eFunc('METHOD=POST') && eFunc('PATH=/products') )"
         val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
-        assertEquals(filterExpression, enhancedExpression)
+        assertEquals(expectedEnhancedExpression, enhancedExpression)
     }
 
     @Test
@@ -439,16 +431,18 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `test enhanced expression with PATH expression`() {
         val filterExpression = "STATUS!=202 && PATH!='/hub,/hub/(id:string)'"
-        val expectedEnhancedExpression = "STATUS!=202 && $ENHANCED_FUNC_NAME('PATH!=/hub,/hub/(id:string)')"
-        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
-        assertEquals(expectedEnhancedExpression, enhancedExpression)
+        val exception = assertThrows<IllegalArgumentException> {
+            ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        }
+        assertEquals("Expected quote for the given expression: STATUS!=202 && PATH!='/hub,/hub/(id:string)' at position 8", exception.message)
     }
 
     @Test
     fun `test enhanced expression with QUERY expression`() {
         val filterExpression = "QUERY='fields'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('QUERY=fields')"
         val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
-        assertEquals(filterExpression, enhancedExpression)
+        assertEquals(expectedEnhancedExpression, enhancedExpression)
     }
 
     @Test
@@ -461,7 +455,7 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `test enhanced expression with multiple QUERY expressions`() {
         val filterExpression = "QUERY='name,age' && QUERY='location'"
-        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('QUERY=name,age') && QUERY='location'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('QUERY=name,age') && $ENHANCED_FUNC_NAME('QUERY=location')"
         val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
         assertEquals(expectedEnhancedExpression, enhancedExpression)
     }
@@ -469,7 +463,7 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `test enhanced expression with multiple HEADER expressions`() {
         val filterExpression = "HEADER='Content-Type,Accept' && HEADER='Authorization'"
-        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('HEADER=Content-Type,Accept') && HEADER='Authorization'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('HEADER=Content-Type,Accept') && $ENHANCED_FUNC_NAME('HEADER=Authorization')"
         val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
         assertEquals(expectedEnhancedExpression, enhancedExpression)
     }
@@ -485,8 +479,9 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `test enhanced expression with no $ENHANCED_FUNCTION_NAME applicable`() {
         val filterExpression = "METHOD='GET' && STATUS='200'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('METHOD=GET') && $ENHANCED_FUNC_NAME('STATUS=200')"
         val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
-        assertEquals(filterExpression, enhancedExpression)
+        assertEquals(expectedEnhancedExpression, enhancedExpression)
     }
 
     @Test
@@ -500,8 +495,9 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `test enhanced expression does not handle spaces around =`() {
         val filterExpression = "METHOD = 'GET, POST' && STATUS = '200, 400'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('METHOD=GET, POST') && $ENHANCED_FUNC_NAME('STATUS=200, 400')"
         val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
-        assertEquals(filterExpression, enhancedExpression)
+        assertEquals(expectedEnhancedExpression, enhancedExpression)
     }
 
     @Test
@@ -515,15 +511,18 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `test enhanced expression with empty $ENHANCED_FUNCTION_NAME`() {
         val filterExpression = "METHOD='' && STATUS=''"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('METHOD=') && $ENHANCED_FUNC_NAME('STATUS=')"
         val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
-        assertEquals(filterExpression, enhancedExpression)
+        assertEquals(expectedEnhancedExpression, enhancedExpression)
     }
 
     @Test
     fun `test enhanced expression with single quotes inside`() {
         val filterExpression = "METHOD='GET' && STATUS='2'00'"
-        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
-        assertEquals(filterExpression, enhancedExpression)
+        val exception = assertThrows<IllegalArgumentException> {
+            ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        }
+        assertEquals("Expected an operator for the given expression: METHOD='GET' && STATUS='2'00' at position 28", exception.message)
     }
 
     @Test
@@ -558,5 +557,21 @@ class ScenarioMetadataFilterTests {
 
         val methods = filteredItems.map { it.toScenarioMetadata().method }.distinct()
         assertThat(methods).containsOnly("GET")
+    }
+
+    @Test
+    fun `filter by examples`() {
+        val filterExpression = "EXAMPLE='SCOOBY_200_OK, ROCKY_200_OK'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('EXAMPLE=SCOOBY_200_OK, ROCKY_200_OK')"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(expectedEnhancedExpression, enhancedExpression)
+    }
+
+    @Test
+    fun `filter with multiple QUERY expression`() {
+        val filterExpression = "QUERY='fields,location' && QUERY='name'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('QUERY=fields,location') && $ENHANCED_FUNC_NAME('QUERY=name')"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(expectedEnhancedExpression, enhancedExpression)
     }
 }

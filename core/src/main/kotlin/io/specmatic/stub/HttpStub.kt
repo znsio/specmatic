@@ -439,7 +439,7 @@ class HttpStub(
         }.distinct().ifEmpty { listOf(this.host to this.port) }
     }
 
-    private fun serveStubResponse(
+    fun serveStubResponse(
         httpRequest: HttpRequest,
         baseUrl: String,
         defaultBaseUrl: String,

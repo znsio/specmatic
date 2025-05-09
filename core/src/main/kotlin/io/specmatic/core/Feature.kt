@@ -1922,10 +1922,10 @@ data class Feature(
         return loadExternalisedExamplesAndListUnloadableExamples().first
     }
 
-    fun validateExamplesOrException() {
+    fun validateExamplesOrException(disallowExtraHeaders: Boolean = true) {
         val errors = scenarios.mapNotNull { scenario ->
             try {
-                scenario.validExamplesOrException(flagsBased.copy(generation = NonGenerativeTests))
+                scenario.validExamplesOrException(flagsBased.copy(generation = NonGenerativeTests), disallowExtraHeaders)
                 null
             } catch (e: Throwable) {
                 exceptionCauseMessage(e)

@@ -210,7 +210,7 @@ data class SpecmaticConfig(
     private val additionalExampleParamsFilePath: String? = null,
     private val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
     private val allPatternsMandatory: Boolean? = null,
-    private val defaultPatternValues: Map<String, Any> = emptyMap(),
+    private val defaultPatternValues: Map<String, Any>? = null,
     private val version: SpecmaticConfigVersion? = null
 ) {
     companion object {
@@ -413,7 +413,9 @@ data class SpecmaticConfig(
 
     @JsonIgnore
     fun parsedDefaultPatternValues(): Map<String, Value> {
-        return parsedJSONObject(ObjectMapper().writeValueAsString(defaultPatternValues)).jsonObject
+        return parsedJSONObject(
+            ObjectMapper().writeValueAsString(defaultPatternValues ?: emptyMap<String, Any>())
+        ).jsonObject
     }
 
     @JsonIgnore
@@ -478,7 +480,7 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun getDefaultPatternValues(): Map<String, Any> {
+    fun getDefaultPatternValues(): Map<String, Any>? {
         return defaultPatternValues
     }
 

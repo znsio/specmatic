@@ -1,0 +1,259 @@
+openapi: 3.0.0
+info:
+  title: Order API
+  version: '1.0'
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: WIP
+    description: API still under development
+paths:
+  /products:
+    summary: Create a new product
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - type
+                - inventory
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                  enum:
+                    - gadget
+                    - book
+                    - food
+                    - other
+                inventory:
+                  type: integer
+                  minimum: 1
+                  maximum: 101
+            examples:
+              SUCCESS:
+                value:
+                  name: iPhone
+                  type: gadget
+                  inventory: 100
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: integer
+              examples:
+                SUCCESS:
+                  value:
+                    id: 1
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '503':
+          description: Timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+  /findAvailableProducts:
+    parameters:
+      - schema:
+          type: string
+        name: type
+        in: query
+        required: false
+        examples:
+          SUCCESS:
+            value: gadget
+          TIMEOUT:
+            value: other
+      - name: pageSize
+        in: header
+        schema:
+          type: integer
+        required: true
+        examples:
+          SUCCESS:
+            value: 10
+          TIMEOUT:
+            value: 20
+    get:
+      summary: Fetch product details
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+              examples:
+                SUCCESS:
+                  value:
+                    - name: iPhone
+                      id: 1
+                      type: gadget
+                      inventory: 100
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '503':
+          description: Timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+              examples:
+                TIMEOUT:
+                  value:
+                    timestamp: '2020-06-02T12:00:00.000+00:00'
+                    status: 503
+                    error: Service Unavailable
+                    message: Timeout
+  /orders:
+    post:
+      summary: Create a new order
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - productid
+                - count
+              properties:
+                productid:
+                  type: integer
+                count:
+                  type: integer
+            examples:
+              SUCCESS:
+                value:
+                  productid: 1
+                  count: 2
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: integer
+              examples:
+                SUCCESS:
+                  value:
+                    id: 1
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '503':
+          description: Timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+    get:
+      summary: Retrieve order information
+      tags:
+        - WIP
+      parameters:
+        - in: query
+          name: orderId
+          schema:
+            type: integer
+          required: false
+          description: ID of the order to retrieve. If not provided, returns all orders.
+          examples:
+            SUCCESS:
+              value: 100
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+              examples:
+                SUCCESS:
+                  value:
+                    - id: 1
+                      productid: 1
+                      count: 2
+                      status: "completed"
+components:
+  schemas:
+    Product:
+      title: Product Details
+      type: object
+      properties:
+        name:
+          type: string
+        id:
+          type: integer
+        type:
+          type: string
+        inventory:
+          type: integer
+        description:
+          type: string
+      required:
+        - name
+        - id
+        - type
+        - inventory
+    Order:
+      title: Order Details
+      type: object
+      properties:
+        id:
+          type: integer
+        productid:
+          type: integer
+        count:
+          type: integer
+        status:
+          type: string
+          enum: [pending, completed, cancelled]
+      required:
+        - id
+        - productid
+        - count
+        - status
+    BadRequest:
+      title: Bad Request
+      type: object
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: number
+        error:
+          type: string
+        message:
+          type: string

@@ -1,0 +1,15 @@
+version: 2
+contracts:
+  - filesystem:
+      directory: "./src/test/resources/filter_test"
+    provides:
+      - product_search_bff_v4.yaml
+    consumes:
+      - product_search_bff_v4.yaml
+report:
+  formatters:
+    - type: text
+      layout: table
+test:
+  resiliencyTests:
+    enable: all

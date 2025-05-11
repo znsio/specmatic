@@ -45,6 +45,8 @@ class FilterIntegrationTest {
                 Arguments.of("PATH='/findAvailableProducts' && QUERY!='type'", 1),
                 Arguments.of("PATH='/findAvailableProducts' && HEADERS='pageSize' && STATUS='2xx'", 2),
                 Arguments.of("PATH='/findAvailableProducts' && HEADERS!='pageSize' && STATUS='2xx'", 0),
+                Arguments.of("PATH='/findAvailableProducts' && EXAMPLE_NAME!='TIMEOUT' && STATUS='2xx'", 2),
+//                Arguments.of("PATH='/findAvailableProducts' && EXAMPLE_NAME='SUCCESS' && STATUS='2xx'", 2), - TODO: need to fix this
             )
         }
 

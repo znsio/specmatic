@@ -18,7 +18,6 @@ class FilterIntegrationTest {
     @ParameterizedTest
     @MethodSource("filterProvider")
     fun contractTestWithDifferentFilters(filter: String, expectedSuccessfulTestCount: Int) {
-        println("Running contract test with filter: $filter")
         System.setProperty("filter", filter)
 
         SpecmaticJUnitSupport().contractTest().forEach { it.executable.execute() }
@@ -33,8 +32,17 @@ class FilterIntegrationTest {
         @JvmStatic
         fun filterProvider(): Stream<Arguments> {
             return Stream.of(
-                Arguments.of("PATH='/findAvailableProducts' && METHOD='GET' && STATUS!='4xx' && STATUS!='5xx'", 2),
+                Arguments.of("PATH='/findAvailableProducts' && METHOD='GET' && (STATUS!='4xx' && STATUS!='5xx')", 2),
                 Arguments.of("PATH='/orders' && STATUS!='4xx' && STATUS!='5xx'", 3),
+                Arguments.of("PATH='/findAvailableProducts' && STATUS='2xx'", 2),
+                Arguments.of("(PATH='/findAvailableProducts' || PATH='/orders')  && STATUS='2xx'", 5),
+                Arguments.of("PATH='/findAvailableProducts,/orders'  && STATUS='2xx'", 5),
+                Arguments.of("PATH='/*'  && STATUS='2xx' && METHOD='POST'", 13),
+                Arguments.of("STATUS='2xx' && METHOD='DELETE'", 0),
+                Arguments.of("STATUS='2xx' && METHOD='GET'", 4),
+                Arguments.of("STATUS>'199' && STATUS<'300' && METHOD='GET'", 4),
+//                Arguments.of("PATH='/findAvailableProducts' && QUERY='type'", 1), - TODO: need to fix this
+                Arguments.of("PATH='/findAvailableProducts' && QUERY!='type'", 1),
             )
         }
 

@@ -43,6 +43,8 @@ class FilterIntegrationTest {
                 Arguments.of("STATUS>'199' && STATUS<'300' && METHOD='GET'", 4),
 //                Arguments.of("PATH='/findAvailableProducts' && QUERY='type'", 1), - TODO: need to fix this
                 Arguments.of("PATH='/findAvailableProducts' && QUERY!='type'", 1),
+                Arguments.of("PATH='/findAvailableProducts' && HEADERS='pageSize' && STATUS='2xx'", 2),
+                Arguments.of("PATH='/findAvailableProducts' && HEADERS!='pageSize' && STATUS='2xx'", 0),
             )
         }
 

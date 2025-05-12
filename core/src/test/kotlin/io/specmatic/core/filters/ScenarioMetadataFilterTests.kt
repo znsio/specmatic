@@ -561,8 +561,8 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `filter by examples`() {
-        val filterExpression = "EXAMPLE='SCOOBY_200_OK, ROCKY_200_OK'"
-        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('EXAMPLE=SCOOBY_200_OK, ROCKY_200_OK')"
+        val filterExpression = "EXAMPLE_NAME='SCOOBY_200_OK, ROCKY_200_OK'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('EXAMPLE_NAME=SCOOBY_200_OK, ROCKY_200_OK')"
         val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
         assertEquals(expectedEnhancedExpression, enhancedExpression)
     }

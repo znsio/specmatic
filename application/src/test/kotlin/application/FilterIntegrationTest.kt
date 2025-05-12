@@ -54,6 +54,7 @@ class FilterIntegrationTest {
                 Arguments.of("STATUS='2xx' && METHOD='DELETE'", 0),
                 Arguments.of("STATUS='2xx' && METHOD='GET'", 2),
                 Arguments.of("STATUS>'199' && STATUS<'300' && METHOD='GET'", 2),
+                Arguments.of("STATUS>='200' && STATUS<='300' && METHOD='GET'", 2),
 //                Arguments.of("PATH='/findAvailableProducts' && QUERY='type' && STATUS='2xx'", 1),
                 Arguments.of("PATH='/findAvailableProducts' && QUERY!='type' && STATUS='2xx'", 0),
                 Arguments.of("PATH='/findAvailableProducts' && EXAMPLE_NAME!='TIMEOUT' && STATUS='2xx'", 1),

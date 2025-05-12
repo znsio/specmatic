@@ -574,4 +574,20 @@ class ScenarioMetadataFilterTests {
         val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
         assertEquals(expectedEnhancedExpression, enhancedExpression)
     }
+
+    @Test
+    fun `filter by less than and greater than operator`() {
+        val filterExpression = "STATUS>'199' && STATUS<'300'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('STATUS>199') && $ENHANCED_FUNC_NAME('STATUS<300')"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(expectedEnhancedExpression, enhancedExpression)
+    }
+
+    @Test
+    fun `filter by less than equal to and greater than equal to operator`() {
+        val filterExpression = "STATUS>='200' && STATUS<='300'"
+        val expectedEnhancedExpression = "$ENHANCED_FUNC_NAME('STATUS>=200') && $ENHANCED_FUNC_NAME('STATUS<=300')"
+        val enhancedExpression = ScenarioMetadataFilter.standardizeExpression(filterExpression)
+        assertEquals(expectedEnhancedExpression, enhancedExpression)
+    }
 }

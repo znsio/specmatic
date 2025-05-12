@@ -6,7 +6,7 @@ enum class ScenarioFilterTags(val key: String) {
     STATUS("STATUS"),
     HEADERS("HEADERS"),
     QUERY("QUERY"),
-    EXAMPLE("EXAMPLE");
+    EXAMPLE_NAME("EXAMPLE_NAME");
 
     companion object {
         fun from(key: String): ScenarioFilterTags {

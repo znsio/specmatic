@@ -19,6 +19,6 @@ data class ScenarioMetadata(
             .with(STATUS.key, statusCode.toString())
             .with(HEADERS.key, header.joinToString(","))
             .with(QUERY.key, query.joinToString(","))
-            .with(EXAMPLE.key, exampleName)
+            .with(EXAMPLE_NAME.key, exampleName)
     }
 }

@@ -36,6 +36,10 @@ class EnhancedRHSValueEvalFunction : AbstractFunction() {
         return when (operator) {
             "=" -> values.any { checkCondition(it) }
             "!=" -> values.all { !checkCondition(it) }
+            ">" -> values.any { (scenarioValue.toIntOrNull() ?: 0) > (it.toIntOrNull() ?: 0) }
+            "<" -> values.any { (scenarioValue.toIntOrNull() ?: 0) < (it.toIntOrNull() ?: 0) }
+            ">=" -> values.any { (scenarioValue.toIntOrNull() ?: 0) >= (it.toIntOrNull() ?: 0) }
+            "<=" -> values.any { (scenarioValue.toIntOrNull() ?: 0) <= (it.toIntOrNull() ?: 0) }
             else -> throw IllegalArgumentException("Unsupported operator: $operator")
         }
     }
@@ -46,7 +50,14 @@ class EnhancedRHSValueEvalFunction : AbstractFunction() {
     }
 
     private fun parseCondition(condition: String): Triple<String, String, List<String>> {
-        val operator = if (condition.contains("!=")) "!=" else "="
+        val operator = when {
+            condition.contains("!=") -> "!="
+            condition.contains(">=") -> ">="
+            condition.contains("<=") -> "<="
+            condition.contains(">") -> ">"
+            condition.contains("<") -> "<"
+            else -> "="
+        }
         val parts = condition.split(operator)
         require(parts.size == 2) { "Invalid condition format: $condition" }
 

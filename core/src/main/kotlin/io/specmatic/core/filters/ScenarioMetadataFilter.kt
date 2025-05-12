@@ -92,9 +92,25 @@ data class ScenarioMetadataFilter(
                                     i += 2
                                     "!="
                                 }
+                                expr.startsWith("<=", i) -> {
+                                    i += 2
+                                    "<="
+                                }
+                                expr.startsWith(">=", i) -> {
+                                    i += 2
+                                    ">="
+                                }
                                 expr.startsWith("~", i) -> {
                                     i += 1
                                     "~"
+                                }
+                                expr.startsWith("<", i) -> {
+                                    i += 1
+                                    "<"
+                                }
+                                expr.startsWith(">", i) -> {
+                                    i += 1
+                                    ">"
                                 }
                                 expr.startsWith("=", i) -> {
                                     i += 1

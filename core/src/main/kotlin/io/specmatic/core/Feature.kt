@@ -1,11 +1,9 @@
 package io.specmatic.core
 
-import io.cucumber.gherkin.GherkinDocumentBuilder
-import io.cucumber.gherkin.Parser
-import io.cucumber.messages.IdGenerator
-import io.cucumber.messages.IdGenerator.Incrementing
+import io.cucumber.gherkin.GherkinParser
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
+import io.cucumber.messages.types.Source
 import io.ktor.http.*
 import io.specmatic.conversions.*
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
@@ -28,6 +26,7 @@ import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
 import java.io.File
 import java.net.URI
+import kotlin.jvm.optionals.getOrNull
 
 fun parseContractFileToFeature(
     contractPath: String,
@@ -126,11 +125,19 @@ data class Feature(
     val sourceRepositoryBranch:String? = null,
     val specification:String? = null,
     val serviceType:String? = null,
-    val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
     val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
     val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig),
-    val strictMode: Boolean = false
+    val strictMode: Boolean = false,
+    val exampleStore: ExampleStore = ExampleStore.empty()
 ): IFeature {
+    val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>>
+        get() {
+            return exampleStore.examples.groupBy(
+                keySelector = { it.name },
+                valueTransform = { it.example.request to it.example.response }
+            )
+        }
+
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         return this.copy(flagsBased = this.flagsBased.copy(
             generation = GenerativeTestsEnabled(onlyPositive),
@@ -838,8 +845,8 @@ data class Feature(
 
     fun overrideInlineExamples(externalExampleNames: Set<String>): Feature {
         return this.copy(
-            stubsFromExamples = this.stubsFromExamples.filterKeys { inlineExampleName ->
-                inlineExampleName !in externalExampleNames
+            exampleStore = this.exampleStore.filter { exampleData ->
+                exampleData.name !in externalExampleNames
             }
         )
     }
@@ -1915,10 +1922,10 @@ data class Feature(
         return loadExternalisedExamplesAndListUnloadableExamples().first
     }
 
-    fun validateExamplesOrException() {
+    fun validateExamplesOrException(disallowExtraHeaders: Boolean = true) {
         val errors = scenarios.mapNotNull { scenario ->
             try {
-                scenario.validExamplesOrException(flagsBased.copy(generation = NonGenerativeTests))
+                scenario.validExamplesOrException(flagsBased.copy(generation = NonGenerativeTests), disallowExtraHeaders)
                 null
             } catch (e: Throwable) {
                 exceptionCauseMessage(e)
@@ -1971,6 +1978,42 @@ data class Feature(
 
             return examplesDirFor(openApiFilePath, TEST_DIR_SUFFIX)
         }
+
+        fun from(
+            scenarios: List<Scenario> = emptyList(),
+            serverState: Map<String, Value> = emptyMap(),
+            name: String,
+            testVariables: Map<String, String> = emptyMap(),
+            testBaseURLs: Map<String, String> = emptyMap(),
+            path: String = "",
+            sourceProvider:String? = null,
+            sourceRepository:String? = null,
+            sourceRepositoryBranch:String? = null,
+            specification:String? = null,
+            serviceType:String? = null,
+            stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
+            specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+            flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig),
+            strictMode: Boolean = false
+        ): Feature {
+            return Feature(
+                scenarios = scenarios,
+                serverState = serverState,
+                name = name,
+                testVariables = testVariables,
+                testBaseURLs = testBaseURLs,
+                path = path,
+                sourceProvider = sourceProvider,
+                sourceRepository = sourceRepository,
+                sourceRepositoryBranch = sourceRepositoryBranch,
+                specification = specification,
+                serviceType = serviceType,
+                specmaticConfig = specmaticConfig,
+                flagsBased = flagsBased,
+                strictMode = strictMode,
+                exampleStore = ExampleStore.from(stubsFromExamples, type = ExampleType.INLINE)
+            )
+        }
     }
 }
 
@@ -2010,7 +2053,7 @@ private fun toPatternInfo(step: StepInfo, rowsList: List<TableRow>): Pair<String
 private fun toFacts(rest: String, fixtures: Map<String, Value>): Map<String, Value> {
     return try {
         jsonStringToValueMap(rest)
-    } catch (notValidJSON: Exception) {
+    } catch (notValidJSON: Throwable) {
         val factTokens = breakIntoPartsMaxLength(rest, 2)
         val name = factTokens[0]
         val data = factTokens.getOrNull(1)?.let { StringValue(it) } ?: fixtures.getOrDefault(name, True)
@@ -2174,7 +2217,7 @@ private fun lexScenario(
     return scenarioInfo.copy(isGherkinScenario = true)
 }
 
-private fun listOfDatatableRows(it: Step) = it.dataTable?.rows ?: mutableListOf()
+private fun listOfDatatableRows(it: Step): MutableList<TableRow> = it.dataTable.getOrNull()?.rows.orEmpty().toMutableList()
 
 fun parseEnum(step: StepInfo): Pair<String, Pattern> {
     val tokens = step.text.split(" ")
@@ -2337,19 +2380,18 @@ fun breakIntoPartsMaxLength(whole: String, separator: String, partCount: Int) =
 
 private val HTTP_METHODS = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS")
 
-fun parseGherkinString(gherkinData: String, sourceFilePath: String): GherkinDocument {
-    return parseGherkinString(gherkinData)
-        ?: throw ContractException("There was no contract in the file $sourceFilePath.")
+internal fun parseGherkinString(gherkinData: String, sourceFilePath: String): GherkinDocument {
+    val parser = GherkinParser.builder().includeSource(false).includePickles(false).build()
+    val envelope = Envelope.of(Source(sourceFilePath, gherkinData, SourceMediaType.TEXT_X_CUCUMBER_GHERKIN_PLAIN))
+
+    val gherkinDocument = parser.parse(envelope).findFirst().getOrNull()?.gherkinDocument?.getOrNull()
+    return gherkinDocument ?: throw ContractException("There was no contract in the file $sourceFilePath.")
 }
 
-internal fun parseGherkinString(gherkinData: String): GherkinDocument? {
-    val idGenerator: IdGenerator = Incrementing()
-    val parser = Parser(GherkinDocumentBuilder(idGenerator))
-    return parser.parse(gherkinData)
+internal fun lex(gherkinDocument: GherkinDocument, filePath: String = ""): Pair<String, List<Scenario>> {
+    val feature = gherkinDocument.unwrapFeature()
+    return Pair(feature.name, lex(feature.children, filePath))
 }
-
-internal fun lex(gherkinDocument: GherkinDocument, filePath: String = ""): Pair<String, List<Scenario>> =
-    Pair(gherkinDocument.feature.name, lex(gherkinDocument.feature.children, filePath))
 
 internal fun lex(featureChildren: List<FeatureChild>, filePath: String): List<Scenario> {
     return scenarioInfos(featureChildren, filePath)
@@ -2392,7 +2434,7 @@ fun scenarioInfos(
 
     val backgroundInfo = backgroundScenario(featureChildren)?.let { feature ->
         lexScenario(
-            feature.background.steps
+            feature.unwrapBackground().steps
                 .filter { !it.text.contains("openapi", true) }
                 .filter { !it.text.contains("wsdl", true) },
             listOf(),
@@ -2404,15 +2446,18 @@ fun scenarioInfos(
     } ?: ScenarioInfo()
 
     val specmaticScenarioInfos = scenarios(featureChildren).map { featureChild ->
-        if (featureChild.scenario.name.isBlank() && openApiSpecification == null && wsdlSpecification == null)
-            throw ContractException("Error at line ${featureChild.scenario.location.line}: scenario name must not be empty")
+        val scenario = featureChild.scenario.orElseThrow {
+            IllegalStateException("Expected a Scenario in FeatureChild, but none was present.")
+        }
 
-        val backgroundInfoCopy = backgroundInfo.copy(scenarioName = featureChild.scenario.name)
+        if (scenario.name.isBlank() && openApiSpecification == null && wsdlSpecification == null)
+            throw ContractException("Error at line ${scenario.location.line}: scenario name must not be empty")
 
+        val backgroundInfoCopy = backgroundInfo.copy(scenarioName = scenario.name)
         lexScenario(
-            featureChild.scenario.steps,
-            featureChild.scenario.examples,
-            featureChild.scenario.tags,
+            scenario.steps,
+            scenario.examples,
+            scenario.tags,
             backgroundInfoCopy,
             filePath,
             includedSpecifications
@@ -2434,29 +2479,25 @@ private fun toIncludedSpecification(
 ): IncludedSpecification? =
     selector(featureChildren)?.run { creator(text.split(" ")[1]) }
 
-private fun backgroundScenario(featureChildren: List<FeatureChild>) =
-    featureChildren.firstOrNull { it.background != null }
+private fun backgroundScenario(featureChildren: List<FeatureChild>) = featureChildren.firstOrNull { it.background.isPresent }
 
 private fun backgroundOpenApi(featureChildren: List<FeatureChild>): Step? {
-    return backgroundScenario(featureChildren)?.let { background ->
-        background.background.steps.firstOrNull {
-            it.keyword.contains("Given", true)
-                    && it.text.contains("openapi", true)
+    return backgroundScenario(featureChildren)?.let {
+        it.unwrapBackground().steps.firstOrNull { step ->
+            step.keyword.contains("Given", true) && step.text.contains("openapi", true)
         }
     }
 }
 
 private fun backgroundWsdl(featureChildren: List<FeatureChild>): Step? {
-    return backgroundScenario(featureChildren)?.let { background ->
-        background.background.steps.firstOrNull {
-            it.keyword.contains("Given", true)
-                    && it.text.contains("wsdl", true)
+    return backgroundScenario(featureChildren)?.let {
+        it.unwrapBackground().steps.firstOrNull { step ->
+            step.keyword.contains("Given", true) && step.text.contains("wsdl", true)
         }
     }
 }
 
-private fun scenarios(featureChildren: List<FeatureChild>) =
-    featureChildren.filter { it.background == null }
+private fun scenarios(featureChildren: List<FeatureChild>) = featureChildren.filter { it.background.isEmpty }
 
 fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature("New Feature", listOf(stub))
 

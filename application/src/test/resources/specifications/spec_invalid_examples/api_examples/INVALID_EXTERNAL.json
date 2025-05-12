@@ -1,0 +1,23 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/test",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "name": "john doe",
+      "email": "INVALID-EMAIL"
+    }
+  },
+  "http-response": {
+    "status": 201,
+    "status-text": "Created",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "id": "SHOULD-BE-AN-NUMBER"
+    }
+  }
+}

@@ -207,15 +207,6 @@ data class HttpPathPattern(
         return pathSegmentPatterns.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
     }
 
-    fun withWildcardPathSegments(): HttpPathPattern {
-        return this.copy(
-            pathSegmentPatterns = this.pathSegmentPatterns.map {
-                if (it.pattern is ExactValuePattern) it
-                else it.copy(pattern = AnythingPattern)
-            }
-        )
-    }
-
     private fun negatively(
         patterns: List<URLPathSegmentPattern>,
         row: Row,
@@ -296,13 +287,15 @@ data class HttpPathPattern(
     fun fixValue(path: String?, resolver: Resolver): String {
         if (path == null) return this.generate(resolver)
 
-        val pathSegments = path.split("/".toRegex()).filter { it.isNotEmpty() }.map(::removeKeyFromParameterToken)
+        val pathSegments = path.split("/".toRegex()).filter { it.isNotEmpty() }
         if (pathSegmentPatterns.size != pathSegments.size) return this.generate(resolver)
 
         val pathHadPrefix = path.startsWith("/")
         return pathSegmentPatterns.zip(pathSegments).map { (urlPathPattern, token) ->
+            val tokenWithoutParameter = removeKeyFromParameterToken(token)
             val updatedResolver = resolver.updateLookupPath("PATH-PARAMS", urlPathPattern.key.orEmpty())
-            urlPathPattern.fixValue(urlPathPattern.tryParse(token, updatedResolver), updatedResolver)
+            val result = urlPathPattern.fixValue(urlPathPattern.tryParse(tokenWithoutParameter, updatedResolver), updatedResolver)
+            token.takeIf { isPatternToken(tokenWithoutParameter) && isPatternToken(result) } ?: result
         }.joinToString("/", prefix = "/".takeIf { pathHadPrefix }.orEmpty() )
     }
 

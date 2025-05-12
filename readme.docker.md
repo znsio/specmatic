@@ -27,7 +27,7 @@ Will use the OpenAPI files in the current directory to run backward compatibilit
 
 #### 4. Running Specmatic Example Linter/Validation
 ```shell
-docker run -v "./openapi.yaml:/openapi.yaml" znsio/specmatic examples validate --contract-file="/openapi.yaml" --examples-to-validate=INLINE
+docker run -v "./openapi.yaml:/openapi.yaml" znsio/specmatic examples validate --spec-file="/openapi.yaml" --examples-to-validate=INLINE
 ```
 Will use the OpenAPI file `openapi.yaml` to validate the examples in the OpenAPI file.
 

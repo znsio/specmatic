@@ -1,7 +1,7 @@
 package io.specmatic.conversions
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
-import io.cucumber.messages.internal.com.fasterxml.jackson.databind.ObjectMapper
 import io.cucumber.messages.types.Step
 import io.ktor.util.reflect.*
 import io.specmatic.core.*
@@ -249,7 +249,7 @@ class OpenApiSpecification(
             )
         }
 
-        return Feature(
+        return Feature.from(
             updatedScenarios, name = name, path = openApiFilePath, sourceProvider = sourceProvider,
             sourceRepository = sourceRepository,
             sourceRepositoryBranch = sourceRepositoryBranch,
@@ -743,8 +743,7 @@ class OpenApiSpecification(
                 requestExamples.values.toList().map { value: Any? -> value?.toString() ?: "" }
                     .map { valueString: String ->
                         if (valueString.contains("externalValue")) {
-                            ObjectMapper().readValue(valueString, Map::class.java).values.first()
-                                .toString()
+                            ObjectMapper().readValue(valueString, Map::class.java).values.first().toString()
                         } else valueString
                     },
                 name = exampleName,

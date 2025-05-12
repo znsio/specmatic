@@ -6,12 +6,12 @@ plugins {
 
 dependencies {
     implementation("io.netty:netty-codec-http:4.1.118.Final")
-    implementation("joda-time:joda-time:2.13.1")
+    implementation("joda-time:joda-time:2.14.0")
     implementation("net.minidev:json-smart:2.5.2")
 
-    implementation("com.ezylang:EvalEx:3.4.0")
+    implementation("com.ezylang:EvalEx:3.5.0")
     implementation("org.apache.commons:commons-lang3:3.17.0")
-    implementation("io.cucumber:gherkin:22.0.0")
+    implementation("io.cucumber:gherkin:32.1.1")
     implementation("io.ktor:ktor-server-netty:2.3.13")
     implementation("io.ktor:ktor-server-core:2.3.13")
     implementation("io.ktor:ktor-client-core-jvm:2.3.13")
@@ -39,7 +39,7 @@ dependencies {
 
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.4")
     implementation("com.github.mifmif:generex:1.0.2")
-    implementation("dk.brics:automaton:1.12-1")
+    implementation("dk.brics:automaton:1.12-4")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     testImplementation("org.assertj:assertj-core:3.27.3")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.11.4")

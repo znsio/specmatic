@@ -1,6 +1,5 @@
 package io.specmatic.core.pattern
 
-import io.specmatic.core.parseGherkinString
 import org.junit.jupiter.api.Test
 import io.specmatic.shouldMatch
 
@@ -31,7 +30,9 @@ class StringMatchTest {
             | id   | (number) |
             | name | (string?) |
         """.trimIndent()
-        val pattern = rowsToTabularPattern(parseGherkinString(gherkin)!!.feature.children[0].scenario.steps[0].dataTable.rows)
+
+        val rows = getRows(gherkin, stepIdx = 0)
+        val pattern = rowsToTabularPattern(rows)
         val value = parsedValue("""{"id": 10, "name": null}""")
 
         value shouldMatch pattern

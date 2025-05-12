@@ -108,6 +108,8 @@ data class Results(val results: List<Result> = emptyList()) {
     }
 
     fun summary(): String {
+        if (results.isEmpty()) return "No examples found"
+
         val (successCount, failureCount, partialFailureCount) = getResultCounts()
         return when {
             successCount == results.size -> "All $successCount example(s) are valid."

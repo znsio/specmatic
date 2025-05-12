@@ -1,0 +1,17 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/hello/10",
+    "headers": {
+      "X-API-KEY": "abc123",
+      "X-Extra-Header": "extraValue"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "headers": {
+      "X-Extra-Header": "extraValue"
+    },
+    "body": "Hello, World!"
+  }
+}

@@ -1,6 +1,7 @@
 package io.specmatic.core
 
 import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.stub.captureStandardOutput
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -2783,6 +2784,31 @@ paths:
         val results: Results = testBackwardCompatibility(olderContract, newerContract)
         println(results.report())
         assertThat(results.success()).isFalse()
+    }
+
+    @Test
+    fun `should show a message when testing each API`() {
+        val feature: Feature =
+            """
+                openapi: 3.0.0
+                info:
+                  title: Sample API
+                  version: 0.1.9
+                paths:
+                  /products:
+                    post:
+                      summary: Create a product
+                      description: Create a new product entry
+                      responses:
+                        '201':
+                          description: Created
+        """.trimIndent().openAPIToContract()
+
+        val (stdout, _) = captureStandardOutput {
+            testBackwardCompatibility(feature, feature)
+        }
+
+        assertThat(stdout).contains("[Compatibility Check] Scenario: POST /products -> 201")
     }
 
     @Test

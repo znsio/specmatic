@@ -133,7 +133,7 @@ data class ListPattern(
     }
 
     private fun dictionaryLookup(resolver: Resolver): Value {
-        return resolver.generateList(pattern)
+        return resolver.generateList(this)
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {

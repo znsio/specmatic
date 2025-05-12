@@ -6639,6 +6639,9 @@ paths:
             val stubbedRequest = HttpRequest(
                 method = "POST",
                 path = "/data",
+                headers = mapOf(
+                    "Content-Type" to "application/octet-stream"
+                ),
                 body = StringValue(base64EncodedRequestBody)
             )
 

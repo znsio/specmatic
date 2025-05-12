@@ -6,7 +6,7 @@ plugins {
 
 dependencies {
     implementation("io.netty:netty-codec-http:4.1.118.Final")
-    implementation("joda-time:joda-time:2.13.1")
+    implementation("joda-time:joda-time:2.14.0")
     implementation("net.minidev:json-smart:2.5.2")
 
     implementation("com.arakelian:java-jq:2.0.0")
@@ -15,7 +15,7 @@ dependencies {
     implementation("org.assertj:assertj-core:3.27.3")
     implementation("org.junit.jupiter:junit-jupiter-api:5.11.4")
 
-    implementation("info.picocli:picocli:4.7.6")
+    implementation("info.picocli:picocli:4.7.7")
     implementation("io.ktor:ktor-client-core-jvm:2.3.13")
     implementation("io.ktor:ktor-network-tls:2.3.13")
     implementation("io.ktor:ktor-network-tls-certificates:2.3.13")

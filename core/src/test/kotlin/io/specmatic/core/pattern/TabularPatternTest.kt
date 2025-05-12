@@ -9,6 +9,8 @@ import io.specmatic.shouldMatch
 import io.specmatic.shouldNotMatch
 import io.specmatic.stub.HttpStub
 import com.fasterxml.jackson.annotation.JsonProperty
+import io.cucumber.messages.types.Scenario
+import io.specmatic.conversions.unwrapFeature
 import io.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -121,8 +123,8 @@ Given pattern Id
         val value = parsedValue("""{"ids": [{"id": 12345}, {"id": 12345}]}""")
         val scenario = getScenario(gherkin)
 
-        val idsPattern = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
-        val idPattern = rowsToTabularPattern(scenario.steps[1].dataTable.rows)
+        val idsPattern = rowsToTabularPattern(getRows(scenario, stepIdx = 0))
+        val idPattern = rowsToTabularPattern(getRows(scenario, stepIdx = 1))
 
         val resolver = Resolver(emptyMap(), false, mapOf("(Ids)" to idsPattern, "(Id)" to idPattern))
 
@@ -143,7 +145,7 @@ Given pattern Ids
         val value = parsedValue("""{"ids": [12345, 98765]}""")
         val scenario = getScenario(gherkin)
 
-        val idsPattern = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
+        val idsPattern = rowsToTabularPattern(getRows(scenario, stepIdx = 0))
 
         val resolver = Resolver(emptyMap(), false, mapOf("(Ids)" to idsPattern))
 
@@ -204,8 +206,8 @@ And pattern Address
 """.trim()
 
         val scenario = getScenario(gherkin)
-        val userPattern = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
-        val addressPattern = rowsToTabularPattern(scenario.steps[1].dataTable.rows)
+        val userPattern = rowsToTabularPattern(getRows(scenario, stepIdx = 0))
+        val addressPattern = rowsToTabularPattern(getRows(scenario, stepIdx = 1))
 
         val row = Row(listOf("id", "flat"), listOf("10", "100"))
 
@@ -235,7 +237,7 @@ Given request-body
 
         val scenario = getScenario(gherkin)
 
-        val patternWithNullValue = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
+        val patternWithNullValue = rowsToTabularPattern(getRows(scenario, stepIdx = 0))
         val value = parsedValue("""{"nothing": null}""")
         value shouldMatch patternWithNullValue
     }
@@ -252,7 +254,7 @@ Given request-body
 
         val scenario = getScenario(gherkin)
 
-        val patternWithNullValue = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
+        val patternWithNullValue = rowsToTabularPattern(getRows(scenario, stepIdx = 0))
         val value = patternWithNullValue.generate(Resolver())
 
         assertTrue(value.jsonObject.getValue("nothing") is NullValue)
@@ -270,7 +272,7 @@ Given request-body
 
         val scenario = getScenario(gherkin)
 
-        val patternWithNullValue = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
+        val patternWithNullValue = rowsToTabularPattern(getRows(scenario, stepIdx = 0))
         val example = Row(listOf("nothing"), listOf("(null)"))
         val newPatterns = patternWithNullValue.newBasedOn(example, Resolver()).map { it.value }.toList()
 
@@ -295,7 +297,7 @@ Given request-body
 
         val scenario = getScenario(gherkin)
 
-        val patternWithNullValue = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
+        val patternWithNullValue = rowsToTabularPattern(getRows(scenario, stepIdx = 0))
         val example = Row(listOf("nothing"), listOf("(null)"))
         assertThrows<ContractException> {
             patternWithNullValue.newBasedOn(example, Resolver()).map { it.value }.toList()
@@ -527,9 +529,11 @@ Feature: Recursive test
     }
 }
 
-internal fun getRows(gherkin: String) = getScenario(gherkin).steps[0].dataTable.rows
+internal fun getRows(gherkin: String, stepIdx: Int = 0) = getRows(getScenario(gherkin), stepIdx = stepIdx)
 
-internal fun getScenario(gherkin: String) = parseGherkinString(gherkin)!!.feature.children[0].scenario
+internal fun getScenario(gherkin: String) = parseGherkinString(gherkin, "").unwrapFeature().children[0].scenario.orElseThrow()
+
+internal fun getRows(scenario: Scenario, stepIdx: Int = 0) = scenario.steps[stepIdx].dataTable.orElseThrow().rows
 
 data class Data(
     @JsonProperty("id") val name: Int,

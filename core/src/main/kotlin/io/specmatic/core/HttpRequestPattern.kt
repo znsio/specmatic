@@ -71,7 +71,7 @@ data class HttpRequestPattern(
         }
     }
 
-    fun matchesPathAndMethod(
+    private fun matchesPathAndMethod(
         incomingHttpRequest: HttpRequest,
         resolver: Resolver
     ): Result {
@@ -95,18 +95,28 @@ data class HttpRequestPattern(
         }
     }
 
+    fun matchesPathStructureMethodAndContentType(incomingHttpRequest: HttpRequest, resolver: Resolver): Result {
+        val contentTypeMatches = headersPattern.matchContentType(incomingHttpRequest.headers to resolver)
+        if (contentTypeMatches is MatchFailure<*>) {
+            return contentTypeMatches.error.breadCrumb("REQUEST.HEADERS")
+        }
+
+        val pathAndMethodMatch = matchesPathAndMethod(incomingHttpRequest, resolver)
+        return pathAndMethodMatch.takeUnless {
+            it is Failure && it.hasReason(FailureReason.URLPathParamMismatchButSameStructure)
+        } ?: Success()
+    }
+
     private fun matchSecurityScheme(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver, failures) = parameters
 
-        val matchFailures = mutableListOf<Failure>()
-        val matchingSecurityScheme: OpenAPISecurityScheme = securitySchemes.firstOrNull {
-            when (val result = it.matches(httpRequest, resolver)) {
-                is Failure -> false.also { matchFailures.add(result) }
-                is Success -> true
-            }
-        } ?: return MatchSuccess(Triple(httpRequest, resolver, failures.plus(matchFailures)))
+        val (modifiedHttpRequest, results) = securitySchemes.fold(Pair(httpRequest, emptyList<Result>())) { (request, results), securityScheme ->
+            securityScheme.removeParam(request) to results.plus(securityScheme.matches(request, resolver))
+        }
 
-        return MatchSuccess(Triple(matchingSecurityScheme.removeParam(httpRequest), resolver, failures))
+        val hasSuccess = results.any { it is Success }
+        val newFailures = if (hasSuccess) emptyList() else results.filterIsInstance<Failure>()
+        return MatchSuccess(Triple(modifiedHttpRequest, resolver, failures.plus(newFailures)))
     }
 
     fun matchesSignature(other: HttpRequestPattern): Boolean =
@@ -313,7 +323,11 @@ data class HttpRequestPattern(
                     resolver
                 )
 
-                requestPattern.copy(headersPattern = HttpHeadersPattern(headersFromRequest, ancestorHeaders = this.headersPattern.pattern))
+                requestPattern.copy(
+                    headersPattern = headersPattern.copy(
+                        pattern = headersFromRequest, ancestorHeaders = this.headersPattern.pattern
+                    )
+                )
             }
 
             requestPattern = attempt(breadCrumb = "BODY") {
@@ -859,12 +873,6 @@ data class HttpRequestPattern(
             queryParams = httpQueryParamPattern.fixValue(request.queryParams, resolver),
             headers = headersPattern.fixValue(request.headers, resolver),
             body = body.fixValue(request.body, resolver)
-        )
-    }
-
-    fun withWildcardPathPattern(): HttpRequestPattern {
-        return this.copy(
-            httpPathPattern = this.httpPathPattern?.withWildcardPathSegments()
         )
     }
 

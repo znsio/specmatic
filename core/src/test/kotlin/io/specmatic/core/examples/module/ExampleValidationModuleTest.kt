@@ -482,6 +482,26 @@ class ExampleValidationModuleTest {
         }
     }
 
+    @Test
+    fun `should validate request content-type for 4xx examples along with path structure and method`(@TempDir tempDir: File) {
+        val scenario = Scenario(ScenarioInfo(
+            httpRequestPattern = HttpRequestPattern(
+                method = "GET",
+                httpPathPattern = buildHttpPathPattern("/test"),
+                headersPattern = HttpHeadersPattern(contentType = "application/json-patch-query+json")
+            ),
+            httpResponsePattern = HttpResponsePattern(status = 400)
+        ))
+        val example = ScenarioStub(
+            request = HttpRequest("GET", "/test", headers = mapOf("Content-Type" to "application/json")),
+            response = HttpResponse(status = 400, headers = mapOf("Content-Type" to "application/json"))
+        ).toExample(tempDir)
+        val feature = Feature(listOf(scenario), name = "")
+        val result = exampleValidationModule.validateExample(feature, example)
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+    }
+
     private fun ScenarioStub.toPartialExample(tempDir: File): File {
         val example = JSONObjectValue(mapOf("partial" to this.toJSON()))
         val exampleFile = tempDir.resolve("example.json")

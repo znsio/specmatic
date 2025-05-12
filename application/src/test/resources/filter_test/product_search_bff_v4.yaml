@@ -78,16 +78,12 @@ paths:
         examples:
           SUCCESS:
             value: gadget
-          TIMEOUT:
-            value: other
       - name: pageSize
         in: query
         schema:
           type: integer
-        required: true
+        required: false
         examples:
-          SUCCESS:
-            value: 10
           TIMEOUT:
             value: 20
       - name: Content-Type
@@ -98,8 +94,6 @@ paths:
         examples:
           SUCCESS:
             value: "application/json"
-          TIMEOUT:
-            value: "text/plain"
       - name: Accept
         in: header
         schema:
@@ -108,8 +102,6 @@ paths:
         examples:
           SUCCESS:
             value: "*/*"
-          TIMEOUT:
-            value: "*"
     get:
       summary: Fetch product details
       responses:

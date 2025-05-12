@@ -144,8 +144,12 @@ data class JSONObjectPattern(
             else -> return HasFailure("Can't generate object value from type ${value.displayableType()}")
         }
 
+        val adjustedPattern = patternToConsider.additionalProperties.updatePatternMap(
+            patternMap = patternToConsider.pattern, valueMap = valueToConsider
+        )
+
         return fill(
-            jsonPatternMap = patternToConsider.pattern, jsonValueMap = valueToConsider,
+            jsonPatternMap = adjustedPattern, jsonValueMap = valueToConsider,
             typeAlias = patternToConsider.typeAlias, resolver = resolver,
             removeExtraKeys = removeExtraKeys
         ).realise(

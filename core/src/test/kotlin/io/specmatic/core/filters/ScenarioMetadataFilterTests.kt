@@ -1,6 +1,5 @@
 package io.specmatic.core.filters
 
-import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.ENHANCED_FUNC_NAME
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
@@ -9,7 +8,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.io.File
 
 class ScenarioMetadataFilterTests {
     private fun createScenarioMetadata(

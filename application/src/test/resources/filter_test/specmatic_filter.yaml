@@ -10,6 +10,3 @@ report:
   formatters:
     - type: text
       layout: table
-test:
-  resiliencyTests:
-    enable: all

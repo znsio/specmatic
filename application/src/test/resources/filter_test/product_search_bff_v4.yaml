@@ -70,10 +70,10 @@ paths:
                 $ref: '#/components/schemas/BadRequest'
   /findAvailableProducts:
     parameters:
-      - schema:
-          type: string
-        name: type
+      - name: type
         in: query
+        schema:
+          type: string
         required: false
         examples:
           SUCCESS:
@@ -81,7 +81,7 @@ paths:
           TIMEOUT:
             value: other
       - name: pageSize
-        in: header
+        in: query
         schema:
           type: integer
         required: true
@@ -90,6 +90,26 @@ paths:
             value: 10
           TIMEOUT:
             value: 20
+      - name: Content-Type
+        in: header
+        schema:
+          type: string
+        required: false
+        examples:
+          SUCCESS:
+            value: "application/json"
+          TIMEOUT:
+            value: "text/plain"
+      - name: Accept
+        in: header
+        schema:
+          type: string
+        required: false
+        examples:
+          SUCCESS:
+            value: "*/*"
+          TIMEOUT:
+            value: "*"
     get:
       summary: Fetch product details
       responses:

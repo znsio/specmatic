@@ -31,7 +31,6 @@ class EnhancedRHSValueEvalFunction : AbstractFunction() {
                 PATH.key -> value == scenarioValue || matchesPath(value, scenarioValue)
                 HEADERS.key -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
                 QUERY.key -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
-                EXAMPLE_NAME.key -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
                 else -> value == scenarioValue
             }
         }

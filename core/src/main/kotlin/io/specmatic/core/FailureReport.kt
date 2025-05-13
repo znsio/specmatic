@@ -29,7 +29,7 @@ data class FailureReport(val contractPath: String?, private val scenarioMessage:
             "$contractLine${reportDetails.prependIndent(reportIndent)}"
         } ?: reportDetails
 
-        return report.trim()
+        return report.trimIndent()
     }
 
     override fun toString(): String = toText()
@@ -41,13 +41,13 @@ data class FailureReport(val contractPath: String?, private val scenarioMessage:
     }
 
     private fun matchFailureDetails(matchFailureDetails: MatchFailureDetails): String {
-        return matchFailureDetails.let { (breadCrumbs, errorMessages) ->
-            val breadCrumbString = startOfBreadCrumbPrefix(breadCrumbString(breadCrumbs))
+        val (breadCrumbs, errorMessages) = matchFailureDetails
 
-            val errorMessagesString = errorMessagesToString(errorMessages)
+        val breadCrumbString = startOfBreadCrumbPrefix(breadCrumbString(breadCrumbs))
 
-            "$breadCrumbString${System.lineSeparator()}${System.lineSeparator()}${errorMessagesString.prependIndent("   ")}".trim()
-        }
+        val errorMessagesString = errorMessagesToString(errorMessages)
+
+        return listOf(breadCrumbString, errorMessagesString.prependIndent("   ")).filter { it.isNotBlank() }.joinToString("${System.lineSeparator()}${System.lineSeparator()}")
     }
 
     private fun errorMessagesToString(errorMessages: List<String>) =

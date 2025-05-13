@@ -9,8 +9,8 @@ tags:
     description: API still under development
 paths:
   /products:
-    summary: Create a new product
     post:
+      summary: Create a new product
       requestBody:
         content:
           application/json:
@@ -69,41 +69,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/BadRequest'
   /findAvailableProducts:
-    parameters:
-      - name: type
-        in: query
-        schema:
-          type: string
-        required: false
-        examples:
-          SUCCESS:
-            value: gadget
-      - name: pageSize
-        in: query
-        schema:
-          type: integer
-        required: false
-        examples:
-          TIMEOUT:
-            value: 20
-      - name: Content-Type
-        in: header
-        schema:
-          type: string
-        required: false
-        examples:
-          SUCCESS:
-            value: "application/json"
-      - name: Accept
-        in: header
-        schema:
-          type: string
-        required: false
-        examples:
-          SUCCESS:
-            value: "*/*"
     get:
       summary: Fetch product details
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+          required: false
+          examples:
+            SUCCESS:
+              value: gadget
+            TIMEOUT:
+              value: other
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [name, inventory]
+          required: false
+          examples:
+            SUCCESS:
+              value: name
+        - name: pageSize
+          in: header
+          schema:
+            type: integer
+          required: true
+          examples:
+            SUCCESS:
+              value: 10
+            TIMEOUT:
+              value: 20
+        - name: request-id
+          in: header
+          schema:
+            type: string
+          required: false
+          examples:
+            SUCCESS:
+              value: "abc123"
+            TIMEOUT:
+              value: "xyz321"
       responses:
         '200':
           description: OK

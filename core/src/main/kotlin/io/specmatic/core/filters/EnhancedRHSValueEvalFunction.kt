@@ -6,8 +6,7 @@ import com.ezylang.evalex.data.EvaluationValue
 import com.ezylang.evalex.functions.AbstractFunction
 import com.ezylang.evalex.functions.FunctionParameter
 import com.ezylang.evalex.parser.Token
-import io.specmatic.core.filters.ScenarioFilterTags.PATH
-import io.specmatic.core.filters.ScenarioFilterTags.STATUS_CODE
+import io.specmatic.core.filters.ScenarioFilterTags.*
 import java.util.regex.Pattern
 
 @FunctionParameter(name = "value")
@@ -28,17 +27,21 @@ class EnhancedRHSValueEvalFunction : AbstractFunction() {
 
         fun checkCondition(value: String): Boolean {
             return when (label) {
-                STATUS_CODE.key -> value == scenarioValue || isInRange(value, scenarioValue)
+                STATUS.key -> value == scenarioValue || isInRange(value, scenarioValue)
                 PATH.key -> value == scenarioValue || matchesPath(value, scenarioValue)
                 else -> value == scenarioValue
             }
         }
 
         return when (operator) {
-                "=" -> values.any { checkCondition(it) }
-                "!=" -> values.all { !checkCondition(it) }
-                else -> throw IllegalArgumentException("Unsupported operator: $operator")
-            }
+            "=" -> values.any { checkCondition(it) }
+            "!=" -> values.all { !checkCondition(it) }
+            ">" -> values.any { (scenarioValue.toIntOrNull() ?: 0) > (it.toIntOrNull() ?: 0) }
+            "<" -> values.any { (scenarioValue.toIntOrNull() ?: 0) < (it.toIntOrNull() ?: 0) }
+            ">=" -> values.any { (scenarioValue.toIntOrNull() ?: 0) >= (it.toIntOrNull() ?: 0) }
+            "<=" -> values.any { (scenarioValue.toIntOrNull() ?: 0) <= (it.toIntOrNull() ?: 0) }
+            else -> throw IllegalArgumentException("Unsupported operator: $operator")
+        }
     }
 
     private fun matchesPath(value: String, scenarioValue: String): Boolean {
@@ -47,7 +50,14 @@ class EnhancedRHSValueEvalFunction : AbstractFunction() {
     }
 
     private fun parseCondition(condition: String): Triple<String, String, List<String>> {
-        val operator = if (condition.contains("!=")) "!=" else "="
+        val operator = when {
+            condition.contains("!=") -> "!="
+            condition.contains(">=") -> ">="
+            condition.contains("<=") -> "<="
+            condition.contains(">") -> ">"
+            condition.contains("<") -> "<"
+            else -> "="
+        }
         val parts = condition.split(operator)
         require(parts.size == 2) { "Invalid condition format: $condition" }
 

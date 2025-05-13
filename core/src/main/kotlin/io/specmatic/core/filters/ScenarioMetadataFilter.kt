@@ -37,11 +37,8 @@ data class ScenarioMetadataFilter(
         }
 
         fun standardizeExpression(expression: String): String {
-            val regexPattern = "\\b\\w+(=|!=)('[^']*([,x*])[^']*')".trimIndent().toRegex()
-
-            return regexPattern.replace(expression) { matchResult ->
-                "$ENHANCED_FUNC_NAME('${matchResult.value.filter { it != '\'' }}')"
-            }
+            val expressionStandardizer = ExpressionStandardizer()
+            return expressionStandardizer.tokenizeExpression(expression)
         }
 
         fun <T : HasScenarioMetadata> filterUsing(

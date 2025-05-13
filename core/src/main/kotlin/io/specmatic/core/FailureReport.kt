@@ -29,7 +29,7 @@ data class FailureReport(val contractPath: String?, private val scenarioMessage:
             "$contractLine${reportDetails.prependIndent(reportIndent)}"
         } ?: reportDetails
 
-        return report.trim()
+        return report.trimIndent()
     }
 
     override fun toString(): String = toText()
@@ -46,7 +46,7 @@ data class FailureReport(val contractPath: String?, private val scenarioMessage:
 
             val errorMessagesString = errorMessagesToString(errorMessages)
 
-            "$breadCrumbString${System.lineSeparator()}${System.lineSeparator()}${errorMessagesString.prependIndent("   ")}".trim()
+            listOf(breadCrumbString, errorMessagesString.prependIndent("   ")).filter { it.isNotBlank() }.joinToString("${System.lineSeparator()}${System.lineSeparator()}")
         }
     }
 

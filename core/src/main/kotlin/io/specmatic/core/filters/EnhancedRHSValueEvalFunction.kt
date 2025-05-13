@@ -29,6 +29,9 @@ class EnhancedRHSValueEvalFunction : AbstractFunction() {
             return when (label) {
                 STATUS.key -> value == scenarioValue || isInRange(value, scenarioValue)
                 PATH.key -> value == scenarioValue || matchesPath(value, scenarioValue)
+                HEADERS.key -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
+                QUERY.key -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
+                EXAMPLE_NAME.key -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
                 else -> value == scenarioValue
             }
         }
@@ -81,5 +84,10 @@ class EnhancedRHSValueEvalFunction : AbstractFunction() {
         val len = multiplier.toString().length - 1
         val rangeStart = range.dropLast(len).toIntOrNull()?.times(multiplier)
         return rangeStart?.let { value in it until it + multiplier -1 } ?: false
+    }
+
+    private fun matchMultipleExpressions(value: String, scenarioValue: String): Boolean {
+        val matchValue = scenarioValue.split(",").map { it.trim().removeSuffix("?") }
+        return matchValue.any { it == value }
     }
 }

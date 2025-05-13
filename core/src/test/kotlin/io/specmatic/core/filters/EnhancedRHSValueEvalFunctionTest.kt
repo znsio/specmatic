@@ -263,8 +263,77 @@ class EnhancedRHSValueEvalFunctionTest {
 
     @Test
     fun `test custom function with QUERY`() {
-        val evalExExpression = "QUERY='fields'"
+        val evalExExpression = "$FUNC('QUERY=fields')"
         val expression = Expression(evalExExpression, configuration).with("QUERY", "fields").evaluate().value
         assertTrue(expression as Boolean)
+    }
+
+    @Test
+    fun `test custom function with NOT QUERY`() {
+        val evalExExpression = "$FUNC('QUERY!=fields')"
+        val expression = Expression(evalExExpression, configuration).with("QUERY", "fields").evaluate().value
+        assertFalse(expression as Boolean)
+    }
+
+    @Test
+    fun `test custom function with multiple QUERY`() {
+        val evalExExpression = "$FUNC('QUERY=fields,startId')"
+        val expression = Expression(evalExExpression, configuration).with("QUERY", "fields").evaluate().value
+        val expression1 = Expression(evalExExpression, configuration).with("QUERY", "startId").evaluate().value
+        val expression2 = Expression(evalExExpression, configuration).with("QUERY", "hello").evaluate().value
+
+        assertTrue(expression as Boolean)
+        assertTrue(expression1 as Boolean)
+        assertFalse(expression2 as Boolean)
+    }
+
+    @Test
+    fun `test custom function with multiple NOT QUERY`() {
+        val evalExExpression = "$FUNC('QUERY!=fields,startId')"
+        val expression = Expression(evalExExpression, configuration).with("QUERY", "fields").evaluate().value
+        val expression1 = Expression(evalExExpression, configuration).with("QUERY", "startId").evaluate().value
+        val expression2 = Expression(evalExExpression, configuration).with("QUERY", "hello").evaluate().value
+
+        assertFalse(expression as Boolean)
+        assertFalse(expression1 as Boolean)
+        assertTrue(expression2 as Boolean)
+    }
+
+    @Test
+    fun `test custom function with HEADERS`() {
+        val evalExExpression = "$FUNC('HEADERS=sortBy')"
+        val expression = Expression(evalExExpression, configuration).with("HEADERS", "sortBy").evaluate().value
+        assertTrue(expression as Boolean)
+    }
+
+    @Test
+    fun `test custom function with NOT HEADERS`() {
+        val evalExExpression = "$FUNC('HEADERS!=sortBy')"
+        val expression = Expression(evalExExpression, configuration).with("HEADERS", "sortBy").evaluate().value
+        assertFalse(expression as Boolean)
+    }
+
+    @Test
+    fun `test custom function with multiple HEADERS`() {
+        val evalExExpression = "$FUNC('HEADERS=sortBy,request-id')"
+        val expression = Expression(evalExExpression, configuration).with("HEADERS", "sortBy").evaluate().value
+        val expression1 = Expression(evalExExpression, configuration).with("HEADERS", "request-id").evaluate().value
+        val expression2 = Expression(evalExExpression, configuration).with("HEADERS", "hello").evaluate().value
+
+        assertTrue(expression as Boolean)
+        assertTrue(expression1 as Boolean)
+        assertFalse(expression2 as Boolean)
+    }
+
+    @Test
+    fun `test custom function with multiple NOT HEADERS`() {
+        val evalExExpression = "$FUNC('HEADERS!=sortBy,request-id')"
+        val expression = Expression(evalExExpression, configuration).with("HEADERS", "sortBy").evaluate().value
+        val expression1 = Expression(evalExExpression, configuration).with("HEADERS", "request-id").evaluate().value
+        val expression2 = Expression(evalExExpression, configuration).with("HEADERS", "hello").evaluate().value
+
+        assertFalse(expression as Boolean)
+        assertFalse(expression1 as Boolean)
+        assertTrue(expression2 as Boolean)
     }
 }

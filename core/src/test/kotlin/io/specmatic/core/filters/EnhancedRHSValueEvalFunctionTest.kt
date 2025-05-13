@@ -56,15 +56,15 @@ class EnhancedRHSValueEvalFunctionTest {
 
     @Test
     fun `test custom function with multiple METHODS and STATUS CODE`() {
-        val evalExExpression = "($FUNC('METHOD=GET,POST') && $FUNC('STATUS=200,400'))"
+        val evalExExpression = "($FUNC('PARAMETERS.METHOD=GET,POST') && $FUNC('STATUS=200,400'))"
         
-        val expressionGET200 = Expression(evalExExpression, configuration).with("METHOD", "GET").with("STATUS", 200)
+        val expressionGET200 = Expression(evalExExpression, configuration).with("PARAMETERS.METHOD", "GET").with("STATUS", 200)
         val resultGET200 = expressionGET200.evaluate().value
 
-        val expressionGET500 = Expression(evalExExpression, configuration).with("METHOD", "GET").with("STATUS", 500)
+        val expressionGET500 = Expression(evalExExpression, configuration).with("PARAMETERS.METHOD", "GET").with("STATUS", 500)
         val resultGET500 = expressionGET500.evaluate().value
 
-        val expressionPOST200 = Expression(evalExExpression, configuration).with("METHOD", "POST").with("STATUS", 200)
+        val expressionPOST200 = Expression(evalExExpression, configuration).with("PARAMETERS.METHOD", "POST").with("STATUS", 200)
         val resultPOST200 = expressionPOST200.evaluate().value
 
         assertTrue(resultGET200 as Boolean)

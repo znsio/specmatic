@@ -192,16 +192,22 @@ data class AnyPattern(
         val resolvedPatterns = pattern.map { resolvedHop(it, resolver) }
 
         if(resolvedPatterns.any { it is NullPattern } || resolvedPatterns.all { it is ExactValuePattern })
-            return failedToFindAny(
-                    typeName,
-                    sampleData,
-                    getResult(matchResults.map { it.result as Failure }),
-                    resolver.mismatchMessages
-                )
+            return when {
+                sampleData is ScalarValue && anyPatternIsEnum() -> {
+                    FailedToFindAnyUsingTypeValueDescription(sampleData)
+                }
+                else -> {
+                    FailedToFindAnyUsingValue(sampleData)
+                }
+            }.failedToFindAny(typeName, getResult(matchResults.map { it.result as Failure }), resolver.mismatchMessages)
 
         val failuresWithUpdatedBreadcrumbs = addTypeInfoBreadCrumbs(matchResults)
 
         return Result.fromFailures(failuresWithUpdatedBreadcrumbs)
+    }
+
+    private fun anyPatternIsEnum(): Boolean {
+        return pattern.all { it is ExactValuePattern && it.pattern is ScalarValue }
     }
 
     @Suppress("MemberVisibilityCanBePrivate") // Being used in openapi
@@ -543,10 +549,39 @@ data class AnyPattern(
     private fun isEmpty(it: Pattern) = it.typeAlias == "(empty)" || it is NullPattern
 }
 
-private fun failedToFindAny(expected: String, actual: Value?, results: List<Failure>, mismatchMessages: MismatchMessages): Failure =
-    when (results.size) {
-        1 -> results[0]
-        else -> {
-            mismatchResult(expected, actual, mismatchMessages)
+private interface FailedToFindAny {
+    fun failedToFindAny(expected: String, results: List<Failure>, mismatchMessages: MismatchMessages): Failure
+}
+
+private class FailedToFindAnyUsingTypeValueDescription <V> (val actual: V) : FailedToFindAny where V : Value, V : ScalarValue {
+    override fun failedToFindAny(
+        expected: String,
+        results: List<Failure>,
+        mismatchMessages: MismatchMessages
+    ): Failure {
+        val displayableValueOfActual = actual.displayableValue()
+
+        val description: String = when(actual) {
+            is StringValue -> displayableValueOfActual
+            else -> "$displayableValueOfActual (${actual.type().typeName})"
+        }
+
+        return mismatchResult(expected, description, mismatchMessages)
+    }
+
+}
+
+private class FailedToFindAnyUsingValue(val actual: Value?) : FailedToFindAny {
+    override fun failedToFindAny(
+        expected: String,
+        results: List<Failure>,
+        mismatchMessages: MismatchMessages
+    ): Failure {
+        return when (results.size) {
+            1 -> results[0]
+            else -> {
+                mismatchResult(expected, actual, mismatchMessages)
+            }
         }
     }
+}

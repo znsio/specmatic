@@ -12,6 +12,11 @@ allprojects {
 
 specmatic {
     publishToMavenCentral()
+    releasePublishTasks = listOf(
+        "publishAllPublicationsToMavenCentralRepository",
+        "publishAllPublicationsToSpecmaticPrivateRepository",
+        "dockerBuildxPublish"
+    )
     publishTo("specmaticPrivate", "https://maven.pkg.github.com/znsio/specmatic-private-maven-repo")
     withOSSLibrary(project(":specmatic-core")) {
         githubRelease()
@@ -99,23 +104,4 @@ specmatic {
             }
         }
     }
-}
-tasks.beforeReleaseBuild {
-    dependsOn("check")
-}
-
-tasks.afterReleaseBuild {
-    dependsOn(
-        "specmatic-executable:publishAllPublicationsToSpecmaticPrivateRepository",
-        "junit5-support:publishAllPublicationsToSpecmaticPrivateRepository",
-        "specmatic-core:publishAllPublicationsToSpecmaticPrivateRepository"
-    )
-
-    dependsOn(
-        "specmatic-executable:publishAllPublicationsToMavenCentralRepository",
-        "junit5-support:publishAllPublicationsToMavenCentralRepository",
-        "specmatic-core:publishAllPublicationsToMavenCentralRepository"
-    )
-
-    dependsOn("specmatic-executable:dockerBuildxPublish")
 }

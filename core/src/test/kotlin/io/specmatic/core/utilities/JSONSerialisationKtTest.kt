@@ -32,7 +32,7 @@ class JSONSerialisationKtTest {
 
     @ParameterizedTest
     @MethodSource("floatingPointValues")
-    fun `should be able to serialise floating point values from json to number value`(value: Number) {
+    fun `should be able to serialise floating point values from number value to json`(value: Number) {
         val valueMap = mapOf("value" to NumberValue(value))
         val jsonContent = valueMapToUnindentedJsonString(valueMap)
 

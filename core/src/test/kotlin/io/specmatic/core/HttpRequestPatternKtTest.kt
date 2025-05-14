@@ -6,7 +6,9 @@ import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.util.stream.Stream
 
 internal class HttpRequestPatternKtTest {
     @Test
@@ -53,10 +55,28 @@ internal class HttpRequestPatternKtTest {
         )
     }
 
+    @ParameterizedTest
+    @MethodSource("pathToGeneralityProvider")
+    fun `should generate a pattern that matches the path`(path: String, expectedGenerality: Int) {
+        val requestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern(path))
+        assertThat(requestPattern.pathGenerality).isEqualTo(expectedGenerality)
+    }
+
     companion object {
         private fun invalidateSecuritySchemes(request: HttpRequest, scheme: OpenAPISecurityScheme): HttpRequest {
             if (scheme !is BasicAuthSecurityScheme && scheme !is BearerSecurityScheme) return request
             return request.copy(headers = request.headers.plus(AUTHORIZATION to "INVALID"))
+        }
+
+        @JvmStatic
+        fun pathToGeneralityProvider(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of("/test", 0),
+                Arguments.of("/test/latest", 0),
+                Arguments.of("/test/(id:string)", 1),
+                Arguments.of("/test/latest/report", 0),
+                Arguments.of("/test/(id:string)/report", 1),
+            )
         }
     }
 }

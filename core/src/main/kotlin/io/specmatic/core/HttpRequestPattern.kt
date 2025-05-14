@@ -36,6 +36,10 @@ data class HttpRequestPattern(
     val securitySchemes: List<OpenAPISecurityScheme> = listOf(NoSecurityScheme())
 ) {
 
+    val pathGenerality: Int by lazy {
+        httpPathPattern?.pathSegmentPatterns?.count { it.key != null } ?: 0
+    }
+
     fun getPathSegmentPatterns() = httpPathPattern?.pathSegmentPatterns
 
     fun getHeaderKeys() = headersPattern.headerNames

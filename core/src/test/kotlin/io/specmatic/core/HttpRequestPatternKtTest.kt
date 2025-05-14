@@ -57,7 +57,7 @@ internal class HttpRequestPatternKtTest {
 
     @ParameterizedTest
     @MethodSource("pathToGeneralityProvider")
-    fun `should generate a pattern that matches the path`(path: String, expectedGenerality: Int) {
+    fun `should be able to determine path generality based on path-params count`(path: String, expectedGenerality: Int) {
         val requestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern(path))
         assertThat(requestPattern.pathGenerality).isEqualTo(expectedGenerality)
     }

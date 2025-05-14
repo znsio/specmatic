@@ -493,6 +493,29 @@ class LoadTestsFromExternalisedFiles {
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 
+    @Test
+    fun `should be able to load and use examples when there are shadow-ed paths`() {
+        val openApiFile = File("src/test/resources/openapi/has_shadow_paths/api.yaml")
+        val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
+        assertDoesNotThrow { feature.validateExamplesOrException() }
+
+        val results = feature.executeTests(object: TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val body = request.body as JSONObjectValue
+                val value = body.jsonObject.getValue("value") as ScalarValue
+                when(request.path) {
+                    "/test/latest" -> assertThat(value.nativeValue).isEqualTo(true)
+                    else -> assertThat(value.nativeValue).isEqualTo(123)
+                }
+
+                println(request.toLogString())
+                return HttpResponse(status = 200, body = body)
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
     @Nested
     inner class AttributeSelection {
         @BeforeEach

@@ -1,7 +1,6 @@
 package io.specmatic.core.filters
 
 import com.ezylang.evalex.Expression
-import com.ezylang.evalex.config.ExpressionConfiguration
 
 data class ScenarioMetadataFilter(
     val expression: Expression? = null
@@ -22,23 +21,11 @@ data class ScenarioMetadataFilter(
 
 
     companion object {
-        const val ENHANCED_FUNC_NAME = "eFunc"
 
         fun from(filterExpression: String): ScenarioMetadataFilter {
             if (filterExpression.isBlank()) return ScenarioMetadataFilter()
-            val evalExExpression = standardizeExpression(filterExpression)
-            val configuration = ExpressionConfiguration.builder()
-                .singleQuoteStringLiteralsAllowed(true).build()
-                .withAdditionalFunctions(
-                    mapOf(Pair(ENHANCED_FUNC_NAME, EnhancedRHSValueEvalFunction())).entries.single()
-                )
-            val finalExpression = Expression(evalExExpression, configuration)
+            val finalExpression = ExpressionStandardizer.filterToEvalEx(filterExpression)
             return ScenarioMetadataFilter(expression = finalExpression)
-        }
-
-        fun standardizeExpression(expression: String): String {
-            val expressionStandardizer = ExpressionStandardizer()
-            return expressionStandardizer.tokenizeExpression(expression)
         }
 
         fun <T : HasScenarioMetadata> filterUsing(

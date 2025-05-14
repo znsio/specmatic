@@ -1,7 +1,15 @@
 package io.specmatic.core.filters
 
+import com.ezylang.evalex.Expression
+import com.ezylang.evalex.config.ExpressionConfiguration
+import java.util.Map.entry
+
+const val ENHANCED_FUNC_NAME = "eFunc"
+const val INCLUDES_FUNC_NAME = "includes"
+
+
 sealed class Token {
-    data class FuncCall(val key: String, val operator: String, val value: String) : Token()
+    data class Operation(val key: String, val operator: Operator, val value: String) : Token()
     data class Symbol(val value: String) : Token()
     object And : Token()
     object Or : Token()
@@ -9,6 +17,7 @@ sealed class Token {
     object LParen : Token()
     object RParen : Token()
 }
+
 
 class ExpressionStandardizer {
 
@@ -33,61 +42,39 @@ class ExpressionStandardizer {
                     tokens.add(Token.And)
                     i += 2
                 }
+
                 expr.startsWith("||", i) -> {
                     tokens.add(Token.Or)
                     i += 2
                 }
+
                 expr[i] == '!' -> {
                     tokens.add(Token.Not)
                     i++
                 }
+
                 expr[i] == '(' -> {
                     tokens.add(Token.LParen)
                     i++
                 }
+
                 expr[i] == ')' -> {
                     tokens.add(Token.RParen)
                     i++
                 }
+
                 else -> {
                     // Parse a key[=|!=]'value' pair
                     val keyStart = i
-                    while (i < expr.length && (expr[i].isLetterOrDigit() || expr[i] == '_')) i++
+                    while (i < expr.length && (expr[i].isLetterOrDigit() || expr[i] == '_' || expr[i] == '.' || expr[i] == '-')) i++
                     val key = expr.substring(keyStart, i)
 
                     skipWhitespace()
 
-                    val operator = when {
-                        expr.startsWith("!=", i) -> {
-                            i += 2
-                            "!="
-                        }
-                        expr.startsWith("<=", i) -> {
-                            i += 2
-                            "<="
-                        }
-                        expr.startsWith(">=", i) -> {
-                            i += 2
-                            ">="
-                        }
-                        expr.startsWith("~", i) -> {
-                            i += 1
-                            "~"
-                        }
-                        expr.startsWith("<", i) -> {
-                            i += 1
-                            "<"
-                        }
-                        expr.startsWith(">", i) -> {
-                            i += 1
-                            ">"
-                        }
-                        expr.startsWith("=", i) -> {
-                            i += 1
-                            "="
-                        }
-                        else -> throw IllegalArgumentException("Expected an operator for the given expression: $expr at position $i")
-                    }
+                    val operator = Operator.ALL.find { eachOperator -> expr.startsWith(eachOperator.symbol, i) }
+                        ?: throw IllegalArgumentException("Expected an operator for the given expression: $expr at position $i")
+
+                    i += operator.symbol.length
 
                     skipWhitespace()
 
@@ -99,7 +86,7 @@ class ExpressionStandardizer {
                     val value = expr.substring(valueStart, i)
                     i++ // skip closing quote
 
-                    tokens.add(Token.FuncCall(key, operator, value))
+                    tokens.add(Token.Operation(key, operator, value))
                 }
             }
         }
@@ -110,7 +97,7 @@ class ExpressionStandardizer {
     private fun tokensToString(tokens: List<Token>): String {
         return tokens.joinToString(" ") { token ->
             when (token) {
-                is Token.FuncCall -> "eFunc('${token.key}${token.operator}${token.value}')"
+                is Token.Operation -> token.operator.operate(token.key, token.value)
                 is Token.And -> "&&"
                 is Token.Or -> "||"
                 is Token.Not -> "!"
@@ -118,6 +105,23 @@ class ExpressionStandardizer {
                 is Token.RParen -> ")"
                 is Token.Symbol -> token.value
             }
+        }
+    }
+
+    companion object {
+        fun filterToEvalEx(filterExpression: String): Expression {
+            val expressionStandardizer = ExpressionStandardizer()
+            val evalExExpression = expressionStandardizer.tokenizeExpression(filterExpression)
+            val functions = mapOf(
+                ENHANCED_FUNC_NAME to EnhancedRHSValueEvalFunction(),
+                INCLUDES_FUNC_NAME to IncludesFunction()
+            )
+
+            val configuration = ExpressionConfiguration.builder()
+                .singleQuoteStringLiteralsAllowed(true).build()
+                .withAdditionalFunctions(*functions.map { entry(it.key, it.value) }.toTypedArray())
+
+            return Expression(evalExExpression, configuration)
         }
     }
 }

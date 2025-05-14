@@ -785,8 +785,8 @@ data class Scenario(
         )
     }
 
-    fun useExamples(rawExternalisedExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Scenario {
-        val matchingRawExternalisedExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>> = matchingRows(rawExternalisedExamples)
+    fun useExamples(rawExternalisedExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Pair<Map<OpenApiSpecification.OperationIdentifier, List<Row>>, Scenario> {
+        val matchingRawExternalisedExamples = matchingRows(rawExternalisedExamples)
 
         val externalisedExamples: List<Examples> = matchingRawExternalisedExamples.map { (operationId, rows) ->
             if(rows.isEmpty())
@@ -799,7 +799,9 @@ data class Scenario(
             listOf(Examples(columns, rowsWithPathData))
         }.flatten()
 
-        return this.copy(examples = inlineExamplesThatAreNotOverridden(externalisedExamples) + externalisedExamples)
+        val unusedExamples = rawExternalisedExamples - matchingRawExternalisedExamples.keys
+        val scenarioWithExamples = this.copy(examples = inlineExamplesThatAreNotOverridden(externalisedExamples) + externalisedExamples)
+        return Pair(unusedExamples, scenarioWithExamples)
     }
 
     private fun matchingRows(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Map<OpenApiSpecification.OperationIdentifier, List<Row>> {

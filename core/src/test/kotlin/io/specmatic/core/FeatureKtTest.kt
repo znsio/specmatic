@@ -795,4 +795,13 @@ paths:
 
         assertThat(stdout).doesNotContain("Could not find the Specmatic configuration at path")
     }
+
+    @Test
+    fun `should retain the order of scenarios when loading examples`() {
+        val openApiFile = File("src/test/resources/openapi/has_shadow_paths/api.yaml")
+        val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
+        val scenarioPath = feature.scenarios.map { it.path }
+
+        assertThat(scenarioPath).containsExactly("/test/(id:string)", "/test/latest")
+    }
 }

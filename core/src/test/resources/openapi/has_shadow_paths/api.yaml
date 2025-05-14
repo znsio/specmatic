@@ -1,0 +1,59 @@
+openapi: '3.0.3'
+info:
+  title: Shadowed Paths
+  version: '1.0'
+servers:
+  - url: https://api.server.test/v1
+paths:
+  /test/{id}:
+    post:
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/IntObject'
+      responses:
+        '200':
+          description: OK
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/IntObject'
+  /test/latest:
+    post:
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/BoolObject'
+      responses:
+        '200':
+          description: OK
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/BoolObject'
+components:
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    IntObject:
+      type: object
+      properties:
+        value:
+          type: integer
+    BoolObject:
+      type: object
+      properties:
+        value:
+          type: boolean
+

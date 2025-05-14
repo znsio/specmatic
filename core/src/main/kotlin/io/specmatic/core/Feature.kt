@@ -1794,11 +1794,18 @@ data class Feature(
     }
 
     private fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Feature {
-        val scenariosWithExamples: List<Scenario> = scenarios.map {
-            it.useExamples(externalisedJSONExamples)
+        val sortedByPathGenerality = scenarios.withIndex().sortedBy { it.value.httpRequestPattern.pathGenerality }
+
+        val (_, scenariosWithExamples) = sortedByPathGenerality.fold(
+            initial = externalisedJSONExamples to emptyList<IndexedValue<Scenario>>()
+        ) { (examples, updatedScenarios), value ->
+            val (_, scenario) = value
+            val (unusedExamples, updatedScenario) = scenario.useExamples(examples)
+            unusedExamples to updatedScenarios.plus(value.copy(value = updatedScenario))
         }
 
-        return this.copy(scenarios = scenariosWithExamples)
+        val originalOrder = scenariosWithExamples.sortedBy { it.index }
+        return this.copy(scenarios = originalOrder.map { it.value })
     }
 
     private fun loadExternalisedJSONExamples(testsDirectory: File?): Map<OpenApiSpecification.OperationIdentifier, List<Row>> {

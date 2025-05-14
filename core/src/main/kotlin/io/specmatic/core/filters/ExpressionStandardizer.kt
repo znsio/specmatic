@@ -1,5 +1,13 @@
 package io.specmatic.core.filters
 
+import com.ezylang.evalex.Expression
+import com.ezylang.evalex.config.ExpressionConfiguration
+import java.util.Map.entry
+
+const val ENHANCED_FUNC_NAME = "eFunc"
+const val INCLUDES_FUNC_NAME = "includes"
+
+
 sealed class Token {
     data class Operation(val key: String, val operator: Operator, val value: String) : Token()
     data class Symbol(val value: String) : Token()
@@ -8,75 +16,6 @@ sealed class Token {
     object Not : Token()
     object LParen : Token()
     object RParen : Token()
-}
-
-abstract class Operator(val symbol: String) {
-    abstract fun operate(left: String, right: String): String
-
-    protected fun String.assertSingleValue() {
-        if (contains(",")) {
-            throw IllegalArgumentException("Operator '${symbol}' does not support multiple values. You specified '${this}'")
-        }
-    }
-
-    protected fun String.splitToQuoteValues(): String {
-        return split(',').joinToString(", ") { "'${it.trim()}'" }
-    }
-
-    private class LessThanEqualsOperator : Operator("<=") {
-        override fun operate(left: String, right: String): String {
-            right.assertSingleValue()
-            return "eFunc('$left', '$symbol', '$right')"
-        }
-
-    }
-
-    private class GreaterThanEqualsOperator : Operator(">=") {
-        override fun operate(left: String, right: String): String {
-            right.assertSingleValue()
-            return "eFunc('$left', '$symbol', '$right')"
-        }
-    }
-
-    private class NotEqualsOperator : Operator("!=") {
-        override fun operate(left: String, right: String): String {
-            val rightValues = right.splitToQuoteValues()
-            return "!includes('$left', $rightValues)"
-        }
-
-    }
-
-    private class LessThanOperator : Operator("<") {
-        override fun operate(left: String, right: String): String {
-            right.assertSingleValue()
-            return "eFunc('$left', '$symbol', '$right')"
-        }
-    }
-
-    private class GreaterThanOperator : Operator(">") {
-        override fun operate(left: String, right: String): String {
-            right.assertSingleValue()
-            return "eFunc('$left', '$symbol', '$right')"
-        }
-    }
-
-    private class EqualsOperator() : Operator("=") {
-        override fun operate(left: String, right: String): String {
-            val rightValues = right.splitToQuoteValues()
-            return "includes('$left', $rightValues)"
-        }
-    }
-
-    companion object {
-        val ALL = listOf(
-            NotEqualsOperator(),
-            GreaterThanEqualsOperator(),
-            LessThanEqualsOperator(),
-            EqualsOperator(),
-            GreaterThanOperator(),
-            LessThanOperator(),
-        ).sortedByDescending { it.symbol.length }
-    }
 }
 
 
@@ -166,6 +105,23 @@ class ExpressionStandardizer {
                 is Token.RParen -> ")"
                 is Token.Symbol -> token.value
             }
+        }
+    }
+
+    companion object {
+        fun filterToEvalEx(filterExpression: String): Expression {
+            val expressionStandardizer = ExpressionStandardizer()
+            val evalExExpression = expressionStandardizer.tokenizeExpression(filterExpression)
+            val functions = mapOf(
+                ENHANCED_FUNC_NAME to EnhancedRHSValueEvalFunction(),
+                INCLUDES_FUNC_NAME to IncludesFunction()
+            )
+
+            val configuration = ExpressionConfiguration.builder()
+                .singleQuoteStringLiteralsAllowed(true).build()
+                .withAdditionalFunctions(*functions.map { entry(it.key, it.value) }.toTypedArray())
+
+            return Expression(evalExExpression, configuration)
         }
     }
 }

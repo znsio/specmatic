@@ -14,8 +14,11 @@ class EnhancedRHSValueEvalFunction : AbstractFunction() {
     override fun evaluate(
         expression: Expression, functionToken: Token, vararg parameterValues: EvaluationValue
     ): EvaluationValue {
-        val inputString = parameterValues[0].stringValue
-        val (filterKey, operator, filterValue) = parseCondition(inputString)
+        val (filterKey, operator, filterValue) = Triple(
+            parameterValues[0].stringValue,
+            parameterValues[1].stringValue,
+            parameterValues[2].stringValue.split(",").map { it.trim() }
+        )
         val scenarioValue = expression.dataAccessor.getData(filterKey).value.toString()
         val result = evaluateCondition(operator, filterValue, scenarioValue)
         return EvaluationValue.of(result, ExpressionConfiguration.defaultConfiguration())
@@ -29,25 +32,6 @@ class EnhancedRHSValueEvalFunction : AbstractFunction() {
             "<=" -> values.any { (scenarioValue.toIntOrNull() ?: 0) <= (it.toIntOrNull() ?: 0) }
             else -> throw IllegalArgumentException("Unsupported operator: $operator")
         }
-    }
-
-
-    private fun parseCondition(condition: String): Triple<String, String, List<String>> {
-        val operator = when {
-            condition.contains("!=") -> "!="
-            condition.contains(">=") -> ">="
-            condition.contains("<=") -> "<="
-            condition.contains(">") -> ">"
-            condition.contains("<") -> "<"
-            else -> "="
-        }
-        val parts = condition.split(operator)
-        require(parts.size == 2) { "Invalid condition format: $condition" }
-
-        val label = parts[0].trim()
-        val values = parts[1].split(",").map { it.trim() }
-
-        return Triple(label, operator, values)
     }
 
 }

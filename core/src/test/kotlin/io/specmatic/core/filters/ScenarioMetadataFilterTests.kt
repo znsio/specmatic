@@ -125,7 +125,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `filter by STATUS 2xx`() {
-        val filter = ScenarioMetadataFilter.from("STATUS='2xx'")
+        val filter = ScenarioMetadataFilter.from("STATUS>'199' && STATUS<'300")
 
         val status200 = createScenarioMetadata(statusCode = 200)
         val status201 = createScenarioMetadata(statusCode = 201)
@@ -202,8 +202,8 @@ class ScenarioMetadataFilterTests {
 
 
     @Test
-    fun `exclude scenarios by list of status codes including range expression`() {
-        val filter = ScenarioMetadataFilter.from("STATUS!='202,401,403,405,5xx'")
+    fun `exclude scenarios by list of status codes`() {
+        val filter = ScenarioMetadataFilter.from("STATUS!='202,401,403,405,500'")
         val status202 = createScenarioMetadata(statusCode = 202)
         val status500 = createScenarioMetadata(statusCode = 500)
         val status201 = createScenarioMetadata(statusCode = 201)
@@ -331,7 +331,7 @@ class ScenarioMetadataFilterTests {
     @Test
     fun `exclude scenarios with combined METHOD and PATH conditions, in addition also a status condition as first condition`() {
         val filter =
-            ScenarioMetadataFilter.from("(STATUS!='202,400' || (!(PATH='/users' && METHOD='POST')) && !(PATH='/products' && METHOD='POST') && STATUS!='5xx')")
+            ScenarioMetadataFilter.from("(STATUS!='202,400' || (!(PATH='/users' && METHOD='POST')) && !(PATH='/products' && METHOD='POST') && STATUS<'500')")
 
         val getProducts200 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 200)
         val getProducts202 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 202)
@@ -366,14 +366,6 @@ class ScenarioMetadataFilterTests {
         assertTrue(filter.isSatisfiedBy(postOrders500))
 
         assertTrue(filter.isSatisfiedBy(postOrders502))
-    }
-
-    @Test
-    fun `exclude scenarios with wildcard only for last digit in status codes`() {
-        val filter = ScenarioMetadataFilter.from("STATUS!='50x'")
-
-        assertTrue(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 521)))
-        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 502)))
     }
 
     @Test

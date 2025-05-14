@@ -204,6 +204,21 @@ internal class HttpRequestTest {
                 Arguments.of("http://localhost/test", ""),
                 Arguments.of(null, "http://localhost/test"),
             ).stream()
+
+        @JvmStatic
+        fun urlPathToExpectedPathGenerality(): List<Pair<String?, Int>> =
+            listOf(
+                Pair(null, 0),
+                Pair("", 0),
+                Pair("/", 0),
+                Pair("/persons", 0),
+                Pair("/persons/1", 0),
+                Pair("/(string)", 1),
+                Pair("/persons/(string)", 1),
+                Pair("/persons/(string)/1", 1),
+                Pair("/persons/(string)/1/(string)", 2),
+                Pair("/persons/group/(string)/1/(string)", 2),
+            )
     }
 
     @ParameterizedTest
@@ -393,5 +408,12 @@ internal class HttpRequestTest {
     fun `should calculate precision score based on the number of patterns seen`(id: String, count: String, generality: Int) {
         val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"id": "$id", "count": "$count"}"""))
         assertThat(request.generality).isEqualTo(generality)
+    }
+
+    @ParameterizedTest
+    @MethodSource("urlPathToExpectedPathGenerality")
+    fun `should include path params to calculate generality`(pathToExpectedGenerality: Pair<String?, Int>) {
+        val request = HttpRequest(path = pathToExpectedGenerality.first)
+        assertThat(request.generality).isEqualTo(pathToExpectedGenerality.second)
     }
 }

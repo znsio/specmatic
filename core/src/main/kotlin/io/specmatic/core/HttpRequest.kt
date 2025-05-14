@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets
 
 const val FORM_FIELDS_JSON_KEY = "form-fields"
 const val MULTIPART_FORMDATA_JSON_KEY = "multipart-formdata"
+const val URL_PATH_DELIMITER = "/"
 
 fun urlToQueryParams(uri: URI): Map<String, String> {
     if (uri.query == null)
@@ -409,11 +410,12 @@ data class HttpRequest(
     }
 
     val generality: Int by lazy {
+        val pathScore: Int = path?.split(URL_PATH_DELIMITER)?.count { StringValue(it).isPatternToken() } ?: 0
         val headerScore: Int = headers.values.sumOf { if(isPatternToken(it)) 1 as Int else 0 }
         val queryScore: Int = queryParams.paramPairs.sumOf { if(isPatternToken(it.second)) 1 as Int else 0 }
         val bodyScore: Int = body.generality()
 
-        headerScore + queryScore + bodyScore
+        pathScore + headerScore + queryScore + bodyScore
     }
 }
 

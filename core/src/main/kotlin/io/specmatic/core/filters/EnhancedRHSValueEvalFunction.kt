@@ -17,19 +17,19 @@ class EnhancedRHSValueEvalFunction : AbstractFunction() {
         val (filterKey, operator, filterValue) = Triple(
             parameterValues[0].stringValue,
             parameterValues[1].stringValue,
-            parameterValues[2].stringValue.split(",").map { it.trim() }
+            parameterValues[2].stringValue
         )
         val scenarioValue = expression.dataAccessor.getData(filterKey).value.toString()
         val result = evaluateCondition(operator, filterValue, scenarioValue)
         return EvaluationValue.of(result, ExpressionConfiguration.defaultConfiguration())
     }
 
-    private fun evaluateCondition(operator: String, values: List<String>, scenarioValue: String): Boolean {
+    private fun evaluateCondition(operator: String, value: String, scenarioValue: String): Boolean {
         return when (operator) {
-            ">" -> values.any { (scenarioValue.toIntOrNull() ?: 0) > (it.toIntOrNull() ?: 0) }
-            "<" -> values.any { (scenarioValue.toIntOrNull() ?: 0) < (it.toIntOrNull() ?: 0) }
-            ">=" -> values.any { (scenarioValue.toIntOrNull() ?: 0) >= (it.toIntOrNull() ?: 0) }
-            "<=" -> values.any { (scenarioValue.toIntOrNull() ?: 0) <= (it.toIntOrNull() ?: 0) }
+            ">" -> (scenarioValue.toIntOrNull() ?: 0) > (value.toIntOrNull() ?: 0)
+            "<" -> (scenarioValue.toIntOrNull() ?: 0) < (value.toIntOrNull() ?: 0)
+            ">=" -> (scenarioValue.toIntOrNull() ?: 0) >= (value.toIntOrNull() ?: 0)
+            "<=" -> (scenarioValue.toIntOrNull() ?: 0) <= (value.toIntOrNull() ?: 0)
             else -> throw IllegalArgumentException("Unsupported operator: $operator")
         }
     }

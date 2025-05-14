@@ -19,11 +19,9 @@ class IncludesFunction : AbstractFunction() {
 
         val scenarioValue = expression.dataAccessor.getData(paramName).stringValue
 
-
         val result = possibleValues.any {
             fun checkCondition(value: String): Boolean {
                 return when (paramName) {
-                    STATUS.key -> value == scenarioValue || isInRange(value, scenarioValue)
                     PATH.key -> value == scenarioValue || matchesPath(value, scenarioValue)
                     HEADERS.key -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
                     QUERY.key -> value == scenarioValue || matchMultipleExpressions(value, scenarioValue)
@@ -36,28 +34,11 @@ class IncludesFunction : AbstractFunction() {
         return EvaluationValue.booleanValue(result)
     }
 
-
     private fun matchesPath(value: String, scenarioValue: String): Boolean {
         return value.contains("*") && Pattern.compile(
             value.replace("(", "\\(")
                 .replace(")", "\\)").replace("*", ".*")
         ).matcher(scenarioValue).matches()
-    }
-
-    private fun isInRange(range: String, value: String): Boolean {
-        val metadataValue = value.toIntOrNull() ?: return false
-
-        return when {
-            range.endsWith("xx") -> isWithinBounds(range, 100, metadataValue)
-            range.endsWith("x") -> isWithinBounds(range, 10, metadataValue)
-            else -> false
-        }
-    }
-
-    private fun isWithinBounds(range: String, multiplier: Int, value: Int): Boolean {
-        val len = multiplier.toString().length - 1
-        val rangeStart = range.dropLast(len).toIntOrNull()?.times(multiplier)
-        return rangeStart?.let { value in it until it + multiplier - 1 } ?: false
     }
 
     private fun matchMultipleExpressions(value: String, scenarioValue: String): Boolean {

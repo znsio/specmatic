@@ -493,6 +493,48 @@ class LoadTestsFromExternalisedFiles {
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 
+    @Test
+    fun `should be able to load and use examples with form fields in the request`() {
+        val openApiFile = File("src/test/resources/openapi/has_form_fields/api.yaml")
+        val examplesDir = openApiFile.resolveSibling("valid_examples")
+
+        Flags.using(EXAMPLE_DIRECTORIES to examplesDir.canonicalPath) {
+            val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
+            assertDoesNotThrow { feature.validateExamplesOrException() }
+
+            val results = feature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.toLogString())
+                    val formFields = request.formFields
+                    assertThat(formFields).containsExactlyInAnyOrderEntriesOf(mapOf("data" to "DATA123", "id" to "123"))
+                    return HttpResponse.OK
+                }
+            })
+
+            assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        }
+    }
+
+    @Test
+    fun `should validate form fields for partial or non-partial examples`() {
+        val openApiFile = File("src/test/resources/openapi/has_form_fields/api.yaml")
+        val examplesDir = openApiFile.resolveSibling("invalid_examples")
+
+        Flags.using(EXAMPLE_DIRECTORIES to examplesDir.canonicalPath) {
+            val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
+            val exception = assertThrows<ContractException> { feature.validateExamplesOrException() }
+
+            assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+            Error loading example for POST /formFields -> 200 from ${examplesDir.resolve("example.json").canonicalPath}
+            >> REQUEST.FORM-FIELDS.id
+            Expected number as per the specification, but the example example had "SHOULD-BE-NUMBER".
+            Error loading example for POST /formFields -> 200 from ${examplesDir.resolve("partial_field.json").canonicalPath}
+            >> REQUEST.FORM-FIELDS.id
+            Expected number as per the specification, but the example partial_field had string.
+            """.trimIndent())
+        }
+    }
+
     @Nested
     inner class AttributeSelection {
         @BeforeEach

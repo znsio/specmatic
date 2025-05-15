@@ -2,10 +2,13 @@ package io.specmatic.core
 
 import io.specmatic.conversions.*
 import io.specmatic.core.pattern.*
+import io.specmatic.core.value.NumberValue
 import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
 
 internal class HttpRequestPatternKtTest {
@@ -51,6 +54,28 @@ internal class HttpRequestPatternKtTest {
             { assertThat(it).containsOnlyOnce(">> REQUEST.QUERY-PARAMS.API-KEY") },
             { assertThat(it).containsOnlyOnce(">> REQUEST.HEADERS.Authorization") }
         )
+    }
+
+    @Nested
+    inner class FixRequestTests {
+
+        @ParameterizedTest
+        @CsvSource(
+            "{\"data\": \"SHOULD-BE-NUMBER\"}",
+            "{\"data\": \"(string)\"}",
+            "{}",
+        )
+        fun `should be able to fix invalid values in form-fields of the request`(formFields: String) {
+            val httpRequestPattern = HttpRequestPattern(method = "POST", formFieldsPattern = mapOf("data" to NumberPattern()))
+            val httpRequest = HttpRequest(
+                method = "POST", path = "/",
+                formFields = parsedJSONObject(formFields).jsonObject.mapValues { it.value.toStringLiteral() }
+            )
+            val resolver = Resolver(dictionary = mapOf("FORM-FIELDS.data" to NumberValue(999)))
+            val fixedValue = httpRequestPattern.fixRequest(httpRequest, resolver)
+
+            assertThat(fixedValue.formFields).isEqualTo(mapOf("data" to "999"))
+        }
     }
 
     companion object {

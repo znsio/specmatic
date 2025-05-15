@@ -1,0 +1,22 @@
+{
+  "http-request": {
+    "path": "/test/latest",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "value": 123
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "value": 123
+    },
+    "status-text": "OK"
+  }
+}

@@ -496,7 +496,10 @@ class LoadTestsFromExternalisedFiles {
     @Test
     fun `should be able to load and use examples when there are shadow-ed paths`() {
         val openApiFile = File("src/test/resources/openapi/has_shadow_paths/api.yaml")
-        val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
+        val validExamplesDir = openApiFile.resolveSibling("valid_examples")
+        val feature = Flags.using(EXAMPLE_DIRECTORIES to validExamplesDir.canonicalPath) {
+            OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
+        }
         assertDoesNotThrow { feature.validateExamplesOrException() }
 
         val results = feature.executeTests(object: TestExecutor {
@@ -504,7 +507,7 @@ class LoadTestsFromExternalisedFiles {
                 val body = request.body as JSONObjectValue
                 val value = body.jsonObject.getValue("value") as ScalarValue
                 when(request.path) {
-                    "/test/latest" -> assertThat(value.nativeValue).isEqualTo(true)
+                    "/test/latest", "/123/reports/456" -> assertThat(value.nativeValue).isEqualTo(true)
                     else -> assertThat(value.nativeValue).isEqualTo(123)
                 }
 
@@ -514,6 +517,42 @@ class LoadTestsFromExternalisedFiles {
         })
 
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `should provide accurate example load failures when shadowed-paths have invalid examples`() {
+        val openApiFile = File("src/test/resources/openapi/has_shadow_paths/api.yaml")
+        val invalidExamplesDir = openApiFile.resolveSibling("invalid_examples")
+        val feature = Flags.using(EXAMPLE_DIRECTORIES to invalidExamplesDir.canonicalPath) {
+            OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
+        }
+        val exception = assertThrows<ContractException> { feature.validateExamplesOrException() }
+
+        assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+        Error loading example for POST /test/latest -> 200 from ${invalidExamplesDir.resolve("latest_example.json").canonicalPath}
+        >> REQUEST.BODY.value
+        Expected boolean as per the specification, but the example latest_example had 123 (number).
+        >> RESPONSE.BODY.value
+        Expected boolean as per the specification, but the example latest_example had 123 (number).
+        
+        Error loading example for POST /test/(testId:string) -> 200 from ${invalidExamplesDir.resolve("testId_example.json").canonicalPath}
+        >> REQUEST.BODY.value
+        Expected number as per the specification, but the example testId_example had true (boolean).
+        >> RESPONSE.BODY.value
+        Expected number as per the specification, but the example testId_example had true (boolean).
+        
+        Error loading example for POST /reports/(testId:string)/latest -> 200 from ${invalidExamplesDir.resolve("reports_testId_latest.json").canonicalPath}
+        >> REQUEST.BODY.value
+        Expected number as per the specification, but the example reports_testId_latest had true (boolean).
+        >> RESPONSE.BODY.value
+        Expected number as per the specification, but the example reports_testId_latest had true (boolean).
+        
+        Error loading example for POST /(testId:string)/reports/(reportId:string) -> 200 from ${invalidExamplesDir.resolve("testId_reports_reportId.json").canonicalPath}
+        >> REQUEST.BODY.value 
+        Expected boolean as per the specification, but the example testId_reports_reportId had 123 (number).
+        >> RESPONSE.BODY.value
+        Expected boolean as per the specification, but the example testId_reports_reportId had 123 (number).
+        """.trimIndent())
     }
 
     @Nested

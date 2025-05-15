@@ -5,10 +5,10 @@ info:
 servers:
   - url: https://api.server.test/v1
 paths:
-  /test/{id}:
+  /test/{testId}:
     post:
       parameters:
-        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/testId'
       requestBody:
         required: true
         content:
@@ -37,10 +37,51 @@ paths:
             'application/json':
               schema:
                 $ref: '#/components/schemas/BoolObject'
+  /reports/{testId}/latest:
+    post:
+      parameters:
+        - $ref: '#/components/parameters/testId'
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/IntObject'
+      responses:
+        '200':
+          description: OK
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/IntObject'
+  /{testId}/reports/{reportId}:
+    post:
+      parameters:
+        - $ref: '#/components/parameters/reportId'
+        - $ref: '#/components/parameters/testId'
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/BoolObject'
+      responses:
+        '200':
+          description: OK
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/BoolObject'
 components:
   parameters:
-    id:
-      name: id
+    reportId:
+      name: reportId
+      in: path
+      required: true
+      schema:
+        type: string
+    testId:
+      name: testId
       in: path
       required: true
       schema:
@@ -56,4 +97,3 @@ components:
       properties:
         value:
           type: boolean
-

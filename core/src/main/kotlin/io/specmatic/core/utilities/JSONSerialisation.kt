@@ -57,7 +57,6 @@ fun toPattern(jsonElement: JsonElement): Pattern {
         is JsonObject -> toJSONObjectPattern(jsonElement.toMap().mapValues { toPattern(it.value) })
         is JsonArray -> JSONArrayPattern(jsonElement.toList().map { toPattern(it) })
         is JsonPrimitive -> toLiteralPattern(jsonElement)
-        else -> throw ContractException("Unknown value type: ${jsonElement.javaClass.name}")
     }
 }
 
@@ -67,7 +66,7 @@ fun toLiteralPattern(jsonElement: JsonPrimitive): Pattern =
         jsonElement.booleanOrNull != null -> ExactValuePattern(BooleanValue(jsonElement.boolean))
         jsonElement.intOrNull != null -> ExactValuePattern(NumberValue(jsonElement.int))
         jsonElement.longOrNull != null -> ExactValuePattern(NumberValue(jsonElement.long))
-        jsonElement.floatOrNull != null -> ExactValuePattern(NumberValue(jsonElement.float))
+        jsonElement.doubleOrNull != null -> ExactValuePattern(NumberValue(jsonElement.double))
         else -> throw ContractException("Can't recognise the type of $jsonElement")
     }
 
@@ -77,7 +76,6 @@ private fun toValue(jsonElement: JsonElement): Value =
         is JsonObject -> JSONObjectValue(jsonElement.toMap().mapValues { toValue(it.value) })
         is JsonArray -> JSONArrayValue(jsonElement.toList().map { toValue(it) })
         is JsonPrimitive -> toLiteralValue(jsonElement)
-        else -> throw ContractException("Unknown value type: ${jsonElement.javaClass.name}")
     }
 
 fun toLiteralValue(jsonElement: JsonPrimitive): Value =
@@ -86,8 +84,8 @@ fun toLiteralValue(jsonElement: JsonPrimitive): Value =
         jsonElement.booleanOrNull != null -> BooleanValue(jsonElement.boolean)
         jsonElement.intOrNull != null -> NumberValue(jsonElement.int)
         jsonElement.longOrNull != null -> NumberValue(jsonElement.long)
-        jsonElement.floatOrNull != null -> NumberValue(jsonElement.float)
-        else -> NumberValue(jsonElement.double)
+        jsonElement.doubleOrNull != null -> NumberValue(jsonElement.double)
+        else -> throw ContractException("Can't recognise the type of $jsonElement")
     }
 
 fun convertToArrayValue(data: List<JsonElement>): List<Value> =

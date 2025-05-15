@@ -454,7 +454,7 @@ fun isNumber(value: StringValue): Boolean {
 }
 
 fun convertToNumber(value: String): Number = value.trim().let {
-    stringToInt(it) ?: stringToLong(it) ?: stringToFloat(it) ?: stringToDouble(it)
+    stringToInt(it) ?: stringToLong(it) ?: stringToDouble(it)
     ?: throw ContractException("""Expected number, actual was "$value"""")
 }
 
@@ -466,12 +466,6 @@ internal fun stringToInt(value: String): Int? = try {
 
 internal fun stringToLong(value: String): Long? = try {
     value.toLong()
-} catch (e: Throwable) {
-    null
-}
-
-internal fun stringToFloat(value: String): Float? = try {
-    value.toFloat()
 } catch (e: Throwable) {
     null
 }

@@ -529,17 +529,17 @@ class LoadTestsFromExternalisedFiles {
         val exception = assertThrows<ContractException> { feature.validateExamplesOrException() }
 
         assertThat(exception.report()).isEqualToNormalizingWhitespace("""
-        Error loading example for POST /test/latest -> 200 from ${invalidExamplesDir.resolve("latest_example.json").canonicalPath}
-        >> REQUEST.BODY.value
-        Expected boolean as per the specification, but the example latest_example had 123 (number).
-        >> RESPONSE.BODY.value
-        Expected boolean as per the specification, but the example latest_example had 123 (number).
-        
         Error loading example for POST /test/(testId:string) -> 200 from ${invalidExamplesDir.resolve("testId_example.json").canonicalPath}
         >> REQUEST.BODY.value
         Expected number as per the specification, but the example testId_example had true (boolean).
         >> RESPONSE.BODY.value
         Expected number as per the specification, but the example testId_example had true (boolean).
+
+        Error loading example for POST /test/latest -> 200 from ${invalidExamplesDir.resolve("latest_example.json").canonicalPath}
+        >> REQUEST.BODY.value
+        Expected boolean as per the specification, but the example latest_example had 123 (number).
+        >> RESPONSE.BODY.value
+        Expected boolean as per the specification, but the example latest_example had 123 (number).
         
         Error loading example for POST /reports/(testId:string)/latest -> 200 from ${invalidExamplesDir.resolve("reports_testId_latest.json").canonicalPath}
         >> REQUEST.BODY.value
@@ -882,7 +882,7 @@ class LoadTestsFromExternalisedFiles {
 
         @Test
         fun `should fill the blanks in partial POST request using values from the dictionary`() {
-            val filteredFeature = feature.copy(scenarioStore = feature.scenarioStore.filter { it.method == "POST" })
+            val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "POST" })
 
             val results = filteredFeature.executeTests(object: TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
@@ -916,7 +916,7 @@ class LoadTestsFromExternalisedFiles {
 
         @Test
         fun `should be able to substitute values into query-params`() {
-            val filteredFeature = feature.copy(scenarioStore = feature.scenarioStore.filter { it.method == "GET" })
+            val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "GET" })
 
             val results = filteredFeature.executeTests(object: TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
@@ -943,7 +943,7 @@ class LoadTestsFromExternalisedFiles {
 
         @Test
         fun `should only substitute pattern tokens and missing mandatory fields`() {
-            val filteredFeature = feature.copy(scenarioStore = feature.scenarioStore.filter { it.method == "PATCH" })
+            val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "PATCH" })
 
             val results = filteredFeature.executeTests(object: TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
@@ -1132,7 +1132,7 @@ class LoadTestsFromExternalisedFiles {
             fun `should be able to load example with only discriminator in request`() {
                 Flags.using(EXAMPLE_DIRECTORIES to exampleWithDiscriminator.canonicalPath) {
                     val feature = parseContractFileToFeature(discriminatorSpecFile).copy(strictMode = true).loadExternalisedExamples()
-                    val filteredFeature = feature.copy(scenarioStore = feature.scenarioStore.filter { it.method == "POST" })
+                    val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "POST" })
                     filteredFeature.validateExamplesOrException()
 
                     val expectedRequest = HttpRequest(
@@ -1159,7 +1159,7 @@ class LoadTestsFromExternalisedFiles {
             fun `should be able to load example without discriminator in request but one of the discriminator fields is present`() {
                 Flags.using(EXAMPLE_DIRECTORIES to exampleWithoutDisc.canonicalPath) {
                     val feature = parseContractFileToFeature(discriminatorSpecFile).copy(strictMode = true).loadExternalisedExamples()
-                    val filteredFeature = feature.copy(scenarioStore = feature.scenarioStore.filter { it.method == "POST" })
+                    val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "POST" })
                     filteredFeature.validateExamplesOrException()
 
                     val expectedRequest = HttpRequest(
@@ -1186,7 +1186,7 @@ class LoadTestsFromExternalisedFiles {
             fun `should be able to load example with pattern token in request`() {
                 Flags.using(EXAMPLE_DIRECTORIES to exampleWithPatternToken.canonicalPath) {
                     val feature = parseContractFileToFeature(discriminatorSpecFile).copy(strictMode = true).loadExternalisedExamples()
-                    val filteredFeature = feature.copy(scenarioStore = feature.scenarioStore.filter { it.method == "POST" })
+                    val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "POST" })
                     filteredFeature.validateExamplesOrException()
 
                     val expectedRequest = HttpRequest(
@@ -1214,7 +1214,7 @@ class LoadTestsFromExternalisedFiles {
             fun `should complain when discriminator is present but invalid`() {
                 Flags.using(EXAMPLE_DIRECTORIES to exampleWithInvalidDisc.canonicalPath) {
                     val feature = parseContractFileToFeature(discriminatorSpecFile).copy(strictMode = true).loadExternalisedExamples()
-                    val filteredFeature = feature.copy(scenarioStore = feature.scenarioStore.filter { it.method == "POST" })
+                    val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "POST" })
                     val exception = assertThrows<ContractException> { filteredFeature.validateExamplesOrException() }
 
                     assertThat(exception.report()).isEqualToNormalizingWhitespace("""
@@ -1260,7 +1260,7 @@ class LoadTestsFromExternalisedFiles {
                     val feature = parseContractFileToFeature(discriminatorSpecFile).copy(strictMode = true).loadExternalisedExamples()
                     assertDoesNotThrow { feature.validateExamplesOrException() }
 
-                    val filteredFeature = feature.copy(scenarioStore = feature.scenarioStore.filter { it.method == "POST" })
+                    val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "POST" })
                     val results = filteredFeature.executeTests(object : TestExecutor {
                         override fun execute(request: HttpRequest): HttpResponse {
                             assertThat((request.body as JSONObjectValue).jsonObject).containsEntry("extraKey", StringValue("extraValue"))

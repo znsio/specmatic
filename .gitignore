@@ -21,3 +21,4 @@ perfiz/*_data
 gen-kt/
 gen-resources/
 .vscode
+.kotlin/

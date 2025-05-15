@@ -3,13 +3,17 @@ package io.specmatic.core
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.filters.HasScenarioMetadata
-import io.specmatic.core.filters.ScenarioMetadata
+import io.specmatic.core.filters.ExpressionContextPopulator
+import io.specmatic.core.filters.ScenarioFilterVariablePopulator
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.mapZip
 import io.specmatic.core.utilities.nullOrExceptionString
-import io.specmatic.core.value.*
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.True
+import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.RequestContext
 import io.specmatic.test.ExampleProcessor
@@ -867,15 +871,8 @@ data class Scenario(
         }
     }
 
-    override fun toScenarioMetadata(): ScenarioMetadata {
-        return ScenarioMetadata(
-            method = this.method,
-            path = this.path,
-            statusCode = this.status,
-            header = this.httpRequestPattern.getHeaderKeys(),
-            query = this.httpRequestPattern.getQueryParamKeys(),
-            exampleName = this.exampleName.orEmpty()
-        )
+    override fun toScenarioMetadata(): ExpressionContextPopulator {
+        return ScenarioFilterVariablePopulator(this)
     }
 
     fun fieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams: QueryParameters?): Set<String> {

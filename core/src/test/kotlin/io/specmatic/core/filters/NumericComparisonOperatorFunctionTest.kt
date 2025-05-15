@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-class EnhancedRHSValueEvalFunctionTest {
+class NumericComparisonOperatorFunctionTest {
     @Test
     fun `test status code greater than equal to 500 and less than 500 using filter`() {
         val expression = "STATUS>='500' && STATUS<'510'"

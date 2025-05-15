@@ -232,6 +232,8 @@ class OpenApiSpecification(
 
     val patterns = mutableMapOf<String, Pattern>()
 
+    private val pathTree: PathTree = PathTree.from(parsedOpenApi.paths.orEmpty())
+
     fun isOpenAPI31(): Boolean {
         return parsedOpenApi.openapi.startsWith("3.1")
     }
@@ -1982,24 +1984,29 @@ class OpenApiSpecification(
                 emptyList()
             else it.split("/")
         }
-        val pathParamMap: Map<String, PathParameter> =
-            parameters.filterIsInstance<PathParameter>().associateBy {
+        val pathParamMap: Map<String, PathParameter> = parameters.filterIsInstance<PathParameter>().associateBy {
                 it.name
             }
 
-        val pathPattern: List<URLPathSegmentPattern> = pathSegments.map { pathSegment ->
+        val pathPattern = pathSegments.mapIndexed { index, pathSegment ->
             logger.debug("Processing path segment $pathSegment")
 
-            if (isParameter(pathSegment)) {
-                val paramName = pathSegment.removeSurrounding("{", "}")
-
-                val param = pathParamMap[paramName]
-                    ?: throw ContractException("The path parameter in $openApiPath is not defined in the specification")
-
-                URLPathSegmentPattern(toSpecmaticPattern(param.schema, emptyList()), paramName)
-            } else {
-                URLPathSegmentPattern(ExactValuePattern(StringValue(pathSegment)))
+            if (!isParameter(pathSegment)) {
+                return@mapIndexed URLPathSegmentPattern(ExactValuePattern(StringValue(pathSegment)))
             }
+
+            val paramName = pathSegment.removeSurrounding("{", "}")
+            val param = pathParamMap[paramName] ?: throw ContractException(
+                errorMessage = "The path parameter in $openApiPath is not defined in the specification"
+            )
+
+            val pathSoFar = pathSegments.take(index + 1).joinToString(separator = "/")
+            val conflicts = pathTree.conflictsFor(pathSoFar)
+            URLPathSegmentPattern(
+                pattern = toSpecmaticPattern(param.schema, emptyList()),
+                key = paramName,
+                conflicts = conflicts
+            )
         }
 
         val specmaticPath = toSpecmaticFormattedPathString(parameters, openApiPath)

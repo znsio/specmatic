@@ -7,9 +7,17 @@ import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
-data class URLPathSegmentPattern(override val pattern: Pattern, override val key: String? = null, override val typeAlias: String? = null) : Pattern, Keyed {
-    override fun matches(sampleData: Value?, resolver: Resolver): Result =
-            resolver.matchesPattern(key, pattern, sampleData ?: NullValue)
+data class URLPathSegmentPattern(override val pattern: Pattern, override val key: String? = null, override val typeAlias: String? = null, val conflicts: Set<String> = emptySet()) : Pattern, Keyed {
+    override fun matches(sampleData: Value?, resolver: Resolver): Result {
+        if (sampleData?.toStringLiteral() in conflicts) {
+            return Result.Failure(
+                "Value ${sampleData?.displayableValue()} conflicts with an existing path using the same prefix",
+                failureReason = FailureReason.SegmentConflict
+            )
+        }
+
+        return resolver.matchesPattern(key, pattern, sampleData ?: NullValue)
+    }
 
     override fun generate(resolver: Resolver): Value {
         return resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->

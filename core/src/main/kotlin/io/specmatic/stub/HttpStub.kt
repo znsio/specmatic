@@ -365,11 +365,11 @@ class HttpStub(
     }
 
     private fun ApplicationEngineEnvironmentBuilder.configureHostPorts() {
-        val hostPortList = getHostAndPortList()
+        val portToHostMap = getHostAndPortList()
 
         when (keyData) {
             null -> connectors.addAll(
-                hostPortList.map { (host, port) ->
+                portToHostMap.map { (port, host) ->
                     EngineConnectorBuilder().also {
                         it.host = host
                         it.port = port
@@ -378,7 +378,7 @@ class HttpStub(
             )
 
             else -> connectors.addAll(
-                hostPortList.map { (host, port) ->
+                portToHostMap.map { (port, host) ->
                     EngineSSLConnectorBuilder(
                         keyStore = keyData.keyStore,
                         keyAlias = keyData.keyAlias,
@@ -413,7 +413,7 @@ class HttpStub(
         }
     }
 
-    private fun getHostAndPortList(): List<Pair<String, Int>> {
+    private fun getHostAndPortList(): Map<Int, String> {
         val defaultBaseUrl = endPointFromHostAndPort(this.host, this.port, this.keyData)
         val specsWithMultipleBaseUrls = specmaticConfig.stubToBaseUrlList(defaultBaseUrl).groupBy(
             keySelector = { it.first }, valueTransform = { it.second }
@@ -436,7 +436,7 @@ class HttpStub(
             val host = extractHost(stubBaseUrl).let(::normalizeHost)
             val port = extractPort(stubBaseUrl)
             Pair(host, port)
-        }.distinct().ifEmpty { listOf(this.host to this.port) }
+        }.deDuplicateByHostAndPort().ifEmpty { mapOf(this.port to this.host) }
     }
 
     fun serveStubResponse(
@@ -1436,4 +1436,13 @@ fun writeEvent(event: SseEvent, writer: Writer) {
 
     writer.write("\n")
     writer.flush()
+}
+
+fun List<Pair<String, Int>>.deDuplicateByHostAndPort(): Map<Int, String> {
+    val precedence = listOf("::", "0.0.0.0", "::1", "localhost", "127.0.0.1")
+    val priority = precedence.withIndex().associate { it.value to it.index }
+
+    return this.groupBy({it.second}, {it.first}).mapValues { (_, hosts) ->
+        hosts.minByOrNull { priority[it] ?: Int.MAX_VALUE } ?: hosts.first()
+    }
 }

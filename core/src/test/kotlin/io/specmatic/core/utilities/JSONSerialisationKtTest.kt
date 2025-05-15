@@ -17,8 +17,8 @@ class JSONSerialisationKtTest {
     }
 
     @ParameterizedTest
-    @MethodSource("floatingPointValues")
-    fun `should be able to de-serialise floating point values from json to number value`(value: Number) {
+    @MethodSource("numberValuesProvider")
+    fun `should be able to de-serialise numbers from json to number value`(value: Number) {
         val jsonString = """{"value": $value}"""
         val valueMap = jsonStringToValueMap(jsonString)
         val parsedValue = (valueMap["value"] as NumberValue).nativeValue
@@ -31,8 +31,8 @@ class JSONSerialisationKtTest {
     }
 
     @ParameterizedTest
-    @MethodSource("floatingPointValues")
-    fun `should be able to serialise floating point values from number value to json`(value: Number) {
+    @MethodSource("numberValuesProvider")
+    fun `should be able to serialise from number value to json`(value: Number) {
         val valueMap = mapOf("value" to NumberValue(value))
         val jsonContent = valueMapToUnindentedJsonString(valueMap)
 
@@ -41,8 +41,13 @@ class JSONSerialisationKtTest {
 
     companion object {
         @JvmStatic
-        fun floatingPointValues(): List<Number> {
-            return listOf(Float.MIN_VALUE, Float.MAX_VALUE, Double.MIN_VALUE, Double.MAX_VALUE)
+        fun numberValuesProvider(): List<Number> {
+            return listOf(
+                Int.MIN_VALUE, Int.MAX_VALUE,
+                Long.MIN_VALUE, Long.MAX_VALUE,
+                Float.MIN_VALUE, Float.MAX_VALUE,
+                Double.MIN_VALUE, Double.MAX_VALUE
+            )
         }
     }
 }

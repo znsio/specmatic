@@ -28,6 +28,11 @@ data class PathTree(val segment: String, val children: Map<String, PathTree> = e
 
     private fun isParameter(segment: String): Boolean = segment.startsWith("{") && segment.endsWith("}")
 
+    fun asMap(isRoot: Boolean = true): Map<String, Any> {
+        val mapped = children.mapValues { it.value.asMap(false) }
+        return if (isRoot) mapOf(segment to mapped) else mapped
+    }
+
     companion object {
         fun <T> from(paths: Map<String, T>): PathTree {
             val rootNode = PathTree("/")

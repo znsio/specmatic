@@ -475,27 +475,6 @@ class ScenarioTest {
             assertDoesNotThrow { scenario.validExamplesOrException(flagBased) }
         }
     }
-    
-    @Test
-    fun `should return un-used scenarios back with updated copy of itself on useExamples`() {
-        val identifier = OpenApiSpecification.OperationIdentifier(
-            requestMethod = "GET", requestPath = "/test/latest", responseStatus = 200,
-            requestContentType = "*/*", responseContentType = "*/*"
-        )
-        val scenario = Scenario(ScenarioInfo(
-            scenarioName = "GET-LATEST",
-            httpRequestPattern = HttpRequestPattern(method = "GET", httpPathPattern = buildHttpPathPattern("/test/latest")),
-            httpResponsePattern = HttpResponsePattern(status = 200)
-        ))
-        val examples = mapOf(
-            identifier.copy(requestPath = "/test/123") to listOf(Row(name = "non-matching-example.json")),
-            identifier to listOf(Row(name = "matching-example.json"))
-        )
-        val (unused, updated) = scenario.useExamples(examples)
-
-        assertThat(unused.keys).containsExactly(identifier.copy(requestPath = "/test/123"))
-        assertThat(updated.examples.flatMap { it.rows }).containsExactly(Row(name = "matching-example.json"))
-    }
 
     @Nested
     inner class AttributeSelectionTest {

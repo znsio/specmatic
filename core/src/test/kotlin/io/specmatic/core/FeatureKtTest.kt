@@ -11,7 +11,6 @@ import io.specmatic.mock.mockFromJSON
 import io.specmatic.osAgnosticPath
 import io.mockk.every
 import io.mockk.mockk
-import io.specmatic.core.utilities.Flags
 import io.specmatic.stub.captureStandardOutput
 import io.swagger.v3.core.util.Yaml
 import org.junit.jupiter.api.*
@@ -795,22 +794,5 @@ paths:
         }
 
         assertThat(stdout).doesNotContain("Could not find the Specmatic configuration at path")
-    }
-
-    @Test
-    fun `should retain the order of scenarios when loading examples`() {
-        val openApiFile = File("src/test/resources/openapi/has_shadow_paths/api.yaml")
-        val validExamplesDir = openApiFile.resolveSibling("valid_examples")
-        Flags.using(Flags.EXAMPLE_DIRECTORIES to validExamplesDir.canonicalPath) {
-            val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
-            val scenarioPaths = feature.scenarioStore.scenariosWithOriginalOrder.map { it.path }
-
-            assertThat(scenarioPaths).containsExactly(
-                "/test/(testId:string)",
-                "/test/latest",
-                "/reports/(testId:string)/latest",
-                "/(testId:string)/reports/(reportId:string)"
-            )
-        }
     }
 }

@@ -573,7 +573,7 @@ class StatefulHttpStubWithAttributeSelectionTest {
             }
             httpStub = StatefulHttpStub(
                 specmaticConfigPath = "$SPEC_DIR_PATH/specmatic.yaml",
-                features = listOf(feature.copy(scenarioStore = ScenarioStore.from(scenarios)))
+                features = listOf(feature.copy(scenarios = scenarios))
             )
         }
 

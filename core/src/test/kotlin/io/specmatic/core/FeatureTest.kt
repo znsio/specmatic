@@ -2932,7 +2932,7 @@ paths:
             exampleName = "example"
         )
 
-        val feature = Feature.from(name = "", scenarios = listOf(scenario))
+        val feature = Feature(name = "", scenarios = listOf(scenario))
 
         val openAPI = feature.toOpenApi()
         assertThat(openAPI.paths["/data"]?.post?.requestBody).isNull()

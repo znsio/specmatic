@@ -110,11 +110,11 @@ fun unsupportedFileExtensionContractException(
 fun parseGherkinStringToFeature(gherkinData: String, sourceFilePath: String = ""): Feature {
     val gherkinDocument = parseGherkinString(gherkinData, sourceFilePath)
     val (name, scenarios) = lex(gherkinDocument, sourceFilePath)
-    return Feature(scenarioStore = ScenarioStore.from(scenarios), name = name, path = sourceFilePath)
+    return Feature(scenarios = scenarios, name = name, path = sourceFilePath)
 }
 
 data class Feature(
-    val scenarioStore: ScenarioStore = ScenarioStore.empty(),
+    val scenarios: List<Scenario> = emptyList(),
     private var serverState: Map<String, Value> = emptyMap(),
     val name: String,
     val testVariables: Map<String, String> = emptyMap(),
@@ -137,8 +137,6 @@ data class Feature(
                 valueTransform = { it.example.request to it.example.response }
             )
         }
-
-    val scenarios: List<Scenario> = scenarioStore.scenarios
 
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         return this.copy(flagsBased = this.flagsBased.copy(
@@ -668,7 +666,7 @@ data class Feature(
         originalScenarios: List<Scenario> = emptyList()
     ): ContractTest = ScenarioAsTest(
         scenario = adjustTestDescription(concreteTestScenario, originalScenarios),
-        feature = this.copy(scenarioStore = ScenarioStore.from(originalScenarios)),
+        feature = this.copy(scenarios = originalScenarios),
         flagsBased,
         concreteTestScenario.sourceProvider,
         concreteTestScenario.sourceRepository,
@@ -725,7 +723,7 @@ data class Feature(
     }
 
     private fun positiveTestScenarios(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<Pair<Scenario, ReturnValue<Scenario>>> =
-        scenarioStore.scenariosWithOriginalOrder.asSequence().filter {
+        scenarios.asSequence().filter {
             it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario
         }.map {
             it.newBasedOn(suggestions)
@@ -748,7 +746,7 @@ data class Feature(
         }
 
     fun negativeTestScenarios(): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
-        return scenarioStore.scenariosWithOriginalOrder.asSequence().filter {
+        return scenarios.asSequence().filter {
             it.isA2xxScenario()
         }.flatMap { originalScenario ->
             val negativeScenario = originalScenario.negativeBasedOn(getBadRequestsOrDefault(originalScenario))
@@ -1796,12 +1794,11 @@ data class Feature(
     }
 
     private fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Feature {
-        val (_, newScenarioStore) = scenarioStore.fold(externalisedJSONExamples) { examples, scenario ->
-            val (unusedExamples, updatedScenario) = scenario.useExamples(examples)
-            unusedExamples to updatedScenario
+        val scenariosWithExamples: List<Scenario> = scenarios.map {
+            it.useExamples(externalisedJSONExamples)
         }
 
-        return this.copy(scenarioStore = newScenarioStore)
+        return this.copy(scenarios = scenariosWithExamples)
     }
 
     private fun loadExternalisedJSONExamples(testsDirectory: File?): Map<OpenApiSpecification.OperationIdentifier, List<Row>> {
@@ -2000,7 +1997,7 @@ data class Feature(
             strictMode: Boolean = false
         ): Feature {
             return Feature(
-                scenarioStore = ScenarioStore.from(scenarios),
+                scenarios = scenarios,
                 serverState = serverState,
                 name = name,
                 testVariables = testVariables,

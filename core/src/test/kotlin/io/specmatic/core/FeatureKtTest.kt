@@ -800,8 +800,8 @@ paths:
     fun `should retain the order of scenarios when loading examples`() {
         val openApiFile = File("src/test/resources/openapi/has_shadow_paths/api.yaml")
         val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
-        val scenarioPath = feature.scenarios.map { it.path }
+        val scenarioPaths = feature.scenarioStore.scenariosWithOriginalOrder.map { it.path }
 
-        assertThat(scenarioPath).containsExactly("/test/(id:string)", "/test/latest")
+        assertThat(scenarioPaths).containsExactly("/test/(id:string)", "/test/latest")
     }
 }

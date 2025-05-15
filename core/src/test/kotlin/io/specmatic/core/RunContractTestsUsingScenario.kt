@@ -560,7 +560,7 @@ paths:
             )
         ))
 
-        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
+        val feature = Feature.from(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
         val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario)
 
         val (result, response) = contractTest.runTest(object : TestExecutor {
@@ -619,7 +619,7 @@ paths:
             )
         ))
 
-        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
+        val feature = Feature.from(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
         val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario)
 
         val (result, response) = contractTest.runTest(object : TestExecutor {
@@ -680,7 +680,7 @@ paths:
             )
         ))
 
-        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario))
+        val feature = Feature.from(name = "", scenarios = listOf(postScenario, acceptedScenario))
         val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario)
 
         val (result, response) = contractTest.runTest(object : TestExecutor {
@@ -712,7 +712,7 @@ paths:
             httpResponsePattern = HttpResponsePattern(status = 202)
         ))
 
-        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario))
+        val feature = Feature.from(name = "", scenarios = listOf(postScenario, acceptedScenario))
         val contractTest = ScenarioAsTest(postScenario, feature, feature.flagsBased, originalScenario = postScenario)
 
         val (result, response) = contractTest.runTest(object : TestExecutor {
@@ -749,7 +749,7 @@ paths:
                 )
             )
         )
-        val feature = Feature(name = "", scenarios = listOf(scenario))
+        val feature = Feature.from(name = "", scenarios = listOf(scenario))
 
         val extractValue: (HttpRequest) -> String = { it ->
             when(securitySchema) {
@@ -795,7 +795,7 @@ paths:
                 )
             )
         )
-        val feature = Feature(name = "", scenarios = listOf(scenario))
+        val feature = Feature.from(name = "", scenarios = listOf(scenario))
 
         val extractValue: (HttpRequest) -> String = { it ->
             when(securitySchema) {

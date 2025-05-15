@@ -2558,7 +2558,7 @@ components:
         }
         assertThat(messageToCheck).isEqualTo(
             """400 Bad Request: "In scenario "POST /users.
-            | Response: Details of the new user to register"<EOL>API: POST /users -> 201<EOL><EOL>
+            | Response: Details of the new user to register"<EOL>API: POST /users -> 201<EOL>
             |  >> REQUEST.BODY.email<EOL>  <EOL>
             |     Contract expected email string but request contained "this.is.not.an.email"""""
                 .trimMargin()

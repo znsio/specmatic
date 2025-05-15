@@ -40,7 +40,7 @@ class ResponseMonitorTest {
 
     @Test
     fun `should return failure if accepted scenario doesn't exist`() {
-        val feature = Feature(name = "", scenarios = listOf(postScenario))
+        val feature = Feature.from(name = "", scenarios = listOf(postScenario))
         val result = ResponseMonitor(
             feature, postScenario, response = HttpResponse(status = 202)
         ).waitForResponse(throwAwayExecutor)
@@ -54,7 +54,7 @@ class ResponseMonitorTest {
 
     @Test
     fun `should return failure when response doesn't mach accepted response`() {
-        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario))
+        val feature = Feature.from(name = "", scenarios = listOf(postScenario, acceptedScenario))
         val result = ResponseMonitor(
             feature, postScenario, response = HttpResponse(status = 404)
         ).waitForResponse(throwAwayExecutor)
@@ -71,7 +71,7 @@ class ResponseMonitorTest {
 
     @Test
     fun `should return failure if monitor link is not found in the response`() {
-        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario))
+        val feature = Feature.from(name = "", scenarios = listOf(postScenario, acceptedScenario))
         val result = ResponseMonitor(
             feature, postScenario, response = HttpResponse(status = 202)
         ).waitForResponse(throwAwayExecutor)
@@ -99,7 +99,7 @@ class ResponseMonitorTest {
                 headersPattern = HttpHeadersPattern(mapOf("Link" to StringPattern()))
             )
         ))
-        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario))
+        val feature = Feature.from(name = "", scenarios = listOf(postScenario, acceptedScenario))
 
         val result = ResponseMonitor(feature, postScenario, response = HttpResponse(
             status = 202,
@@ -115,7 +115,7 @@ class ResponseMonitorTest {
 
     @Test
     fun `should make a request to the monitor link provided in headers`() {
-        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
+        val feature = Feature.from(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
         val result = ResponseMonitor(feature, postScenario, response = HttpResponse(
             status = 202,
             headers = mapOf("Link" to "</monitor/123>;rel=related;title=monitor")
@@ -157,7 +157,7 @@ class ResponseMonitorTest {
     @Test
     fun `should retry if the monitor response is not complete`() {
         var count = 0
-        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
+        val feature = Feature.from(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
 
         val result = ResponseMonitor(feature, postScenario, response = HttpResponse(
             status = 202,
@@ -221,7 +221,7 @@ class ResponseMonitorTest {
     fun `should return failure when max retries have exceeded`() {
         var count = 0
         val maxRetries = 2
-        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
+        val feature = Feature.from(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
 
         val result = ResponseMonitor(feature, postScenario, response = HttpResponse(
             status = 202,
@@ -262,7 +262,7 @@ class ResponseMonitorTest {
         val customSleeper = object : Sleeper {
             override fun sleep(milliSeconds: Long) { sleepDurations.add(milliSeconds) }
         }
-        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
+        val feature = Feature.from(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
 
         val result = ResponseMonitor(feature, postScenario, response = HttpResponse(
             status = 202,
@@ -298,7 +298,7 @@ class ResponseMonitorTest {
 
     @Test
     fun `should return an error when monitor response is invalid`() {
-        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
+        val feature = Feature.from(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
         val result = ResponseMonitor(feature, postScenario, response = HttpResponse(
             status = 202,
             headers = mapOf("Link" to "</monitor/123>;rel=related;title=monitor")
@@ -340,7 +340,7 @@ class ResponseMonitorTest {
 
     @Test
     fun `extraHeaders from monitor response payload should be allowed`() {
-        val feature = Feature(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
+        val feature = Feature.from(name = "", scenarios = listOf(postScenario, acceptedScenario, monitorScenario))
         val response = JSONObjectValue(mapOf(
             "statusCode" to NumberValue(201),
             "body" to JSONObjectValue(mapOf("name" to StringValue("John"), "age" to NumberValue(20))),

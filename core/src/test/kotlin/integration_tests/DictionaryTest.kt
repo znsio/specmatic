@@ -368,7 +368,7 @@ class DictionaryTest {
                 httpRequestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/orders/(id:number)"), method = "GET"),
                 httpResponsePattern = HttpResponsePattern(status = 200)
             )).copy(dictionary = dictionary)
-            val feature = Feature(listOf(scenario), name = "")
+            val feature = Feature.from(listOf(scenario), name = "")
 
             val result = feature.enableGenerativeTesting().executeTests(object: TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
@@ -398,7 +398,7 @@ class DictionaryTest {
                 ),
                 httpResponsePattern = HttpResponsePattern(status = 200)
             )).copy(dictionary = dictionary)
-            val feature = Feature(listOf(scenario), name = "")
+            val feature = Feature.from(listOf(scenario), name = "")
 
             val result = feature.enableGenerativeTesting().executeTests(object: TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
@@ -430,7 +430,7 @@ class DictionaryTest {
                 ),
                 httpResponsePattern = HttpResponsePattern(status = 200)
             )).copy(dictionary = dictionary)
-            val feature = Feature(listOf(scenario), name = "")
+            val feature = Feature.from(listOf(scenario), name = "")
 
             val result = feature.enableGenerativeTesting().executeTests(object: TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
@@ -464,7 +464,7 @@ class DictionaryTest {
                 ),
                 httpResponsePattern = HttpResponsePattern(status = 200)
             )).copy(dictionary = dictionary)
-            val feature = Feature(listOf(scenario), name = "")
+            val feature = Feature.from(listOf(scenario), name = "")
 
             val result = feature.enableGenerativeTesting().executeTests(object: TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
@@ -500,7 +500,7 @@ class DictionaryTest {
             ),
             httpResponsePattern = HttpResponsePattern(status = 200)
         )).copy(dictionary = dictionary)
-        val feature = Feature(listOf(scenario), name = "")
+        val feature = Feature.from(listOf(scenario), name = "")
 
 
         feature.enableGenerativeTesting().executeTests(object : TestExecutor {

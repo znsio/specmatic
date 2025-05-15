@@ -47,7 +47,7 @@ class ExampleValidationModuleTest {
             )
         )
 
-        val result = exampleValidationModule.validateExample(Feature(listOf(scenario), name= ""), example)
+        val result = exampleValidationModule.validateExample(Feature.from(listOf(scenario), name= ""), example)
         assertThat(result.toResultIfAny()).isInstanceOf(Result.Success::class.java)
     }
 
@@ -83,7 +83,7 @@ class ExampleValidationModuleTest {
             )
         )
 
-        val result = exampleValidationModule.validateExample(Feature(listOf(scenario), name= ""), example)
+        val result = exampleValidationModule.validateExample(Feature.from(listOf(scenario), name= ""), example)
         assertThat(result.report()).isEqualToNormalizingWhitespace("""
         In scenario ""
         API: POST /add -> 200
@@ -100,7 +100,7 @@ class ExampleValidationModuleTest {
         val example = JSONObjectValue(mapOf("first" to StringValue("(number)"), "second" to NumberValue(10)))
 
         val scenario = Scenario(ScenarioInfo(patterns = mapOf("(Test)" to pattern)))
-        val feature = Feature(listOf(scenario), name= "")
+        val feature = Feature.from(listOf(scenario), name= "")
 
         val result = feature.matchResultSchemaFlagBased(null, "Test", example, DefaultMismatchMessages)
         assertThat(result).isInstanceOf(Result.Success::class.java)
@@ -112,7 +112,7 @@ class ExampleValidationModuleTest {
         val example = JSONObjectValue(mapOf("first" to StringValue("(string)"), "second" to NumberValue(10)))
 
         val scenario = Scenario(ScenarioInfo(patterns = mapOf("(Test)" to pattern)))
-        val feature = Feature(listOf(scenario), name= "")
+        val feature = Feature.from(listOf(scenario), name= "")
 
         val result = feature.matchResultSchemaFlagBased(null, "Test", example, DefaultMismatchMessages)
         assertThat(result).isInstanceOf(Result.Failure::class.java)
@@ -130,7 +130,7 @@ class ExampleValidationModuleTest {
                 httpResponsePattern = HttpResponsePattern(status = 200)
             )
         )
-        val feature = Feature(listOf(scenario), name = "")
+        val feature = Feature.from(listOf(scenario), name = "")
         val example = ScenarioStub(request = HttpRequest(method = "GET", path = "/test/abc/name/123"), response = HttpResponse.OK)
         val result = exampleValidationModule.validateExample(feature, example).toResultIfAny()
 
@@ -151,7 +151,7 @@ class ExampleValidationModuleTest {
                 httpResponsePattern = HttpResponsePattern(status = 400)
             )
         )
-        val feature = Feature(listOf(scenario), name = "")
+        val feature = Feature.from(listOf(scenario), name = "")
         val example = ScenarioStub(request = HttpRequest(method = "GET", path = "/test/abc/name/123"), response = HttpResponse(status = 400))
         val result = exampleValidationModule.validateExample(feature, example)
 
@@ -173,7 +173,7 @@ class ExampleValidationModuleTest {
                 )
             )
         )
-        val feature = Feature(listOf(scenario), name = "")
+        val feature = Feature.from(listOf(scenario), name = "")
 
         val example = ScenarioStub(
             request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"name": "John"}""")),
@@ -200,7 +200,7 @@ class ExampleValidationModuleTest {
                 )
             )
         )
-        val feature = Feature(listOf(scenario), name = "")
+        val feature = Feature.from(listOf(scenario), name = "")
 
         val example = ScenarioStub(
             request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"name": 123}""")),
@@ -233,7 +233,7 @@ class ExampleValidationModuleTest {
                 )
             )
         )
-        val feature = Feature(listOf(scenario), name = "")
+        val feature = Feature.from(listOf(scenario), name = "")
 
         val example = ScenarioStub(
             request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"name": "(number)", "age": "(number)"}""")),
@@ -266,7 +266,7 @@ class ExampleValidationModuleTest {
                 )
             )
         )
-        val feature = Feature(listOf(scenario), name = "")
+        val feature = Feature.from(listOf(scenario), name = "")
 
         val example = ScenarioStub(
             request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"name": "John"}""")),
@@ -304,7 +304,7 @@ class ExampleValidationModuleTest {
                 )
             )
         ).copy(attributeSelectionPattern = AttributeSelectionPattern(defaultFields = listOf("id"), queryParamKey = "columns"))
-        val feature = Feature(listOf(scenario), name = "")
+        val feature = Feature.from(listOf(scenario), name = "")
 
         val example = ScenarioStub(
             request = HttpRequest("GET", "/test", queryParams = QueryParameters(mapOf("columns" to "name"))),
@@ -341,7 +341,7 @@ class ExampleValidationModuleTest {
                 )
             )
         ).copy(attributeSelectionPattern = AttributeSelectionPattern(defaultFields = listOf("id"), queryParamKey = "columns"))
-        val feature = Feature(listOf(scenario), name = "")
+        val feature = Feature.from(listOf(scenario), name = "")
 
         val example = ScenarioStub(
             request = HttpRequest("GET", "/test", queryParams = QueryParameters(mapOf("columns" to "name"))),
@@ -368,7 +368,7 @@ class ExampleValidationModuleTest {
                 )
             )
         ).copy(attributeSelectionPattern = AttributeSelectionPattern(defaultFields = listOf("id"), queryParamKey = "columns"))
-        val feature = Feature(listOf(scenario), name = "")
+        val feature = Feature.from(listOf(scenario), name = "")
 
         val invalidExample = ScenarioStub(
             request = HttpRequest("GET", "/test", queryParams = QueryParameters(mapOf("columns" to "name"))),
@@ -412,7 +412,7 @@ class ExampleValidationModuleTest {
                 headersPattern = HttpHeadersPattern(mapOf("RESPONSE-HEADER" to StringPattern()))
             )
         ))
-        val feature = Feature(listOf(scenario), name = "")
+        val feature = Feature.from(listOf(scenario), name = "")
         val example = ScenarioStub(
             request = HttpRequest("GET", "/test", headers = mapOf("REQUEST-HEADER" to "request-value", "EXTRA-HEADER" to "extra-value")),
             response = HttpResponse(status = 200, headers = mapOf("RESPONSE-HEADER" to "response-value", "EXTRA-HEADER" to "extra-value"))
@@ -441,7 +441,7 @@ class ExampleValidationModuleTest {
                 headersPattern = HttpHeadersPattern(mapOf("RESPONSE-HEADER" to StringPattern()))
             )
         ))
-        val feature = Feature(listOf(scenario), name = "")
+        val feature = Feature.from(listOf(scenario), name = "")
         val example = ScenarioStub(
             request = HttpRequest("GET", "/test", headers = mapOf("REQUEST-HEADER" to "request-value", "EXTRA-HEADER" to "extra-value")),
             response = HttpResponse(status = 200, headers = mapOf("RESPONSE-HEADER" to "response-value", "EXTRA-HEADER" to "extra-value"))
@@ -476,7 +476,7 @@ class ExampleValidationModuleTest {
         ).toExample(tempDir)
 
         Flags.using(Flags.EXTENSIBLE_SCHEMA to "true") {
-            val feature = Feature(listOf(scenario), name = "")
+            val feature = Feature.from(listOf(scenario), name = "")
             val result = exampleValidationModule.validateExample(feature, example)
             assertThat(result).isInstanceOf(Result.Success::class.java)
         }
@@ -496,7 +496,7 @@ class ExampleValidationModuleTest {
             request = HttpRequest("GET", "/test", headers = mapOf("Content-Type" to "application/json")),
             response = HttpResponse(status = 400, headers = mapOf("Content-Type" to "application/json"))
         ).toExample(tempDir)
-        val feature = Feature(listOf(scenario), name = "")
+        val feature = Feature.from(listOf(scenario), name = "")
         val result = exampleValidationModule.validateExample(feature, example)
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)

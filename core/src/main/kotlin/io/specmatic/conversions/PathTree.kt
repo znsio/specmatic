@@ -18,6 +18,7 @@ data class PathTree(val segment: String, val children: Map<String, PathTree> = e
 
     private fun conflictsFor(segments: List<String>): Set<String> {
         return when (segments.size) {
+            0 -> emptySet()
             1 -> children.keys.filterNot(::isParameter).toSet()
             else -> {
                 val (head, tail) = segments.first() to segments.drop(1)

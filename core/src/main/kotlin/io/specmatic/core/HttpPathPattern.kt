@@ -58,7 +58,7 @@ data class HttpPathPattern(
             try {
 
                 val parsedValue = urlPathPattern.tryParse(token, resolver)
-                val result = resolver.matchesPattern(urlPathPattern.key, urlPathPattern.pattern, parsedValue)
+                val result = urlPathPattern.matches(parsedValue, resolver)
                 if (result is Failure) {
                     when (urlPathPattern.key) {
                         null -> result.breadCrumb("$PATH_BREAD_CRUMB ($path)").withFailureReason(FailureReason.URLPathMisMatch)
@@ -79,12 +79,12 @@ data class HttpPathPattern(
         }
 
         val failures = results.filterIsInstance<Failure>()
-
         val finalMatchResult = Result.fromResults(failures)
-
-        val failureReason = if (structureMatches(path, resolver)) {
-            FailureReason.URLPathParamMismatchButSameStructure
-        } else FailureReason.URLPathMisMatch
+        val failureReason = when {
+            finalMatchResult is Failure && finalMatchResult.hasReason(FailureReason.SegmentConflict) -> FailureReason.SegmentConflict
+            structureMatches(path, resolver) -> FailureReason.URLPathParamMismatchButSameStructure
+            else -> FailureReason.URLPathMisMatch
+        }
 
         return finalMatchResult.withFailureReason(failureReason)
     }

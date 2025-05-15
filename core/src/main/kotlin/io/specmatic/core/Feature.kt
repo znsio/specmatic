@@ -110,11 +110,11 @@ fun unsupportedFileExtensionContractException(
 fun parseGherkinStringToFeature(gherkinData: String, sourceFilePath: String = ""): Feature {
     val gherkinDocument = parseGherkinString(gherkinData, sourceFilePath)
     val (name, scenarios) = lex(gherkinDocument, sourceFilePath)
-    return Feature(scenarios = scenarios, name = name, path = sourceFilePath)
+    return Feature(scenarioStore = ScenarioStore.from(scenarios), name = name, path = sourceFilePath)
 }
 
 data class Feature(
-    val scenarios: List<Scenario> = emptyList(),
+    val scenarioStore: ScenarioStore = ScenarioStore.empty(),
     private var serverState: Map<String, Value> = emptyMap(),
     val name: String,
     val testVariables: Map<String, String> = emptyMap(),
@@ -137,6 +137,8 @@ data class Feature(
                 valueTransform = { it.example.request to it.example.response }
             )
         }
+
+    val scenarios: List<Scenario> = scenarioStore.scenarios
 
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         return this.copy(flagsBased = this.flagsBased.copy(
@@ -666,7 +668,7 @@ data class Feature(
         originalScenarios: List<Scenario> = emptyList()
     ): ContractTest = ScenarioAsTest(
         scenario = adjustTestDescription(concreteTestScenario, originalScenarios),
-        feature = this.copy(scenarios = originalScenarios),
+        feature = this.copy(scenarioStore = ScenarioStore.from(originalScenarios)),
         flagsBased,
         concreteTestScenario.sourceProvider,
         concreteTestScenario.sourceRepository,
@@ -723,7 +725,7 @@ data class Feature(
     }
 
     private fun positiveTestScenarios(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<Pair<Scenario, ReturnValue<Scenario>>> =
-        scenarios.asSequence().filter {
+        scenarioStore.scenariosWithOriginalOrder.asSequence().filter {
             it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario
         }.map {
             it.newBasedOn(suggestions)
@@ -746,7 +748,7 @@ data class Feature(
         }
 
     fun negativeTestScenarios(): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
-        return scenarios.asSequence().filter {
+        return scenarioStore.scenariosWithOriginalOrder.asSequence().filter {
             it.isA2xxScenario()
         }.flatMap { originalScenario ->
             val negativeScenario = originalScenario.negativeBasedOn(getBadRequestsOrDefault(originalScenario))
@@ -1794,18 +1796,12 @@ data class Feature(
     }
 
     private fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Feature {
-        val sortedByPathGenerality = scenarios.withIndex().sortedBy { it.value.httpRequestPattern.pathGenerality }
-
-        val (_, scenariosWithExamples) = sortedByPathGenerality.fold(
-            initial = externalisedJSONExamples to emptyList<IndexedValue<Scenario>>()
-        ) { (examples, updatedScenarios), value ->
-            val (_, scenario) = value
+        val (_, newScenarioStore) = scenarioStore.fold(externalisedJSONExamples) { examples, scenario ->
             val (unusedExamples, updatedScenario) = scenario.useExamples(examples)
-            unusedExamples to updatedScenarios.plus(value.copy(value = updatedScenario))
+            unusedExamples to updatedScenario
         }
 
-        val originalOrder = scenariosWithExamples.sortedBy { it.index }
-        return this.copy(scenarios = originalOrder.map { it.value })
+        return this.copy(scenarioStore = newScenarioStore)
     }
 
     private fun loadExternalisedJSONExamples(testsDirectory: File?): Map<OpenApiSpecification.OperationIdentifier, List<Row>> {
@@ -2004,7 +2000,7 @@ data class Feature(
             strictMode: Boolean = false
         ): Feature {
             return Feature(
-                scenarios = scenarios,
+                scenarioStore = ScenarioStore.from(scenarios),
                 serverState = serverState,
                 name = name,
                 testVariables = testVariables,

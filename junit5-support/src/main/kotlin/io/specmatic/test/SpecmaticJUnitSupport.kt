@@ -457,7 +457,7 @@ open class SpecmaticJUnitSupport {
             else -> emptyList()
         }
 
-        val allEndpoints: List<Endpoint> = feature.scenarios.map { scenario ->
+        val allEndpoints: List<Endpoint> = feature.scenarioStore.scenariosWithOriginalOrder.map { scenario ->
             Endpoint(
                 convertPathParameterStyle(scenario.path),
                 scenario.method,
@@ -471,7 +471,7 @@ open class SpecmaticJUnitSupport {
         }
 
         val filteredScenariosBasedOnName = selectTestsToRun(
-            feature.scenarios.asSequence(),
+            feature.scenarioStore.scenariosWithOriginalOrder.asSequence(),
             filterName,
             filterNotName
         ) {
@@ -493,7 +493,7 @@ open class SpecmaticJUnitSupport {
 
         openApiCoverageReportInput.addExcludedAPIs(excludedEndpoints);
         val tests: Sequence<ContractTest> = feature
-            .copy(scenarios = filteredScenarios.toList())
+            .copy(scenarioStore = ScenarioStore.from(filteredScenarios.toList()))
             .also {
                 if (it.scenarios.isEmpty())
                     logger.log("All scenarios were filtered out.")

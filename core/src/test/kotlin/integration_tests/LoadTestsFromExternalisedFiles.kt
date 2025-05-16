@@ -560,7 +560,7 @@ class LoadTestsFromExternalisedFiles {
     fun `should complain when examples have invalid security-scheme values or unexpected keys in header and query`() {
         val openApiFile = File("src/test/resources/openapi/has_composite_security/api.yaml")
         val examplesDir = openApiFile.resolveSibling("invalid_examples")
-        val feature = Flags.using(EXAMPLE_DIRECTORIES to examplesDir.canonicalPath) {
+        val feature = Flags.using(EXAMPLE_DIRECTORIES to examplesDir.canonicalPath, IGNORE_INLINE_EXAMPLES to "true") {
             OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
         }
         val exception = assertThrows<ContractException> { feature.validateExamplesOrException() }

@@ -1,5 +1,6 @@
 package io.specmatic.core
 
+import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.NumberPattern
 import io.specmatic.core.pattern.parsedJSON
@@ -13,6 +14,7 @@ import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
 import io.specmatic.trimmedLinesString
+import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
 import org.junit.jupiter.api.*
@@ -24,6 +26,7 @@ import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForEntity
 import org.springframework.web.client.postForEntity
 import org.w3c.dom.Node
+import java.io.File
 import java.net.URI
 import java.util.*
 
@@ -642,6 +645,69 @@ Scenario: JSON API to get account details with fact check
                 assertThat(response.statusCode.value()).isEqualTo(200)
             } catch (e: HttpClientErrorException) {
                 fail("Threw exception: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    @Test
+    fun `should respond with 4xx if request does not match the security scheme defined in the contract`() {
+        val openApiFile = File("src/test/resources/openapi/has_composite_security/api.yaml")
+        val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature()
+
+        val validRequestBody = JSONObjectValue(mapOf("message" to StringValue("Hello")))
+        val headersWithAuth = mapOf(AUTHORIZATION to "Bearer API-TOKEN")
+
+        HttpStub(feature).use {
+            val secureInvalidRequest = HttpRequest("POST", "/secure", body = validRequestBody, headers = headersWithAuth)
+            val secureResponse = it.client.execute(secureInvalidRequest)
+
+            assertThat(secureResponse.status).isEqualTo(400)
+            assertThat(secureResponse.body.toStringLiteral()).isEqualToNormalizingWhitespace("""
+            In scenario "Secure endpoint requiring Bearer token and query API key. Response: Success"
+            API: POST /secure -> 200
+            >> REQUEST.QUERY-PARAMS.apiKey
+            Api-key named apiKey in the contract was not found in the request
+            """.trimIndent())
+
+            val partialInvalidRequest = HttpRequest("POST", "/partial", body = validRequestBody)
+            val partialResponse = it.client.execute(partialInvalidRequest)
+
+            assertThat(partialResponse.status).isEqualTo(400)
+            assertThat(partialResponse.body.toStringLiteral()).isEqualToNormalizingWhitespace("""
+            In scenario "Partially secure endpoint requiring either Bearer token or query API key. Response: Success"
+            API: POST /partial -> 200
+            >> REQUEST.HEADERS.Authorization
+            Header named Authorization in the contract was not found in the request
+            >> REQUEST.QUERY-PARAMS.apiKey
+            Api-key named apiKey in the contract was not found in the request
+            """.trimIndent())
+
+            val insecureValidRequest = HttpRequest("POST", "/insecure", body = validRequestBody)
+            val insecureResponse = it.client.execute(insecureValidRequest)
+            assertThat(insecureResponse.status).isEqualTo(200)
+        }
+    }
+
+    @Test
+    fun `should respond with 2xx if request matches the security scheme defined in the contract`() {
+        val openApiFile = File("src/test/resources/openapi/has_composite_security/api.yaml")
+        val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature()
+
+        val validRequestBody = JSONObjectValue(mapOf("message" to StringValue("Hello")))
+        val headersWithAuth = mapOf(AUTHORIZATION to "Bearer API-TOKEN")
+        val queryWithAuth = QueryParameters(mapOf("apiKey" to "1234"))
+
+        HttpStub(feature).use {
+            val secureInvalidRequest = HttpRequest("POST", "/secure", body = validRequestBody, headers = headersWithAuth, queryParams = queryWithAuth)
+            val secureResponse = it.client.execute(secureInvalidRequest)
+            assertThat(secureResponse.status).isEqualTo(200)
+
+            listOf(
+                HttpRequest("POST", "/partial", body = validRequestBody, headers = headersWithAuth),
+                HttpRequest("POST", "/partial", body = validRequestBody, queryParams = queryWithAuth)
+            ).forEach { request ->
+                val response = it.client.execute(request)
+                assertThat(response.status).isEqualTo(200)
             }
         }
     }

@@ -808,7 +808,7 @@ paths:
                     val result = securitySchema.matches(request, Resolver())
 
                     assertThat(result).isInstanceOf(Result.Success::class.java)
-                    assertThat(securitySchema.isInRequest(request)).isTrue()
+                    assertThat(securitySchema.isInRequest(request, complete = true)).isTrue()
                 }
             }
         })

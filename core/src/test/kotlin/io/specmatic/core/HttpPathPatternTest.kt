@@ -23,6 +23,50 @@ internal class HttpPathPatternTest {
 
     @ParameterizedTest
     @CsvSource(
+        "a/b/1",
+        "a/1/c",
+        "1/b/c",
+        "1/2/c",
+        "a/1/2",
+        "1/b/2",
+        "1/2/3"
+    )
+    fun `should match path when structure matches and not all segments conflict`(path: String) {
+        val pattern = HttpPathPattern(listOf(
+            URLPathSegmentPattern(StringPattern(), "first", conflicts = setOf("a")),
+            URLPathSegmentPattern(StringPattern(), "second", conflicts = setOf("b")),
+            URLPathSegmentPattern(StringPattern(), "third", conflicts = setOf("c"))
+        ), path = "/(first:String)/(second:String)/(third:String)")
+        val result = pattern.matches(path, Resolver())
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should return failure when path conflicts with an existing path even if structure and data type matches`() {
+        val pattern = HttpPathPattern(listOf(
+            URLPathSegmentPattern(StringPattern(), "first", conflicts = setOf("a")),
+            URLPathSegmentPattern(StringPattern(), "second", conflicts = setOf("b")),
+            URLPathSegmentPattern(StringPattern(), "third", conflicts = setOf("c"))
+        ), path = "/(first:String)/(second:String)/(third:String)")
+        val result = pattern.matches("a/b/c", Resolver())
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat((result as Result.Failure).hasReason(FailureReason.URLPathParamMatchButConflict)).isTrue()
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+        >> PATH
+        Path segments of URL a/b/c overlap with another URL that has the same structure
+        >> PATH.first
+        Value "a" conflicts with an existing path using the same prefix
+        >> PATH.second
+        Value "b" conflicts with an existing path using the same prefix
+        >> PATH.third
+        Value "c" conflicts with an existing path using the same prefix
+        """.trimIndent())
+    }
+
+    @ParameterizedTest
+    @CsvSource(
         "/pets/(id:number), /pets/abc",
         "/customers/(customerId:number)/profile, /customers/abc/profile",
         "/(apiVersion:number), /abc",

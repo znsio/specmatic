@@ -80,13 +80,25 @@ data class HttpPathPattern(
 
         val failures = results.filterIsInstance<Failure>()
         val finalMatchResult = Result.fromResults(failures)
-        val failureReason = when {
-            finalMatchResult is Failure && finalMatchResult.hasReason(FailureReason.SegmentConflict) -> FailureReason.SegmentConflict
-            structureMatches(path, resolver) -> FailureReason.URLPathParamMismatchButSameStructure
-            else -> FailureReason.URLPathMisMatch
-        }
 
-        return finalMatchResult.withFailureReason(failureReason)
+        val structureMatches = structureMatches(path, resolver)
+        if (!structureMatches) return finalMatchResult.withFailureReason(FailureReason.URLPathMisMatch)
+
+        val hasNoConflicts = failures.none { it.hasReason(FailureReason.URLPathParamMatchButConflict) }
+        if (hasNoConflicts) return finalMatchResult.withFailureReason(FailureReason.URLPathParamMismatchButSameStructure)
+
+        val pathParametersCount = pathSegmentPatterns.count { it.pattern !is ExactValuePattern }
+        return when {
+            failures.size == pathParametersCount -> Failure(
+                breadCrumb = PATH_BREAD_CRUMB,
+                message = """
+                |Path segments of URL $path overlap with another URL that has the same structure
+                |${failures.joinToString("\n") { it.reportString() }}
+                """.trimMargin(),
+                failureReason = FailureReason.URLPathParamMatchButConflict
+            )
+            else -> Success()
+        }
     }
 
     fun generate(resolver: Resolver): String {

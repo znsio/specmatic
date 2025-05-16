@@ -46,4 +46,8 @@ data class APIKeyInQueryParamSecurityScheme(val name: String, private val apiKey
     }
 
     override fun isInRow(row: Row): Boolean = row.containsField(name)
+
+    override fun isInRequest(request: HttpRequest): Boolean {
+        return request.queryParams.containsKey(name)
+    }
 }

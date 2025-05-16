@@ -6,7 +6,7 @@ import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.pattern.Row
 
-data class CompositeSecurityScheme(private val schemes: List<OpenAPISecurityScheme>): OpenAPISecurityScheme {
+data class CompositeSecurityScheme(val schemes: List<OpenAPISecurityScheme>): OpenAPISecurityScheme {
     override fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
         val results = schemes.map { it.matches(httpRequest, resolver) }
         return Result.fromResults(results)
@@ -38,5 +38,9 @@ data class CompositeSecurityScheme(private val schemes: List<OpenAPISecuritySche
 
     override fun isInRow(row: Row): Boolean {
         return schemes.all { it.isInRow(row) }
+    }
+
+    override fun isInRequest(request: HttpRequest): Boolean {
+        return schemes.all { it.isInRequest(request) }
     }
 }

@@ -109,13 +109,24 @@ data class HttpRequestPattern(
 
     private fun matchSecurityScheme(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver, failures) = parameters
-
-        val (modifiedHttpRequest, results) = securitySchemes.fold(Pair(httpRequest, emptyList<Result>())) { (request, results), securityScheme ->
-            securityScheme.removeParam(request) to results.plus(securityScheme.matches(request, resolver))
+        val (modifiedHttpRequest, results) = securitySchemes.fold(
+            initial = Pair(httpRequest, emptyList<SecurityMatch>())
+        ) { (request, results), securityScheme ->
+            securityScheme.removeParam(request) to results.plus(
+                SecurityMatch(exists = securityScheme.isInRequest(request), result = securityScheme.matches(request, resolver))
+            )
         }
 
-        val hasSuccess = results.any { it is Success }
-        val newFailures = if (hasSuccess) emptyList() else results.filterIsInstance<Failure>()
+        if (results.any { it.exists }) {
+            val resultFromExisting = results.map { it.result }.filterIsInstance<Failure>()
+            return MatchSuccess(Triple(modifiedHttpRequest, resolver, failures.plus(resultFromExisting)))
+        }
+
+        if (results.any { it.result.isSuccess() }) {
+            return MatchSuccess(Triple(modifiedHttpRequest, resolver, failures))
+        }
+
+        val newFailures = results.map { it.result }.filterIsInstance<Failure>()
         return MatchSuccess(Triple(modifiedHttpRequest, resolver, failures.plus(newFailures)))
     }
 
@@ -905,6 +916,8 @@ data class HttpRequestPattern(
         }
     }
 }
+
+private data class SecurityMatch(val exists: Boolean, val result: Result)
 
 fun missingParam(missingValue: String): ContractException {
     return ContractException("$missingValue is missing. Can't generate the contract test.")

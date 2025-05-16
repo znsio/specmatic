@@ -555,6 +555,30 @@ class LoadTestsFromExternalisedFiles {
         """.trimIndent())
     }
 
+    @Test
+    fun `should complain when examples have invalid security-scheme values or unexpected keys in header and query`() {
+        val openApiFile = File("src/test/resources/openapi/has_composite_security/api.yaml")
+        val examplesDir = openApiFile.resolveSibling("invalid_examples")
+        val feature = Flags.using(EXAMPLE_DIRECTORIES to examplesDir.canonicalPath) {
+            OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
+        }
+        val exception = assertThrows<ContractException> { feature.validateExamplesOrException() }
+
+        assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+        Error loading example for POST /secure -> 200 from ${examplesDir.resolve("secure.json").canonicalPath} 
+        >> REQUEST.HEADERS.Authorization
+        Authorization header must be prefixed with "Bearer"
+        Error loading example for POST /partial -> 200 from ${examplesDir.resolve("partial.json").canonicalPath} 
+        >> REQUEST.HEADERS.Authorization
+        Authorization header must be prefixed with "Bearer"
+        Error loading example for POST /insecure -> 200 from ${examplesDir.resolve("insecure.json").canonicalPath} 
+        >> REQUEST.QUERY-PARAMS.apiKey
+        The query param apiKey was found in the example insecure but was not in the specification. 
+        >> REQUEST.HEADERS.Authorization
+        The header Authorization was found in the example insecure but was not in the specification.
+        """.trimIndent())
+    }
+
     @Nested
     inner class AttributeSelection {
         @BeforeEach

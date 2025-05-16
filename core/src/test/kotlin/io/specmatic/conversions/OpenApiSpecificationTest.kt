@@ -10772,13 +10772,21 @@ paths:
         val feature = Flags.using("bearerAuth" to "API-SECRET", "apiKeyQuery" to "1234") {
             OpenApiSpecification.fromFile(oasFile.canonicalPath).toFeature()
         }
-        val (secure, partial, insecure) = feature.scenarios
+        val (secure, partial, overlap, insecure) = feature.scenarios
 
         assertThat(secure.httpRequestPattern.securitySchemes).isEqualTo(listOf(
             CompositeSecurityScheme(listOf(
                 BearerSecurityScheme(configuredToken = "API-SECRET"),
                 APIKeyInQueryParamSecurityScheme(name = "apiKey", apiKey = "1234")
             ))
+        ))
+
+        assertThat(overlap.httpRequestPattern.securitySchemes).isEqualTo(listOf(
+            CompositeSecurityScheme(listOf(
+                BearerSecurityScheme(configuredToken = "API-SECRET"),
+                APIKeyInQueryParamSecurityScheme(name = "apiKey", apiKey = "1234")
+            )),
+            BearerSecurityScheme(configuredToken = "API-SECRET"),
         ))
 
         assertThat(partial.httpRequestPattern.securitySchemes).isEqualTo(listOf(

@@ -682,6 +682,21 @@ Scenario: JSON API to get account details with fact check
             Api-key named apiKey in the contract was not found in the request
             """.trimIndent())
 
+            val overlapInvalidRequest = HttpRequest("POST", "/overlap", body = validRequestBody)
+            val overlapResponse = it.client.execute(overlapInvalidRequest)
+
+            assertThat(overlapResponse.status).isEqualTo(400)
+            assertThat(overlapResponse.body.toStringLiteral()).isEqualToNormalizingWhitespace("""
+            In scenario "overlap endpoint requiring either Bearer token and query API key or Bearer token only. Response: Success"
+            API: POST /overlap -> 200
+            >> REQUEST.HEADERS.Authorization
+            Header named Authorization in the contract was not found in the request
+            >> REQUEST.QUERY-PARAMS.apiKey
+            Api-key named apiKey in the contract was not found in the request
+            >> REQUEST.HEADERS.Authorization
+            Header named Authorization in the contract was not found in the request
+            """.trimIndent())
+
             val insecureValidRequest = HttpRequest("POST", "/insecure", body = validRequestBody)
             val insecureResponse = it.client.execute(insecureValidRequest)
             assertThat(insecureResponse.status).isEqualTo(200)
@@ -705,6 +720,14 @@ Scenario: JSON API to get account details with fact check
             listOf(
                 HttpRequest("POST", "/partial", body = validRequestBody, headers = headersWithAuth),
                 HttpRequest("POST", "/partial", body = validRequestBody, queryParams = queryWithAuth)
+            ).forEach { request ->
+                val response = it.client.execute(request)
+                assertThat(response.status).isEqualTo(200)
+            }
+
+            listOf(
+                HttpRequest("POST", "/overlap", body = validRequestBody, headers = headersWithAuth),
+                HttpRequest("POST", "/overlap", body = validRequestBody, queryParams = queryWithAuth, headers = headersWithAuth)
             ).forEach { request ->
                 val response = it.client.execute(request)
                 assertThat(response.status).isEqualTo(200)

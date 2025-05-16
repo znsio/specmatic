@@ -569,9 +569,15 @@ class LoadTestsFromExternalisedFiles {
         Error loading example for POST /secure -> 200 from ${examplesDir.resolve("secure.json").canonicalPath} 
         >> REQUEST.HEADERS.Authorization
         Authorization header must be prefixed with "Bearer"
+
         Error loading example for POST /partial -> 200 from ${examplesDir.resolve("partial.json").canonicalPath} 
         >> REQUEST.HEADERS.Authorization
         Authorization header must be prefixed with "Bearer"
+        
+        Error loading example for POST /overlap -> 200 from ${examplesDir.resolve("overlap.json").canonicalPath}
+        >> REQUEST.HEADERS.Authorization
+        Authorization header must be prefixed with "Bearer"
+
         Error loading example for POST /insecure -> 200 from ${examplesDir.resolve("insecure.json").canonicalPath} 
         >> REQUEST.QUERY-PARAMS.apiKey
         The query param apiKey was found in the example insecure but was not in the specification. 
@@ -610,6 +616,19 @@ class LoadTestsFromExternalisedFiles {
                         assertAuthHeader(request, "Bearer API-SECRET")
                         assertThat(bodyString).isEqualTo("Hello to Secure")
                     }
+                    "/overlap" -> {
+                        assertThat(request).satisfiesAnyOf(
+                            {
+                                assertApiKey(it, "1234")
+                                assertAuthHeader(it, "Bearer API-SECRET")
+                            },
+                            {
+                                assertApiKey(it, null)
+                                assertAuthHeader(it, "Bearer API-SECRET")
+                            }
+                        )
+                        assertThat(bodyString).isEqualTo("Hello to Overlap")
+                    }
                     "/partial" -> {
                         assertThat(request).satisfiesAnyOf(
                             {
@@ -638,7 +657,7 @@ class LoadTestsFromExternalisedFiles {
         })
 
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
-        assertThat(results.testCount).isEqualTo(4)
+        assertThat(results.testCount).isEqualTo(6)
     }
 
     @Nested

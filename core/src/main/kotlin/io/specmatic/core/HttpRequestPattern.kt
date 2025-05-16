@@ -115,11 +115,11 @@ data class HttpRequestPattern(
             securityScheme.removeParam(request) to results.plus(
                 SecurityMatch(
                     presence = when {
-                        securityScheme.isInRequest(request, complete = true) -> SchemePresence.FULL
-                        securityScheme.isInRequest(request, complete = false) -> SchemePresence.PARTIAL
+                        securityScheme.isInRequest(httpRequest, complete = true) -> SchemePresence.FULL
+                        securityScheme.isInRequest(httpRequest, complete = false) -> SchemePresence.PARTIAL
                         else -> SchemePresence.ABSENT
                     },
-                    result = securityScheme.matches(request, resolver)
+                    result = securityScheme.matches(httpRequest, resolver)
                 )
             )
         }

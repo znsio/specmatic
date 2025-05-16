@@ -54,6 +54,34 @@ paths:
       security:
         - bearerAuth: []
         - apiKeyQuery: []
+  /overlap:
+    post:
+      summary: overlap endpoint requiring either Bearer token and query API key or Bearer token only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimpleBody'
+            examples:
+              EITHER_SUCCESS:
+                value:
+                  message: Hello to Overlap
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleBody'
+              examples:
+                EITHER_SUCCESS:
+                  value:
+                    message: Hello from Overlap
+      security:
+        - bearerAuth: []
+          apiKeyQuery: []
+        - bearerAuth: []
   /insecure:
     post:
       summary: Insecure endpoint not requiring authentication

@@ -1359,6 +1359,19 @@ Examples:
                         )
                         assertThat(bodyString).isEqualTo("Hello to Partial")
                     }
+                    "/overlap" -> {
+                        assertThat(request).satisfiesAnyOf(
+                            {
+                                assertApiKey(it, "1234")
+                                assertAuthHeader(it, "Bearer API-SECRET")
+                            },
+                            {
+                                assertApiKey(it, null)
+                                assertAuthHeader(it, "Bearer API-SECRET")
+                            }
+                        )
+                        assertThat(bodyString).isEqualTo("Hello to Overlap")
+                    }
                     else -> {
                         assertApiKey(request, null)
                         assertAuthHeader(request, null)
@@ -1373,7 +1386,7 @@ Examples:
             }}
         )
 
-        assertThat(results.testCount).isEqualTo(3)
+        assertThat(results.testCount).isEqualTo(4)
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 }

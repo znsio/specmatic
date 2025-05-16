@@ -45,14 +45,15 @@ class HttpFilterContext(private val scenario: Scenario) : FilterContext {
                 "REQUEST-BODY.CONTENT-TYPE" -> {
                     scenario.httpRequestPattern.headersPattern.contentType
                         ?: throw IllegalArgumentException("Content type is not set for scenario - ${scenario.apiDescription}")
-                    MimeType(scenario.httpRequestPattern.headersPattern.contentType).match(eachValue)
+
+                    scenario.httpRequestPattern.headersPattern.contentType.toMimetype().match(eachValue.toMimetype())
                 }
 
                 "RESPONSE.CONTENT-TYPE" -> {
                     scenario.httpResponsePattern.headersPattern.contentType
                         ?: throw IllegalArgumentException("Content type is not set for scenario - ${scenario.apiDescription}")
 
-                    MimeType(scenario.httpResponsePattern.headersPattern.contentType).match(eachValue)
+                    scenario.httpResponsePattern.headersPattern.contentType.toMimetype().match(eachValue.toMimetype())
                 }
 
                 "PARAMETERS.QUERY" -> {
@@ -81,6 +82,14 @@ class HttpFilterContext(private val scenario: Scenario) : FilterContext {
             }
         }
     }
+
+    private fun String.toMimetype(): MimeType =
+        runCatching { MimeType(this) }.getOrElse(onFailure = { exception: Exception ->
+            throw IllegalArgumentException(
+                "Unable to parse mime type '$this'. ${exception.message}",
+                exception
+            )
+        })
 
     override fun compare(filterKey: String, operator: String, filterValue: String): Boolean {
         if (filterKey.uppercase() == "STATUS") {

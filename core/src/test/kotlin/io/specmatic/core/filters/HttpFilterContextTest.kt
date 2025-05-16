@@ -78,7 +78,6 @@ paths:
         """.trim(), ""
         ).toFeature()
 
-
         private val usersGetAPI = OpenApiSpecification.fromYAML(
             """
 openapi: "3.0.1"
@@ -113,6 +112,64 @@ paths:
                   error:
                     type: string
                 """.trim(), ""
+        ).toFeature()
+
+
+        private val usersPostAPI = OpenApiSpecification.fromYAML(
+            """
+openapi: "3.0.1"
+info:
+  version: "1"
+paths:
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: authentication
+          schema:
+            type: string
+          in: header
+          required: false
+        - name: 
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                age:
+                  type: integer
+          application/text:
+            schema:
+              type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+            text/plain:
+              schema:
+                type: string
+                
+        "400":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              """.trim(), ""
         ).toFeature()
 
         @JvmStatic

@@ -113,17 +113,29 @@ data class HttpRequestPattern(
             initial = Pair(httpRequest, emptyList<SecurityMatch>())
         ) { (request, results), securityScheme ->
             securityScheme.removeParam(request) to results.plus(
-                SecurityMatch(exists = securityScheme.isInRequest(request), result = securityScheme.matches(request, resolver))
+                SecurityMatch(
+                    presence = when {
+                        securityScheme.isInRequest(request, complete = true) -> SchemePresence.FULL
+                        securityScheme.isInRequest(request, complete = false) -> SchemePresence.PARTIAL
+                        else -> SchemePresence.ABSENT
+                    },
+                    result = securityScheme.matches(request, resolver)
+                )
             )
         }
 
-        if (results.any { it.exists }) {
-            val resultFromExisting = results.map { it.result }.filterIsInstance<Failure>()
-            return MatchSuccess(Triple(modifiedHttpRequest, resolver, failures.plus(resultFromExisting)))
-        }
+        SchemePresence.entries.forEach { presence ->
+            val presenceResults = results.filter { it.presence == presence }.map { it.result }
+            val presencesSuccess = presenceResults.filterIsInstance<Success>()
+            val presenceFailures = presenceResults.filterIsInstance<Failure>()
 
-        if (results.any { it.result.isSuccess() }) {
-            return MatchSuccess(Triple(modifiedHttpRequest, resolver, failures))
+            if (presencesSuccess.isNotEmpty()) {
+                return MatchSuccess(Triple(modifiedHttpRequest, resolver, failures.plus(presenceFailures)))
+            }
+
+            if (presenceFailures.isNotEmpty()) {
+                return MatchSuccess(Triple(modifiedHttpRequest, resolver, failures.plus(presenceFailures)))
+            }
         }
 
         val newFailures = results.map { it.result }.filterIsInstance<Failure>()
@@ -917,7 +929,8 @@ data class HttpRequestPattern(
     }
 }
 
-private data class SecurityMatch(val exists: Boolean, val result: Result)
+private enum class SchemePresence { FULL, PARTIAL, ABSENT }
+private data class SecurityMatch(val presence: SchemePresence, val result: Result)
 
 fun missingParam(missingValue: String): ContractException {
     return ContractException("$missingValue is missing. Can't generate the contract test.")

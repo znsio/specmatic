@@ -1,0 +1,22 @@
+{
+    "http-request": {
+        "path": "/insecure",
+        "method": "POST",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "body": {
+            "message": "Hello to Insecure"
+        }
+    },
+    "http-response": {
+        "status": 200,
+        "body": {
+            "message": "Hello from Insecure"
+        },
+        "status-text": "OK",
+        "headers": {
+            "Content-Type": "application/json"
+        }
+    }
+}

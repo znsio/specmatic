@@ -84,8 +84,8 @@ data class HttpPathPattern(
         val structureMatches = structureMatches(path, resolver)
         if (!structureMatches) return finalMatchResult.withFailureReason(FailureReason.URLPathMisMatch)
 
-        val hasNoConflicts = failures.none { it.hasReason(FailureReason.URLPathParamMatchButConflict) }
-        if (hasNoConflicts) return finalMatchResult.withFailureReason(FailureReason.URLPathParamMismatchButSameStructure)
+        val areAllConflicts = failures.isNotEmpty() && failures.all { it.hasReason(FailureReason.URLPathParamMatchButConflict) }
+        if (!areAllConflicts) return finalMatchResult.withFailureReason(FailureReason.URLPathParamMismatchButSameStructure)
 
         val pathParametersCount = pathSegmentPatterns.count { it.pattern !is ExactValuePattern }
         return when {

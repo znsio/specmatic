@@ -17,6 +17,10 @@ paths:
                   type: string
               required:
                 - json
+            examples:
+              EXAMPLE:
+                value:
+                  json: '{"value": ["string", 1, false, null], "location": "request"}'
       responses:
         '200':
           description: Successful response with the same json value as a string
@@ -29,3 +33,7 @@ paths:
                     type: string
                 required:
                   - json
+              examples:
+                EXAMPLE:
+                  value:
+                    json: '{"value": ["string", 1, false, null], "location": "response"}'

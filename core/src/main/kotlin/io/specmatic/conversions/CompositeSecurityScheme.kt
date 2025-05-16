@@ -40,7 +40,8 @@ data class CompositeSecurityScheme(val schemes: List<OpenAPISecurityScheme>): Op
         return schemes.all { it.isInRow(row) }
     }
 
-    override fun isInRequest(request: HttpRequest): Boolean {
-        return schemes.all { it.isInRequest(request) }
+    override fun isInRequest(request: HttpRequest, complete: Boolean): Boolean {
+        return if (!complete) schemes.any { it.isInRequest(request, false) }
+        else schemes.all { it.isInRequest(request, true) }
     }
 }

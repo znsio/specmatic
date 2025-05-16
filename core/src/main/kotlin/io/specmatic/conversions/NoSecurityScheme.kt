@@ -39,7 +39,7 @@ class NoSecurityScheme : OpenAPISecurityScheme {
         return false
     }
 
-    override fun isInRequest(request: HttpRequest): Boolean {
+    override fun isInRequest(request: HttpRequest, complete: Boolean): Boolean {
         return false
     }
 }

@@ -61,14 +61,24 @@ data class ScenarioAsTest(
             logger.log(logMessage.withComment(this.annotations))
         }
 
-        val httpClient = HttpClient(testBaseURL, log = log, timeoutInMilliseconds = timeoutInMilliseconds)
+        val httpClient = LegacyHttpClient(testBaseURL, log = log, timeoutInMilliseconds = timeoutInMilliseconds)
 
         return runTest(httpClient)
     }
 
     override fun runTest(testExecutor: TestExecutor): Pair<Result, HttpResponse?> {
 
-        val (result, response) = executeTestAndReturnResultAndResponse(scenario, testExecutor, flagsBased)
+        val newExecutor = if (testExecutor is HttpClient) {
+            val log: (LogMessage) -> Unit = { logMessage ->
+                logger.log(logMessage.withComment(this.annotations))
+            }
+
+            testExecutor.withLogger(log)
+        } else {
+            testExecutor
+        }
+
+        val (result, response) = executeTestAndReturnResultAndResponse(scenario, newExecutor, flagsBased)
         return Pair(result.updateScenario(scenario), response)
     }
 
@@ -95,26 +105,39 @@ data class ScenarioAsTest(
             //TODO: Review - Do we need workflow anymore
             workflow.extractDataFrom(response, originalScenario)
 
-            val validatorResult = validators.asSequence().map { it.validate(scenario, response) }.filterNotNull().firstOrNull()
+            val validatorResult =
+                validators.asSequence().map { it.validate(scenario, response) }.filterNotNull().firstOrNull()
             if (validatorResult is Result.Failure) {
                 return Pair(validatorResult.withBindings(testScenario.bindings, response), response)
             }
 
             val testResult = validatorResult ?: testResult(request, response, testScenario, flagsBased)
-            if (testResult is Result.Failure && !(response.isAcceptedHenceValid() && ResponseMonitor.isMonitorLinkPresent(response))) {
+            if (testResult is Result.Failure && !(response.isAcceptedHenceValid() && ResponseMonitor.isMonitorLinkPresent(
+                    response
+                ))
+            ) {
                 return Pair(testResult.withBindings(testScenario.bindings, response), response)
             }
 
-            val responseToCheckAndStore = when(testResult) {
+            val responseToCheckAndStore = when (testResult) {
                 is Result.Failure -> {
-                    val client = if (testExecutor is HttpClient) testExecutor.copy() else testExecutor
+                    val client = if (testExecutor is LegacyHttpClient) testExecutor.copy() else testExecutor
                     val awaitedResponse = ResponseMonitor(feature, originalScenario, response).waitForResponse(client)
                     when (awaitedResponse) {
                         is HasValue -> awaitedResponse.value
-                        is HasFailure -> return Pair(awaitedResponse.failure.withBindings(testScenario.bindings, response), response)
-                        is HasException -> return Pair(awaitedResponse.toFailure().withBindings(testScenario.bindings, response), response)
+                        is HasFailure -> return Pair(
+                            awaitedResponse.failure.withBindings(
+                                testScenario.bindings,
+                                response
+                            ), response
+                        )
+
+                        is HasException -> return Pair(
+                            awaitedResponse.toFailure().withBindings(testScenario.bindings, response), response
+                        )
                     }
                 }
+
                 else -> response
             }
 
@@ -127,14 +150,27 @@ data class ScenarioAsTest(
         } catch (exception: Throwable) {
             return Pair(
                 Result.Failure(exceptionCauseMessage(exception))
-                .also { failure -> failure.updateScenario(testScenario) }, null)
+                    .also { failure -> failure.updateScenario(testScenario) }, null
+            )
         }
     }
 
-    private fun testResult(request: HttpRequest, response: HttpResponse, testScenario: Scenario, flagsBased: FlagsBased): Result {
+    private fun testResult(
+        request: HttpRequest,
+        response: HttpResponse,
+        testScenario: Scenario,
+        flagsBased: FlagsBased
+    ): Result {
         val result = when {
-            response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral()).updateScenario(testScenario)
-            else -> testScenario.matchesResponse(request, response, ContractAndResponseMismatch, flagsBased.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
+            response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral())
+                .updateScenario(testScenario)
+
+            else -> testScenario.matchesResponse(
+                request,
+                response,
+                ContractAndResponseMismatch,
+                flagsBased.unexpectedKeyCheck ?: ValidateUnexpectedKeys
+            )
         }
 
         if (result is Result.Success && result.isPartialSuccess()) {

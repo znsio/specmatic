@@ -9,7 +9,6 @@ import io.specmatic.test.SpecmaticJUnitSupport.Companion.PROTOCOL
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import io.specmatic.test.listeners.ContractExecutionListener
 import io.specmatic.test.reports.coverage.Endpoint
-import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.AfterEach

@@ -17,7 +17,7 @@ import io.specmatic.mock.DELAY_IN_SECONDS
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.osAgnosticPath
 import io.specmatic.shouldMatch
-import io.specmatic.test.HttpClient
+import io.specmatic.test.LegacyHttpClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -56,7 +56,7 @@ internal class HttpStubTest {
         val request = HttpRequest(method = "GET", path = "/")
 
         HttpStub(gherkin).use { stub ->
-            val response = HttpClient(stub.endPoint).execute(request)
+            val response = LegacyHttpClient(stub.endPoint).execute(request)
             assertThat(response.headers[SPECMATIC_TYPE_HEADER]).isEqualTo("random")
         }
     }
@@ -388,7 +388,7 @@ Scenario: Square of a number
         )
 
         HttpStub(listOf(feature, feature)).use { stub ->
-            val client = HttpClient(stub.endPoint)
+            val client = LegacyHttpClient(stub.endPoint)
             val request = HttpRequest(method = "POST", path = "/wrong_path", body = NumberValue(10))
             val squareResponse = client.execute(request)
             assertThat(squareResponse.status).isEqualTo(400)
@@ -410,7 +410,7 @@ Scenario: Square of a number
 """.trim()
         )
 
-        val httpClient = mockk<HttpClient>()
+        val httpClient = mockk<LegacyHttpClient>()
         every { httpClient.execute(any()) } returns (HttpResponse.ok("it worked"))
 
         val httpClientFactory = mockk<HttpClientFactory>()
@@ -421,7 +421,7 @@ Scenario: Square of a number
             passThroughTargetBase = "http://example.com",
             httpClientFactory = httpClientFactory
         ).use { stub ->
-            val client = HttpClient(stub.endPoint)
+            val client = LegacyHttpClient(stub.endPoint)
             val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
 
             assertThat(response.status).isEqualTo(200)
@@ -444,7 +444,7 @@ Scenario: Square of a number
 """.trim()
         )
 
-        val httpClient = mockk<HttpClient>()
+        val httpClient = mockk<LegacyHttpClient>()
         every { httpClient.execute(any()) } returns (HttpResponse.ok("it worked"))
 
         val httpClientFactory = mockk<HttpClientFactory>()
@@ -455,7 +455,7 @@ Scenario: Square of a number
             passThroughTargetBase = "http://example.com",
             httpClientFactory = httpClientFactory
         ).use { stub ->
-            val client = HttpClient(stub.endPoint)
+            val client = LegacyHttpClient(stub.endPoint)
             val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
 
             assertThat(response.headers[SPECMATIC_SOURCE_HEADER]).isEqualTo("proxy")
@@ -476,7 +476,7 @@ Scenario: Square of a number
 """.trim()
         )
 
-        val httpClient = mockk<HttpClient>()
+        val httpClient = mockk<LegacyHttpClient>()
         every { httpClient.execute(any()) } returns (HttpResponse.ok("should not get here"))
 
         val httpClientFactory = mockk<HttpClientFactory>()
@@ -493,7 +493,7 @@ Scenario: Square of a number
                     HttpResponse.ok("success")
                 )
             )
-            val client = HttpClient(stub.endPoint)
+            val client = LegacyHttpClient(stub.endPoint)
             val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
 
             assertThat(response.status).isEqualTo(200)
@@ -2315,7 +2315,7 @@ Then status 200
                     path = "/products",
                     body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
                 )
-                val importedProductResponse = HttpClient(
+                val importedProductResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9001, null)
                 ).execute(request)
                 assertThat(
@@ -2323,7 +2323,7 @@ Then status 200
                 ).isEqualTo("100")
 
 
-                val exportedProductResponse = HttpClient(
+                val exportedProductResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9002, null)
                 ).execute(request)
                 assertThat(
@@ -2331,7 +2331,7 @@ Then status 200
                 ).isEqualTo("200")
 
 
-                val anotherExportedProductResponse = HttpClient(
+                val anotherExportedProductResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9003, null)
                 ).execute(request)
                 assertThat(
@@ -2358,7 +2358,7 @@ Then status 200
                     path = "/products",
                     body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
                 )
-                val importedProductResponse = HttpClient(
+                val importedProductResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9001, null)
                 ).execute(request.copy(path = "/base/products"))
                 assertThat(
@@ -2366,7 +2366,7 @@ Then status 200
                 ).isEqualTo("100")
 
 
-                val exportedProductResponse = HttpClient(
+                val exportedProductResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9002, null)
                 ).execute(request.copy(path = "/random/products"))
                 assertThat(
@@ -2374,7 +2374,7 @@ Then status 200
                 ).isEqualTo("200")
 
 
-                val anotherExportedProductResponse = HttpClient(
+                val anotherExportedProductResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9003, null)
                 ).execute(request.copy(path = "/random/base/products"))
                 assertThat(
@@ -2396,7 +2396,7 @@ Then status 200
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
                 specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use {
-                val productWithoutCategoryResponse = HttpClient(
+                val productWithoutCategoryResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9000, null)
                 ).execute(
                     HttpRequest(
@@ -2409,7 +2409,7 @@ Then status 200
                 assertThat(productWithoutCategoryResponse.jsonObject).doesNotContainKey("category")
 
 
-                val productWithCategoryResponse = HttpClient(
+                val productWithCategoryResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9001, null)
                 ).execute(
                     HttpRequest(
@@ -2443,7 +2443,7 @@ Then status 200
                 )
 
                 assertThrows<ConnectException> {
-                    HttpClient(endPointFromHostAndPort(
+                    LegacyHttpClient(endPointFromHostAndPort(
                         "localhost", Configuration.DEFAULT_HTTP_STUB_PORT.toInt(), null
                     )).execute(request)
                 }
@@ -2469,7 +2469,7 @@ Then status 200
                     path = "/products",
                     body = parsedJSONObject("""{"name": "Widget", "price": 9.99}""")
                 )
-                val productWithCategoryResponse = HttpClient(
+                val productWithCategoryResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9001, null)
                 ).execute(productWithoutCategoryExampleBasedRequest)
 
@@ -2481,7 +2481,7 @@ Then status 200
                     path = "/products",
                     body = parsedJSONObject("""{"name": "Nokia", "price": 100.0, "category": "Electronics"}""")
                 )
-                val productWithoutCategoryResponse = HttpClient(
+                val productWithoutCategoryResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9000, null)
                 ).execute(productWithCategoryBasedRequest)
 
@@ -2508,7 +2508,7 @@ Then status 200
                     body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
                 )
 
-                val importedProductResponse = HttpClient(
+                val importedProductResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9000, null)
                 ).execute(exportedProductStubbedRequest)
 
@@ -2516,7 +2516,7 @@ Then status 200
                     (importedProductResponse.body as JSONObjectValue).findFirstChildByPath("name")?.toStringLiteral()
                 ).isNotEqualTo("Xiaomi").isNotEmpty()
 
-                val exportedProductResponse = HttpClient(
+                val exportedProductResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9001, null)
                 ).execute(exportedProductStubbedRequest)
 
@@ -2539,7 +2539,7 @@ Then status 200
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
                 specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use {
-                val productsResponse = HttpClient(
+                val productsResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9000, null)
                 ).execute(
                     HttpRequest(
@@ -2554,7 +2554,7 @@ Then status 200
                     (productsResponse.body as JSONObjectValue).findFirstChildByPath("name")?.toStringLiteral()
                 ).isNotEqualTo("Xiaomi").isNotEmpty()
 
-                val ordersResponse = HttpClient(
+                val ordersResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9000, null)
                 ).execute(
                     HttpRequest(
@@ -2587,7 +2587,7 @@ Then status 200
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
                 specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use {
-                val productsResponse = HttpClient(
+                val productsResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9000, null)
                 ).execute(
                     HttpRequest(
@@ -2603,7 +2603,7 @@ Then status 200
                 ).isNotEqualTo("Xiaomi").isNotEmpty()
 
 
-                val exportedProductsResponse = HttpClient(
+                val exportedProductsResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9001, null)
                 ).execute(
                     HttpRequest(
@@ -2618,7 +2618,7 @@ Then status 200
                     (exportedProductsResponse.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
                 ).isEqualTo("200")
 
-                val ordersResponse = HttpClient(
+                val ordersResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9001, null)
                 ).execute(
                     HttpRequest(
@@ -2651,7 +2651,7 @@ Then status 200
                 specmaticConfigPath = specmaticConfigFile.canonicalPath,
                 specToStubBaseUrlMap = contractPathData.specToBaseUrlMap()
             ).use {
-                val postProductResponse = HttpClient(
+                val postProductResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9000, null)
                 ).execute(
                     HttpRequest(
@@ -2667,7 +2667,7 @@ Then status 200
                 ).isEqualTo("100")
 
 
-                val postOrderResponse = HttpClient(
+                val postOrderResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9000, null)
                 ).execute(
                     HttpRequest(
@@ -2720,7 +2720,7 @@ Then status 200
                     path = "/products",
                     body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
                 )
-                val importedProductResponse = HttpClient(
+                val importedProductResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9001, null)
                 ).execute(request)
                 assertThat(
@@ -2728,7 +2728,7 @@ Then status 200
                 ).isEqualTo("100")
 
 
-                val exportedProductResponse = HttpClient(
+                val exportedProductResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9002, null)
                 ).execute(request)
                 assertThat(
@@ -2736,7 +2736,7 @@ Then status 200
                 ).isEqualTo("200")
 
 
-                val anotherExportedProductResponse = HttpClient(
+                val anotherExportedProductResponse = LegacyHttpClient(
                     endPointFromHostAndPort("localhost", 9003, null)
                 ).execute(request)
                 assertThat(
@@ -2765,13 +2765,13 @@ Then status 200
                     body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
                 )
 
-                val exportedProductResponse = HttpClient(endPointFromHostAndPort("localhost", 9002, null)).execute(request)
+                val exportedProductResponse = LegacyHttpClient(endPointFromHostAndPort("localhost", 9002, null)).execute(request)
                 assertThat(exportedProductResponse.body).isEqualTo(
                     parsedJSONObject("""{"id": "999", "name": "Nokia", "category": "Mobile"}""")
                 )
 
 
-                val importedProductResponse = HttpClient(endPointFromHostAndPort("localhost", 9001, null)).execute(request)
+                val importedProductResponse = LegacyHttpClient(endPointFromHostAndPort("localhost", 9001, null)).execute(request)
                 assertThat(importedProductResponse.body).isEqualTo(
                     parsedJSONObject("""{"id": "999", "name": "Nokia", "category": "Mobile", "senderName": "Payne"}""")
                 )
@@ -2802,7 +2802,7 @@ Then status 200
                         method = "POST", path = "/products",
                         body = parsedJSONObject("""{"name": "Xiaomi", "category": "Mobile"}""")
                     )
-                    val client = HttpClient(endPointFromHostAndPort(host, port, null))
+                    val client = LegacyHttpClient(endPointFromHostAndPort(host, port, null))
                     val response = client.execute(request)
                     val actualId = (response.body as JSONObjectValue).findFirstChildByPath("id")?.toStringLiteral()
 
@@ -3093,8 +3093,8 @@ Then status 200
             port = 9000,
             dataDirPaths = emptyList<String>()
         ) { stub ->
-            val client8080 = HttpClient("http://localhost:8080")
-            val client9000 = HttpClient("http://localhost:9000")
+            val client8080 = LegacyHttpClient("http://localhost:8080")
+            val client9000 = LegacyHttpClient("http://localhost:9000")
 
             val dynamicExpectationRequest = HttpRequest(
                 method = "POST",
@@ -3165,7 +3165,7 @@ Then status 200
                     - ${simpleProductIdSpec.path}
                 """.trimIndent()
             ) {
-                val client = HttpClient("http://localhost:8080/api/v2")
+                val client = LegacyHttpClient("http://localhost:8080/api/v2")
                 assertGetProductResponse(client)
             }
         }
@@ -3182,7 +3182,7 @@ Then status 200
                     - ${simpleProductIdSpec.path}
                 """.trimIndent()
             ) {
-                val client = HttpClient("http://0.0.0.0:9000")
+                val client = LegacyHttpClient("http://0.0.0.0:9000")
                 assertGetProductResponse(client)
             }
         }
@@ -3199,7 +3199,7 @@ Then status 200
                     - ${simpleProductIdSpec.path}
                 """.trimIndent()
             ) {
-                val client = HttpClient("http://0.0.0.0:5000")
+                val client = LegacyHttpClient("http://0.0.0.0:5000")
                 assertGetProductResponse(client)
             }
         }
@@ -3216,7 +3216,7 @@ Then status 200
                     - ${simpleProductIdSpec.path}
                 """.trimIndent()
             ) {
-                val client = HttpClient("http://0.0.0.0:9000/api/v2")
+                val client = LegacyHttpClient("http://0.0.0.0:9000/api/v2")
                 assertGetProductResponse(client)
             }
         }
@@ -3235,12 +3235,12 @@ Then status 200
                     - ${simpleProductIdSpec.path}
                 """.trimIndent()
             ) {
-                val client = HttpClient("http://0.0.0.0:20000/api/v2")
+                val client = LegacyHttpClient("http://0.0.0.0:20000/api/v2")
                 assertGetProductResponse(client)
             }
         }
 
-        private fun assertGetProductResponse(client: HttpClient) {
+        private fun assertGetProductResponse(client: LegacyHttpClient) {
             val request = HttpRequest(method = "GET", path = "/products/123")
             val response = client.execute(request)
 

@@ -6,7 +6,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import io.specmatic.core.pattern.ContractException
-import io.specmatic.test.HttpClient
+import io.specmatic.test.LegacyHttpClient
 import io.mockk.verify
 
 internal class ReferencesTest {
@@ -107,7 +107,7 @@ internal class ReferencesTest {
     private fun mockFeature(results: Results): Feature {
         val mockFeature = mockk<Feature>()
         every {
-            mockFeature.executeTests(match { (it as HttpClient).baseURL == baseURL }, any())
+            mockFeature.executeTests(match { (it as LegacyHttpClient).baseURL == baseURL }, any())
         }.returns(results)
         every {
             mockFeature.copy(testVariables = any(), testBaseURLs = any())

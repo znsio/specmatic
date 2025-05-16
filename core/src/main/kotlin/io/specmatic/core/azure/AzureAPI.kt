@@ -7,7 +7,7 @@ import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
-import io.specmatic.test.HttpClient
+import io.specmatic.test.LegacyHttpClient
 import java.net.URI
 
 private fun unDefault(jsonObject: JSONObjectValue, defaultCollectionName: String) =
@@ -45,7 +45,7 @@ class AzureAPI(private val azureAuthToken: AzureAuthToken, private val azureBase
     }
 
     private fun codeAdvancedSearch(searchString: String): JSONObjectValue {
-        val client = HttpClient(azureBaseURL, log = { })
+        val client = LegacyHttpClient(azureBaseURL, log = { })
         val request = HttpRequest(
             "POST",
             URI("/$collection/_apis/search/codeAdvancedQueryResults?api-version=5.1-preview.1")

@@ -14,7 +14,7 @@ import io.specmatic.core.pattern.NumberPattern
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.*
 import io.specmatic.osAgnosticPath
-import io.specmatic.test.HttpClient
+import io.specmatic.test.LegacyHttpClient
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
@@ -784,7 +784,7 @@ Examples:
         try {
             server.start(wait = false)
 
-            val results = spec.executeTests(HttpClient("http://localhost:8080"))
+            val results = spec.executeTests(LegacyHttpClient("http://localhost:8080"))
             assertThat(results.success()).withFailMessage(results.report()).isTrue()
             assertThat(results.successCount).isPositive()
         } finally {
@@ -825,7 +825,7 @@ Examples:
         try {
             server.start(wait = false)
 
-            val results = spec.executeTests(HttpClient("http://localhost:8080"))
+            val results = spec.executeTests(LegacyHttpClient("http://localhost:8080"))
             assertThat(results.success()).withFailMessage(results.report()).isTrue()
             assertThat(results.successCount).isPositive()
         } finally {
@@ -879,7 +879,7 @@ Examples:
 
         val results = try {
             server.start(wait = false)
-            specification.executeTests(HttpClient("http://localhost:9001"))
+            specification.executeTests(LegacyHttpClient("http://localhost:9001"))
         } finally {
             server.stop()
         }
@@ -940,7 +940,7 @@ Examples:
 
         val results = try {
             server.start(wait = false)
-            specification.executeTests(HttpClient("http://localhost:9001"))
+            specification.executeTests(LegacyHttpClient("http://localhost:9001"))
         } finally {
             server.stop()
         }
@@ -1011,7 +1011,7 @@ Examples:
 
         val results = try {
             server.start(wait = false)
-            specification.executeTests(HttpClient("http://localhost:9001"))
+            specification.executeTests(LegacyHttpClient("http://localhost:9001"))
         } finally {
             server.stop()
         }
@@ -1090,7 +1090,7 @@ Examples:
 
         val results = try {
             server.start(wait = false)
-            specification.enableGenerativeTesting().executeTests(HttpClient("http://localhost:9001"))
+            specification.enableGenerativeTesting().executeTests(LegacyHttpClient("http://localhost:9001"))
         } finally {
             server.stop()
         }

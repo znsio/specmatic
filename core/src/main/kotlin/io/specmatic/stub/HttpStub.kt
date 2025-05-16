@@ -35,7 +35,7 @@ import io.specmatic.mock.validateMock
 import io.specmatic.stub.report.StubEndpoint
 import io.specmatic.stub.report.StubUsageReport
 import io.specmatic.stub.report.StubUsageReportJson
-import io.specmatic.test.HttpClient
+import io.specmatic.test.LegacyHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.BufferOverflow
@@ -233,7 +233,7 @@ class HttpStub(
 
     val endPoint = endPointFromHostAndPort(host, port, keyData)
 
-    override val client = HttpClient(this.endPoint)
+    override val client = LegacyHttpClient(this.endPoint)
 
     private val sseBuffer: SSEBuffer = SSEBuffer()
 

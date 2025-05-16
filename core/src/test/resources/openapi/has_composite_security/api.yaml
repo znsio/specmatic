@@ -4,26 +4,80 @@ info:
   version: 1.0.0
 paths:
   /secure:
-    get:
+    post:
       summary: Secure endpoint requiring Bearer token and query API key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimpleBody'
+            examples:
+              SECURE_SUCCESS:
+                value:
+                  message: Hello to Secure
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleBody'
+              examples:
+                SECURE_SUCCESS:
+                  value:
+                    message: Hello from Secure
   /partial:
-    get:
+    post:
       summary: Partially secure endpoint requiring either Bearer token or query API key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimpleBody'
+            examples:
+              PARTIAL_SUCCESS:
+                value:
+                  message: Hello to Partial
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleBody'
+              examples:
+                PARTIAL_SUCCESS:
+                  value:
+                    message: Hello from Partial
       security:
         - bearerAuth: []
         - apiKeyQuery: []
   /insecure:
-    get:
+    post:
       summary: Insecure endpoint not requiring authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimpleBody'
+            examples:
+              INSECURE_SUCCESS:
+                value:
+                  message: Hello to Insecure
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleBody'
+              examples:
+                INSECURE_SUCCESS:
+                  value:
+                    message: Hello from Insecure
       security: []
 components:
   securitySchemes:
@@ -34,6 +88,12 @@ components:
       type: apiKey
       in: query
       name: apiKey
+  schemas:
+    SimpleBody:
+      type: object
+      properties:
+        message:
+          type: string
 security:
   - bearerAuth: []
     apiKeyQuery: []

@@ -49,7 +49,7 @@ class ScenarioTestGenerationFailure(
 
     override fun runTest(testBaseURL: String, timeoutInMilliseconds: Long): Pair<Result, HttpResponse?> {
         val log: (LogMessage) -> Unit = { logMessage -> logger.log(logMessage) }
-        val httpClient = HttpClient(testBaseURL, log = log, timeoutInMilliseconds = timeoutInMilliseconds)
+        val httpClient = LegacyHttpClient(testBaseURL, log = log, timeoutInMilliseconds = timeoutInMilliseconds)
         return runTest(httpClient)
     }
 

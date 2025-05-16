@@ -43,6 +43,18 @@ internal class HttpPathPatternTest {
     }
 
     @Test
+    fun `should match not path when structure does matches and there are some segment conflicts`() {
+        val pattern = HttpPathPattern(listOf(
+            URLPathSegmentPattern(NumberPattern(), "first", conflicts = setOf("a")),
+            URLPathSegmentPattern(StringPattern(), "second", conflicts = setOf("b")),
+            URLPathSegmentPattern(StringPattern(), "third", conflicts = setOf("c"))
+        ), path = "/(first:number)/(second:String)/(third:String)")
+        val result = pattern.matches("/a/b/1", Resolver())
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
     fun `should return failure when path conflicts with an existing path even if structure and data type matches`() {
         val pattern = HttpPathPattern(listOf(
             URLPathSegmentPattern(StringPattern(), "first", conflicts = setOf("a")),

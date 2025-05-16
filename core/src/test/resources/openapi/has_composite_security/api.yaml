@@ -1,0 +1,39 @@
+openapi: 3.0.0
+info:
+  title: Example API
+  version: 1.0.0
+paths:
+  /secure:
+    get:
+      summary: Secure endpoint requiring Bearer token and query API key
+      responses:
+        '200':
+          description: Success
+  /partial:
+    get:
+      summary: Partially secure endpoint requiring either Bearer token or query API key
+      responses:
+        '200':
+          description: Success
+      security:
+        - bearerAuth: []
+        - apiKeyQuery: []
+  /insecure:
+    get:
+      summary: Insecure endpoint not requiring authentication
+      responses:
+        '200':
+          description: Success
+      security: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    apiKeyQuery:
+      type: apiKey
+      in: query
+      name: apiKey
+security:
+  - bearerAuth: []
+    apiKeyQuery: []

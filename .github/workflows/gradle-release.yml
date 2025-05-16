@@ -39,7 +39,8 @@ jobs:
           echo "Making a release with version $RELEASE_VERSION and next version $NEXT_VERSION..."
           git clean -fd
 
-          ./gradlew release \
+          ./gradlew --stacktrace \
+            release \
             -Prelease.releaseVersion=${RELEASE_VERSION} \
             -Prelease.newVersion=${NEXT_VERSION}
         env:

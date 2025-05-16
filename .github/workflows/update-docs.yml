@@ -10,6 +10,13 @@ on:
       - '*.*.*'
 
 jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Noop
+        run: echo "Noop step to trigger the workflow"
+
   dispatch:
     needs: build
     strategy:

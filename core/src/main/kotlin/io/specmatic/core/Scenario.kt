@@ -1,6 +1,7 @@
 package io.specmatic.core
 
 import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.conversions.OperationMetadata
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.filters.HasScenarioMetadata
 import io.specmatic.core.filters.ExpressionContextPopulator
@@ -88,7 +89,8 @@ data class Scenario(
     val descriptionFromPlugin: String? = null,
     val dictionary: Map<String, Value> = emptyMap(),
     val attributeSelectionPattern: AttributeSelectionPatternDetails = AttributeSelectionPatternDetails.default,
-    val exampleRow: Row? = null
+    val exampleRow: Row? = null,
+    val operationMetadata: OperationMetadata? = null
 ): ScenarioDetailsForResult, HasScenarioMetadata {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -105,7 +107,8 @@ data class Scenario(
         sourceRepository = scenarioInfo.sourceRepository,
         sourceRepositoryBranch = scenarioInfo.sourceRepositoryBranch,
         specification = scenarioInfo.specification,
-        serviceType = scenarioInfo.serviceType
+        serviceType = scenarioInfo.serviceType,
+        operationMetadata = scenarioInfo.operationMetadata
     )
 
     val apiIdentifier: String

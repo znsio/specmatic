@@ -121,18 +121,24 @@ openapi: "3.0.1"
 info:
   version: "1"
 paths:
+  /users:
+    post:
+      summary: "Create a new user"
+      operationId: "createUser"
+      description: "This is a create user endpoint"
+      tags:
+      - "users"
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
         - name: authentication
           schema:
             type: string
           in: header
           required: false
-        - name: 
+        - name: csrf-token
+          schema:
+            type: string
+          in: cookie
+          required: false
       requestBody:
         content:
           application/json:
@@ -143,7 +149,7 @@ paths:
                   type: string
                 age:
                   type: integer
-          application/text:
+          text/plain:
             schema:
               type: string
       responses:
@@ -224,10 +230,36 @@ paths:
             Arguments.of("RESPONSE.CONTENT-TYPE", "application/json", true, simpleSpecWithOneGetUrl.scenarios[0]),
             Arguments.of("RESPONSE.CONTENT-TYPE", "application/j*", false, simpleSpecWithOneGetUrl.scenarios[0]),
             Arguments.of("RESPONSE.CONTENT-TYPE", "application/json*", false, simpleSpecWithOneGetUrl.scenarios[0]),
-            Arguments.of("RESPONSE.CONTENT-TYPE", "application/*+json", true, simpleSpecWithOneGetUrl.scenarios[0]),
-            Arguments.of("RESPONSE.CONTENT-TYPE", "json", true, simpleSpecWithOneGetUrl.scenarios[0]),
-            Arguments.of("RESPONSE.CONTENT-TYPE", "application/*json", true, simpleSpecWithOneGetUrl.scenarios[0]),
+            Arguments.of("RESPONSE.CONTENT-TYPE", "application/*+json", false, simpleSpecWithOneGetUrl.scenarios[0]),
+            Arguments.of("RESPONSE.CONTENT-TYPE", "application/*json", false, simpleSpecWithOneGetUrl.scenarios[0]),
             Arguments.of("RESPONSE.CONTENT-TYPE", "application/foo", false, simpleSpecWithOneGetUrl.scenarios[0]),
+            Arguments.of("RESPONSE.CONTENT-TYPE", "foo", false, simpleSpecWithOneGetUrl.scenarios[0]),
+            Arguments.of("RESPONSE.CONTENT-TYPE", "", false, simpleSpecWithOneGetUrl.scenarios[0]),
+            Arguments.of("RESPONSE.CONTENT-TYPE", "text/plain", true, usersPostAPI.scenarios[1]),
+
+            // body content type for post requests
+            Arguments.of("REQUEST-BODY.CONTENT-TYPE", "application/*", true, usersPostAPI.scenarios[0]),
+            Arguments.of("REQUEST-BODY.CONTENT-TYPE", "application/json", true, usersPostAPI.scenarios[0]),
+            Arguments.of("REQUEST-BODY.CONTENT-TYPE", "application/json*", false, usersPostAPI.scenarios[0]),
+            Arguments.of("REQUEST-BODY.CONTENT-TYPE", "text/plain", true, usersPostAPI.scenarios[1]),
+            Arguments.of("REQUEST-BODY.CONTENT-TYPE", "text/*", true, usersPostAPI.scenarios[1]),
+            Arguments.of("REQUEST-BODY.CONTENT-TYPE", "text/p*", false, usersPostAPI.scenarios[1]),
+
+            // tags
+            Arguments.of("TAGS", "users", true, usersPostAPI.scenarios[0]),
+            Arguments.of("TAGS", "pet", false, usersPostAPI.scenarios[0]),
+
+            // summary
+            Arguments.of("SUMMARY", "create a new user", true, usersPostAPI.scenarios[0]),
+            Arguments.of("SUMMARY", "create a random user", false, usersPostAPI.scenarios[0]),
+
+            // description
+            Arguments.of("DESCRIPTION", "This is a create user endpoint", true, usersPostAPI.scenarios[0]),
+            Arguments.of("DESCRIPTION", "create a random user", false, usersPostAPI.scenarios[0]),
+
+            // operationId
+            Arguments.of("OPERATION_ID", "createUser", true, usersPostAPI.scenarios[0]),
+            Arguments.of("OPERATION_ID", "createEndpoint", false, usersPostAPI.scenarios[0]),
         )
 
         @JvmStatic

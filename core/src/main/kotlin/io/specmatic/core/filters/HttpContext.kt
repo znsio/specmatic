@@ -4,31 +4,6 @@ import io.specmatic.core.Scenario
 import java.util.regex.Pattern
 import javax.activation.MimeType
 
-//"PARAMETERS.QUERY='field1'"
-//"PARAMETERS.QUERY.field1='skip'"
-
-// TODO: where does this match?
-//"PARAMETERS.PATH='request-id'"
-//"PARAMETERS.COOKIE='request-id'"
-
-//"PARAMETERS.HEADER='content-type'" //key
-//"PARAMETERS.HEADER.CONTENT-TYPE='text/xml'" //specific value for the key
-//"PARAMETERS.HEADER.CONTENT-TYPE='application/*+json'" //specific value for the key
-
-// this if for a post request
-//"REQUEST-BODY.CONTENT-TYPE='text/xml'"
-
-// TODO - finalize one of these keys. they mean the same thing?
-//"REQUEST.HEADERS.ACCEPT='text/xml'" //key
-//"RESPONSE-BODY.CONTENT-TYPE='text/xml'" //key
-
-//"STATUS>'409' && STATUS<'420'"
-//"STATUS>'399' && STATUS<'500'"
-//"PATH='/user/v*/invoice'"
-//"PATH='/user/*/invoice'"
-//"PATH='/user/*/invoice' && PARAMETERS.PATH.user_id='naresh'"
-//"METHOD='POST'"
-//"EXAMPLE-NAME='VALID_PRODUCT_CREATE_201'"
 
 class HttpFilterContext(private val scenario: Scenario) : FilterContext {
     override fun includes(key: String, values: List<String>): Boolean {
@@ -42,22 +17,24 @@ class HttpFilterContext(private val scenario: Scenario) : FilterContext {
                     scenario.httpRequestPattern.getHeaderKeys().caseInsensitiveContains(eachValue)
                 }
 
-                "REQUEST-BODY.CONTENT-TYPE" -> {
-                    scenario.httpRequestPattern.headersPattern.contentType
-                        ?: throw IllegalArgumentException("Content type is not set for scenario - ${scenario.apiDescription}")
+                "PARAMETERS.QUERY" -> {
+                    scenario.httpRequestPattern.getQueryParamKeys().contains(eachValue)
+                }
 
-                    scenario.httpRequestPattern.headersPattern.contentType.toMimetype().match(eachValue.toMimetype())
+                "PARAMETERS.PATH" -> {
+                    scenario.httpRequestPattern?.httpPathPattern?.pathParameters()?.map{ it -> it.key }?.contains(eachValue) ?: false
+                }
+
+                "REQUEST-BODY.CONTENT-TYPE" -> {
+                    try {
+                        MimeType(scenario.httpRequestPattern.headersPattern.contentType).match(MimeType(eachValue))
+                    } catch(_: Exception) { false }
                 }
 
                 "RESPONSE.CONTENT-TYPE" -> {
-                    scenario.httpResponsePattern.headersPattern.contentType
-                        ?: throw IllegalArgumentException("Content type is not set for scenario - ${scenario.apiDescription}")
-
-                    scenario.httpResponsePattern.headersPattern.contentType.toMimetype().match(eachValue.toMimetype())
-                }
-
-                "PARAMETERS.QUERY" -> {
-                    scenario.httpRequestPattern.getQueryParamKeys().contains(eachValue)
+                    try {
+                        MimeType(scenario.httpResponsePattern.headersPattern.contentType).match(MimeType(eachValue))
+                    } catch(_: Exception) { false }
                 }
 
                 "METHOD" -> {
@@ -76,20 +53,28 @@ class HttpFilterContext(private val scenario: Scenario) : FilterContext {
                     }
                 }
 
+                "TAGS" -> {
+                    scenario.operationMetadata?.tags?.contains(eachValue) ?: false
+                }
+
+                "SUMMARY" -> {
+                    scenario.operationMetadata?.summary.equals(eachValue, ignoreCase = true)
+                }
+
+                "OPERATION_ID" -> {
+                    scenario.operationMetadata?.operationId == eachValue
+                }
+
+                "DESCRIPTION" -> {
+                    scenario.operationMetadata?.description.equals(eachValue, ignoreCase = true)
+                }
+
                 else -> {
                     throw IllegalArgumentException("Unknown parameter name: $key")
                 }
             }
         }
     }
-
-    private fun String.toMimetype(): MimeType =
-        runCatching { MimeType(this) }.getOrElse(onFailure = { exception: Exception ->
-            throw IllegalArgumentException(
-                "Unable to parse mime type '$this'. ${exception.message}",
-                exception
-            )
-        })
 
     override fun compare(filterKey: String, operator: String, filterValue: String): Boolean {
         if (filterKey.uppercase() == "STATUS") {

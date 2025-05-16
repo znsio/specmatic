@@ -24,8 +24,12 @@ class ScenarioTest {
             return Stream.of(
                 APIKeyInHeaderSecurityScheme(name = "API-KEY", apiKey = "1234"),
                 APIKeyInQueryParamSecurityScheme(name = "API-KEY", apiKey = "1234"),
-                BasicAuthSecurityScheme(),
-                BearerSecurityScheme()
+                BasicAuthSecurityScheme("am9objoxMjM0"),
+                BearerSecurityScheme("1234"),
+                CompositeSecurityScheme(listOf(
+                    BearerSecurityScheme("1234"),
+                    APIKeyInQueryParamSecurityScheme(name = "API-KEY", apiKey = "1234"),
+                ))
             )
         }
     }

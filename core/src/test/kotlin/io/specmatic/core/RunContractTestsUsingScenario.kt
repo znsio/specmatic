@@ -1,16 +1,13 @@
 package io.specmatic.core
 
 import io.specmatic.DefaultStrategies
-import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.*
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.test.TestExecutor
 import io.mockk.every
 import io.mockk.mockk
-import io.specmatic.conversions.APIKeyInHeaderSecurityScheme
-import io.specmatic.conversions.APIKeyInQueryParamSecurityScheme
-import io.specmatic.conversions.OpenAPISecurityScheme
+import io.specmatic.conversions.*
 import io.specmatic.test.ScenarioAsTest
 import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.assertj.core.api.Assertions.assertThat
@@ -768,9 +765,15 @@ paths:
                     val result = securitySchema.matches(request, Resolver())
                     assertThat(result).isInstanceOf(Result.Success::class.java)
 
-                    val actualValue = extractValue(request)
-                    val expectedValue = extractValue(request)
-                    assertThat(actualValue).isEqualTo(expectedValue)
+                    val schemesToCheck = when(securitySchema) {
+                        is CompositeSecurityScheme -> securitySchema.schemes
+                        else -> listOf(securitySchema)
+                    }
+                    assertThat(schemesToCheck).allSatisfy {
+                        val actualValue = extractValue(request)
+                        val expectedValue = extractValue(request)
+                        assertThat(actualValue).isEqualTo(expectedValue)
+                    }
                 }
             }
         })
@@ -797,25 +800,15 @@ paths:
         )
         val feature = Feature(name = "", scenarios = listOf(scenario))
 
-        val extractValue: (HttpRequest) -> String = { it ->
-            when(securitySchema) {
-                is APIKeyInHeaderSecurityScheme -> it.headers.getValue(securitySchema.name)
-                is APIKeyInQueryParamSecurityScheme -> it.queryParams.getValues(securitySchema.name).first()
-                else -> it.headers.getValue(AUTHORIZATION)
-            }
-        }
-
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 return HttpResponse.OK.also {
                     val logs = listOf(request.toLogString(), it.toLogString())
                     println(logs.joinToString(separator = "\n\n"))
-
                     val result = securitySchema.matches(request, Resolver())
-                    assertThat(result).isInstanceOf(Result.Success::class.java)
 
-                    val actualValue = extractValue(request)
-                    assertThat(actualValue).isNotEmpty()
+                    assertThat(result).isInstanceOf(Result.Success::class.java)
+                    assertThat(securitySchema.isInRequest(request)).isTrue()
                 }
             }
         })

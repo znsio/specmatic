@@ -58,7 +58,7 @@ data class HttpPathPattern(
             try {
 
                 val parsedValue = urlPathPattern.tryParse(token, resolver)
-                val result = resolver.matchesPattern(urlPathPattern.key, urlPathPattern.pattern, parsedValue)
+                val result = urlPathPattern.matches(parsedValue, resolver)
                 if (result is Failure) {
                     when (urlPathPattern.key) {
                         null -> result.breadCrumb("$PATH_BREAD_CRUMB ($path)").withFailureReason(FailureReason.URLPathMisMatch)
@@ -79,14 +79,26 @@ data class HttpPathPattern(
         }
 
         val failures = results.filterIsInstance<Failure>()
-
         val finalMatchResult = Result.fromResults(failures)
 
-        val failureReason = if (structureMatches(path, resolver)) {
-            FailureReason.URLPathParamMismatchButSameStructure
-        } else FailureReason.URLPathMisMatch
+        val structureMatches = structureMatches(path, resolver)
+        if (!structureMatches) return finalMatchResult.withFailureReason(FailureReason.URLPathMisMatch)
 
-        return finalMatchResult.withFailureReason(failureReason)
+        val areAllConflicts = failures.isNotEmpty() && failures.all { it.hasReason(FailureReason.URLPathParamMatchButConflict) }
+        if (!areAllConflicts) return finalMatchResult.withFailureReason(FailureReason.URLPathParamMismatchButSameStructure)
+
+        val pathParametersCount = pathSegmentPatterns.count { it.pattern !is ExactValuePattern }
+        return when {
+            failures.size == pathParametersCount -> Failure(
+                breadCrumb = PATH_BREAD_CRUMB,
+                message = """
+                |Path segments of URL $path overlap with another URL that has the same structure
+                |${failures.joinToString("\n") { it.reportString() }}
+                """.trimMargin(),
+                failureReason = FailureReason.URLPathParamMatchButConflict
+            )
+            else -> Success()
+        }
     }
 
     fun generate(resolver: Resolver): String {

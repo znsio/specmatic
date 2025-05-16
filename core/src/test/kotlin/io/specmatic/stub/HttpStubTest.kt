@@ -9,6 +9,7 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.*
 import io.specmatic.core.utilities.ContractPathData.Companion.specToBaseUrlMap
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
+import io.specmatic.core.value.BooleanValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
@@ -1083,6 +1084,30 @@ paths:
                 stub.client.execute(HttpRequest("POST", "/data", emptyMap(), parsedJSONObject("""{"id": 10}""")))
             assertThat(response.status).isEqualTo(400)
             assertThat(response.body).isEqualTo(StringValue("No valid API specifications loaded"))
+        }
+    }
+
+    @Test
+    fun `should be able to serve accurate requests using OAS that has shadowed paths`() {
+        val openApiFile = File("src/test/resources/openapi/has_shadow_paths/api.yaml")
+        val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature()
+        val booleanEndpoints = listOf("/test/latest", "/ABC/reports/DEF")
+        val numberEndpoints = listOf("/test/ABC", "/reports/ABC/latest")
+
+        HttpStub(listOf(feature)).use { stub ->
+            booleanEndpoints.forEach { endpoint ->
+                val request = HttpRequest("POST", endpoint, body = parsedJSONObject("""{"value": true}"""))
+                val response = stub.client.execute(request)
+                assertThat(response.status).withFailMessage(response.body.toStringLiteral()).isEqualTo(200)
+                assertThat((response.body as JSONObjectValue).jsonObject["value"]).isInstanceOf(BooleanValue::class.java)
+            }
+
+            numberEndpoints.forEach { endpoint ->
+                val request = HttpRequest("POST", endpoint, body = parsedJSONObject("""{"value": 123}"""))
+                val response = stub.client.execute(request)
+                assertThat(response.status).withFailMessage(response.body.toStringLiteral()).isEqualTo(200)
+                assertThat((response.body as JSONObjectValue).jsonObject["value"]).isInstanceOf(NumberValue::class.java)
+            }
         }
     }
 

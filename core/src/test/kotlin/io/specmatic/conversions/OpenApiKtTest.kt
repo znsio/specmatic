@@ -2550,13 +2550,7 @@ components:
             }
         }
 
-        val messageToCheck = exception.message?.trimmedLinesString()?.let {
-            if(runningOnWindows())
-                it.replace("<EOL><EOL>", "<EOL>")
-            else
-                it
-        }
-        assertThat(messageToCheck).isEqualTo(
+        assertThat(exception.message?.trimmedLinesString()).isEqualTo(
             """400 Bad Request: "In scenario "POST /users.
             | Response: Details of the new user to register"<EOL>API: POST /users -> 201<EOL><EOL>
             |  >> REQUEST.BODY.email<EOL>  <EOL>

@@ -1,0 +1,22 @@
+{
+  "http-request": {
+    "path": "/123/reports/456",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "value": 123
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "value": 123
+    },
+    "status-text": "OK",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

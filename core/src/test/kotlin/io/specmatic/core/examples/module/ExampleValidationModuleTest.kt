@@ -1,5 +1,7 @@
 package io.specmatic.core.examples.module
 
+import io.specmatic.conversions.ExampleFromFile
+import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.Flags
@@ -500,6 +502,54 @@ class ExampleValidationModuleTest {
         val result = exampleValidationModule.validateExample(feature, example)
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `should be able to validate examples where the OAS has shadowed paths`() {
+        val openApiFile = File("src/test/resources/openapi/has_shadow_paths/api.yaml")
+        val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature()
+        val validExamplesDir = openApiFile.resolveSibling("valid_examples")
+        val examples = validExamplesDir.listFiles()
+
+        assertThat(examples).allSatisfy { example ->
+            val result = exampleValidationModule.validateExample(feature, example)
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
+    @Test
+    fun `should provide accurate errors when shadowed paths have invalid external examples`() {
+        val openApiFile = File("src/test/resources/openapi/has_shadow_paths/api.yaml")
+        val feature = OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature()
+        val invalidExamplesDir = openApiFile.resolveSibling("invalid_examples")
+        val examples = invalidExamplesDir.listFiles()
+
+        assertThat(examples).allSatisfy { example ->
+            val requestPath = ExampleFromFile(example).requestPath
+            val result = exampleValidationModule.validateExample(feature, example)
+
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+            assertThat(result.reportString()).satisfiesAnyOf(
+                {
+                    assertThat(requestPath).isIn("/test/latest", "/123/reports/456")
+                    assertThat(it).isEqualToNormalizingWhitespace("""
+                    >> REQUEST.BODY.value
+                    Specification expected boolean but example contained 123 (number)
+                    >> RESPONSE.BODY.value
+                    Specification expected boolean but example contained 123 (number)
+                    """.trimIndent())
+                },
+                {
+                    assertThat(requestPath).isIn("/test/123", "/reports/123/latest")
+                    assertThat(it).isEqualToNormalizingWhitespace("""
+                    >> REQUEST.BODY.value
+                    Specification expected number but example contained true (boolean)
+                    >> RESPONSE.BODY.value
+                    Specification expected number but example contained true (boolean)
+                    """.trimIndent())
+                }
+            )
+        }
     }
 
     private fun ScenarioStub.toPartialExample(tempDir: File): File {

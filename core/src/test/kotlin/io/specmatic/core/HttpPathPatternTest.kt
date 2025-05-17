@@ -419,7 +419,7 @@ internal class HttpPathPatternTest {
             val urlPattern = buildHttpPathPattern("/pets/(id:number)")
             val invalidPath = "/pets/abc"
 
-            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999))
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999)).let(Dictionary::from)
             val fixedPath = urlPattern.fixValue(invalidPath, Resolver(dictionary = dictionary))
             println(fixedPath)
 
@@ -429,7 +429,7 @@ internal class HttpPathPatternTest {
         @Test
         fun `should only add the prefix if the path already had it`() {
             val urlPattern = buildHttpPathPattern("/pets/(id:number)")
-            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999))
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999)).let(Dictionary::from)
             val resolver = Resolver(dictionary = dictionary)
 
             val prefixedPath = "/pets/abc"
@@ -446,7 +446,7 @@ internal class HttpPathPatternTest {
         @Test
         fun `should retain pattern token if it matches when resolver is in mock mode`() {
             val urlPattern = buildHttpPathPattern("/pets/(id:number)")
-            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999))
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999)).let(Dictionary::from)
             val resolver = Resolver(dictionary = dictionary, mockMode = true)
             val validValue = "/pets/(id:number)"
 
@@ -458,7 +458,7 @@ internal class HttpPathPatternTest {
         @Test
         fun `should fix pattern token if it does not match`() {
             val urlPattern = buildHttpPathPattern("/pets/(id:number)")
-            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999))
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999)).let(Dictionary::from)
             val resolver = Resolver(dictionary = dictionary, mockMode = true)
             val validValue = "/pets/(id:string)"
 
@@ -469,7 +469,7 @@ internal class HttpPathPatternTest {
         @Test
         fun `should generate value when pattern token does not match when resolver is in mock mode`() {
             val urlPattern = buildHttpPathPattern("/pets/(id:number)")
-            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999))
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999)).let(Dictionary::from)
             val resolver = Resolver(dictionary = dictionary, mockMode = true)
             val validValue = "/pets/(string)"
 
@@ -481,7 +481,7 @@ internal class HttpPathPatternTest {
         @Test
         fun `should generate values even if pattern token matches but resolver is not in mock mode`() {
             val urlPattern = buildHttpPathPattern("/pets/(id:number)")
-            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999))
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999)).let(Dictionary::from)
             val resolver = Resolver(dictionary = dictionary)
             val validValue = "/pets/(number)"
 
@@ -493,7 +493,7 @@ internal class HttpPathPatternTest {
         @Test
         fun `should work when pattern-token contains key`() {
             val urlPattern = buildHttpPathPattern("/pets/(id:number)")
-            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999))
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(999)).let(Dictionary::from)
             val resolver = Resolver(dictionary = dictionary)
             val validValue = "/pets/(id:number)"
 
@@ -511,7 +511,7 @@ internal class HttpPathPatternTest {
             val path = "/pets/(number)/owners/(boolean)"
             val dictionary = mapOf(
                 "PATH-PARAMS.id" to NumberValue(999), "PATH-PARAMS.flag" to BooleanValue(true)
-            )
+            ).let(Dictionary::from)
             val filledPath = pathPattern.fillInTheBlanks(path, Resolver(dictionary = dictionary)).value
 
             assertThat(filledPath).isEqualTo("/pets/999/owners/true")
@@ -523,7 +523,7 @@ internal class HttpPathPatternTest {
             val path = "/pets/(anyvalue)/owners/(boolean)"
             val dictionary = mapOf(
                 "PATH-PARAMS.id" to NumberValue(999), "PATH-PARAMS.flag" to BooleanValue(true)
-            )
+            ).let(Dictionary::from)
             val filledPath = pathPattern.fillInTheBlanks(path, Resolver(dictionary = dictionary)).value
 
             assertThat(filledPath).isEqualTo("/pets/999/owners/true")
@@ -535,7 +535,7 @@ internal class HttpPathPatternTest {
             val path = "/pets/(string)/owners/(boolean)"
             val dictionary = mapOf(
                 "PATH-PARAMS.id" to NumberValue(999), "PATH-PARAMS.flag" to BooleanValue(true)
-            )
+            ).let(Dictionary::from)
             val exception = assertThrows<ContractException> {
                 pathPattern.fillInTheBlanks(path, Resolver(dictionary = dictionary)).value
             }
@@ -552,7 +552,7 @@ internal class HttpPathPatternTest {
             val path = "/pets/(id:number)/owners/(flag:boolean)"
             val dictionary = mapOf(
                 "PATH-PARAMS.id" to NumberValue(999), "PATH-PARAMS.flag" to BooleanValue(true)
-            )
+            ).let(Dictionary::from)
             val filledPath = pathPattern.fillInTheBlanks(path, Resolver(dictionary = dictionary)).value
 
             assertThat(filledPath).isEqualTo("/pets/999/owners/true")

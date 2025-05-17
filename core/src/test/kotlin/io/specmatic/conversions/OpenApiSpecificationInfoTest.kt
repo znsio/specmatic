@@ -117,8 +117,7 @@ class OpenApiSpecificationInfoTest {
         """.trimIndent()
         tempDir.resolve("api_dictionary.yaml").writeText(yamlDictionary)
         val dictionary = OpenApiSpecification.loadDictionary(apiFile.canonicalPath, null)
-
-        assertThat(dictionary).containsExactlyInAnyOrderEntriesOf(mapOf(
+        val expectedEntries = mapOf(
             "Schema.stringKey" to StringValue("stringValue"),
             "Schema.numberKey" to NumberValue(123),
             "Schema.booleanKey" to BooleanValue(true),
@@ -126,6 +125,11 @@ class OpenApiSpecificationInfoTest {
             "Schema.nested.key" to StringValue("value"),
             "Schema.array[*]" to StringValue("value"),
             "Schema.array[0].key" to StringValue("value"),
-        ))
+        ).entries
+
+        assertThat(expectedEntries).allSatisfy { (key, value) ->
+            assertThat(dictionary.containsKey(key))
+            assertThat(dictionary.getRawValue(key)).isEqualTo(value)
+        }
     }
 }

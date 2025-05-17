@@ -1,5 +1,6 @@
 package io.specmatic.core
 
+import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.NumberPattern
 import io.specmatic.core.pattern.parsedJSON
@@ -24,6 +25,7 @@ import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForEntity
 import org.springframework.web.client.postForEntity
 import org.w3c.dom.Node
+import java.io.File
 import java.net.URI
 import java.util.*
 
@@ -643,6 +645,28 @@ Scenario: JSON API to get account details with fact check
             } catch (e: HttpClientErrorException) {
                 fail("Threw exception: ${e.localizedMessage}")
             }
+        }
+    }
+
+    @Test
+    fun `should retain serialized JSON values as strings in response when responding to requests`() {
+        val apiFile = File("src/test/resources/openapi/has_serialized_json_field/api.yaml")
+        val feature = OpenApiSpecification.fromFile(apiFile.canonicalPath).toFeature()
+        val examplesDir = apiFile.resolveSibling("api_examples")
+        val examples = examplesDir.listFiles()?.map(ScenarioStub::readFromFile).orEmpty()
+
+        HttpStub(feature, examples).use {
+            val request = HttpRequest(
+                "POST", "/example",
+                body = JSONObjectValue(mapOf(
+                    "json" to StringValue("{\"value\": [\"string\", 1, false, null], \"location\": \"request\"}")
+                )),
+            )
+            val response = it.client.execute(request)
+            val returnedValue = (response.body as JSONObjectValue).jsonObject["json"] as StringValue
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(returnedValue.nativeValue).isEqualTo("{\"value\": [\"string\", 1, false, null], \"location\": \"response\"}")
         }
     }
 }

@@ -726,7 +726,7 @@ internal class AnyPatternTest {
                 )
             )
 
-            val dictionary = mapOf("Sub1.prop" to StringValue("TODO"), "Sub2.prop" to NumberValue(999))
+            val dictionary = mapOf("Sub1.prop" to StringValue("TODO"), "Sub2.prop" to NumberValue(999)).let(Dictionary::from)
             val invalidSub1Value = JSONObjectValue(mapOf("type" to StringValue("sub1")))
             val validSub1Value = pattern.fixValue(invalidSub1Value, Resolver(dictionary = dictionary))
             println(validSub1Value.toStringLiteral())
@@ -753,7 +753,7 @@ internal class AnyPatternTest {
                 )
             )
 
-            val dictionary = mapOf("Sub1.prop" to StringValue("TODO"), "Sub2.prop" to NumberValue(999))
+            val dictionary = mapOf("Sub1.prop" to StringValue("TODO"), "Sub2.prop" to NumberValue(999)).let(Dictionary::from)
             val invalidSub1Value = JSONObjectValue(mapOf("type" to StringValue("notExists")))
             val validSub1Value = pattern.fixValue(invalidSub1Value, Resolver(dictionary = dictionary))
             println(validSub1Value.toStringLiteral())
@@ -780,7 +780,7 @@ internal class AnyPatternTest {
                 )
             )
 
-            val dictionary = mapOf("Sub1.prop" to StringValue("TODO"), "Sub2.prop" to NumberValue(999))
+            val dictionary = mapOf("Sub1.prop" to StringValue("TODO"), "Sub2.prop" to NumberValue(999)).let(Dictionary::from)
             val invalidSub1Value = JSONObjectValue(emptyMap())
             val validSub1Value = pattern.fixValue(invalidSub1Value, Resolver(dictionary = dictionary))
             println(validSub1Value.toStringLiteral())
@@ -803,7 +803,7 @@ internal class AnyPatternTest {
                 discriminator = null
             )
 
-            val dictionary = mapOf("Sub1.prop" to StringValue("TODO"), "Sub2.prop" to NumberValue(999))
+            val dictionary = mapOf("Sub1.prop" to StringValue("TODO"), "Sub2.prop" to NumberValue(999)).let(Dictionary::from)
             val invalidSub1Value = JSONObjectValue(emptyMap())
             val validSub1Value = pattern.fixValue(invalidSub1Value, Resolver(dictionary = dictionary))
             println(validSub1Value.toStringLiteral())
@@ -870,7 +870,7 @@ internal class AnyPatternTest {
         @Test
         fun `should work when pattern is scalar based of nullable type`() {
             val pattern = AnyPattern(listOf(NullPattern, StringPattern()))
-            val resolver = Resolver(dictionary = mapOf("(string)" to StringValue("TODO")))
+            val resolver = Resolver(dictionary = mapOf("(string)" to StringValue("TODO")).let(Dictionary::from))
             val invalidValue = NumberValue(999)
             val fixedValue = pattern.fixValue(invalidValue, resolver)
 
@@ -881,7 +881,7 @@ internal class AnyPatternTest {
         @Test
         fun `scalar value should be picked from dictionary when pattern has typeAlias and matching key in dictionary`() {
             val pattern = AnyPattern(listOf(NullPattern, StringPattern()), typeAlias = "(StringOrEmpty)")
-            val resolver = Resolver(dictionary = mapOf("StringOrEmpty" to StringValue("TODO")))
+            val resolver = Resolver(dictionary = mapOf("StringOrEmpty" to StringValue("TODO")).let(Dictionary::from))
             val invalidValue = NumberValue(999)
             val fixedValue = pattern.fixValue(invalidValue, resolver)
 
@@ -893,7 +893,7 @@ internal class AnyPatternTest {
         fun `nullable pattern dictionary lookup should not throw an exception`() {
             val pattern = AnyPattern(listOf(NullPattern, NumberPattern()))
             val jsonObjPattern = JSONObjectPattern(mapOf("id" to pattern), typeAlias = "(Test)")
-            val resolver = Resolver(dictionary = mapOf("Test.id" to NumberValue(999)))
+            val resolver = Resolver(dictionary = mapOf("Test.id" to NumberValue(999)).let(Dictionary::from))
 
             val invalidValue = JSONObjectValue(mapOf("id" to StringValue("INVALID")))
             val fixedValue = assertDoesNotThrow { jsonObjPattern.fixValue(invalidValue, resolver) }
@@ -914,7 +914,7 @@ internal class AnyPatternTest {
                     mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
                 )
             )
-            val resolver = Resolver(dictionary = mapOf("(number)" to NumberValue(999))).partializeKeyCheck()
+            val resolver = Resolver(dictionary = mapOf("(number)" to NumberValue(999)).let(Dictionary::from)).partializeKeyCheck()
             val partialValue = JSONObjectValue(mapOf("extra" to StringValue("(string)")))
             val fixedValue = pattern.fixValue(partialValue, resolver)
 
@@ -937,7 +937,7 @@ internal class AnyPatternTest {
                     mapping = mapOf("sub1" to "#/components/schemas/Sub1", "sub2" to "#/components/schemas/Sub2")
                 )
             )
-            val dictionary = mapOf("Sub2.prop" to NumberValue(999))
+            val dictionary = mapOf("Sub2.prop" to NumberValue(999)).let(Dictionary::from)
             val resolver = Resolver(dictionary = dictionary)
             val partialValue = JSONObjectValue(mapOf("type" to StringValue("sub2")))
             val filledInValue = pattern.fillInTheBlanks(partialValue, resolver).value
@@ -958,7 +958,7 @@ internal class AnyPatternTest {
                 )
             )
 
-            val dictionary = mapOf("Sub2.prop" to NumberValue(999))
+            val dictionary = mapOf("Sub2.prop" to NumberValue(999)).let(Dictionary::from)
             val resolver = Resolver(dictionary = dictionary, newPatterns = mapOf("(Sub1)" to patternSub1, "(Sub2)" to patternSub2))
             val partialValue = StringValue("(Sub2)")
             val filledInValue = pattern.fillInTheBlanks(partialValue, resolver).value
@@ -980,7 +980,7 @@ internal class AnyPatternTest {
                 )
             )
 
-            val dictionary = mapOf("Sub2.prop" to NumberValue(999))
+            val dictionary = mapOf("Sub2.prop" to NumberValue(999)).let(Dictionary::from)
             val resolver = Resolver(dictionary = dictionary)
             val partialValue = JSONObjectValue(mapOf("prop" to StringValue("(number)")))
             val filledInValue = pattern.fillInTheBlanks(partialValue, resolver).value
@@ -1002,7 +1002,7 @@ internal class AnyPatternTest {
                 )
             )
 
-            val dictionary = mapOf("Sub1.prop" to StringValue("TODO"), "Sub1.extra" to StringValue("TODO"),)
+            val dictionary = mapOf("Sub1.prop" to StringValue("TODO"), "Sub1.extra" to StringValue("TODO"),).let(Dictionary::from)
             val resolver = Resolver(newPatterns = mapOf("(Base)" to pattern), dictionary = dictionary)
             val partialValue = StringValue("(Base)")
             val filledInValue = pattern.fillInTheBlanks(partialValue, resolver).value
@@ -1026,7 +1026,7 @@ internal class AnyPatternTest {
                 )
             )
 
-            val resolver = Resolver(newPatterns = mapOf("(Base)" to pattern), isNegative = true, dictionary = mapOf("(number)" to NumberValue(999)))
+            val resolver = Resolver(newPatterns = mapOf("(Base)" to pattern), isNegative = true, dictionary = mapOf("(number)" to NumberValue(999)).let(Dictionary::from))
             val partialValue = JSONObjectValue(mapOf(
                 "type" to StringValue("sub1"), "prop" to BooleanValue(false), "extra" to StringValue("(number)")
             ))

@@ -37,7 +37,7 @@ data class Resolver(
     val cyclePreventionStack: List<Pattern> = listOf(),
     val defaultExampleResolver: DefaultExampleResolver = DoNotUseDefaultExample,
     val generation: GenerationStrategies = NonGenerativeTests,
-    val dictionary: Map<String, Value> = emptyMap(),
+    val dictionary: Dictionary = Dictionary.empty(),
     val dictionaryLookupPath: String = "",
     val jsonObjectResolver: JSONObjectResolver = JSONObjectResolver(),
     val allPatternsAreMandatory: Boolean = false,
@@ -140,6 +140,10 @@ data class Resolver(
             else -> throw ContractException("$patternValue is not a type")
         }
 
+    private fun getPatternOrElse(patternValue: String, orElse: Pattern): Pattern {
+        return runCatching { getPattern(patternValue) }.getOrDefault(orElse)
+    }
+
     fun <T> withCyclePrevention(pattern: Pattern, toResult: (r: Resolver) -> T) : T {
         return withCyclePrevention(pattern, false, toResult)!!
     }
@@ -201,23 +205,17 @@ data class Resolver(
     }
 
     fun generate(pattern: Pattern): Value {
-        val valueFromDict = getValueFromDictionary(dictionaryLookupPath, pattern)
+        val valueFromDict = dictionary.getValueFor(dictionaryLookupPath, pattern, this)
         if (valueFromDict != null) {
             return valueFromDict.unwrapOrContractException()
         }
 
-        val defaultValueFromDict = getDefaultValueFromDictionary(pattern)
+        val defaultValueFromDict = dictionary.getDefaultValueFor(pattern, this)
         if (defaultValueFromDict != null) {
             return defaultValueFromDict
         }
 
         return pattern.generate(this)
-    }
-
-    private fun getDefaultValueFromDictionary(pattern: Pattern): Value? {
-        val lookupKey = withPatternDelimiters(pattern.typeName)
-        val defaultPatternValue = getValueFromDictionary(lookupKey, pattern)
-        return defaultPatternValue?.withDefault(null) { it }
     }
 
     fun generate(typeAlias: String?, rawLookupKey: String, pattern: Pattern): Value {
@@ -230,7 +228,7 @@ data class Resolver(
         if (factStore.has(lookupKey))
             return generate(lookupKey, pattern)
 
-        val updatedResolver = updateLookupPath(typeAlias, lookupKey)
+        val updatedResolver = updateLookupPath(typeAlias, lookupKey, pattern)
 
         return updatedResolver.generate(pattern)
     }
@@ -239,26 +237,29 @@ data class Resolver(
         val resolvedPattern = resolvedHop(pattern, this)
         if (resolvedPattern is ExactValuePattern) return resolvedPattern.generate(this)
 
-        val updatedResolver = updateLookupPath(typeAlias, lookupKey)
+        val updatedResolver = updateLookupPath(typeAlias, lookupKey, pattern)
         return pattern.fixValue(value, updatedResolver)
     }
 
-    fun updateLookupPath(typeAlias: String?, lookupKey: String): Resolver {
-        val lookupPath = lookupPath(typeAlias, lookupKey)
+    fun updateLookupPath(typeAlias: String?, key: String, keyPattern: Pattern): Resolver {
+        val lookupPath = lookupPath(typeAlias, key).takeIf(String::isNotBlank) ?: return this
 
-        val updatedResolver = if (lookupPath.isNotBlank()) {
-            val updatedLookupPathsSeenSoFar =
-                if(lookupKey.isNotBlank())
-                    lookupPathsSeenSoFar.plus(lookupPath)
-                else
-                    lookupPathsSeenSoFar
-
-            this.copy(dictionaryLookupPath = lookupPath, lookupPathsSeenSoFar = updatedLookupPathsSeenSoFar)
-        } else {
-            this
+        val patternFocused = dictionary.applyWith(typeAlias, "*") { patternName ->
+            val pattern = getPatternOrElse(patternName, AnyValuePattern)
+            focusIntoSchema(pattern, withoutPatternDelimiters(patternName), this@Resolver)
         }
 
-        return updatedResolver
+        val key = key.takeIf(String::isNotBlank)
+        val keyFocused = patternFocused.applyWith(key) { key ->
+            val focusKey = if (key == "[*]") "${dictionaryLookupPath.substringAfterLast(".")}[*]" else key
+            focusIntoProperty(keyPattern, focusKey, this@Resolver)
+        }
+
+        return this.copy(
+            dictionaryLookupPath = lookupPath,
+            lookupPathsSeenSoFar = lookupPathsSeenSoFar.plus(lookupPath),
+            dictionary = keyFocused
+        )
     }
 
     private fun lookupPath(typeAlias: String?, lookupKey: String): String {
@@ -286,12 +287,14 @@ data class Resolver(
 
     fun generateList(pattern: ListPattern): Value {
         val lookupPath = lookupPath(pattern.typeAlias, "")
-        val valueFromDict = getValueFromDictionary(lookupPath, pattern)
+        val valueFromDict = dictionary.getValueFor(lookupPath, pattern, this)
         if (valueFromDict != null) {
             return valueFromDict.unwrapOrContractException()
         }
 
-        return updateLookupPath(pattern.typeAlias, "[*]").generateRandomList(pattern.pattern)
+        return updateLookupPath(
+            typeAlias = pattern.typeAlias, key = "[*]", keyPattern = pattern.pattern
+        ).generateRandomList(pattern.pattern)
     }
 
     private fun generateRandomList(pattern: Pattern): Value {
@@ -369,26 +372,12 @@ data class Resolver(
         return generation.generateKeySubLists(key, subList)
     }
 
-    fun plusDictionaryLookupDetails(typeAlias: String?, key: String): Resolver {
-        val newDictionaryLookupPath = addToDictionaryLookupPath(typeAlias, key)
-
-        return this.copy(dictionaryLookupPath = newDictionaryLookupPath)
-    }
-
-    private fun addToDictionaryLookupPath(typeAlias: String?, key: String): String {
-        return when {
-            !typeAlias.isNullOrBlank() -> "${withoutPatternDelimiters(typeAlias)}.$key"
-            key.startsWith("[") -> "$dictionaryLookupPath$key"
-            else -> "$dictionaryLookupPath.$key"
-        }
-    }
-
     fun hasDictionaryToken(key: String): Boolean {
-        return key in dictionary
+        return dictionary.containsKey(key)
     }
 
     fun getDictionaryToken(key: String): Value {
-        return dictionary.getValue(key)
+        return dictionary.getRawValue(key)
     }
 
     fun hasSeenPattern(pattern: Pattern): Boolean {
@@ -422,40 +411,13 @@ data class Resolver(
     fun getPartialKeyCheck(): KeyCheck {
         return findKeyErrorCheck.toPartialKeyCheck()
     }
-
-    private fun getValueFromDictionary(lookupKey: String, pattern: Pattern): ReturnValue<Value>? {
-        val dictionaryValue = dictionary[lookupKey] ?: return null
-        val valueToMatch = getValueToMatch(dictionaryValue, pattern) ?: return null
-
-        return runCatching {
-            val result = pattern.matches(valueToMatch, this)
-            if (result is Result.Failure && this.isNegative) return@runCatching null
-            result.toReturnValue(valueToMatch, "Invalid Dictionary value at \"$lookupKey\"")
-        }.getOrElse(::HasException)
-    }
-
-    private fun <T> calculateDepth(data: T, getChildren: (T) -> List<T>?): Int {
-        val children = getChildren(data) ?: return 0
-        return when {
-            children.isEmpty() -> 1
-            else -> 1 + children.maxOf { calculateDepth(it, getChildren) }
-        }
-    }
-
-    private fun getValueToMatch(value: Value, pattern: Pattern): Value? {
-        if (value !is JSONArrayValue) return value
-        if (pattern !is ListPattern) return value.list.randomOrNull()
-
-        val patternDepth = calculateDepth<Pattern>(pattern) { (resolvedHop(it, this) as? ListPattern)?.pattern?.let(::listOf) }
-        val valueDepth = calculateDepth<Value>(value) { (it as? JSONArrayValue)?.list }
-        return when {
-            valueDepth > patternDepth -> value.list.randomOrNull()
-            else -> value
-        }
-    }
 }
 
 private fun ExactValuePattern.hasPatternToken(): Boolean {
     return this.pattern is StringValue && isPatternToken(this.pattern.string)
 }
 
+private fun <T, U> T.applyWith(original: U?, default: U? = null, block: T.(U) -> T): T {
+    val value: U = original ?: default ?: return this
+    return block(value)
+}

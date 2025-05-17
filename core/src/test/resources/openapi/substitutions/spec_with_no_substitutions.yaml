@@ -23,8 +23,7 @@ paths:
           headers:
             X-Region:
               schema:
-                X-Region:
-                  type: string
+                type: string
           content:
             application/json:
               schema:

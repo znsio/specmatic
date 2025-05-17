@@ -1,6 +1,7 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.GENERATION
+import io.specmatic.core.Dictionary
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.UseDefaultExample
@@ -186,7 +187,7 @@ class EnumPatternTest {
         val enumPattern = EnumPattern(enumValues, typeAlias = "(AnimalType)")
         val jsonPattern = JSONObjectPattern(mapOf("type" to enumPattern), typeAlias = "(Test)")
 
-        val dictionary= mapOf("Test.type" to StringValue("Dog"))
+        val dictionary = "Test: { type: Dog }".let(Dictionary::fromYaml)
         val resolver = Resolver(newPatterns = mapOf("(AnimalType)" to enumPattern), dictionary = dictionary)
         val value = JSONObjectValue(mapOf("type" to StringValue("(AnimalType)")))
         val filledInValue = jsonPattern.fillInTheBlanks(value, resolver).value
@@ -199,7 +200,8 @@ class EnumPatternTest {
         val enumValues: List<Value> = listOf("Cat", "Dog", "Fish").map { StringValue(it) }
         val enumPattern = EnumPattern(enumValues, typeAlias = "(AnimalType)")
         val pattern = JSONObjectPattern(mapOf("type" to enumPattern), typeAlias = "(Test)")
-        val resolver = Resolver(dictionary = mapOf("Test.type" to StringValue("Dog")))
+        val dictionary = "Test: { type: Dog }".let(Dictionary::fromYaml)
+        val resolver = Resolver(dictionary = dictionary)
         val invalidValues = listOf(
             StringValue("Unknown"),
             NumberValue(999),

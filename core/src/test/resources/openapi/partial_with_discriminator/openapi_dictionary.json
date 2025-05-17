@@ -1,6 +1,10 @@
 {
-  "Cat.color": "black",
-  "Cat.livesLeft": 9,
-  "Dog.breed": "Golden Retriever",
-  "Dog.barkVolume": 10
+  "Cat": {
+    "color": "black",
+    "livesLeft": 9
+  },
+  "Dog": {
+    "breed": "Golden Retriever",
+    "barkVolume": 10
+  }
 }

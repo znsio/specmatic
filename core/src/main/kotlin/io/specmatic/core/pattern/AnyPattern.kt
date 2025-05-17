@@ -64,7 +64,7 @@ data class AnyPattern(
         }
 
         val matchingPatternNew = patternMatches.minBy { (it.result as? Failure)?.failureCount() ?: 0 }
-        val updatedResolver = resolver.updateLookupPath(this.typeAlias, "")
+        val updatedResolver = resolver.updateLookupPath(this.typeAlias, "", matchingPatternNew.pattern)
         return matchingPatternNew.pattern.fixValue(value, updatedResolver)
     }
 

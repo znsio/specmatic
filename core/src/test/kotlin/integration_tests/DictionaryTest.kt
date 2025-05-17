@@ -3,7 +3,6 @@ package integration_tests
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.pattern.*
-import io.specmatic.core.utilities.jsonStringToValueMap
 import io.specmatic.core.value.*
 import io.specmatic.stub.*
 import io.specmatic.stub.createStubFromContracts
@@ -363,7 +362,7 @@ class DictionaryTest {
 
         @Test
         fun `negative based path parameters should still be generated when dictionary contains substitutions`() {
-            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(123))
+            val dictionary = mapOf("PATH-PARAMS.id" to NumberValue(123)).let(Dictionary::from)
             val scenario = Scenario(ScenarioInfo(
                 httpRequestPattern = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/orders/(id:number)"), method = "GET"),
                 httpResponsePattern = HttpResponsePattern(status = 200)
@@ -390,7 +389,7 @@ class DictionaryTest {
 
         @Test
         fun `negative based query parameters should still be generated when dictionary contains substitutions`() {
-            val dictionary = mapOf("QUERY-PARAMS.id" to NumberValue(123))
+            val dictionary = mapOf("QUERY-PARAMS.id" to NumberValue(123)).let(Dictionary::from)
             val scenario = Scenario(ScenarioInfo(
                 httpRequestPattern = HttpRequestPattern(
                     httpPathPattern = buildHttpPathPattern("/orders"), method = "GET",
@@ -422,7 +421,7 @@ class DictionaryTest {
 
         @Test
         fun `negative based headers should still be generated when dictionary contains substitutions`() {
-            val dictionary = mapOf("HEADERS.ID" to NumberValue(123))
+            val dictionary = mapOf("HEADERS.ID" to NumberValue(123)).let(Dictionary::from)
             val scenario = Scenario(ScenarioInfo(
                 httpRequestPattern = HttpRequestPattern(
                     httpPathPattern = buildHttpPathPattern("/orders"), method = "GET",
@@ -454,7 +453,7 @@ class DictionaryTest {
 
         @Test
         fun `negative based bodies should still be generated when dictionary contains substitutions`() {
-            val dictionary = mapOf("OBJECT.id" to NumberValue(123))
+            val dictionary = mapOf("OBJECT.id" to NumberValue(123)).let(Dictionary::from)
             val scenario = Scenario(ScenarioInfo(
                 httpRequestPattern = HttpRequestPattern(
                     httpPathPattern = buildHttpPathPattern("/orders"), method = "GET",
@@ -499,7 +498,7 @@ class DictionaryTest {
                 ), typeAlias = "(OBJECT)")
             ),
             httpResponsePattern = HttpResponsePattern(status = 200)
-        )).copy(dictionary = dictionary)
+        )).copy(dictionary = dictionary.let(Dictionary::from))
         val feature = Feature(listOf(scenario), name = "")
 
 
@@ -533,10 +532,7 @@ class DictionaryTest {
 
         @Test
         fun `should randomly pick one of the dictionary values when generating`() {
-            val dictionary = jsonStringToValueMap("""{
-            "Schema.number": [10, 20, 30],
-            "Schema.string": ["a", "b", "c"]
-            }""".trimIndent())
+            val dictionary = "Schema: { number: [10, 20, 30], string: [a, b, c] } ".let(Dictionary::fromYaml)
             val pattern = parsedPattern("""{
                 "number": "(number)",
                 "string": "(string)"
@@ -550,10 +546,7 @@ class DictionaryTest {
 
         @Test
         fun `should use the array value as is when pattern is an array and dictionary contains array level key`() {
-            val dictionary = jsonStringToValueMap("""{
-            "Schema.array": [10, 20, 30],
-            "Schema.array[*]": [1, 2, 3]
-            }""".trimIndent())
+            val dictionary = "Schema: { array: [10, 20, 30], 'array[*]': [1, 2, 3] }".let(Dictionary::fromYaml)
             val pattern = JSONObjectPattern(mapOf("array" to ListPattern(NumberPattern())), typeAlias = "(Schema)")
             val resolver = Resolver(dictionary = dictionary)
             val value = pattern.generate(resolver)
@@ -564,9 +557,7 @@ class DictionaryTest {
 
         @Test
         fun `should use wildcard index key if exists in dictionary when array key is missing and pattern is an array`() {
-            val dictionary = jsonStringToValueMap("""{
-            "Schema.array[*]": [1, 2, 3]
-            }""".trimIndent())
+            val dictionary = "Schema: { 'array[*]': [1, 2, 3] } ".let(Dictionary::fromYaml)
             val pattern = JSONObjectPattern(mapOf("array" to ListPattern(NumberPattern())), typeAlias = "(Schema)")
             val resolver = Resolver(dictionary = dictionary)
             val value = pattern.generate(resolver)
@@ -580,9 +571,7 @@ class DictionaryTest {
 
         @Test
         fun `should throw an exception when array key contains invalid value and pattern is an array`() {
-            val dictionary = jsonStringToValueMap("""{
-            "Schema.array": [1, "abc", 3]
-            }""".trimIndent())
+            val dictionary = "Schema: { array: [1, abc, 3] }".let(Dictionary::fromYaml)
             val pattern = JSONObjectPattern(mapOf("array" to ListPattern(NumberPattern())), typeAlias = "(Schema)")
             val resolver = Resolver(dictionary = dictionary)
             val exception = assertThrows<ContractException> { pattern.generate(resolver) }
@@ -596,10 +585,10 @@ class DictionaryTest {
 
         @Test
         fun `should look for default dictionary values when schema key is missing`() {
-            val dictionary = jsonStringToValueMap("""{
-            "(number)": [1, 2, 3],
-            "(string)": ["a", "b", "c"]
-            }""".trimIndent())
+            val dictionary = """
+            (number): [1, 2, 3]
+            (string): [a, b, c]
+            """.let(Dictionary::fromYaml)
             val pattern = parsedPattern("""{
             "numberKey": "(number)",
             "stringKey": "(string)"
@@ -613,10 +602,10 @@ class DictionaryTest {
         
         @Test
         fun `should pick up default value for complex pattern if exists in dictionary`() {
-            val dictionary = jsonStringToValueMap("""{
-            "(list of number)": [1, 2, 3],
-            "(list of email)": ["john@mail.com", "jane@mail.com", "bob@mail.com"]
-            }""".trimIndent())
+            val dictionary = """
+            (list of number): [1, 2, 3]
+            (list of email): [john@mail.com, jane@mail.com, bob@mail.com]
+            """.let(Dictionary::fromYaml)
             val pattern = JSONObjectPattern(mapOf(
                 "numbers" to ListPattern(NumberPattern()),
                 "emails" to ListPattern(EmailPattern())
@@ -637,10 +626,10 @@ class DictionaryTest {
 
         @Test
         fun `should prioritise schema keys over default values in dictionary`() {
-            val dictionary = jsonStringToValueMap("""{
-            "Schema.number": [10, 20, 30],
-            "(number)": [1, 2, 3]
-            }""".trimIndent())
+            val dictionary = """
+            (number): [1, 2, 3]
+            Schema: { number: [10, 20, 30] }
+            """.let(Dictionary::fromYaml)
             val pattern = parsedPattern("""{ "number": "(number)" }""".trimIndent(), typeAlias = "(Schema)")
             val resolver = Resolver(dictionary = dictionary)
             val value = pattern.generate(resolver) as JSONObjectValue
@@ -655,7 +644,7 @@ class DictionaryTest {
             @MethodSource("integration_tests.DictionaryTest#listPatternToSingleValueProvider")
             fun `should use the dictionary value as is when when pattern and value depth matches`(pattern: ListPattern, value: JSONArrayValue) {
                 val testPattern = JSONObjectPattern(mapOf("test" to pattern), typeAlias = "(Test)")
-                val resolver = Resolver(dictionary = mapOf("Test.test" to value))
+                val resolver = Resolver(dictionary = "Test: { test: $value }".let(Dictionary::fromYaml))
                 val generatedValue = resolver.generate(testPattern)
 
                 assertThat(generatedValue).isInstanceOf(JSONObjectValue::class.java); generatedValue as JSONObjectValue
@@ -666,7 +655,7 @@ class DictionaryTest {
             @MethodSource("integration_tests.DictionaryTest#listPatternToMultiValueProvider")
             fun `should pick random value from the dictionary when value depth is higher than pattern`(pattern: ListPattern, value: JSONArrayValue) {
                 val testPattern = JSONObjectPattern(mapOf("test" to pattern), typeAlias = "(Test)")
-                val resolver = Resolver(dictionary = mapOf("Test.test" to value))
+                val resolver = Resolver(dictionary = "Test: { test: $value }".let(Dictionary::fromYaml))
                 val generatedValue = resolver.generate(testPattern)
 
                 assertThat(generatedValue).isInstanceOf(JSONObjectValue::class.java); generatedValue as JSONObjectValue

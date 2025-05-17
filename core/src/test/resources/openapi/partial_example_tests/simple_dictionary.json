@@ -1,10 +1,18 @@
 {
-  "PATH-PARAMS.creatorId": 123,
-  "PATH-PARAMS.petId": 999,
-  "HEADERS.CREATOR-ID": 123,
-  "HEADERS.PET-ID": 999,
-  "QUERY-PARAMS.creatorId": 123,
-  "QUERY-PARAMS.petId": 999,
-  "NewPet.creatorId": 123,
-  "NewPet.petId": 999
+  "PATH-PARAMS": {
+    "creatorId": 123,
+    "petId": 999
+  },
+  "HEADERS": {
+    "CREATOR-ID": 123,
+    "PET-ID": 999
+  },
+  "QUERY-PARAMS": {
+    "creatorId": 123,
+    "petId": 999
+  },
+  "NewPet": {
+    "creatorId": 123,
+    "petId": 999
+  }
 }

@@ -1,5 +1,11 @@
 {
-  "Person.name.details.first_name": "Leanna",
-  "Person.name.details.last_name": "Schwartz",
-  "Person.name.salutation": "Ms"
+  "Person": {
+    "name": {
+      "salutation": "Ms",
+      "details": {
+        "first_name": "Leanna",
+        "last_name": "Schwartz"
+      }
+    }
+  }
 }

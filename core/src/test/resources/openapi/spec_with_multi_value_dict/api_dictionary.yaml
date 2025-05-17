@@ -1,47 +1,53 @@
-PATH-PARAMS.creatorId:
-  - 123
-  - 456
-PATH-PARAMS.petId:
-  - 123
-  - 456
+PATH-PARAMS:
+  creatorId:
+    - 123
+    - 456
+  petId:
+    - 123
+    - 456
 
-HEADERS.CREATOR-ID:
-  - 123
-  - 456
-HEADERS.PET-ID:
-  - 123
-  - 456
+HEADERS:
+  CREATOR-ID:
+    - 123
+    - 456
+  PET-ID:
+    - 123
+    - 456
 
-QUERY-PARAMS.creatorId:
-  - 123
-  - 456
-QUERY-PARAMS.petId:
-  - 123
-  - 456
+QUERY-PARAMS:
+  creatorId:
+    - 123
+    - 456
+  petId:
+    - 123
+    - 456
 
-NewPet.creatorId:
-  - 123
-  - 456
-NewPet.name:
-  - Tom
-  - Jerry
+NewPet:
+  creatorId:
+    - 123
+    - 456
+  name:
+    - Tom
+    - Jerry
 
-Pet.id:
-  - 123
-  - 456
-Pet.petId:
-  - 123
-  - 456
-Pet.creatorId:
-  - 123
-  - 456
-Pet.name:
-  - Tom
-  - Jerry
+Pet:
+  id:
+    - 123
+    - 456
+  petId:
+    - 123
+    - 456
+  creatorId:
+    - 123
+    - 456
+  name:
+    - Tom
+    - Jerry
 
-Error.code:
-  - 123
-  - 456
-Error.message:
-  - Bad Request
-  - Internal Server Error
+Error:
+  code:
+    - 123
+    - 456
+  message:
+    - Bad Request
+    - Internal Server Error

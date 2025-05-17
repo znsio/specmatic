@@ -12,6 +12,7 @@ import io.ktor.util.*
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.pattern.NumberPattern
 import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.value.*
 import io.specmatic.osAgnosticPath
 import io.specmatic.test.LegacyHttpClient
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
+import java.io.File
 
 class ContractTests {
     @Test
@@ -1318,6 +1320,74 @@ Examples:
                 .loadExternalisedExamples()
 
         assertThat(feature.scenarios.filter { it.examples.singleOrNull()?.rows?.size?.let { it > 0 } == true }).hasSize(1)
+    }
+
+    @Test
+    fun `should be able to run tests from OAS with composite security schemes using inline examples`() {
+        val openApiFile = File("src/test/resources/openapi/has_composite_security/api.yaml")
+        val feature = Flags.using("bearerAuth" to "API-SECRET", "apiKeyQuery" to "1234") {
+            OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature()
+        }
+
+        val assertApiKey: (HttpRequest, String?) -> Unit = { request, expected ->
+            assertThat(request.queryParams.asMap()["apiKey"]).isEqualTo(expected)
+        }
+        val assertAuthHeader: (HttpRequest, String?) -> Unit = { request, expected ->
+            assertThat(request.headers["Authorization"]).isEqualTo(expected)
+        }
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val requestBody = request.body as JSONObjectValue
+                val bodyString = requestBody.jsonObject["message"]!!.toStringLiteral()
+                when (request.path) {
+                    "/secure" -> {
+                        assertApiKey(request, "1234")
+                        assertAuthHeader(request, "Bearer API-SECRET")
+                        assertThat(bodyString).isEqualTo("Hello to Secure")
+                    }
+                    "/partial" -> {
+                        assertThat(request).satisfiesAnyOf(
+                            {
+                                assertApiKey(request, "1234")
+                                assertAuthHeader(request, null)
+                            },
+                            {
+                                assertApiKey(request, null)
+                                assertAuthHeader(request, "Bearer API-SECRET")
+                            }
+                        )
+                        assertThat(bodyString).isEqualTo("Hello to Partial")
+                    }
+                    "/overlap" -> {
+                        assertThat(request).satisfiesAnyOf(
+                            {
+                                assertApiKey(it, "1234")
+                                assertAuthHeader(it, "Bearer API-SECRET")
+                            },
+                            {
+                                assertApiKey(it, null)
+                                assertAuthHeader(it, "Bearer API-SECRET")
+                            }
+                        )
+                        assertThat(bodyString).isEqualTo("Hello to Overlap")
+                    }
+                    else -> {
+                        assertApiKey(request, null)
+                        assertAuthHeader(request, null)
+                        assertThat(bodyString).isEqualTo("Hello to Insecure")
+                    }
+                }
+
+                return HttpResponse.ok(requestBody.addEntry("message", bodyString)).also {
+                    println(request.toLogString())
+                    println(it.toLogString())
+                }
+            }}
+        )
+
+        assertThat(results.testCount).isEqualTo(4)
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 }
 

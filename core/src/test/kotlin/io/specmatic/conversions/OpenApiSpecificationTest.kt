@@ -10766,6 +10766,39 @@ paths:
         assertThat(results.report()).contains("""expected "application/json; charset=utf-8" but found value "application/json"""")
     }
 
+    @Test
+    fun `should be able to load OAS with security schemes defined in logical AND or OR combination`() {
+        val oasFile = File("src/test/resources/openapi/has_composite_security/api.yaml")
+        val feature = Flags.using("bearerAuth" to "API-SECRET", "apiKeyQuery" to "1234") {
+            OpenApiSpecification.fromFile(oasFile.canonicalPath).toFeature()
+        }
+        val (secure, partial, overlap, insecure) = feature.scenarios
+
+        assertThat(secure.httpRequestPattern.securitySchemes).isEqualTo(listOf(
+            CompositeSecurityScheme(listOf(
+                BearerSecurityScheme(configuredToken = "API-SECRET"),
+                APIKeyInQueryParamSecurityScheme(name = "apiKey", apiKey = "1234")
+            ))
+        ))
+
+        assertThat(overlap.httpRequestPattern.securitySchemes).isEqualTo(listOf(
+            CompositeSecurityScheme(listOf(
+                BearerSecurityScheme(configuredToken = "API-SECRET"),
+                APIKeyInQueryParamSecurityScheme(name = "apiKey", apiKey = "1234")
+            )),
+            BearerSecurityScheme(configuredToken = "API-SECRET"),
+        ))
+
+        assertThat(partial.httpRequestPattern.securitySchemes).isEqualTo(listOf(
+            BearerSecurityScheme(configuredToken = "API-SECRET"),
+            APIKeyInQueryParamSecurityScheme(name = "apiKey", apiKey = "1234")
+        ))
+
+        assertThat(insecure.httpRequestPattern.securitySchemes).isEqualTo(listOf(
+            NoSecurityScheme()
+        ))
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

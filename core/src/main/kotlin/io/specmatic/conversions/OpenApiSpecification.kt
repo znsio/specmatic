@@ -49,8 +49,6 @@ const val SERVICE_TYPE_HTTP = "HTTP"
 const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"
 const val testDirectoryProperty = "specmaticTestsDirectory"
 
-const val NO_SECURITY_SCHEMA_IN_SPECIFICATION = "NO-SECURITY-SCHEME-IN-SPECIFICATION"
-
 var missingRequestExampleErrorMessageForTest: String = "WARNING: Ignoring response example named %s for test or stub data, because no associated request example named %s was found."
 var missingResponseExampleErrorMessageForTest: String = "WARNING: Ignoring request example named %s for test or stub data, because no associated response example named %s was found."
 
@@ -965,6 +963,20 @@ class OpenApiSpecification(
         }
     }
 
+    private fun parseOperationSecuritySchemas(operation: Operation, getSecurityScheme: (name: String) -> OpenAPISecurityScheme): List<OpenAPISecurityScheme> {
+        logger.debug("Associating security schemes")
+        val securitySchemes = operation.security ?: parsedOpenApi.security
+        if (securitySchemes.isNullOrEmpty()) return listOf(NoSecurityScheme())
+
+        return securitySchemes.map {
+            when (it.keys.size) {
+                0 -> NoSecurityScheme()
+                1 -> getSecurityScheme(it.keys.single())
+                else -> CompositeSecurityScheme(it.keys.map(getSecurityScheme))
+            }
+        }
+    }
+
     private fun toHttpRequestPatterns(
         httpPathPattern: HttpPathPattern,
         httpQueryParamPattern: HttpQueryParamPattern,
@@ -974,21 +986,16 @@ class OpenApiSpecification(
     ): List<RequestPatternsData> {
         logger.debug("Processing requests for $httpMethod")
 
-        val securitySchemes: Map<String, OpenAPISecurityScheme> =
-            parsedOpenApi.components?.securitySchemes?.mapValues { (schemeName, scheme) ->
-                toSecurityScheme(schemeName, scheme)
-            } ?: mapOf(NO_SECURITY_SCHEMA_IN_SPECIFICATION to NoSecurityScheme())
+        val securitySchemeEntries = parsedOpenApi.components?.securitySchemes.orEmpty()
+        val securitySchemes = securitySchemeEntries.entries.associate { (schemeName, scheme) ->
+            schemeName to toSecurityScheme(schemeName, scheme)
+        }
 
-        val securitySchemesForRequestPattern: Map<String, OpenAPISecurityScheme> =
-            (operation.security ?: parsedOpenApi.security.orEmpty())
-                .flatMap { it.keys }
-                .toSet().associateWith {
-                    val securityScheme = securitySchemes[it]
-                        ?: throw ContractException("Security scheme used in $httpMethod ${httpPathPattern.path} does not exist in the spec")
-                    securityScheme
-                }.ifEmpty {
-                    mapOf(NO_SECURITY_SCHEMA_IN_SPECIFICATION to NoSecurityScheme())
-                }
+        val securitySchemesForRequestPattern = parseOperationSecuritySchemas(operation) { name ->
+            securitySchemes[name] ?: throw ContractException(
+                "Security scheme used in $httpMethod ${httpPathPattern.path} does not exist in the spec"
+            )
+        }
 
         val parameters = operation.parameters
 
@@ -1006,7 +1013,7 @@ class OpenApiSpecification(
             httpQueryParamPattern = httpQueryParamPattern,
             method = httpMethod,
             headersPattern = headersPattern,
-            securitySchemes = operationSecuritySchemes(operation, securitySchemesForRequestPattern)
+            securitySchemes = securitySchemesForRequestPattern
         )
 
         val exampleQueryParams = namedExampleParams(operation, QueryParameter::class.java)
@@ -1196,23 +1203,6 @@ class OpenApiSpecification(
         operation.requestBody?.`$ref`?.let {
             resolveReferenceToRequestBody(it).second
         } ?: operation.requestBody
-
-    private fun operationSecuritySchemes(
-        operation: Operation,
-        contractSecuritySchemes: Map<String, OpenAPISecurityScheme>
-    ): List<OpenAPISecurityScheme> {
-        logger.debug("Associating security schemes")
-
-        val globalSecurityRequirements: List<String> =
-            parsedOpenApi.security?.map { it.keys.toList() }?.flatten() ?: emptyList()
-        val operationSecurityRequirements: List<String> =
-            operation.security?.map { it.keys.toList() }?.flatten() ?: emptyList()
-        val operationSecurityRequirementsSuperSet: List<String> =
-            globalSecurityRequirements.plus(operationSecurityRequirements).distinct()
-        val operationSecuritySchemes: List<OpenAPISecurityScheme> =
-            contractSecuritySchemes.filter { (name, _: OpenAPISecurityScheme) -> name in operationSecurityRequirementsSuperSet }.values.toList()
-        return operationSecuritySchemes.ifEmpty { listOf(NoSecurityScheme()) }
-    }
 
     private fun toSecurityScheme(schemeName: String, securityScheme: SecurityScheme): OpenAPISecurityScheme {
         val securitySchemeConfiguration =

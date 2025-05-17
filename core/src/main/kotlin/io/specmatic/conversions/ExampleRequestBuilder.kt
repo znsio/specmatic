@@ -11,7 +11,7 @@ class ExampleRequestBuilder(
     exampleQueryParams: Map<String, Map<String, String>>,
     val httpPathPattern: HttpPathPattern,
     private val httpMethod: String,
-    val securitySchemes: Map<String, OpenAPISecurityScheme>
+    val securitySchemes: List<OpenAPISecurityScheme>
 ) {
     fun examplesWithRequestBodies(exampleBodies: Map<String, String?>, contentType: String): Map<String, List<HttpRequest>> {
         val examplesWithBodies: Map<String, List<HttpRequest>> = exampleBodies.mapValues { (exampleName, bodyValue) ->
@@ -30,7 +30,7 @@ class ExampleRequestBuilder(
                     body = parsedValue(bodyValue)
                 )
 
-                val requestsWithSecurityParams = securitySchemes.map { (_, securityScheme) ->
+                val requestsWithSecurityParams = securitySchemes.map { securityScheme ->
                     securityScheme.addTo(httpRequest)
                 }
 
@@ -60,7 +60,7 @@ class ExampleRequestBuilder(
         val httpRequest =
             HttpRequest(method = httpMethod, path = path, queryParametersMap = queryParams, headers = headerParams)
 
-        val requestsWithSecurityParams: List<HttpRequest> = securitySchemes.map { (_, securityScheme) ->
+        val requestsWithSecurityParams: List<HttpRequest> = securitySchemes.map { securityScheme ->
             securityScheme.addTo(httpRequest)
         }
 

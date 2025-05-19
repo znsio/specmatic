@@ -24,6 +24,11 @@ data class JSONObjectResolver(
     val allowOnlyMandatoryKeys: Boolean = false
 )
 
+data class KeyWithPattern(
+    val key: String,
+    val pattern: Pattern
+)
+
 data class Resolver(
     val factStore: FactStore = CheckFacts(),
     val mockMode: Boolean = false,
@@ -228,7 +233,7 @@ data class Resolver(
         if (factStore.has(lookupKey))
             return generate(lookupKey, pattern)
 
-        val updatedResolver = updateLookupPath(typeAlias, lookupKey, pattern)
+        val updatedResolver = updateLookupPath(typeAlias, KeyWithPattern(lookupKey, pattern))
 
         return updatedResolver.generate(pattern)
     }
@@ -237,20 +242,19 @@ data class Resolver(
         val resolvedPattern = resolvedHop(pattern, this)
         if (resolvedPattern is ExactValuePattern) return resolvedPattern.generate(this)
 
-        val updatedResolver = updateLookupPath(typeAlias, lookupKey, pattern)
+        val updatedResolver = updateLookupPath(typeAlias, KeyWithPattern(lookupKey, pattern))
         return pattern.fixValue(value, updatedResolver)
     }
 
-    fun updateLookupPath(typeAlias: String?, key: String, keyPattern: Pattern): Resolver {
-        val lookupPath = lookupPath(typeAlias, key).takeIf(String::isNotBlank) ?: return this
+    fun updateLookupPath(typeAlias: String?, keyWithPattern: KeyWithPattern? = null): Resolver {
+        val lookupPath = lookupPath(typeAlias, keyWithPattern?.key.orEmpty()).takeIf(String::isNotBlank) ?: return this
 
         val patternFocused = dictionary.applyWith(typeAlias, "*") { patternName ->
             val pattern = getPatternOrElse(patternName, AnyValuePattern)
             focusIntoSchema(pattern, withoutPatternDelimiters(patternName), this@Resolver)
         }
 
-        val key = key.takeIf(String::isNotBlank)
-        val keyFocused = patternFocused.applyWith(key) { key ->
+        val keyFocused = patternFocused.applyWith(keyWithPattern) { (key, keyPattern) ->
             val focusKey = if (key == "[*]") "${dictionaryLookupPath.substringAfterLast(".")}[*]" else key
             focusIntoProperty(keyPattern, focusKey, this@Resolver)
         }
@@ -292,9 +296,11 @@ data class Resolver(
             return valueFromDict.unwrapOrContractException()
         }
 
-        return updateLookupPath(
-            typeAlias = pattern.typeAlias, key = "[*]", keyPattern = pattern.pattern
-        ).generateRandomList(pattern.pattern)
+        return this.updateLookupPath(
+            typeAlias = pattern.typeAlias,
+            keyWithPattern = KeyWithPattern("[*]", pattern.pattern)
+        )
+            .generateRandomList(pattern.pattern)
     }
 
     private fun generateRandomList(pattern: Pattern): Value {

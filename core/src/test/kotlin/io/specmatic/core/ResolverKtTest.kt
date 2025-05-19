@@ -18,7 +18,7 @@ internal class ResolverKtTest {
     @ParameterizedTest
     @MethodSource("typeAliasToLookupKeyProvider")
     fun `should be able to combine typeAlias and lookupKey to a lookupPath`(typeAlias: String?, lookupKey: String, expectedLookupPath: String) {
-        val resolver = Resolver().updateLookupPath(typeAlias, lookupKey, AnyValuePattern)
+        val resolver = Resolver().updateLookupPath(typeAlias, KeyWithPattern(lookupKey, AnyValuePattern))
         assertThat(resolver.dictionaryLookupPath).isEqualTo(expectedLookupPath)
     }
 

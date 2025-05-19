@@ -569,7 +569,7 @@ fun fill(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>,
             resolver.isNegative -> generateIfPatternToken(typeAlias, key, value, resolver)
             else -> HasFailure<Value>(Result.Failure(resolver.mismatchMessages.unexpectedKey("key", key)))
         }.breadCrumb(key)
-        val updatedResolver = resolver.updateLookupPath(typeAlias, key, pattern)
+        val updatedResolver = resolver.updateLookupPath(typeAlias, KeyWithPattern(key, pattern))
         pattern.fillInTheBlanks(value, updatedResolver).breadCrumb(key)
     }.mapFold()
 
@@ -593,7 +593,7 @@ private fun generateIfPatternToken(typeAlias: String?, key: String, value: Value
     if (value !is StringValue || !value.isPatternToken()) return HasValue(value)
     return runCatching {
         val keyPattern = resolver.getPattern(value.string).takeUnless { it is AnyValuePattern } ?: StringPattern()
-        resolver.updateLookupPath(typeAlias, key, keyPattern).generate(keyPattern)
+        resolver.updateLookupPath(typeAlias, KeyWithPattern(key, keyPattern)).generate(keyPattern)
     }.map(::HasValue).getOrElse(::HasException)
 }
 

@@ -24,11 +24,11 @@ data class Dictionary(private val data: Map<String, Value>, private val focusedD
     }
 
     fun focusIntoSchema(pattern: Pattern, key: String, resolver: Resolver): Dictionary {
-        return focusInto(pattern, key, resolver, data)
+        return focusInto(pattern, key, resolver, data, preserve = false)
     }
 
-    fun focusIntoProperty(pattern: Pattern, key: String, resolver: Resolver): Dictionary {
-        return focusInto(pattern, key, resolver, focusedData)
+    fun focusIntoProperty(pattern: Pattern, key: String, resolver: Resolver, preserve: Boolean): Dictionary {
+        return focusInto(pattern, key, resolver, focusedData, preserve)
     }
 
     fun getDefaultValueFor(pattern: Pattern, resolver: Resolver): Value? {
@@ -43,9 +43,9 @@ data class Dictionary(private val data: Map<String, Value>, private val focusedD
         return getReturnValueFor(lookup, dictionaryValue, pattern, resolver)
     }
 
-    private fun focusInto(pattern: Pattern, key: String, resolver: Resolver, storeToUse: Map<String, Value>): Dictionary {
-        val rawValue = storeToUse[key] ?: return this
-        val valueToFocusInto = getValueToMatch(rawValue, pattern, resolver, true)
+    private fun focusInto(pattern: Pattern, key: String, resolver: Resolver, storeToUse: Map<String, Value>, preserve: Boolean): Dictionary {
+        val rawValue = storeToUse[key] ?: return resetFocus(preserve)
+        val valueToFocusInto = getValueToMatch(rawValue, pattern, resolver, true) ?: return resetFocus(preserve)
         val dataToFocusInto = (valueToFocusInto as? JSONObjectValue)?.jsonObject ?: storeToUse
         return copy(focusedData = dataToFocusInto)
     }
@@ -85,6 +85,8 @@ data class Dictionary(private val data: Map<String, Value>, private val focusedD
         val resolved = resolvedHop(this, resolver)
         return resolved is ScalarType || resolved is URLPathSegmentPattern || resolved is QueryParameterScalarPattern
     }
+
+    private fun resetFocus(preserve: Boolean): Dictionary = copy(focusedData = focusedData.takeIf { preserve }.orEmpty())
 
     companion object {
         fun from(file: File): Dictionary {

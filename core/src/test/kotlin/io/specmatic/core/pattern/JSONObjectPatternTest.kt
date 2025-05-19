@@ -1002,10 +1002,7 @@ internal class JSONObjectPatternTest {
         )
 
         val street = StringValue("Baker Street")
-
-        val dictionary = mapOf("Person.address" to JSONObjectValue(
-            mapOf("street" to street)
-        ))
+        val dictionary = mapOf("Address.street" to street)
 
         val resolver = Resolver(
             newPatterns = mapOf(personTypeAlias to personPattern, addressTypeAlias to addressPattern),

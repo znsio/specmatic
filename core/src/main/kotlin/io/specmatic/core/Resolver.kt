@@ -249,14 +249,15 @@ data class Resolver(
     fun updateLookupPath(typeAlias: String?, keyWithPattern: KeyWithPattern? = null): Resolver {
         val lookupPath = lookupPath(typeAlias, keyWithPattern?.key.orEmpty()).takeIf(String::isNotBlank) ?: return this
 
-        val patternFocused = dictionary.applyWith(typeAlias, "*") { patternName ->
+        val schemaName = typeAlias ?: "*".takeIf { dictionaryLookupPath.isBlank() }
+        val patternFocused = dictionary.applyIf(schemaName) { patternName ->
             val pattern = getPatternOrElse(patternName, AnyValuePattern)
             focusIntoSchema(pattern, withoutPatternDelimiters(patternName), this@Resolver)
         }
 
-        val keyFocused = patternFocused.applyWith(keyWithPattern) { (key, keyPattern) ->
+        val keyFocused = patternFocused.applyIf(keyWithPattern) { (key, keyPattern) ->
             val focusKey = if (key == "[*]") "${dictionaryLookupPath.substringAfterLast(".")}[*]" else key
-            focusIntoProperty(keyPattern, focusKey, this@Resolver)
+            focusIntoProperty(keyPattern, focusKey, this@Resolver, keyPattern is SequenceType)
         }
 
         return this.copy(
@@ -423,7 +424,7 @@ private fun ExactValuePattern.hasPatternToken(): Boolean {
     return this.pattern is StringValue && isPatternToken(this.pattern.string)
 }
 
-private fun <T, U> T.applyWith(original: U?, default: U? = null, block: T.(U) -> T): T {
-    val value: U = original ?: default ?: return this
+private fun <T, U> T.applyIf(original: U?, block: T.(U) -> T): T {
+    val value: U = original ?: return this
     return block(value)
 }

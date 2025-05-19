@@ -358,6 +358,25 @@ class DictionaryTest {
         assertThat(testCountWithDictionary).isEqualTo(testCountWithoutDictionary)
     }
 
+    @Test
+    fun `should not re-use top-level keys for deep nested patterns with same key`() {
+        val pattern = parsedPattern("""{
+        "name": "(string)",
+        "details": {
+            "name": "(string)"
+        }
+        }""".trimIndent(), typeAlias = "(Test)")
+        val dictionary = mapOf(".name" to StringValue("Jane Doe"), "Test.name" to StringValue("John Doe")).let(Dictionary::from)
+
+        val resolver = Resolver(dictionary = dictionary)
+        val generatedValue = pattern.generate(resolver) as JSONObjectValue
+        val details = generatedValue.jsonObject["details"] as JSONObjectValue
+
+        assertThat(generatedValue.jsonObject["name"]?.toStringLiteral()).isEqualTo("John Doe")
+        assertThat(details.jsonObject["name"]?.toStringLiteral()).isNotEqualTo("John Doe")
+        assertThat(details.jsonObject["name"]?.toStringLiteral()).isNotEqualTo("Jane Doe")
+    }
+
     @Nested
     inner class NegativeBasedOnTests {
 

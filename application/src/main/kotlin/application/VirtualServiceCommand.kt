@@ -6,6 +6,9 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.DEFAULT_WORKING_DIRECTORY
 import io.specmatic.core.Feature
 import io.specmatic.core.Scenario
+import io.specmatic.core.filters.ExpressionStandardizer
+import io.specmatic.core.filters.HttpStubFilterContext
+import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
@@ -33,6 +36,25 @@ class VirtualServiceCommand : Callable<Int> {
 
     @Option(names = ["--examples"], description = ["Directories containing JSON examples"], required = false)
     var exampleDirs: List<String> = mutableListOf()
+
+    @Option(
+        names = ["--filter"],
+        hidden = true,
+        description = [
+            """Filter tests matching the specified filtering criteria
+
+You can filter tests based on the following keys:
+- `METHOD`: HTTP methods (e.g., GET, POST)
+- `PATH`: Request paths (e.g., /users, /product)
+- `STATUS`: HTTP response status codes (e.g., 200, 400)
+
+You can find all available filters and their usage at:
+https://docs.specmatic.io/documentation/contract_tests.html#supported-filters--operators"""
+        ],
+        required = false
+    )
+    var filter: String = ""
+
 
     private val stubLoaderEngine = StubLoaderEngine()
     private var server: StatefulHttpStub? = null
@@ -84,11 +106,30 @@ class VirtualServiceCommand : Callable<Int> {
 
     private fun startServer() {
         val stubData: List<Pair<Feature, List<ScenarioStub>>> = stubLoaderEngine.loadStubs(
-            stubContractPathData(),
-            exampleDirs,
-            Configuration.configFilePath,
-            false
-        )
+            contractPathDataList = stubContractPathData(),
+            dataDirs = exampleDirs,
+            specmaticConfigPath = Configuration.configFilePath,
+            strictMode = false
+        ).mapNotNull { (feature, scenarioStubs) ->
+            val metadataFilter = ScenarioMetadataFilter.from(filter)
+            val filteredScenarios = ScenarioMetadataFilter.filterUsing(
+                feature.scenarios.asSequence(),
+                metadataFilter
+            ).toList()
+            val stubFilterExpression = ExpressionStandardizer.filterToEvalEx(filter)
+            val filteredStubScenario = scenarioStubs.filter { it ->
+                stubFilterExpression.with("context", HttpStubFilterContext(it)).evaluate().booleanValue
+            }
+            if (filteredScenarios.isNotEmpty()) {
+                val updatedFeature = feature.copy(scenarios = filteredScenarios)
+                updatedFeature to filteredStubScenario
+            } else null
+        }
+
+        if (filter != "" && stubData.isEmpty()) {
+            consoleLog(StringLog("FATAL: No stubs found for the given filter: $filter"))
+            return
+        }
 
         val validateSpec = virtualServiceValidationRuleset(stubData.map { it.first }.flatMap { it.scenarios })
 

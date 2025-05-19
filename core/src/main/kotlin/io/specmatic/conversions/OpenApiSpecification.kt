@@ -71,7 +71,7 @@ class OpenApiSpecification(
     private val specificationPath: String? = null,
     private val securityConfiguration: SecurityConfiguration? = null,
     private val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-    private val dictionary: Map<String, Value> = loadDictionary(openApiFilePath, specmaticConfig.getStubDictionary()),
+    private val dictionary: Dictionary = loadDictionary(openApiFilePath, specmaticConfig.getStubDictionary()),
     private val strictMode: Boolean = false
 ) : IncludedSpecification, ApiSpecification {
     init {
@@ -169,29 +169,9 @@ class OpenApiSpecification(
             )
         }
 
-        fun loadDictionary(openApiFilePath: String, dictionaryPathFromConfig: String?): Map<String, Value> {
-            val dictionaryFile = getDictionaryFile(File(openApiFilePath), dictionaryPathFromConfig) ?: return emptyMap()
-
-            if (!dictionaryFile.exists()) throw ContractException(
-                breadCrumb = dictionaryFile.path,
-                errorMessage = "Expected dictionary file at ${dictionaryFile.path}, but it does not exist"
-            )
-
-            if (!dictionaryFile.isFile) throw ContractException(
-                breadCrumb = dictionaryFile.path,
-                errorMessage = "Expected dictionary file at ${dictionaryFile.path} to be a file"
-            )
-
-            return runCatching {
-                logger.log("Using dictionary file ${dictionaryFile.path}")
-                readValueAs<JSONObjectValue>(dictionaryFile).jsonObject
-            }.getOrElse { e ->
-                logger.debug(e)
-                throw ContractException(
-                    breadCrumb = dictionaryFile.path,
-                    errorMessage = "Could not parse dictionary file ${dictionaryFile.path}, it must be a valid JSON/YAML object"
-                )
-            }
+        fun loadDictionary(openApiFilePath: String, dictionaryPathFromConfig: String?): Dictionary {
+            val dictionaryFile = getDictionaryFile(File(openApiFilePath), dictionaryPathFromConfig)
+            return if (dictionaryFile != null) Dictionary.from(dictionaryFile) else Dictionary.empty()
         }
 
         private fun getDictionaryFile(openApiFile: File, dictionaryPathFromConfig: String?): File? {

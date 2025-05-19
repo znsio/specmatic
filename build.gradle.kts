@@ -105,3 +105,15 @@ specmatic {
         }
     }
 }
+
+subprojects {
+    afterEvaluate {
+        project.extensions.configure<PublishingExtension> {
+            repositories.configureEach {
+                if (this is MavenArtifactRepository) {
+                    isAllowInsecureProtocol = true
+                }
+            }
+        }
+    }
+}

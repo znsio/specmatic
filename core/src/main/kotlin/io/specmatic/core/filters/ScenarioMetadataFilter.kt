@@ -5,7 +5,7 @@ import com.ezylang.evalex.Expression
 data class ScenarioMetadataFilter(
     val expression: Expression? = null
 ) {
-    fun isSatisfiedBy(scenarioMetaData: ScenarioMetadata): Boolean {
+    fun isSatisfiedBy(scenarioMetaData: ExpressionContextPopulator): Boolean {
         val expression = expression ?: return true
 
         val expressionWithVariables = scenarioMetaData.populateExpressionData(expression)
@@ -25,7 +25,7 @@ data class ScenarioMetadataFilter(
         fun from(filterExpression: String): ScenarioMetadataFilter {
             if (filterExpression.isBlank()) return ScenarioMetadataFilter()
             val finalExpression = ExpressionStandardizer.filterToEvalEx(filterExpression)
-            return ScenarioMetadataFilter(expression = finalExpression)
+            return ScenarioMetadataFilter(finalExpression)
         }
 
         fun <T : HasScenarioMetadata> filterUsing(

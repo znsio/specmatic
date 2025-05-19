@@ -113,12 +113,14 @@ class ExpressionStandardizer {
             val expressionStandardizer = ExpressionStandardizer()
             val evalExExpression = expressionStandardizer.tokenizeExpression(filterExpression)
             val functions = mapOf(
-                ENHANCED_FUNC_NAME to EnhancedRHSValueEvalFunction(),
+                ENHANCED_FUNC_NAME to NumericComparisonOperatorFunction(),
                 INCLUDES_FUNC_NAME to IncludesFunction()
             )
 
             val configuration = ExpressionConfiguration.builder()
-                .singleQuoteStringLiteralsAllowed(true).build()
+                .binaryAllowed(true)
+                .singleQuoteStringLiteralsAllowed(true)
+                .build()
                 .withAdditionalFunctions(*functions.map { entry(it.key, it.value) }.toTypedArray())
 
             return Expression(evalExExpression, configuration)

@@ -14,11 +14,11 @@ import java.util.concurrent.Callable
             CompareCommand::class,
             GenerateCompletion::class,
             ImportCommand::class,
-            ProxyCommand::class,
-            ExamplesCommand::class,
-            StubCommand::class,
-            VirtualServiceCommand::class,
-            TestCommand::class,
+            ProxyCommand::class, // TODO
+            ExamplesCommand::class, // done
+            StubCommand::class, // done
+            VirtualServiceCommand::class, // done
+            TestCommand::class, // done
             CentralContractRepoReportCommand::class,
             ConfigCommand::class
         ]

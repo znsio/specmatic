@@ -3,6 +3,7 @@ package application
 import io.specmatic.core.*
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
+import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.ContractPathData.Companion.specToBaseUrlMap
@@ -66,6 +67,28 @@ class StubCommand(
 
     @Option(names = ["--httpsPassword"], description = ["Key password if any"])
     var keyPassword = "forgotten"
+
+
+    @Option(
+        names= ["--filter"],
+        description = [
+            """Filter tests matching the specified filtering criteria
+
+You can filter tests based on the following keys:
+- `METHOD`: HTTP methods (e.g., GET, POST)
+- `PATH`: Request paths (e.g., /users, /product)
+- `STATUS`: HTTP response status codes (e.g., 200, 400)
+- `HEADERS`: Request headers (e.g., Accept, X-Request-ID)
+- `QUERY`: Query parameters name (e.g., status, productId)
+- `EXAMPLE_NAME`: Example name (e.g., create-product, active-status)
+
+To specify multiple values for the same filter, separate them with commas. 
+For example, to filter by HTTP methods: 
+--filter="METHOD='GET,POST'""""
+        ],
+        required = false
+    )
+    var filter: String = ""
 
     @Option(names = ["--debug"], description = ["Debug logs"])
     var verbose = false
@@ -183,7 +206,19 @@ class StubCommand(
     private fun startServer() {
         val workingDirectory = WorkingDirectory()
         if(strictMode) throwExceptionIfDirectoriesAreInvalid(exampleDirs, "example directories")
-        val stubData = stubLoaderEngine.loadStubs(contractSources, exampleDirs, specmaticConfigPath, strictMode)
+        val stubData = stubLoaderEngine.loadStubs(
+            contractPathDataList = contractSources,
+            dataDirs = exampleDirs,
+            specmaticConfigPath = specmaticConfigPath,
+            strictMode = strictMode
+        ).filter { eachFeaturePair ->
+            val feature = eachFeaturePair.first
+            val metadataFilter = ScenarioMetadataFilter.from(filter)
+            ScenarioMetadataFilter.filterUsing(
+                feature.scenarios.asSequence(),
+                metadataFilter
+            ).toList().isNotEmpty()
+        }
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 
         httpStub = httpStubEngine.runHTTPStub(

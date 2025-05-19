@@ -409,6 +409,16 @@ data class HttpRequest(
         return headers[SPECMATIC_RESPONSE_CODE_HEADER]?.toIntOrNull()
     }
 
+    fun containsHeader(key: String): Boolean {
+        return headers.keys.any { it.equals(key, ignoreCase = true) }
+    }
+
+    fun getHeader(key: String): String? {
+        return headers.filter { it.key.equals(key, ignoreCase = true) }
+            .values
+            .firstOrNull()
+    }
+
     val generality: Int by lazy {
         val pathScore: Int = path?.split(URL_PATH_DELIMITER)?.count { StringValue(it).isPatternToken() } ?: 0
         val headerScore: Int = headers.values.sumOf { if(isPatternToken(it)) 1 as Int else 0 }

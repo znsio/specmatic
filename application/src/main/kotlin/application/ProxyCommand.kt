@@ -45,6 +45,28 @@ class ProxyCommand : Callable<Unit> {
     @Option(names = ["--httpsPassword"], description = ["Key password if any"])
     var keyPassword = "forgotten"
 
+    @Option(
+        names= ["--filter"],
+        description = [
+            """Filter tests matching the specified filtering criteria
+
+You can filter tests based on the following keys:
+- `METHOD`: HTTP methods (e.g., GET, POST)
+- `PATH`: Request paths (e.g., /users, /product)
+- `STATUS`: HTTP response status codes (e.g., 200, 400)
+- `HEADERS`: Request headers (e.g., Accept, X-Request-ID)
+- `QUERY`: Query parameters name (e.g., status, productId)
+- `EXAMPLE_NAME`: Example name (e.g., create-product, active-status)
+
+To specify multiple values for the same filter, separate them with commas. 
+For example, to filter by HTTP methods: 
+--filter="METHOD='GET,POST'""""
+        ],
+        required = false
+    )
+    var filter: String = ""
+
+
     @Option(names = ["--debug"], description = ["Write verbose logs to console for debugging"])
     var debugLog = false
 
@@ -62,7 +84,7 @@ class ProxyCommand : Callable<Unit> {
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
         val keyStoreData = certInfo.getHttpsCert()
 
-        proxy = Proxy(host, port, targetBaseURL, proxySpecmaticDataDir, keyStoreData, timeoutInMs)
+        proxy = Proxy(host, port, targetBaseURL, proxySpecmaticDataDir, keyStoreData, timeoutInMs, filter)
         addShutdownHook()
 
         consoleLog(StringLog("Proxy server is running on ${consolePrintableURL(host, port, keyStoreData)}. Ctrl + C to stop."))

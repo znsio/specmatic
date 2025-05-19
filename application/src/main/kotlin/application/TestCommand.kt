@@ -83,8 +83,7 @@ class TestCommand(private val junitLauncher: Launcher = LauncherFactory.create()
     @Option(
         names= ["--filter"],
         description = [
-           """
-Filter tests matching the specified filtering criteria
+            """Filter tests matching the specified filtering criteria
 
 You can filter tests based on the following keys:
 - `METHOD`: HTTP methods (e.g., GET, POST)
@@ -96,8 +95,7 @@ You can filter tests based on the following keys:
 
 To specify multiple values for the same filter, separate them with commas. 
 For example, to filter by HTTP methods: 
---filter="METHOD='GET,POST'"
-           """
+--filter="METHOD='GET,POST'""""
         ],
         required = false
     )

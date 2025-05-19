@@ -251,20 +251,21 @@ paths:
             // path globs
             Arguments.of("PATH", "/*", true, simpleSpecWithOneGetUrl.scenarios[0]),
             Arguments.of("PATH", "/users/*", true, usersGetAPI.scenarios[0]),
-            // TODO - validate with Naresh?
+            // TODO - validate with Naresh? - we finalize this syntax. no data types to be accepted from user, barf if data-type is specified
             Arguments.of("PATH", "/users/{id}", false, usersGetAPI.scenarios[0]),
             // TODO - validate with Naresh? type in spec is integer, so this should work?
             Arguments.of("PATH", "/users/(id:integer)", false, usersGetAPI.scenarios[0]),
             Arguments.of("PATH", "/users/(id:number)", true, usersGetAPI.scenarios[0]),
+            // TODO - validate with Naresh? whitespace. this does not have any meaning anymore
+            Arguments.of("PATH", "/users/(id: integer)", false, usersGetAPI.scenarios[0]),
             // params are case-sensitive
             Arguments.of("PATH", "/users/(ID:integer)", false, usersGetAPI.scenarios[0]),
 
-            // TODO - validate with Naresh?
-            Arguments.of("PATH", "/users/(id: integer)", false, usersGetAPI.scenarios[0]),
             Arguments.of("PATH", "/users/bob", false, usersGetAPI.scenarios[0]),
 
-            // TODO - revisit this?
-            Arguments.of("PATH", "/foo?bar", false, simpleSpecWithOneGetUrl.scenarios[0]),
+            // TODO - revisit this? semantics of passing query param in the path. we don't support this. ask user to be more explicit
+            // PATH = /foo && PARAMS.QUERY.bar=123
+            Arguments.of("PATH", "/foo?bar=123", false, simpleSpecWithOneGetUrl.scenarios[0]),
 
             // header keys are case-insensitive
             Arguments.of("PARAMETERS.HEADER", "AUTHenTICATION", true, simpleSpecWithOneGetUrl.scenarios[0]),

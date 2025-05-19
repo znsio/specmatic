@@ -6,6 +6,7 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.DEFAULT_WORKING_DIRECTORY
 import io.specmatic.core.Feature
 import io.specmatic.core.Scenario
+import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
@@ -33,6 +34,28 @@ class VirtualServiceCommand : Callable<Int> {
 
     @Option(names = ["--examples"], description = ["Directories containing JSON examples"], required = false)
     var exampleDirs: List<String> = mutableListOf()
+
+    @Option(
+        names = ["--filter"],
+        description = [
+            """Filter tests matching the specified filtering criteria
+
+You can filter tests based on the following keys:
+- `METHOD`: HTTP methods (e.g., GET, POST)
+- `PATH`: Request paths (e.g., /users, /product)
+- `STATUS`: HTTP response status codes (e.g., 200, 400)
+- `HEADERS`: Request headers (e.g., Accept, X-Request-ID)
+- `QUERY`: Query parameters name (e.g., status, productId)
+- `EXAMPLE_NAME`: Example name (e.g., create-product, active-status)
+
+To specify multiple values for the same filter, separate them with commas. 
+For example, to filter by HTTP methods: 
+--filter="METHOD='GET,POST'""""
+        ],
+        required = false
+    )
+    var filter: String = ""
+
 
     private val stubLoaderEngine = StubLoaderEngine()
     private var server: StatefulHttpStub? = null
@@ -84,11 +107,19 @@ class VirtualServiceCommand : Callable<Int> {
 
     private fun startServer() {
         val stubData: List<Pair<Feature, List<ScenarioStub>>> = stubLoaderEngine.loadStubs(
-            stubContractPathData(),
-            exampleDirs,
-            Configuration.configFilePath,
-            false
-        )
+            contractPathDataList = stubContractPathData(),
+            dataDirs = exampleDirs,
+            specmaticConfigPath = Configuration.configFilePath,
+            strictMode = false
+        ).filter { eachFeaturePair ->
+            val feature = eachFeaturePair.first
+            val metadataFilter = ScenarioMetadataFilter.from(filter)
+            ScenarioMetadataFilter.filterUsing(
+                feature.scenarios.asSequence(),
+                metadataFilter
+            ).toList().isNotEmpty()
+
+        }
 
         val validateSpec = virtualServiceValidationRuleset(stubData.map { it.first }.flatMap { it.scenarios })
 

@@ -19,7 +19,7 @@ class HttpFilterContext(private val scenario: Scenario) : FilterContext {
                     TODO("implement this")
                 }
                 key == "PARAMETERS.QUERY" -> {
-                    scenario.httpRequestPattern.getQueryParamKeys().contains(eachValue)
+                    scenario.httpRequestPattern.getQueryParamKeys().caseSensitiveContains(eachValue)
                 }
                 key.startsWith("PARAMETERS.QUERY.") -> {
                     // This only applies to examples
@@ -32,7 +32,7 @@ class HttpFilterContext(private val scenario: Scenario) : FilterContext {
                     }
                 }
                 key == "PARAMETERS.PATH" -> {
-                    scenario.httpRequestPattern?.httpPathPattern?.pathParameters()?.map { it -> it.key }
+                    scenario.httpRequestPattern.httpPathPattern?.pathParameters()?.map { it -> it.key }
                         ?.contains(eachValue) ?: false
                 }
                 key == "REQUEST-BODY.CONTENT-TYPE" -> {
@@ -75,7 +75,7 @@ class HttpFilterContext(private val scenario: Scenario) : FilterContext {
                     scenario.operationMetadata?.description.equals(eachValue, ignoreCase = true)
                 }
                 else -> {
-                    throw IllegalArgumentException("Unknown parameter name: $key")
+                    throw IllegalArgumentException("Unknown filter parameter name: $key")
                 }
             }
         }
@@ -83,21 +83,13 @@ class HttpFilterContext(private val scenario: Scenario) : FilterContext {
 
     override fun compare(filterKey: String, operator: String, filterValue: String): Boolean {
         if (filterKey.uppercase() == "STATUS") {
-            return evaluateCondition(operator, filterValue.toIntOrNull() ?: 0, scenario.status)
+            return evaluateCondition(scenario.status, operator, filterValue.toIntOrNull() ?: 0)
         } else {
             throw IllegalArgumentException("Unknown filter key: $filterKey")
         }
     }
 
-    private fun evaluateCondition(operator: String, value: Int, scenarioValue: Int): Boolean {
-        return when (operator) {
-            ">" -> scenarioValue > value
-            "<" -> scenarioValue < value
-            ">=" -> scenarioValue >= value
-            "<=" -> scenarioValue <= value
-            else -> throw IllegalArgumentException("Unsupported operator: $operator")
-        }
-    }
+
 
     private fun matchesPath(value: String, scenarioValue: String): Boolean {
         return value.contains("*") &&
@@ -106,12 +98,10 @@ class HttpFilterContext(private val scenario: Scenario) : FilterContext {
                 ).matcher(scenarioValue).matches()
     }
 
-    // TODO: figure this out
-    private fun matchMultipleExpressions(value: String, scenarioValue: String): Boolean {
-        val matchValue = scenarioValue.split(",").map { it.trim().removeSuffix("?") }
-        return matchValue.any { it == value }
-    }
 }
 
-private fun Iterable<String>.caseInsensitiveContains(needle: String): Boolean =
+internal fun Iterable<String>.caseInsensitiveContains(needle: String): Boolean =
     this.any { haystack -> haystack.lowercase().trim().removeSuffix("?") == needle.lowercase() }
+
+internal fun Iterable<String>.caseSensitiveContains(needle: String): Boolean =
+    this.any { haystack -> haystack.trim().removeSuffix("?") == needle }

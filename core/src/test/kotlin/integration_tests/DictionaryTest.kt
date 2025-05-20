@@ -569,32 +569,13 @@ class DictionaryTest {
 
         @Test
         fun `should use the array value as is when pattern is an array and dictionary contains array level key`() {
-            val dictionary = jsonStringToValueMap("""{
-            "Schema.array": [10, 20, 30],
-            "Schema.array[*]": [1, 2, 3]
-            }""".trimIndent()).let(Dictionary::from)
+            val dictionary = jsonStringToValueMap("""{ "Schema.array": [10, 20, 30] }""".trimIndent()).let(Dictionary::from)
             val pattern = JSONObjectPattern(mapOf("array" to ListPattern(NumberPattern())), typeAlias = "(Schema)")
             val resolver = Resolver(dictionary = dictionary)
             val value = pattern.generate(resolver)
 
             assertThat(value.jsonObject["array"]).isInstanceOf(JSONArrayValue::class.java)
             assertThat((value.jsonObject["array"])).isEqualTo(listOf(10, 20, 30).map(::NumberValue).let(::JSONArrayValue))
-        }
-
-        @Test
-        fun `should use wildcard index key if exists in dictionary when array key is missing and pattern is an array`() {
-            val dictionary = jsonStringToValueMap("""{
-            "Schema.array[*]": [1, 2, 3]
-            }""".trimIndent()).let(Dictionary::from)
-            val pattern = JSONObjectPattern(mapOf("array" to ListPattern(NumberPattern())), typeAlias = "(Schema)")
-            val resolver = Resolver(dictionary = dictionary)
-            val value = pattern.generate(resolver)
-
-            assertThat(value.jsonObject["array"]).isInstanceOf(JSONArrayValue::class.java)
-            assertThat((value.jsonObject["array"] as JSONArrayValue).list).hasSizeGreaterThanOrEqualTo(1).hasSizeLessThanOrEqualTo(3)
-            assertThat((value.jsonObject["array"] as JSONArrayValue).list).allSatisfy {
-                assertThat(it).isIn(listOf(1, 2, 3).map(::NumberValue))
-            }
         }
 
         @Test

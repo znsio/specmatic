@@ -13,7 +13,7 @@ class DataRepresentationTests {
         val initialMap = mapOf(
             "Schema.name" to StringValue("<NAME>"),
             "Schema.age" to NumberValue(10),
-            "Schema.details[*].address" to JSONArrayValue(listOf("<ADDRESS1>", "<ADDRESS2>").map(::StringValue))
+            "Schema.details.address" to JSONArrayValue(listOf("<ADDRESS1>", "<ADDRESS2>").map(::StringValue))
         )
         val dataRepresentation = DataRepresentation.from(initialMap)
         val finalValue = dataRepresentation.toValue()
@@ -23,7 +23,7 @@ class DataRepresentationTests {
             "Schema": {
                 "name": "<NAME>",
                 "age": 10,
-                "details[*]": {
+                "details": {
                     "address": [
                         "<ADDRESS1>",
                         "<ADDRESS2>"

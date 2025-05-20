@@ -109,7 +109,6 @@ class OpenApiSpecificationInfoTest {
         Schema.booleanKey: true
         Schema.nullKey: null
         Schema.nested.key: value
-        Schema.array[*]: value
         Schema.array: 
         - value
         """.trimIndent()
@@ -124,7 +123,6 @@ class OpenApiSpecificationInfoTest {
         "nested": {
             "key": "value"
         },
-        "array[*]": "value",
         "array": [
             "value"
         ]

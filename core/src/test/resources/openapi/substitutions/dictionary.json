@@ -5,7 +5,10 @@
   ".name": "George",
   "HEADERS.X-Data-Token": "pqr",
   ".street": "Baker Street",
-  ".addresses[*].street": "Baker Street",
+  ".addresses": [
+    {
+      "street":  "Baker Street"
+    }
+  ],
   ".address.street": "Baker Street"
-
 }

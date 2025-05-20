@@ -376,6 +376,45 @@ class DictionaryTest {
         assertThat(details.jsonObject["name"]?.toStringLiteral()).isNotEqualTo("John Doe")
         assertThat(details.jsonObject["name"]?.toStringLiteral()).isNotEqualTo("Jane Doe")
     }
+    
+    @Test
+    fun `should fill-in partial values in an array when picking values from dictionary`() {
+        val pattern = JSONObjectPattern(mapOf(
+            "details" to ListPattern(JSONObjectPattern(mapOf(
+                "name" to StringPattern(), "email" to EmailPattern())
+            ))
+        ), typeAlias = "(Test)")
+        val dictionary = parsedJSONObject("""{
+        "Test.details": [
+            [{"name": "John Doe"}],
+            [{"name": "Jane Doe", "email": "JaneDoe@mail.com"}]
+        ]
+        }""".trimIndent()).jsonObject.let(Dictionary::from)
+        val resolver = Resolver(dictionary = dictionary).partializeKeyCheck()
+        val partialValue = parsedJSONObject("""{
+        "details": [
+            "(anyvalue)",
+            { "name": "(string)" },
+            { "name": "(string)", "email": "(email)" }
+        ]
+        }""".trimIndent())
+        val filledInValue = pattern.fillInTheBlanks(partialValue, resolver).value as JSONObjectValue
+        val details = filledInValue.jsonObject["details"] as JSONArrayValue
+
+        assertThat(details.list).allSatisfy { detail ->
+            assertThat(detail).isInstanceOf(JSONObjectValue::class.java); detail as JSONObjectValue
+            assertThat(detail).satisfiesAnyOf(
+                {
+                    assertThat(it.jsonObject["name"]?.toStringLiteral()).isEqualTo("John Doe")
+                    assertThat(it.jsonObject["email"]?.toStringLiteral()).isNotEqualTo("JaneDoe@mail.com")
+                },
+                {
+                    assertThat(it.jsonObject["name"]?.toStringLiteral()).isEqualTo("Jane Doe")
+                    assertThat(it.jsonObject["email"]?.toStringLiteral()).isEqualTo("JaneDoe@mail.com")
+                }
+            )
+        }
+    }
 
     @Nested
     inner class NegativeBasedOnTests {

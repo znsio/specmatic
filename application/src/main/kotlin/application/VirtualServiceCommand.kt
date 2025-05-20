@@ -6,6 +6,8 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.DEFAULT_WORKING_DIRECTORY
 import io.specmatic.core.Feature
 import io.specmatic.core.Scenario
+import io.specmatic.core.filters.ExpressionStandardizer
+import io.specmatic.core.filters.HttpStubFilterContext
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleLog
@@ -111,14 +113,27 @@ For example, to filter by HTTP methods:
             dataDirs = exampleDirs,
             specmaticConfigPath = Configuration.configFilePath,
             strictMode = false
-        ).filter { eachFeaturePair ->
+        ).mapNotNull { eachFeaturePair ->
             val feature = eachFeaturePair.first
+            val scenarioStubs = eachFeaturePair.second
             val metadataFilter = ScenarioMetadataFilter.from(filter)
-            ScenarioMetadataFilter.filterUsing(
+            val filteredScenarios = ScenarioMetadataFilter.filterUsing(
                 feature.scenarios.asSequence(),
                 metadataFilter
-            ).toList().isNotEmpty()
+            ).toList()
+            val stubFilterExpression = ExpressionStandardizer.filterToEvalEx(filter)
+            val filteredStubScenario = scenarioStubs.filter { it ->
+                stubFilterExpression.with("context", HttpStubFilterContext(it)).evaluate().booleanValue
+            }
+            if (filteredScenarios.isNotEmpty()) {
+                val updatedFeature = feature.copy(scenarios = filteredScenarios)
+                updatedFeature to filteredStubScenario
+            } else null
+        }
 
+        if (filter != "" && stubData.isEmpty()) {
+            consoleLog(StringLog("WARNING: No stubs found for the given filter: $filter"))
+            return
         }
 
         val validateSpec = virtualServiceValidationRuleset(stubData.map { it.first }.flatMap { it.scenarios })

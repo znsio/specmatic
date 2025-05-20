@@ -3,6 +3,8 @@ package application
 import io.specmatic.core.*
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
+import io.specmatic.core.filters.ExpressionStandardizer
+import io.specmatic.core.filters.HttpStubFilterContext
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
@@ -211,14 +213,29 @@ For example, to filter by HTTP methods:
             dataDirs = exampleDirs,
             specmaticConfigPath = specmaticConfigPath,
             strictMode = strictMode
-        ).filter { eachFeaturePair ->
+        ).mapNotNull { eachFeaturePair ->
             val feature = eachFeaturePair.first
+            val scenarioStubs = eachFeaturePair.second
             val metadataFilter = ScenarioMetadataFilter.from(filter)
-            ScenarioMetadataFilter.filterUsing(
+            val filteredScenarios = ScenarioMetadataFilter.filterUsing(
                 feature.scenarios.asSequence(),
                 metadataFilter
-            ).toList().isNotEmpty()
+            ).toList()
+            val stubFilterExpression = ExpressionStandardizer.filterToEvalEx(filter)
+            val filteredStubScenario = scenarioStubs.filter { it ->
+                stubFilterExpression.with("context", HttpStubFilterContext(it)).evaluate().booleanValue
+            }
+            if (filteredScenarios.isNotEmpty()) {
+                val updatedFeature = feature.copy(scenarios = filteredScenarios)
+                updatedFeature to filteredStubScenario
+            } else null
         }
+
+        if (filter != "" && stubData.isEmpty()) {
+            consoleLog(StringLog("WARNING: No stubs found for the given filter: $filter"))
+            return
+        }
+
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 
         httpStub = httpStubEngine.runHTTPStub(

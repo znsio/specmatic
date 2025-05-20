@@ -46,8 +46,9 @@ class Proxy(
         baseURL: String,
         proxySpecmaticDataDir: String,
         keyData: KeyData? = null,
-        timeoutInMilliseconds: Long
-    ) : this(host, port, baseURL, RealFileWriter(proxySpecmaticDataDir), keyData, timeoutInMilliseconds)
+        timeoutInMilliseconds: Long,
+        filter: String
+    ) : this(host, port, baseURL, RealFileWriter(proxySpecmaticDataDir), keyData, timeoutInMilliseconds, filter)
 
     private val stubs = mutableListOf<NamedStub>()
 
@@ -79,11 +80,9 @@ class Proxy(
                         }
 
                         else -> try {
-                            val filterHttpRequest = filterHttpRequest(httpRequest, filter)
-                            if (filterHttpRequest) {
-                                TODO()
-                            } else {
-                                TODO()
+                            if (filter != "" && filterHttpRequest(httpRequest, filter)) {
+                                respondToKtorHttpResponse(call, HttpResponse(404, "This request has been filtered out"))
+                                return@intercept
                             }
 
                             // continue as before, if not matching filter
@@ -98,15 +97,12 @@ class Proxy(
 
                             val httpResponse = client.execute(requestToSend)
 
-                            val filterHttpResponse = filterHttpResponse(httpResponse, filter)
-                            if (filterHttpResponse) {
-                                TODO()
-                            } else {
-                                TODO()
+                            if (filter != "" && filterHttpResponse(httpResponse, filter)) {
+                                respondToKtorHttpResponse(call, HttpResponse(404, "This response has been filtered out"))
+                                return@intercept
                             }
 
                             // check response for matching filter. if matches, bail!
-
                             val name =
                                 "${httpRequest.method} ${httpRequest.path}${toQueryString(httpRequest.queryParams.asMap())}"
                             stubs.add(

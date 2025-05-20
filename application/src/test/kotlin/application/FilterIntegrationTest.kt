@@ -32,7 +32,6 @@ class FilterIntegrationTest {
         @JvmStatic
         fun filterProvider(): Stream<Arguments> {
             return Stream.of(
-//                TODO: Need to fix all the commented out test cases
                 Arguments.of("EXAMPLE-NAME='SUCCESS'", 4),
                 Arguments.of("EXAMPLE-NAME!='SUCCESS'", 1),
                 Arguments.of("EXAMPLE-NAME='SUCCESS,TIMEOUT'", 5),

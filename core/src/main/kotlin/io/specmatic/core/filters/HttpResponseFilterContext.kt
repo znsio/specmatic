@@ -9,18 +9,12 @@ class HttpResponseFilterContext(private val httpResponse: HttpResponse) : Filter
                 key == "STATUS" -> {
                     httpResponse.status == eachValue.toIntOrNull()
                 }
-
-                key == "RESPONSE-HEADER" -> {
-                    httpResponse.containsHeader(eachValue)
+                key == "RESPONSE.CONTENT-TYPE" -> {
+                    httpResponse.getHeader("CONTENT_TYPE") == eachValue
                 }
-
-                key.startsWith("RESPONSE-HEADER.") -> {
-                    val headerKey = key.substringAfter("RESPONSE-HEADER.").substringBefore("=")
-                    val headerValue = eachValue.substringAfter("=")
-                    httpResponse.getHeader(headerKey) == headerValue
+                else -> {
+                    false
                 }
-
-                else -> throw IllegalArgumentException("Unknown filter parameter name: $key")
             }
         }
     }

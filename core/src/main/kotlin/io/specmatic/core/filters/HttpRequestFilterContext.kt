@@ -9,17 +9,15 @@ class HttpRequestFilterContext(private val httpRequest: HttpRequest) : FilterCon
                 key == "METHOD" -> {
                     httpRequest.method.equals(eachValue, ignoreCase = true)
                 }
-
                 key == "PATH" -> {
                     httpRequest.path == eachValue
                 }
-
-                key == "REQUEST-HEADER" -> {
+                key == "PARAMETERS.HEADER" -> {
                     httpRequest.containsHeader(eachValue)
-//                    httpRequest.headers.keys.caseInsensitiveContains(eachValue)
                 }
-
-                else -> throw IllegalArgumentException("Unknown filter parameter name: $key")
+                else -> {
+                    false
+                }
             }
         }
     }

@@ -16,7 +16,14 @@ class HttpFilterContext(private val scenario: Scenario) : FilterContext {
                     scenario.httpRequestPattern.getHeaderKeys().caseInsensitiveContains(eachValue)
                 }
                 key.startsWith("PARAMETERS.HEADER.") -> {
-                    TODO("implement this")
+                    // This only applies to examples
+                    val queryKey = key.substringAfter("PARAMETERS.HEADER.").substringBefore("=")
+                    val queryValue = eachValue.substringAfter("=")
+                    scenario.examples.any { eachExample->
+                        eachExample.rows.any { eachRow ->
+                            eachRow.containsField(queryKey) && eachRow.getField(queryKey) == queryValue
+                        }
+                    }
                 }
                 key == "PARAMETERS.QUERY" -> {
                     scenario.httpRequestPattern.getQueryParamKeys().caseSensitiveContains(eachValue)
@@ -89,12 +96,10 @@ class HttpFilterContext(private val scenario: Scenario) : FilterContext {
         }
     }
 
-
-
     private fun matchesPath(value: String, scenarioValue: String): Boolean {
         return value.contains("*") &&
                 Pattern.compile(
-                    value.replace("(", "\\(").replace(")", "\\)").replace("*", ".*")
+                    value.replace("{", "\\(").replace("}", ".*\\)").replace("*", ".*")
                 ).matcher(scenarioValue).matches()
     }
 

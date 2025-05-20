@@ -2,6 +2,7 @@ package io.specmatic.core
 
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
+import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
@@ -24,11 +25,18 @@ data class Dictionary(private val data: Map<String, Value>, private val focusedD
     }
 
     fun focusIntoSchema(pattern: Pattern, key: String, resolver: Resolver): Dictionary {
-        return focusInto(pattern, key, resolver, data, preserve = false)
+        return focusInto(pattern, key, resolver, data)
     }
 
-    fun focusIntoProperty(pattern: Pattern, key: String, resolver: Resolver, preserve: Boolean): Dictionary {
-        return focusInto(pattern, key, resolver, focusedData, preserve)
+    fun focusIntoProperty(pattern: Pattern, key: String, resolver: Resolver): Dictionary {
+        return focusInto(pattern, key, resolver, focusedData)
+    }
+
+    fun <T> focusIntoSequence(pattern: T, childPattern: Pattern, key: String, resolver: Resolver): Dictionary where T: Pattern, T: SequenceType {
+        return focusInto(pattern, key, resolver, focusedData) { value ->
+            val valueToMatch = getValueToMatch(value, childPattern, resolver, overrideNestedCheck = true)
+            valueToMatch as? JSONObjectValue
+        }
     }
 
     fun getDefaultValueFor(pattern: Pattern, resolver: Resolver): Value? {
@@ -43,27 +51,31 @@ data class Dictionary(private val data: Map<String, Value>, private val focusedD
         return getReturnValueFor(lookup, dictionaryValue, pattern, resolver)
     }
 
-    private fun focusInto(pattern: Pattern, key: String, resolver: Resolver, storeToUse: Map<String, Value>, preserve: Boolean): Dictionary {
-        val rawValue = storeToUse[key] ?: return resetFocus(preserve)
-        val valueToFocusInto = getValueToMatch(rawValue, pattern, resolver, true) ?: return resetFocus(preserve)
-        val dataToFocusInto = (valueToFocusInto as? JSONObjectValue)?.jsonObject ?: storeToUse
+    private fun focusInto(
+        pattern: Pattern, key: String,
+        resolver: Resolver, storeToUse: Map<String, Value>,
+        onValue: (Value) -> JSONObjectValue? = { it as? JSONObjectValue }
+    ): Dictionary {
+        val rawValue = storeToUse[key] ?: return resetFocus()
+        val valueToFocusInto = getValueToMatch(rawValue, pattern, resolver, true) ?: return resetFocus()
+        val dataToFocusInto = onValue(valueToFocusInto)?.jsonObject ?: storeToUse
         return copy(focusedData = dataToFocusInto)
     }
 
     private fun getReturnValueFor(lookup: String, value: Value, pattern: Pattern, resolver: Resolver): ReturnValue<Value>? {
         val valueToMatch = getValueToMatch(value, pattern, resolver) ?: return null
         return runCatching {
-            val result = pattern.matches(valueToMatch, resolver)
-            if (result is Result.Failure && resolver.isNegative) return@runCatching null
-            result.toReturnValue(valueToMatch, "Invalid Dictionary value at \"$lookup\"")
+            val result = pattern.fillInTheBlanks(valueToMatch, resolver.copy(isNegative = false))
+            if (result is ReturnFailure && resolver.isNegative) return null
+            result.addDetails("Invalid Dictionary value at \"$lookup\"", breadCrumb = "")
         }.getOrElse(::HasException)
     }
 
     private fun getValueToMatch(value: Value, pattern: Pattern, resolver: Resolver, overrideNestedCheck: Boolean = false): Value? {
         if (value !is JSONArrayValue) return value.takeIf { pattern.isScalar(resolver) || overrideNestedCheck }
-        if (pattern !is ListPattern) return value.list.randomOrNull()
+        if (pattern !is SequenceType) return value.list.randomOrNull()
 
-        val patternDepth = calculateDepth<Pattern>(pattern) { (resolvedHop(it, resolver) as? ListPattern)?.pattern?.let(::listOf) }
+        val patternDepth = calculateDepth<Pattern>(pattern) { (resolvedHop(it, resolver) as? SequenceType)?.memberList?.patternList() }
         val valueDepth = calculateDepth<Value>(value) { (it as? JSONArrayValue)?.list }
         return when {
             valueDepth > patternDepth -> value.list.randomOrNull()
@@ -86,7 +98,7 @@ data class Dictionary(private val data: Map<String, Value>, private val focusedD
         return resolved is ScalarType || resolved is URLPathSegmentPattern || resolved is QueryParameterScalarPattern
     }
 
-    private fun resetFocus(preserve: Boolean): Dictionary = copy(focusedData = focusedData.takeIf { preserve }.orEmpty())
+    private fun resetFocus(): Dictionary = copy(focusedData = emptyMap())
 
     companion object {
         fun from(file: File): Dictionary {
@@ -108,7 +120,7 @@ data class Dictionary(private val data: Map<String, Value>, private val focusedD
                 logger.debug(e)
                 throw ContractException(
                     breadCrumb = file.path,
-                    errorMessage = "Could not parse dictionary file ${file.path}, it must be a valid JSON/YAML object"
+                    errorMessage = "Could not parse dictionary file ${file.path}, it must be a valid JSON/YAML object:\n${exceptionCauseMessage(e)}"
                 )
             }
         }

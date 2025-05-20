@@ -3,6 +3,7 @@ package io.specmatic.core
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.*
 import io.specmatic.test.ExampleProcessor
+import io.specmatic.test.asserts.WILDCARD_INDEX
 
 val actualMatch: (resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value) -> Result = { resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value ->
     resolver.actualPatternMatch(factKey, pattern, sampleValue)
@@ -255,15 +256,27 @@ data class Resolver(
             focusIntoSchema(pattern, withoutPatternDelimiters(patternName), this@Resolver)
         }
 
-        val keyFocused = patternFocused.applyIf(keyWithPattern) { (key, keyPattern) ->
-            val focusKey = if (key == "[*]") "${dictionaryLookupPath.substringAfterLast(".")}[*]" else key
-            focusIntoProperty(keyPattern, focusKey, this@Resolver, keyPattern is SequenceType)
+        val keyFocused = patternFocused.applyIf(keyWithPattern) { (focusKey, keyPattern) ->
+            focusIntoProperty(keyPattern, focusKey, this@Resolver)
         }
 
         return this.copy(
             dictionaryLookupPath = lookupPath,
             lookupPathsSeenSoFar = lookupPathsSeenSoFar.plus(lookupPath),
             dictionary = keyFocused
+        )
+    }
+
+    fun <T> updateLookupPath(pattern: T, childPattern: Pattern): Resolver where T: Pattern, T: SequenceType {
+        val lookupPath = lookupPath(pattern.typeAlias, WILDCARD_INDEX)
+        val itemFocused = dictionary.applyIf(lastLookupKey()) { key ->
+            focusIntoSequence(pattern, childPattern, key,this@Resolver)
+        }
+
+        return this.copy(
+            dictionaryLookupPath = lookupPath,
+            lookupPathsSeenSoFar = lookupPathsSeenSoFar.plus(lookupPath),
+            dictionary = itemFocused
         )
     }
 
@@ -418,6 +431,8 @@ data class Resolver(
     fun getPartialKeyCheck(): KeyCheck {
         return findKeyErrorCheck.toPartialKeyCheck()
     }
+
+    private fun lastLookupKey(): String? = dictionaryLookupPath.substringAfterLast(".").takeIf(String::isNotBlank)
 }
 
 private fun ExactValuePattern.hasPatternToken(): Boolean {

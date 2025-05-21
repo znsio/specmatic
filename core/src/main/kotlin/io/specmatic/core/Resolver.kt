@@ -268,12 +268,13 @@ data class Resolver(
     }
 
     fun <T> updateLookupPath(pattern: T, childPattern: Pattern): Resolver where T: Pattern, T: SequenceType {
-        val lookupPath = lookupPath(pattern.typeAlias, WILDCARD_INDEX)
-        val itemFocused = dictionary.applyIf(lastLookupKey()) { key ->
-            focusIntoSequence(pattern, childPattern, key,this@Resolver)
+        val patternFocused = updateLookupPath(pattern.typeAlias)
+        val itemFocused = patternFocused.dictionary.applyIf(patternFocused.lastLookupKey()) { key ->
+            focusIntoSequence(pattern, childPattern, key, patternFocused)
         }
 
-        return this.copy(
+        val lookupPath = patternFocused.lookupPath(null, WILDCARD_INDEX)
+        return patternFocused.copy(
             dictionaryLookupPath = lookupPath,
             lookupPathsSeenSoFar = lookupPathsSeenSoFar.plus(lookupPath),
             dictionary = itemFocused
@@ -304,17 +305,13 @@ data class Resolver(
     }
 
     fun generateList(pattern: ListPattern): Value {
-        val lookupPath = lookupPath(pattern.typeAlias, "")
-        val valueFromDict = dictionary.getValueFor(lookupPath, pattern, this)
+        val patternFocused = updateLookupPath(pattern.typeAlias)
+        val valueFromDict = patternFocused.dictionary.getValueFor(patternFocused.dictionaryLookupPath, pattern, this)
         if (valueFromDict != null) {
             return valueFromDict.unwrapOrContractException()
         }
 
-        return this.updateLookupPath(
-            typeAlias = pattern.typeAlias,
-            keyWithPattern = KeyWithPattern("[*]", pattern.pattern)
-        )
-            .generateRandomList(pattern.pattern)
+        return this.updateLookupPath(pattern, pattern.pattern).generateRandomList(pattern.pattern)
     }
 
     private fun generateRandomList(pattern: Pattern): Value {

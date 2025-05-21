@@ -416,6 +416,28 @@ class DictionaryTest {
         }
     }
 
+    @Test
+    fun `should fill-in partial values in an scalar array when picking values from dictionary`() {
+        val pattern = JSONObjectPattern(mapOf("numbers" to ListPattern(NumberPattern())), typeAlias = "(Test)")
+        val dictionary = parsedJSONObject("""{
+        "Test.numbers": [ [123], [456] ] }
+        """.trimIndent()).jsonObject.let(Dictionary::from)
+        val resolver = Resolver(dictionary = dictionary).partializeKeyCheck()
+        val partialValue = parsedJSONObject("""{
+        "numbers": [
+            "(anyvalue)",
+            "(number)"
+        ]
+        }""".trimIndent())
+        val filledInValue = pattern.fillInTheBlanks(partialValue, resolver).value as JSONObjectValue
+        val numbers = filledInValue.jsonObject["numbers"] as JSONArrayValue
+
+        println(filledInValue)
+        assertThat(numbers.list).allSatisfy { numberValue ->
+            assertThat((numberValue as NumberValue).nativeValue).isIn(123, 456)
+        }
+    }
+
     @Nested
     inner class NegativeBasedOnTests {
 

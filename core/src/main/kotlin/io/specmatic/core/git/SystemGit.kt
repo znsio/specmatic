@@ -199,6 +199,13 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         val result = execute(Configuration.gitCommand, "show", "-s", "--pretty=%D", "HEAD")
         return result.trim().split(",")[1].trim()
     }
+
+    override fun getUntrackedFiles(): List<String> {
+        val result = execute(Configuration.gitCommand, "ls-files", "--others", "--exclude-standard")
+        return result.trim().split("\n")
+            .filter { it.isNotBlank() }
+            .map { Paths.get("$workingDirectory${File.separator}$it").absolutePathString() }
+    }
 }
 
 fun exitErrorMessageContains(exception: NonZeroExitError, snippets: List<String>): Boolean {

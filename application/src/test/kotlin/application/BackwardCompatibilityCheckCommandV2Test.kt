@@ -121,6 +121,58 @@ class BackwardCompatibilityCheckCommandV2Test {
             assertThat(command.getSpecsReferringTo(setOf("b.yaml"))).isEqualTo(setOf("c.yaml", "a.yaml").map { File(it).canonicalPath }.toSet())
             assertThat(command.getSpecsReferringTo(setOf("c.yaml"))).isEqualTo(setOf("a.yaml", "b.yaml").map { File(it).canonicalPath }.toSet())
         }
+
+        @Test
+        fun `should show message for untracked files`() {
+            val apiFile = File("src/test/resources/specifications/spec_with_examples/api.yaml")
+            apiFile.copyTo(tempDir.resolve("api.yaml"))
+            commitAndPush(tempDir, "Initial commit")
+            apiFile.copyTo(tempDir.resolve("contract.yaml"))
+
+            val (stdOut, exception) = captureStandardOutput {
+                assertThrows<SystemExitException> {
+                    SystemExit.throwOnExit {
+                        BackwardCompatibilityCheckCommandV2().apply { repoDir = tempDir.canonicalPath }.call()
+                    }
+                }
+            }
+
+            assertThat(exception.code).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            - Specs that will be skipped (Untracked Files):
+            1. ${tempDir.resolve("contract.yaml").toPath().toRealPath()}
+            """.trimIndent()).containsIgnoringWhitespaces("""
+            Files checked: 0 (Passed: 0, Failed: 0)
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should include message for untracked files with changed files`() {
+            val apiFile = File("src/test/resources/specifications/spec_with_examples/api.yaml")
+            val gitApiFile = tempDir.resolve("api.yaml")
+            apiFile.copyTo(gitApiFile)
+            commitAndPush(tempDir, "Initial commit")
+            gitApiFile.writeText(gitApiFile.readText().replace("endpoint", "modified endpoint"))
+            apiFile.copyTo(tempDir.resolve("contract.yaml"))
+
+            val (stdOut, exception) = captureStandardOutput {
+                assertThrows<SystemExitException> {
+                    SystemExit.throwOnExit {
+                        BackwardCompatibilityCheckCommandV2().apply { repoDir = tempDir.canonicalPath }.call()
+                    }
+                }
+            }
+
+            assertThat(exception.code).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            - Specs that have changed: 
+            1. $gitApiFile
+            - Specs that will be skipped (Untracked Files):
+            1. ${tempDir.resolve("contract.yaml").toPath().toRealPath()}
+            """.trimIndent()).containsIgnoringWhitespaces("""
+            Files checked: 1 (Passed: 1, Failed: 0)
+            """.trimIndent())
+        }
     }
 
     @Nested
@@ -278,4 +330,6 @@ class BackwardCompatibilityCheckCommandV2Test {
         ProcessBuilder("git", "commit", "-m", commitMessage).directory(repoDir).inheritIO().start().waitFor()
         ProcessBuilder("git", "push", "origin", "master").directory(repoDir).inheritIO().start().waitFor()
     }
+
+
 }

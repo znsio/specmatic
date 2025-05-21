@@ -226,7 +226,7 @@ data class Resolver(
 
     fun generate(typeAlias: String?, rawLookupKey: String, pattern: Pattern): Value {
         val resolvedPattern = resolvedHop(pattern, this)
-        if(resolvedPattern is ExactValuePattern && !resolvedPattern.hasPatternToken())
+        if((resolvedPattern is ExactValuePattern && !resolvedPattern.hasPatternToken()) || resolvedPattern is JSONArrayPattern)
             return pattern.generate(this)
 
         val lookupKey = withoutOptionality(rawLookupKey)

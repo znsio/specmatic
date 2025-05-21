@@ -365,8 +365,12 @@ class DictionaryTest {
             "name": "(string)"
         }
         }""".trimIndent(), typeAlias = "(Test)")
-        val dictionary = mapOf(".name" to StringValue("Jane Doe"), "Test.name" to StringValue("John Doe")).let(Dictionary::from)
-
+        val dictionary = """
+        '*':
+          name: John Doe
+        Test:
+          name: John Doe
+        """.trimIndent().let(Dictionary::fromYaml)
         val resolver = Resolver(dictionary = dictionary)
         val generatedValue = pattern.generate(resolver) as JSONObjectValue
         val details = generatedValue.jsonObject["details"] as JSONObjectValue
@@ -384,10 +388,12 @@ class DictionaryTest {
             ))
         ), typeAlias = "(Test)")
         val dictionary = parsedJSONObject("""{
-        "Test.details": [
-            [{"name": "John Doe"}],
-            [{"name": "Jane Doe", "email": "JaneDoe@mail.com"}]
-        ]
+        "Test": {
+            "details": [
+                [{"name": "John Doe"}],
+                [{"name": "Jane Doe", "email": "JaneDoe@mail.com"}]
+            ]
+        }
         }""".trimIndent()).jsonObject.let(Dictionary::from)
         val resolver = Resolver(dictionary = dictionary).partializeKeyCheck()
         val partialValue = parsedJSONObject("""{
@@ -419,7 +425,7 @@ class DictionaryTest {
     fun `should fill-in partial values in an scalar array when picking values from dictionary`() {
         val pattern = JSONObjectPattern(mapOf("numbers" to ListPattern(NumberPattern())), typeAlias = "(Test)")
         val dictionary = parsedJSONObject("""{
-        "Test.numbers": [ [123], [456] ] }
+        "Test": { "numbers": [ [123], [456] ] } }
         """.trimIndent()).jsonObject.let(Dictionary::from)
         val resolver = Resolver(dictionary = dictionary).partializeKeyCheck()
         val partialValue = parsedJSONObject("""{

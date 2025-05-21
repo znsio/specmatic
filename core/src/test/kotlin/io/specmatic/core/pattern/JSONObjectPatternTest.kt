@@ -758,8 +758,7 @@ internal class JSONObjectPatternTest {
             typeAlias = addressTypeAlias
         )
 
-        val expectedAddress = StringValue("22B Baker Street")
-
+        val expectedAddress = JSONArrayValue(listOf(StringValue("22B Baker Street")))
         val dictionary = "Address: { 'addresses': $expectedAddress }".let(Dictionary::fromYaml)
 
         val resolver = Resolver(
@@ -771,7 +770,7 @@ internal class JSONObjectPatternTest {
 
         val addresses = value.findFirstChildByPath("addresses")!! as JSONArrayValue
         assertThat(addresses.list).allSatisfy {
-            assertThat(it).isEqualTo(expectedAddress)
+            assertThat(it).isEqualTo(StringValue("22B Baker Street"))
         }
     }
 
@@ -842,9 +841,9 @@ internal class JSONObjectPatternTest {
             typeAlias = personTypeAlias
         )
 
-        val streetAsNumber = NumberValue(10)
-
+        val streetAsNumber = JSONArrayValue(listOf(NumberValue(10)))
         val dictionary = "Person: { 'addresses': $streetAsNumber }".let(Dictionary::fromYaml)
+
         val resolver = Resolver(
             newPatterns = mapOf(personTypeAlias to personPattern),
             dictionary = dictionary

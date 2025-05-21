@@ -358,6 +358,86 @@ class DictionaryTest {
         assertThat(testCountWithDictionary).isEqualTo(testCountWithoutDictionary)
     }
 
+    @Test
+    fun `should not re-use top-level keys for deep nested patterns with same key`() {
+        val pattern = parsedPattern("""{
+        "name": "(string)",
+        "details": {
+            "name": "(string)"
+        }
+        }""".trimIndent(), typeAlias = "(Test)")
+        val dictionary = mapOf(".name" to StringValue("Jane Doe"), "Test.name" to StringValue("John Doe")).let(Dictionary::from)
+
+        val resolver = Resolver(dictionary = dictionary)
+        val generatedValue = pattern.generate(resolver) as JSONObjectValue
+        val details = generatedValue.jsonObject["details"] as JSONObjectValue
+
+        assertThat(generatedValue.jsonObject["name"]?.toStringLiteral()).isEqualTo("John Doe")
+        assertThat(details.jsonObject["name"]?.toStringLiteral()).isNotEqualTo("John Doe")
+        assertThat(details.jsonObject["name"]?.toStringLiteral()).isNotEqualTo("Jane Doe")
+    }
+    
+    @Test
+    fun `should fill-in partial values in an array when picking values from dictionary`() {
+        val pattern = JSONObjectPattern(mapOf(
+            "details" to ListPattern(JSONObjectPattern(mapOf(
+                "name" to StringPattern(), "email" to EmailPattern())
+            ))
+        ), typeAlias = "(Test)")
+        val dictionary = parsedJSONObject("""{
+        "Test.details": [
+            [{"name": "John Doe"}],
+            [{"name": "Jane Doe", "email": "JaneDoe@mail.com"}]
+        ]
+        }""".trimIndent()).jsonObject.let(Dictionary::from)
+        val resolver = Resolver(dictionary = dictionary).partializeKeyCheck()
+        val partialValue = parsedJSONObject("""{
+        "details": [
+            "(anyvalue)",
+            { "name": "(string)" },
+            { "name": "(string)", "email": "(email)" }
+        ]
+        }""".trimIndent())
+        val filledInValue = pattern.fillInTheBlanks(partialValue, resolver).value as JSONObjectValue
+        val details = filledInValue.jsonObject["details"] as JSONArrayValue
+
+        assertThat(details.list).allSatisfy { detail ->
+            assertThat(detail).isInstanceOf(JSONObjectValue::class.java); detail as JSONObjectValue
+            assertThat(detail).satisfiesAnyOf(
+                {
+                    assertThat(it.jsonObject["name"]?.toStringLiteral()).isEqualTo("John Doe")
+                    assertThat(it.jsonObject["email"]?.toStringLiteral()).isNotEqualTo("JaneDoe@mail.com")
+                },
+                {
+                    assertThat(it.jsonObject["name"]?.toStringLiteral()).isEqualTo("Jane Doe")
+                    assertThat(it.jsonObject["email"]?.toStringLiteral()).isEqualTo("JaneDoe@mail.com")
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `should fill-in partial values in an scalar array when picking values from dictionary`() {
+        val pattern = JSONObjectPattern(mapOf("numbers" to ListPattern(NumberPattern())), typeAlias = "(Test)")
+        val dictionary = parsedJSONObject("""{
+        "Test.numbers": [ [123], [456] ] }
+        """.trimIndent()).jsonObject.let(Dictionary::from)
+        val resolver = Resolver(dictionary = dictionary).partializeKeyCheck()
+        val partialValue = parsedJSONObject("""{
+        "numbers": [
+            "(anyvalue)",
+            "(number)"
+        ]
+        }""".trimIndent())
+        val filledInValue = pattern.fillInTheBlanks(partialValue, resolver).value as JSONObjectValue
+        val numbers = filledInValue.jsonObject["numbers"] as JSONArrayValue
+
+        println(filledInValue)
+        assertThat(numbers.list).allSatisfy { numberValue ->
+            assertThat((numberValue as NumberValue).nativeValue).isIn(123, 456)
+        }
+    }
+
     @Nested
     inner class NegativeBasedOnTests {
 
@@ -550,32 +630,13 @@ class DictionaryTest {
 
         @Test
         fun `should use the array value as is when pattern is an array and dictionary contains array level key`() {
-            val dictionary = jsonStringToValueMap("""{
-            "Schema.array": [10, 20, 30],
-            "Schema.array[*]": [1, 2, 3]
-            }""".trimIndent()).let(Dictionary::from)
+            val dictionary = jsonStringToValueMap("""{ "Schema.array": [10, 20, 30] }""".trimIndent()).let(Dictionary::from)
             val pattern = JSONObjectPattern(mapOf("array" to ListPattern(NumberPattern())), typeAlias = "(Schema)")
             val resolver = Resolver(dictionary = dictionary)
             val value = pattern.generate(resolver)
 
             assertThat(value.jsonObject["array"]).isInstanceOf(JSONArrayValue::class.java)
             assertThat((value.jsonObject["array"])).isEqualTo(listOf(10, 20, 30).map(::NumberValue).let(::JSONArrayValue))
-        }
-
-        @Test
-        fun `should use wildcard index key if exists in dictionary when array key is missing and pattern is an array`() {
-            val dictionary = jsonStringToValueMap("""{
-            "Schema.array[*]": [1, 2, 3]
-            }""".trimIndent()).let(Dictionary::from)
-            val pattern = JSONObjectPattern(mapOf("array" to ListPattern(NumberPattern())), typeAlias = "(Schema)")
-            val resolver = Resolver(dictionary = dictionary)
-            val value = pattern.generate(resolver)
-
-            assertThat(value.jsonObject["array"]).isInstanceOf(JSONArrayValue::class.java)
-            assertThat((value.jsonObject["array"] as JSONArrayValue).list).hasSizeGreaterThanOrEqualTo(1).hasSizeLessThanOrEqualTo(3)
-            assertThat((value.jsonObject["array"] as JSONArrayValue).list).allSatisfy {
-                assertThat(it).isIn(listOf(1, 2, 3).map(::NumberValue))
-            }
         }
 
         @Test

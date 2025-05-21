@@ -760,8 +760,7 @@ internal class JSONObjectPatternTest {
         )
 
         val expectedAddress = StringValue("22B Baker Street")
-
-        val dictionary = mapOf("Address.addresses[*]" to expectedAddress)
+        val dictionary = mapOf("Address.addresses" to JSONArrayValue(listOf(expectedAddress)))
 
         val resolver = Resolver(
             newPatterns = mapOf(addressTypeAlias to addressPattern),
@@ -849,8 +848,7 @@ internal class JSONObjectPatternTest {
         )
 
         val streetAsNumber = NumberValue(10)
-
-        val dictionary = mapOf("Person.addresses[*]" to streetAsNumber)
+        val dictionary = mapOf("Person.addresses" to JSONArrayValue(listOf(streetAsNumber)))
 
         val resolver = Resolver(
             newPatterns = mapOf(personTypeAlias to personPattern),
@@ -862,8 +860,8 @@ internal class JSONObjectPatternTest {
         }
 
         assertThat(exception.report()).isEqualToNormalizingWhitespace("""
-        >> addresses[0 (random)]
-        Invalid Dictionary value at "Person.addresses[*]"
+        >> addresses[0]
+        Invalid Dictionary value at "Person.addresses"
         Expected string, actual was 10 (number)
         """.trimIndent())
     }
@@ -1002,10 +1000,7 @@ internal class JSONObjectPatternTest {
         )
 
         val street = StringValue("Baker Street")
-
-        val dictionary = mapOf("Person.address" to JSONObjectValue(
-            mapOf("street" to street)
-        ))
+        val dictionary = mapOf("Address.street" to street)
 
         val resolver = Resolver(
             newPatterns = mapOf(personTypeAlias to personPattern, addressTypeAlias to addressPattern),

@@ -65,7 +65,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
 
     override fun generate(resolver: Resolver): Value {
         val resolverWithNullType = withNullPattern(resolver)
-        return JSONArrayValue(generate(pattern, resolverWithNullType))
+        return JSONArrayValue(generate(this, resolverWithNullType))
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
@@ -229,22 +229,22 @@ fun <ValueType> allOrNothingListCombinations(values: List<Sequence<ValueType?>>)
     }
 }
 
-fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =
-        jsonPattern.mapIndexed { index, pattern ->
-            resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
-                when (pattern) {
-                    is RestPattern -> attempt(breadCrumb = "[$index...${jsonPattern.lastIndex}]") {
-                        val list = cyclePreventedResolver
-                            .generate(null, "[*]", pattern) as ListValue
-                        list.list
-                    }
-
-                    else -> attempt(breadCrumb = "[$index]") {
-                        listOf(cyclePreventedResolver.generate(null, "[*]", pattern))
-                    }
+private fun generate(jsonArrayPatter: JSONArrayPattern, resolver: Resolver): List<Value> {
+    return jsonArrayPatter.pattern.mapIndexed { index, pattern ->
+        resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+            val updatedResolver = cyclePreventedResolver.updateLookupPath(jsonArrayPatter, pattern)
+            when (pattern) {
+                is RestPattern -> attempt(breadCrumb = "[$index...${jsonArrayPatter.pattern.lastIndex}]") {
+                    val list = updatedResolver.generate(pattern) as ListValue
+                    list.list
+                }
+                else -> attempt(breadCrumb = "[$index]") {
+                    listOf(updatedResolver.generate(pattern))
                 }
             }
-        }.flatten()
+        }
+    }.flatten()
+}
 
 const val RANDOM_NUMBER_CEILING = 10
 

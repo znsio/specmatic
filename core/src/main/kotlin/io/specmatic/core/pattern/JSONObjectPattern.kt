@@ -146,7 +146,7 @@ data class JSONObjectPattern(
 
         return fill(
             jsonPatternMap = patternToConsider.pattern, jsonValueMap = valueToConsider,
-            typeAlias = patternToConsider.typeAlias.orEmpty(), resolver = resolver
+            typeAlias = patternToConsider.typeAlias, resolver = resolver
         ).realise(
             hasValue = { valuesMap, _ -> HasValue(JSONObjectValue(valuesMap)) },
             orException = { e -> e.cast() }, orFailure = { f -> f.cast() }
@@ -562,14 +562,14 @@ fun fix(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, 
     .mapValues { (_, opt) -> opt.get() }
 }
 
-fun fill(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, resolver: Resolver, typeAlias: String): ReturnValue<Map<String, Value>> {
+fun fill(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, resolver: Resolver, typeAlias: String?): ReturnValue<Map<String, Value>> {
     val resolvedValuesMap = jsonValueMap.mapValues { (key, value) ->
-        val updatedResolver = resolver.updateLookupPath(typeAlias, key)
         val pattern = jsonPatternMap[key] ?: jsonPatternMap["$key?"] ?: return@mapValues when {
-            resolver.findKeyErrorCheck.unexpectedKeyCheck is IgnoreUnexpectedKeys -> generateIfPatternToken(value, updatedResolver)
-            resolver.isNegative -> generateIfPatternToken(value, updatedResolver)
+            resolver.findKeyErrorCheck.unexpectedKeyCheck is IgnoreUnexpectedKeys -> generateIfPatternToken(typeAlias, key, value, resolver)
+            resolver.isNegative -> generateIfPatternToken(typeAlias, key, value, resolver)
             else -> HasFailure<Value>(Result.Failure(resolver.mismatchMessages.unexpectedKey("key", key)))
         }.breadCrumb(key)
+        val updatedResolver = resolver.updateLookupPath(typeAlias, KeyWithPattern(key, pattern))
         pattern.fillInTheBlanks(value, updatedResolver).breadCrumb(key)
     }.mapFold()
 
@@ -589,12 +589,11 @@ fun fill(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>,
     }
 }
 
-private fun generateIfPatternToken(value: Value, resolver: Resolver): ReturnValue<Value> {
+private fun generateIfPatternToken(typeAlias: String?, key: String, value: Value, resolver: Resolver): ReturnValue<Value> {
     if (value !is StringValue || !value.isPatternToken()) return HasValue(value)
     return runCatching {
-        val pattern = resolver.getPattern(value.string)
-        if (pattern is AnyValuePattern) return@runCatching resolver.generate(StringPattern())
-        resolver.generate(pattern)
+        val keyPattern = resolver.getPattern(value.string).takeUnless { it is AnyValuePattern } ?: StringPattern()
+        resolver.updateLookupPath(typeAlias, KeyWithPattern(key, keyPattern)).generate(keyPattern)
     }.map(::HasValue).getOrElse(::HasException)
 }
 

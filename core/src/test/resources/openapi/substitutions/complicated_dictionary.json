@@ -1,5 +1,17 @@
 {
-  "PersonDetails.person.addresses[*].street": "Baker Street",
-  "PersonDetails.person.past_companies[*].name": "Acme Inc",
+  "PersonDetails": {
+    "person": {
+      "addresses": [
+        {
+          "street": "Baker Street"
+        }
+      ],
+      "past_companies": [
+        {
+          "name": "Acme Inc"
+        }
+      ]
+    }
+  },
   "PersonDetails.person.name": "Jackie"
 }

@@ -305,7 +305,8 @@ data class HttpPathPattern(
         val pathHadPrefix = path.startsWith("/")
         return pathSegmentPatterns.zip(pathSegments).map { (urlPathPattern, token) ->
             val tokenWithoutParameter = removeKeyFromParameterToken(token)
-            val updatedResolver = resolver.updateLookupPath("PATH-PARAMS", urlPathPattern.key.orEmpty())
+            val (key, keyPattern) = urlPathPattern.let { it.key.orEmpty() to it.pattern }
+            val updatedResolver = resolver.updateLookupPath("PATH-PARAMS", KeyWithPattern(key, keyPattern))
             val result = urlPathPattern.fixValue(urlPathPattern.tryParse(tokenWithoutParameter, updatedResolver), updatedResolver)
             token.takeIf { isPatternToken(tokenWithoutParameter) && isPatternToken(result) } ?: result
         }.joinToString("/", prefix = "/".takeIf { pathHadPrefix }.orEmpty() )
@@ -321,7 +322,8 @@ data class HttpPathPattern(
 
         val pathHadPrefix = path.startsWith("/")
         val generatedSegments = pathSegmentPatterns.zip(pathSegments).map { (urlPathPattern, token) ->
-            val updatedResolver = resolver.updateLookupPath("PATH-PARAMS", urlPathPattern.key.orEmpty())
+            val (key, keyPattern) = urlPathPattern.let { it.key.orEmpty() to it.pattern }
+            val updatedResolver = resolver.updateLookupPath("PATH-PARAMS", KeyWithPattern(key, keyPattern))
             urlPathPattern.fillInTheBlanks(urlPathPattern.tryParse(token, updatedResolver), updatedResolver).breadCrumb(urlPathPattern.key)
         }.listFold()
 

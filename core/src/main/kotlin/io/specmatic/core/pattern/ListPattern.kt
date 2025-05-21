@@ -63,8 +63,8 @@ data class ListPattern(
             else -> return HasFailure("Cannot generate a list from type ${value.displayableType()}")
         }
 
-        val updatedResolver = resolver.plusDictionaryLookupDetails(null, "[*]")
         return valueToConsider.mapIndexed { index, item ->
+            val updatedResolver = resolver.updateLookupPath(this, this.pattern)
             patternToConsider.fillInTheBlanks(item, updatedResolver).breadCrumb("[$index]")
         }.listFold().ifValue(::JSONArrayValue)
     }

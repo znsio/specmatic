@@ -64,7 +64,7 @@ data class AnyPattern(
         }
 
         val matchingPatternNew = patternMatches.minBy { (it.result as? Failure)?.failureCount() ?: 0 }
-        val updatedResolver = resolver.updateLookupPath(this.typeAlias, "")
+        val updatedResolver = resolver.updateLookupPath(this.typeAlias)
         return matchingPatternNew.pattern.fixValue(value, updatedResolver)
     }
 
@@ -110,7 +110,7 @@ data class AnyPattern(
 
         val updatedPatterns = getUpdatedPattern(resolver)
         val newPatterns = updatedPatterns.filter { it.typeAlias != null }.associateBy { it.typeAlias.orEmpty() }
-        val updatedResolver = resolver.copy(newPatterns = resolver.newPatterns.plus(newPatterns) )
+        val updatedResolver = resolver.copy(newPatterns = resolver.newPatterns.plus(newPatterns) ).updateLookupPath(this.typeAlias)
 
         val results = updatedPatterns.asSequence().map { it.fillInTheBlanks(value, updatedResolver) }
         val successfulGeneration = results.firstOrNull { it is HasValue }

@@ -1,14 +1,22 @@
 {
-  "QUERY-PARAMS.id": 10,
-  ".id": 10,
-  "HEADERS.X-Region": "Asia",
-  ".name": "George",
-  "HEADERS.X-Data-Token": "pqr",
-  ".street": "Baker Street",
-  ".addresses": [
-    {
-      "street":  "Baker Street"
+  "QUERY-PARAMS": {
+    "id": 10
+  },
+  "HEADERS": {
+    "X-Region": "Asia",
+    "X-Data-Token": "pqr"
+  },
+  "*": {
+    "id": 10,
+    "name": "George",
+    "street": "Baker Street",
+    "addresses": [
+      {
+        "street": "Baker Street"
+      }
+    ],
+    "address": {
+      "street": "Baker Street"
     }
-  ],
-  ".address.street": "Baker Street"
+  }
 }

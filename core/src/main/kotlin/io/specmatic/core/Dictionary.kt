@@ -6,6 +6,7 @@ import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
+import io.specmatic.test.asserts.WILDCARD_INDEX
 import java.io.File
 
 data class Dictionary(private val data: Map<String, Value>, private val focusedData: Map<String, Value> = emptyMap()) {
@@ -34,8 +35,11 @@ data class Dictionary(private val data: Map<String, Value>, private val focusedD
 
     fun <T> focusIntoSequence(pattern: T, childPattern: Pattern, key: String, resolver: Resolver): Dictionary where T: Pattern, T: SequenceType {
         return focusInto(pattern, key, resolver, focusedData) { value ->
-            val valueToMatch = getValueToMatch(value, childPattern, resolver, overrideNestedCheck = true)
-            valueToMatch as? JSONObjectValue
+            when (val valueToMatch = getValueToMatch(value, childPattern, resolver, overrideNestedCheck = true)) {
+                is JSONObjectValue -> valueToMatch
+                is Value -> JSONObjectValue(mapOf(key to valueToMatch))
+                else -> value as? JSONObjectValue
+            }
         }
     }
 
@@ -91,7 +95,7 @@ data class Dictionary(private val data: Map<String, Value>, private val focusedD
         }
     }
 
-    private fun String.tailEndKey(): String = substringAfterLast(".")
+    private fun String.tailEndKey(): String = substringAfterLast(".").removeSuffix(WILDCARD_INDEX)
 
     private fun Pattern.isScalar(resolver: Resolver): Boolean {
         val resolved = resolvedHop(this, resolver)

@@ -2508,6 +2508,29 @@ components:
                 println(result.value)
             }
         }
+
+        @Test
+        fun `should work with additional patterns`() {
+            val jsonObjectPattern = JSONObjectPattern(
+                pattern = emptyMap(),
+                additionalProperties = AdditionalProperties.FreeForm,
+                typeAlias = "(Test)"
+            )
+            val validValue = parsedJSONObject("""{
+            "field1": "foo",
+            "field2": 123,
+            "field3": true,
+            "field4": null,
+            "field5": [1, 2, 3],
+            "field6": {
+                "field7": "bar"
+            }
+            }""".trimIndent())
+            val filledInValue = jsonObjectPattern.fillInTheBlanks(validValue, Resolver()).value
+            filledInValue as JSONObjectValue
+
+            assertThat(validValue).isEqualTo(filledInValue)
+        }
     }
 
     companion object {

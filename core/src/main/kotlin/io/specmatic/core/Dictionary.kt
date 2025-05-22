@@ -70,7 +70,7 @@ data class Dictionary(private val data: Map<String, Value>, private val focusedD
     private fun getReturnValueFor(lookup: String, value: Value, pattern: Pattern, resolver: Resolver): ReturnValue<Value>? {
         val valueToMatch = getValueToMatch(value, pattern, resolver) ?: return null
         return runCatching {
-            val result = pattern.fillInTheBlanks(valueToMatch, resolver.copy(isNegative = false))
+            val result = pattern.fillInTheBlanks(valueToMatch, resolver.copy(isNegative = false), removeExtraKeys = true)
             if (result is ReturnFailure && resolver.isNegative) return null
             result.addDetails("Invalid Dictionary value at \"$lookup\"", breadCrumb = "")
         }.getOrElse(::HasException)

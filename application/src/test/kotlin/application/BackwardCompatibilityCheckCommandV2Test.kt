@@ -148,8 +148,8 @@ class BackwardCompatibilityCheckCommandV2Test {
 
         @Test
         fun `should include message for untracked files with changed files`() {
-            val apiFile = File("src/test/resources/specifications/spec_with_examples/api.yaml")
-            val gitApiFile = tempDir.resolve("api.yaml")
+            val apiFile = File("src/test/resources/specifications/spec_with_examples/api.yaml").canonicalFile
+            val gitApiFile = tempDir.resolve("api.yaml").canonicalFile
             apiFile.copyTo(gitApiFile)
             commitAndPush(tempDir, "Initial commit")
             gitApiFile.writeText(gitApiFile.readText().replace("endpoint", "modified endpoint"))
@@ -168,7 +168,7 @@ class BackwardCompatibilityCheckCommandV2Test {
             - Specs that have changed: 
             1. $gitApiFile
             - Specs that will be skipped (Untracked Files):
-            1. ${tempDir.resolve("contract.yaml").toPath().toRealPath()}
+            1. ${tempDir.resolve("contract.yaml").canonicalFile.toPath().toRealPath()}
             """.trimIndent()).containsIgnoringWhitespaces("""
             Files checked: 1 (Passed: 1, Failed: 0)
             """.trimIndent())

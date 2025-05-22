@@ -202,7 +202,7 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
 
     override fun getUntrackedFiles(): List<String> {
         val result = execute(Configuration.gitCommand, "ls-files", "--others", "--exclude-standard")
-        return result.trim().split("\n")
+        return result.trim().lines()
             .filter { it.isNotBlank() }
             .map { Paths.get("$workingDirectory${File.separator}$it").absolutePathString() }
     }

@@ -44,6 +44,10 @@ data class BearerSecurityScheme(private val configuredToken: String? = null) : O
         return row.columnNames.any { it.equals(AUTHORIZATION, ignoreCase = true) }
     }
 
+    override fun isInRequest(request: HttpRequest, complete: Boolean): Boolean {
+        return request.hasHeader(AUTHORIZATION)
+    }
+
     private fun getAuthorizationHeaderValue(resolver: Resolver): String {
         return "Bearer " + (configuredToken ?: resolver.generate("HEADERS", AUTHORIZATION, StringPattern()).toStringLiteral())
     }

@@ -126,7 +126,7 @@ data class JSONObjectPattern(
         )
     }
 
-    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
+    override fun fillInTheBlanks(value: Value, resolver: Resolver, removeExtraKeys: Boolean): ReturnValue<Value> {
         val patternToConsider = when (val resolvedPattern = resolveToPattern(value, resolver, this)) {
             is ReturnFailure -> return resolvedPattern.cast()
             else -> (resolvedPattern.value as? JSONObjectPattern) ?: return when(resolver.isNegative) {
@@ -146,7 +146,8 @@ data class JSONObjectPattern(
 
         return fill(
             jsonPatternMap = patternToConsider.pattern, jsonValueMap = valueToConsider,
-            typeAlias = patternToConsider.typeAlias, resolver = resolver
+            typeAlias = patternToConsider.typeAlias, resolver = resolver,
+            removeExtraKeys = removeExtraKeys
         ).realise(
             hasValue = { valuesMap, _ -> HasValue(JSONObjectValue(valuesMap)) },
             orException = { e -> e.cast() }, orFailure = { f -> f.cast() }
@@ -562,8 +563,13 @@ fun fix(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, 
     .mapValues { (_, opt) -> opt.get() }
 }
 
-fun fill(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, resolver: Resolver, typeAlias: String?): ReturnValue<Map<String, Value>> {
-    val resolvedValuesMap = jsonValueMap.mapValues { (key, value) ->
+fun fill(jsonPatternMap: Map<String, Pattern>, jsonValueMap: Map<String, Value>, resolver: Resolver, typeAlias: String?, removeExtraKeys: Boolean = false): ReturnValue<Map<String, Value>> {
+    val adjustedValue = if (removeExtraKeys) {
+        val keysToRetain = jsonPatternMap.keys.map(::withoutOptionality)
+        jsonValueMap.filterKeys { it in keysToRetain }
+    } else jsonValueMap
+
+    val resolvedValuesMap = adjustedValue.mapValues { (key, value) ->
         val pattern = jsonPatternMap[key] ?: jsonPatternMap["$key?"] ?: return@mapValues when {
             resolver.findKeyErrorCheck.unexpectedKeyCheck is IgnoreUnexpectedKeys -> generateIfPatternToken(typeAlias, key, value, resolver)
             resolver.isNegative -> generateIfPatternToken(typeAlias, key, value, resolver)

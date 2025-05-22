@@ -24,8 +24,8 @@ data class DeferredPattern(
         return resolvePattern(resolver).addTypeAliasesToConcretePattern(concretePattern, resolver, null)
     }
 
-    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
-        return resolvePattern(resolver).fillInTheBlanks(value, resolver)
+    override fun fillInTheBlanks(value: Value, resolver: Resolver, removeExtraKeys: Boolean): ReturnValue<Value> {
+        return resolvePattern(resolver).fillInTheBlanks(value, resolver, removeExtraKeys)
     }
 
     override fun removeKeysNotPresentIn(keys: Set<String>, resolver: Resolver): Pattern {

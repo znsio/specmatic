@@ -184,7 +184,7 @@ class HttpQueryParamPatternTest {
 
     @Test
     @Tag(GENERATION)
-    fun `should create 2^n matchers on an empty Row`() {
+    fun `should not create 2^n matchers on an empty Row`() {
         val patterns = buildQueryPattern(URI("/pets?status=(string)&type=(string)"))
         val generatedPatterns = patterns.newBasedOn(Row(), Resolver()).toList().map { it.value.queryPatterns }
         assertThat(generatedPatterns).containsExactlyInAnyOrder(

@@ -41,7 +41,7 @@ object NoBodyPattern : Pattern {
         return Result.Failure("Expected no body, but found ${otherPattern.typeName}")
     }
 
-    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
+    override fun fillInTheBlanks(value: Value, resolver: Resolver, removeExtraKeys: Boolean): ReturnValue<Value> {
         return runCatching { parse(value.toStringLiteral(), resolver) }.map(::HasValue).getOrElse(::HasException)
     }
 

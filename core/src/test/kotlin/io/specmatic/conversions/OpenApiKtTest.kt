@@ -1317,9 +1317,8 @@ Background:
         printMap("Tests Executed", flags.mapValues { it.toString() })
 
         assertThat(flags["/pets POST executed"]).isEqualTo(1)
-        //assertThat(flags["/pets GET executed"]).isEqualTo(24)
-        assertThat(flags["/pets GET executed"]).isEqualTo(36)
-        assertThat(flags["/petIds GET executed"]).isEqualTo(4)
+        assertThat(flags["/pets GET executed"]).isEqualTo(5)
+        assertThat(flags["/petIds GET executed"]).isEqualTo(2)
         assertThat(flags["/pets/0 GET executed"]).isEqualTo(1)
         assertThat(flags.keys.filter { it.matches(Regex("""/pets/\d+ GET executed""")) }.size).isEqualTo(2)
         assertThat(flags.keys.any { it.matches(Regex("""/pets/\d+ DELETE executed""")) }).isNotNull
@@ -2550,13 +2549,7 @@ components:
             }
         }
 
-        val messageToCheck = exception.message?.trimmedLinesString()?.let {
-            if(runningOnWindows())
-                it.replace("<EOL><EOL>", "<EOL>")
-            else
-                it
-        }
-        assertThat(messageToCheck).isEqualTo(
+        assertThat(exception.message?.trimmedLinesString()).isEqualTo(
             """400 Bad Request: "In scenario "POST /users.
             | Response: Details of the new user to register"<EOL>API: POST /users -> 201<EOL><EOL>
             |  >> REQUEST.BODY.email<EOL>  <EOL>

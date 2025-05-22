@@ -91,8 +91,8 @@ You can filter tests based on the following keys:
 - `PATH`: Request paths (e.g., /users, /product)
 - `STATUS`: HTTP response status codes (e.g., 200, 400)
 - `HEADERS`: Request headers (e.g., Accept, X-Request-ID)
-- `QUERY-PARAM`: Query parameters (e.g., status, productId)
-- `EXAMPLE-NAME`: Example name (e.g., create-product, active-status)
+- `QUERY`: Query parameters name (e.g., status, productId)
+- `EXAMPLE_NAME`: Example name (e.g., create-product, active-status)
 
 To specify multiple values for the same filter, separate them with commas. 
 For example, to filter by HTTP methods: 

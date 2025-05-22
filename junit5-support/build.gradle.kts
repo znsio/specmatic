@@ -13,7 +13,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("org.assertj:assertj-core:3.27.3")
     implementation("org.junit.jupiter:junit-jupiter-api:5.11.4")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.3")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.19.0")
     implementation("org.thymeleaf:thymeleaf:3.1.3.RELEASE")
 
     implementation("io.ktor:ktor-client-core-jvm:2.3.13")
@@ -22,5 +22,5 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.11.4")
     implementation("org.junit.platform:junit-platform-launcher:1.11.4")
     implementation("org.junit.platform:junit-platform-reporting:1.11.4")
-    implementation("org.fusesource.jansi:jansi:2.4.1")
+    implementation("org.fusesource.jansi:jansi:2.4.2")
 }

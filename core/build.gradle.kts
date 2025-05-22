@@ -20,7 +20,7 @@ dependencies {
     implementation("io.ktor:ktor-server-double-receive:2.3.13")
     implementation("io.ktor:ktor-server-content-negotiation:2.3.13")
     implementation("io.ktor:ktor-serialization-jackson:2.3.13")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.3")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.19.0")
     implementation("com.jayway.jsonpath:json-path:2.9.0")
 
 
@@ -28,14 +28,14 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.25")
     implementation("org.eclipse.jgit:org.eclipse.jgit:7.0.0.202409031743-r")
     implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.apache:7.0.0.202409031743-r")
-    implementation("com.fasterxml.jackson.core:jackson-core:2.18.3")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.3")
+    implementation("com.fasterxml.jackson.core:jackson-core:2.19.0")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.19.0")
 
     implementation("com.flipkart.zjsonpatch:zjsonpatch:0.4.16")
 
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.3")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.19.0")
 
-    implementation("io.swagger.parser.v3:swagger-parser:2.1.24")
+    implementation("io.swagger.parser.v3:swagger-parser:2.1.27")
 
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.4")
     implementation("com.github.mifmif:generex:1.0.2")

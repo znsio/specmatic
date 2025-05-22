@@ -20,7 +20,7 @@ dependencies {
     implementation("io.ktor:ktor-network-tls:2.3.13")
     implementation("io.ktor:ktor-network-tls-certificates:2.3.13")
 
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.3")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.19.0")
 
     implementation("org.junit.platform:junit-platform-launcher:1.11.4")
     implementation("org.junit.platform:junit-platform-reporting:1.11.4")
@@ -34,7 +34,7 @@ dependencies {
     implementation(project(":junit5-support"))
 
     implementation("io.ktor:ktor-client-cio:2.3.13")
-    implementation("io.swagger.parser.v3:swagger-parser:2.1.24") {
+    implementation("io.swagger.parser.v3:swagger-parser:2.1.27") {
         exclude(group = "org.mozilla", module = "rhino")
     }
     implementation("org.mozilla:rhino:1.7.15")

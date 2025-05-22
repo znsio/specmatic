@@ -6,9 +6,13 @@ import io.specmatic.core.*
 import io.specmatic.core.SpecmaticConfig.Companion.getSecurityConfiguration
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
+import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.ignoreLog
 import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.*
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.Examples
+import io.specmatic.core.pattern.Row
+import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.utilities.*
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.getLongValue
@@ -35,7 +39,6 @@ import java.util.stream.Stream
 import javax.management.ObjectName
 import kotlin.streams.asStream
 
-
 interface ContractTestStatisticsMBean {
     fun testsExecuted(): Int
 }
@@ -49,6 +52,8 @@ data class API(val method: String, val path: String)
 
 @Execution(ExecutionMode.CONCURRENT)
 open class SpecmaticJUnitSupport {
+    private val testFilter = ScenarioMetadataFilter.from(readEnvVarOrProperty(FILTER, FILTER).orEmpty())
+
     companion object {
         const val CONTRACT_PATHS = "contractPaths"
         const val WORKING_DIRECTORY = "workingDirectory"
@@ -73,7 +78,6 @@ open class SpecmaticJUnitSupport {
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfig: SpecmaticConfig? = null
         var openApiCoverageReportInput: OpenApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
-        private val testFilter = ScenarioMetadataFilter.from(readEnvVarOrProperty(FILTER, FILTER).orEmpty())
 
         private val threads: Vector<String> = Vector<String>()
 
@@ -111,7 +115,7 @@ open class SpecmaticJUnitSupport {
 
         fun actuatorFromSwagger(testBaseURL: String, client: TestExecutor? = null): ActuatorSetupResult {
             val baseURL = Flags.getStringValue(SWAGGER_UI_BASEURL) ?: testBaseURL
-            val httpClient = client ?: HttpClient(baseURL, log = ignoreLog)
+            val httpClient = client ?: LegacyHttpClient(baseURL, log = ignoreLog)
 
             val request = HttpRequest(path = "/swagger/v1/swagger.yaml", method = "GET")
             val response = httpClient.execute(request)
@@ -135,7 +139,7 @@ open class SpecmaticJUnitSupport {
         fun queryActuator(): ActuatorSetupResult {
             val endpointsAPI: String = Flags.getStringValue(ENDPOINTS_API) ?: return ActuatorSetupResult.Failure
             val request = HttpRequest("GET")
-            val response = HttpClient(endpointsAPI, log = ignoreLog).execute(request)
+            val response = LegacyHttpClient(endpointsAPI, log = ignoreLog).execute(request)
 
             if (response.status != 200) {
                 logger.log("Failed to query actuator, status code: ${response.status}")
@@ -340,6 +344,12 @@ open class SpecmaticJUnitSupport {
 
         logger.newLine()
 
+        val log: (LogMessage) -> Unit = { logMessage ->
+            logger.log(logMessage)
+        }
+
+        val httpClient = HttpClient(testBaseURL, log = log, timeoutInMilliseconds = timeoutInMilliseconds)
+
         return testScenarios.map { contractTest ->
             DynamicTest.dynamicTest(contractTest.testDescription()) {
                 threads.add(Thread.currentThread().name)
@@ -347,7 +357,7 @@ open class SpecmaticJUnitSupport {
                 var testResult: Pair<Result, HttpResponse?>? = null
 
                 try {
-                    testResult = contractTest.runTest(testBaseURL, timeoutInMilliseconds)
+                    testResult = contractTest.runTest(httpClient)
                     val (result) = testResult
 
                     if (result is Result.Success && result.isPartialSuccess()) {
@@ -375,7 +385,7 @@ open class SpecmaticJUnitSupport {
                     }
                 }
             }
-        }.asStream()
+        }.asStream().onClose { httpClient.close() }
     }
 
     fun constructTestBaseURL(): String {
@@ -611,4 +621,3 @@ fun <T> selectTestsToRun(
 
     return filteredByNotName
 }
-

@@ -1,6 +1,8 @@
 package io.specmatic.core.filters
 
 import com.ezylang.evalex.Expression
+import io.specmatic.core.filters.ScenarioFilterTags.*
+
 
 data class ScenarioMetadata(
     val method: String,
@@ -12,11 +14,11 @@ data class ScenarioMetadata(
 ) {
     fun populateExpressionData(expression: Expression): Expression {
         return expression
-            .with(ScenarioFilterTags.METHOD.key, method)
-            .with(ScenarioFilterTags.PATH.key, path)
-            .with(ScenarioFilterTags.STATUS_CODE.key, statusCode.toString())
-            .with(ScenarioFilterTags.HEADER.key, header.joinToString(","))
-            .with(ScenarioFilterTags.QUERY.name, query.joinToString(","))
-            .with(ScenarioFilterTags.EXAMPLE_NAME.name, exampleName)
+            .with(METHOD.key, method)
+            .with(PATH.key, path)
+            .with(STATUS.key, statusCode.toString())
+            .with(HEADERS.key, header.joinToString(","))
+            .with(QUERY.key, query.joinToString(","))
+            .with(EXAMPLE_NAME.key, exampleName)
     }
 }

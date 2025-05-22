@@ -25,7 +25,7 @@ import io.specmatic.core.value.XMLValue
 import io.specmatic.core.value.toXMLNode
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stubResponse
-import io.specmatic.test.HttpClient
+import io.specmatic.test.LegacyHttpClient
 import io.specmatic.trimmedLinesList
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
@@ -33,11 +33,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.json.JSONObject
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledOnOs
 import org.junit.jupiter.api.condition.OS
@@ -645,7 +641,7 @@ Feature: POST API
 
     private fun invokeStub(i: Int, stub: HttpStub): HttpResponse {
         val request = HttpRequest(method = "POST", path = "/", formFields = mapOf("Data" to """{"number": $i}"""))
-        val client = HttpClient(stub.endPoint)
+        val client = LegacyHttpClient(stub.endPoint)
         return client.execute(request)
     }
 
@@ -666,7 +662,7 @@ Feature: POST API
     }
     """.trimIndent()
 
-        val client = HttpClient(stub.endPoint, log = ::consoleLog)
+        val client = LegacyHttpClient(stub.endPoint, log = ::consoleLog)
         val request = HttpRequest("POST", path = "/_specmatic/expectations", body = parsedValue(stubInfo))
         val response = client.execute(request)
 

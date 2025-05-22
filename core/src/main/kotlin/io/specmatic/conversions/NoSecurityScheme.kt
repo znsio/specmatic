@@ -38,4 +38,8 @@ class NoSecurityScheme : OpenAPISecurityScheme {
     override fun isInRow(row: Row): Boolean {
         return false
     }
+
+    override fun isInRequest(request: HttpRequest, complete: Boolean): Boolean {
+        return false
+    }
 }

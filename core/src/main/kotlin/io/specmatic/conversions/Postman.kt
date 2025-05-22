@@ -8,7 +8,7 @@ import io.specmatic.core.utilities.parseXML
 import io.specmatic.core.value.*
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.core.log.dontPrintToConsole
-import io.specmatic.test.HttpClient
+import io.specmatic.test.LegacyHttpClient
 import java.net.URI
 import java.net.URL
 
@@ -37,7 +37,7 @@ fun runTests(contract: ImportedPostmanContracts) {
     logger.log("Testing contract \"$name\" with base URL ${baseURLInfo.originalBaseURL}")
     try {
         val feature = parseGherkinStringToFeature(gherkin)
-        val results = feature.executeTests(HttpClient(baseURL = baseURLInfo.originalBaseURL))
+        val results = feature.executeTests(LegacyHttpClient(baseURL = baseURLInfo.originalBaseURL))
 
         logger.log("Test result for contract \"$name\" ###")
         val resultReport = "${results.report(PATH_NOT_RECOGNIZED_ERROR).trim()}\n\n".trim()
@@ -102,7 +102,7 @@ private fun baseNamedStub(request: JSONObjectValue, scenarioName: String): List<
         val (baseURL, httpRequest) = postmanItemRequest(request)
 
         logger.log("  Using base url $baseURL")
-        val response = HttpClient(baseURL, log = dontPrintToConsole).execute(httpRequest)
+        val response = LegacyHttpClient(baseURL, log = dontPrintToConsole).execute(httpRequest)
 
         listOf(Pair(hostAndPort(baseURL), NamedStub(scenarioName, ScenarioStub(
             httpRequest,

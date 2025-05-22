@@ -82,7 +82,7 @@ data class Scenario(
     val statusInDescription: String = httpResponsePattern.status.toString(),
     val disambiguate: () -> String = { "" },
     val descriptionFromPlugin: String? = null,
-    val dictionary: Map<String, Value> = emptyMap(),
+    val dictionary: Dictionary = Dictionary.empty(),
     val attributeSelectionPattern: AttributeSelectionPatternDetails = AttributeSelectionPatternDetails.default,
     val exampleRow: Row? = null
 ): ScenarioDetailsForResult, HasScenarioMetadata {

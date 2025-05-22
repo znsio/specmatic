@@ -1,7 +1,5 @@
 package io.specmatic.core
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.mockk.every
 import io.mockk.mockk
 import io.specmatic.conversions.OpenApiSpecification
@@ -2676,17 +2674,16 @@ paths:
         }
         """.trimIndent()
         val dictionary = """
-        {
-            "ExampleRequest.name": "John Doe",
-            "ExampleRequest.age": 999,
-            "ExampleRequest.isEligible": false
-        }
+        ExampleRequest:
+          name: John Doe
+          age: 999
+          isEligible: false
         """.trimIndent()
 
         val apiSpecFile = tempDir.resolve("api.yaml").apply { writeText(apiSpecification) }
         val examplesDir = tempDir.resolve("api_examples").apply { mkdirs() }
         val exampleFile = examplesDir.resolve("example.json").apply { writeText(example) }
-        tempDir.resolve("api_dictionary.json").apply { writeText(dictionary) }
+        tempDir.resolve("api_dictionary.yaml").apply { writeText(dictionary) }
 
         Flags.using(
             Flags.SPECMATIC_GENERATIVE_TESTS to "true"
@@ -2782,17 +2779,16 @@ paths:
         }
         """.trimIndent()
         val dictionary = """
-        {
-            "ExampleRequest.name": "John Doe",
-            "ExampleRequest.age": 999,
-            "ExampleRequest.isEligible": false
-        }
+        ExampleRequest:
+          name: John Doe
+          age: 999
+          isEligible: false
         """.trimIndent()
 
         val apiSpecFile = tempDir.resolve("api.yaml").apply { writeText(apiSpecification) }
         val examplesDir = tempDir.resolve("api_examples").apply { mkdirs() }
         val exampleFile = examplesDir.resolve("example.json").apply { writeText(example) }
-        tempDir.resolve("api_dictionary.json").apply { writeText(dictionary) }
+        tempDir.resolve("api_dictionary.yaml").apply { writeText(dictionary) }
 
         val feature = parseContractFileToFeature(apiSpecFile)
         val contractTest = feature.createContractTestFromExampleFile(exampleFile.canonicalPath).value

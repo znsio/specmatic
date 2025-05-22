@@ -1,3 +1,5 @@
 {
-  "Person.address": "22B Baker Street"
+  "Person": {
+    "address": "22B Baker Street"
+  }
 }

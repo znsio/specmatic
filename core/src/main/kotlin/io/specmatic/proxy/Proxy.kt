@@ -25,7 +25,7 @@ import io.specmatic.stub.httpRequestLog
 import io.specmatic.stub.httpResponseLog
 import io.specmatic.stub.ktorHttpRequestToHttpRequest
 import io.specmatic.stub.respondToKtorHttpResponse
-import io.specmatic.test.HttpClient
+import io.specmatic.test.LegacyHttpClient
 import io.swagger.v3.core.util.Yaml
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -69,7 +69,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                         }
 
                         else -> try {
-                            val client = HttpClient(proxyURL(httpRequest, baseURL), timeoutInMilliseconds = timeoutInMilliseconds)
+                            val client = LegacyHttpClient(proxyURL(httpRequest, baseURL), timeoutInMilliseconds = timeoutInMilliseconds)
 
                             val requestToSend = targetHost?.let {
                                 httpRequest.withHost(targetHost)

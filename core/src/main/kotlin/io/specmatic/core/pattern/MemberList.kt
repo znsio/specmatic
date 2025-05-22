@@ -39,4 +39,6 @@ data class MemberList(private val finiteList: List<Pattern>, private val rest: P
     }
 
     fun isEndless(): Boolean = rest != null
+
+    fun patternList(): List<Pattern> = rest?.let { finiteList.plus(it) } ?: finiteList
 }

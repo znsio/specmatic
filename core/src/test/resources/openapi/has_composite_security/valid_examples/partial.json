@@ -1,0 +1,22 @@
+{
+    "http-request": {
+        "path": "/partial",
+        "method": "POST",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "body": {
+            "message": "Hello to Partial"
+        }
+    },
+    "http-response": {
+        "status": 200,
+        "body": {
+            "message": "Hello from Partial"
+        },
+        "status-text": "OK",
+        "headers": {
+            "Content-Type": "application/json"
+        }
+    }
+}

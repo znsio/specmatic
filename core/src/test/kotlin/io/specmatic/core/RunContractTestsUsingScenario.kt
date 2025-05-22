@@ -731,7 +731,7 @@ paths:
     @ParameterizedTest
     @MethodSource("io.specmatic.core.ScenarioTest#securitySchemaProvider")
     fun `should use security schema values from examples when provided`(securitySchema: OpenAPISecurityScheme) {
-        val request = securitySchema.addTo(HttpRequest("POST", "/"))
+        val exampleRequest = securitySchema.addTo(HttpRequest("POST", "/"))
         val scenario = Scenario(
             name = "SIMPLE POST",
             httpRequestPattern = HttpRequestPattern(
@@ -742,7 +742,7 @@ paths:
             examples = listOf(
                 Examples(
                     emptyList(),
-                    listOf(Row(requestExample = request))
+                    listOf(Row(requestExample = exampleRequest))
                 )
             )
         )
@@ -771,7 +771,7 @@ paths:
                     }
                     assertThat(schemesToCheck).allSatisfy {
                         val actualValue = extractValue(request)
-                        val expectedValue = extractValue(request)
+                        val expectedValue = extractValue(exampleRequest)
                         assertThat(actualValue).isEqualTo(expectedValue)
                     }
                 }

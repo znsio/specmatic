@@ -963,16 +963,27 @@ class OpenApiSpecification(
         }
     }
 
-    private fun parseOperationSecuritySchemas(operation: Operation, getSecurityScheme: (name: String) -> OpenAPISecurityScheme): List<OpenAPISecurityScheme> {
+    private fun parseOperationSecuritySchemas(
+        operation: Operation,
+        method: String,
+        path: String,
+        securitySchemeComponents: Map<String, OpenAPISecurityScheme>
+    ): List<OpenAPISecurityScheme> {
         logger.debug("Associating security schemes")
         val securitySchemes = operation.security ?: parsedOpenApi.security
         if (securitySchemes.isNullOrEmpty()) return listOf(NoSecurityScheme())
+
+        fun getSecurityScheme(name: String): OpenAPISecurityScheme {
+            val scheme = securitySchemeComponents[name]
+                ?: throw ContractException("Security scheme $name not found in $method $path")
+            return scheme
+        }
 
         return securitySchemes.map {
             when (it.keys.size) {
                 0 -> NoSecurityScheme()
                 1 -> getSecurityScheme(it.keys.single())
-                else -> CompositeSecurityScheme(it.keys.map(getSecurityScheme))
+                else -> CompositeSecurityScheme(it.keys.map(::getSecurityScheme))
             }
         }
     }
@@ -987,15 +998,11 @@ class OpenApiSpecification(
         logger.debug("Processing requests for $httpMethod")
 
         val securitySchemeEntries = parsedOpenApi.components?.securitySchemes.orEmpty()
-        val securitySchemes = securitySchemeEntries.entries.associate { (schemeName, scheme) ->
+        val securitySchemeComponents = securitySchemeEntries.entries.associate { (schemeName, scheme) ->
             schemeName to toSecurityScheme(schemeName, scheme)
         }
 
-        val securitySchemesForRequestPattern = parseOperationSecuritySchemas(operation) { name ->
-            securitySchemes[name] ?: throw ContractException(
-                "Security scheme used in $httpMethod ${httpPathPattern.path} does not exist in the spec"
-            )
-        }
+        val securitySchemesForRequestPattern = parseOperationSecuritySchemas(operation, httpMethod, httpPathPattern.path, securitySchemeComponents)
 
         val parameters = operation.parameters
 

@@ -3,7 +3,6 @@ package integration_tests
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.pattern.*
-import io.specmatic.core.utilities.jsonStringToValueMap
 import io.specmatic.core.value.*
 import io.specmatic.stub.*
 import io.specmatic.stub.createStubFromContracts
@@ -366,8 +365,12 @@ class DictionaryTest {
             "name": "(string)"
         }
         }""".trimIndent(), typeAlias = "(Test)")
-        val dictionary = mapOf(".name" to StringValue("Jane Doe"), "Test.name" to StringValue("John Doe")).let(Dictionary::from)
-
+        val dictionary = """
+        '*':
+          name: John Doe
+        Test:
+          name: John Doe
+        """.trimIndent().let(Dictionary::fromYaml)
         val resolver = Resolver(dictionary = dictionary)
         val generatedValue = pattern.generate(resolver) as JSONObjectValue
         val details = generatedValue.jsonObject["details"] as JSONObjectValue
@@ -376,7 +379,7 @@ class DictionaryTest {
         assertThat(details.jsonObject["name"]?.toStringLiteral()).isNotEqualTo("John Doe")
         assertThat(details.jsonObject["name"]?.toStringLiteral()).isNotEqualTo("Jane Doe")
     }
-    
+
     @Test
     fun `should fill-in partial values in an array when picking values from dictionary`() {
         val pattern = JSONObjectPattern(mapOf(
@@ -385,10 +388,12 @@ class DictionaryTest {
             ))
         ), typeAlias = "(Test)")
         val dictionary = parsedJSONObject("""{
-        "Test.details": [
-            [{"name": "John Doe"}],
-            [{"name": "Jane Doe", "email": "JaneDoe@mail.com"}]
-        ]
+        "Test": {
+            "details": [
+                [{"name": "John Doe"}],
+                [{"name": "Jane Doe", "email": "JaneDoe@mail.com"}]
+            ]
+        }
         }""".trimIndent()).jsonObject.let(Dictionary::from)
         val resolver = Resolver(dictionary = dictionary).partializeKeyCheck()
         val partialValue = parsedJSONObject("""{
@@ -420,7 +425,7 @@ class DictionaryTest {
     fun `should fill-in partial values in an scalar array when picking values from dictionary`() {
         val pattern = JSONObjectPattern(mapOf("numbers" to ListPattern(NumberPattern())), typeAlias = "(Test)")
         val dictionary = parsedJSONObject("""{
-        "Test.numbers": [ [123], [456] ] }
+        "Test": { "numbers": [ [123], [456] ] } }
         """.trimIndent()).jsonObject.let(Dictionary::from)
         val resolver = Resolver(dictionary = dictionary).partializeKeyCheck()
         val partialValue = parsedJSONObject("""{
@@ -613,10 +618,7 @@ class DictionaryTest {
 
         @Test
         fun `should randomly pick one of the dictionary values when generating`() {
-            val dictionary = jsonStringToValueMap("""{
-            "Schema.number": [10, 20, 30],
-            "Schema.string": ["a", "b", "c"]
-            }""".trimIndent()).let(Dictionary::from)
+            val dictionary = "Schema: { number: [10, 20, 30], string: [a, b, c] } ".let(Dictionary::fromYaml)
             val pattern = parsedPattern("""{
                 "number": "(number)",
                 "string": "(string)"
@@ -630,7 +632,7 @@ class DictionaryTest {
 
         @Test
         fun `should use the array value as is when pattern is an array and dictionary contains array level key`() {
-            val dictionary = jsonStringToValueMap("""{ "Schema.array": [10, 20, 30] }""".trimIndent()).let(Dictionary::from)
+            val dictionary = "Schema: { array: [10, 20, 30] }".let(Dictionary::fromYaml)
             val pattern = JSONObjectPattern(mapOf("array" to ListPattern(NumberPattern())), typeAlias = "(Schema)")
             val resolver = Resolver(dictionary = dictionary)
             val value = pattern.generate(resolver)
@@ -641,9 +643,7 @@ class DictionaryTest {
 
         @Test
         fun `should throw an exception when array key contains invalid value and pattern is an array`() {
-            val dictionary = jsonStringToValueMap("""{
-            "Schema.array": [1, "abc", 3]
-            }""".trimIndent()).let(Dictionary::from)
+            val dictionary = "Schema: { array: [1, abc, 3] }".let(Dictionary::fromYaml)
             val pattern = JSONObjectPattern(mapOf("array" to ListPattern(NumberPattern())), typeAlias = "(Schema)")
             val resolver = Resolver(dictionary = dictionary)
             val exception = assertThrows<ContractException> { pattern.generate(resolver) }
@@ -657,10 +657,10 @@ class DictionaryTest {
 
         @Test
         fun `should look for default dictionary values when schema key is missing`() {
-            val dictionary = jsonStringToValueMap("""{
-            "(number)": [1, 2, 3],
-            "(string)": ["a", "b", "c"]
-            }""".trimIndent()).let(Dictionary::from)
+            val dictionary = """
+            (number): [1, 2, 3]
+            (string): [a, b, c]
+            """.let(Dictionary::fromYaml)
             val pattern = parsedPattern("""{
             "numberKey": "(number)",
             "stringKey": "(string)"
@@ -674,10 +674,10 @@ class DictionaryTest {
         
         @Test
         fun `should pick up default value for complex pattern if exists in dictionary`() {
-            val dictionary = jsonStringToValueMap("""{
-            "(list of number)": [1, 2, 3],
-            "(list of email)": ["john@mail.com", "jane@mail.com", "bob@mail.com"]
-            }""".trimIndent()).let(Dictionary::from)
+            val dictionary = """
+            (list of number): [1, 2, 3]
+            (list of email): [john@mail.com, jane@mail.com, bob@mail.com]
+            """.let(Dictionary::fromYaml)
             val pattern = JSONObjectPattern(mapOf(
                 "numbers" to ListPattern(NumberPattern()),
                 "emails" to ListPattern(EmailPattern())
@@ -698,10 +698,10 @@ class DictionaryTest {
 
         @Test
         fun `should prioritise schema keys over default values in dictionary`() {
-            val dictionary = jsonStringToValueMap("""{
-            "Schema.number": [10, 20, 30],
-            "(number)": [1, 2, 3]
-            }""".trimIndent()).let(Dictionary::from)
+            val dictionary = """
+            (number): [1, 2, 3]
+            Schema: { number: [10, 20, 30] }
+            """.let(Dictionary::fromYaml)
             val pattern = parsedPattern("""{ "number": "(number)" }""".trimIndent(), typeAlias = "(Schema)")
             val resolver = Resolver(dictionary = dictionary)
             val value = pattern.generate(resolver) as JSONObjectValue
@@ -716,7 +716,7 @@ class DictionaryTest {
             @MethodSource("integration_tests.DictionaryTest#listPatternToSingleValueProvider")
             fun `should use the dictionary value as is when when pattern and value depth matches`(pattern: ListPattern, value: JSONArrayValue) {
                 val testPattern = JSONObjectPattern(mapOf("test" to pattern), typeAlias = "(Test)")
-                val resolver = Resolver(dictionary = mapOf("Test.test" to value).let(Dictionary::from))
+                val resolver = Resolver(dictionary = "Test: { test: $value }".let(Dictionary::fromYaml))
                 val generatedValue = resolver.generate(testPattern)
 
                 assertThat(generatedValue).isInstanceOf(JSONObjectValue::class.java); generatedValue as JSONObjectValue
@@ -727,7 +727,7 @@ class DictionaryTest {
             @MethodSource("integration_tests.DictionaryTest#listPatternToMultiValueProvider")
             fun `should pick random value from the dictionary when value depth is higher than pattern`(pattern: ListPattern, value: JSONArrayValue) {
                 val testPattern = JSONObjectPattern(mapOf("test" to pattern), typeAlias = "(Test)")
-                val resolver = Resolver(dictionary = mapOf("Test.test" to value).let(Dictionary::from))
+                val resolver = Resolver(dictionary = "Test: { test: $value }".let(Dictionary::fromYaml))
                 val generatedValue = resolver.generate(testPattern)
 
                 assertThat(generatedValue).isInstanceOf(JSONObjectValue::class.java); generatedValue as JSONObjectValue

@@ -380,10 +380,12 @@ Feature: Recursive test
             }
             """.trimIndent(), typeAlias = "(Test)")
             val pattern = ListPattern(innerPattern)
-            val patternDictionary = mapOf(
-                "Test.topLevelKey" to StringValue("Fixed"),
-                "Test.nested.nestedOptionalKey" to BooleanValue(booleanValue = true)
-            ).let(Dictionary::from)
+            val patternDictionary = """
+            Test:
+                topLevelKey: Fixed
+                nested:
+                    nestedOptionalKey: true
+            """.let(Dictionary::fromYaml)
 
             val invalidValue = parsedValue("""[
                 {
@@ -427,10 +429,12 @@ Feature: Recursive test
             }
             """.trimIndent(), typeAlias = "(Test)")
             val pattern = ListPattern(innerPattern)
-            val patternDictionary = mapOf(
-                "Test.topLevelKey" to StringValue("Fixed"),
-                "Test.nested.nestedKey" to StringValue("2025-01-01"),
-            ).let(Dictionary::from)
+            val patternDictionary = """
+            Test:
+                topLevelKey: Fixed
+                nested:
+                    nestedKey: 2025-01-01
+            """.let(Dictionary::fromYaml)
 
             val invalidValue = JSONObjectValue()
             val fixedValue = pattern.fixValue(invalidValue, Resolver(dictionary = patternDictionary))
@@ -456,10 +460,11 @@ Feature: Recursive test
                 "subList?": "(TestList)"
             }
             """.trimIndent(), typeAlias = "(Test)"), typeAlias = "(TestList)")
-            val patternDictionary = mapOf(
-                "Test.topLevelKey" to StringValue("Fixed"),
-                "Test.topLevelOptionalKey" to NumberValue(999)
-            ).let(Dictionary::from)
+            val patternDictionary = """
+            Test:
+                topLevelKey: Fixed
+                topLevelOptionalKey: 999
+            """.let(Dictionary::fromYaml)
 
             val value = parsedValue("""
             [
@@ -490,10 +495,11 @@ Feature: Recursive test
                 "subList": "(TestList)"
             }
             """.trimIndent(), typeAlias = "(Test)"), typeAlias = "(TestList)")
-            val patternDictionary = mapOf(
-                "Test.topLevelKey" to StringValue("Fixed"),
-                "Test.topLevelOptionalKey" to NumberValue(999)
-            ).let(Dictionary::from)
+            val patternDictionary = """
+            Test:
+                topLevelKey: Fixed
+                topLevelOptionalKey: 999
+            """.let(Dictionary::fromYaml)
 
             val value = parsedValue("""
             [
@@ -521,10 +527,11 @@ Feature: Recursive test
             }
             """.trimIndent(), typeAlias = "(Test)")
             val pattern = ListPattern(innerPattern)
-            val patternDictionary = mapOf(
-                "Test.topLevelKey" to StringValue("Fixed"),
-                "Test.topLevelOptionalKey" to NumberValue(10)
-            ).let(Dictionary::from)
+            val patternDictionary = """
+            Test:
+                topLevelKey: Fixed
+                topLevelOptionalKey: 10
+            """.let(Dictionary::fromYaml)
 
             val emptyList = parsedValue(LIST_BREAD_CRUMB)
             val fixedValue = pattern.fixValue(emptyList, Resolver(dictionary = patternDictionary).withAllPatternsAsMandatory())
@@ -553,10 +560,11 @@ Feature: Recursive test
                 "subList?": "(TestList)"
             }
             """.trimIndent(), typeAlias = "(Test)"), typeAlias = "(TestList)")
-            val patternDictionary = mapOf(
-                "Test.topLevelKey" to StringValue("Fixed"),
-                "Test.topLevelOptionalKey" to NumberValue(999)
-            ).let(Dictionary::from)
+            val patternDictionary = """
+            Test:
+                topLevelKey: Fixed
+                topLevelOptionalKey: 999
+            """.let(Dictionary::fromYaml)
 
             val value = parsedValue("""
             [
@@ -660,9 +668,7 @@ Feature: Recursive test
         fun `should fill in missing mandatory elements using dictionary`() {
             val listPattern = ListPattern(StringPattern())
             val jsonArray = JSONArrayValue(listOf(StringValue("(string)")))
-            val resolver = Resolver(
-                dictionary = mapOf("(string)" to StringValue("Value")).let(Dictionary::from)
-            )
+            val resolver = Resolver(dictionary = "(string): Value".let(Dictionary::fromYaml))
 
             val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
             assertThat(filledJsonArray.list).isEqualTo(listOf(StringValue("Value")))
@@ -687,7 +693,7 @@ Feature: Recursive test
         fun `should handle any-value pattern token as a special case`() {
             val listPattern = ListPattern(StringPattern())
             val jsonArray = JSONArrayValue(listOf(StringValue("(anyvalue)")))
-            val dictionary = mapOf("(string)" to StringValue("Value")).let(Dictionary::from)
+            val dictionary = "(string): Value".let(Dictionary::fromYaml)
             val resolver = Resolver(dictionary = dictionary)
 
             val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
@@ -699,7 +705,7 @@ Feature: Recursive test
             val listPattern = ListPattern(NumberPattern(), typeAlias = "(Test)")
             val jsonArray = StringValue("(Test)")
 
-            val dictionary = mapOf("(number)" to NumberValue(999)).let(Dictionary::from)
+            val dictionary = "(number): 999".let(Dictionary::fromYaml)
             val resolver = Resolver(dictionary = dictionary, newPatterns = mapOf("(Test)" to listPattern))
             val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
 
@@ -744,9 +750,7 @@ Feature: Recursive test
         fun `should generate if list is empty when allPatternsMandatory is set`() {
             val listPattern = ListPattern(StringPattern())
             val jsonArray = JSONArrayValue(emptyList())
-            val resolver = Resolver(
-                dictionary = mapOf("(string)" to StringValue("Value")).let(Dictionary::from)
-            ).withAllPatternsAsMandatory()
+            val resolver = Resolver(dictionary = "(string): Value".let(Dictionary::fromYaml)).withAllPatternsAsMandatory()
 
             val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
             assertThat(filledJsonArray.list).allSatisfy {
@@ -775,7 +779,7 @@ Feature: Recursive test
             val listPattern = ListPattern(NumberPattern(), typeAlias = "(Test)")
             val jsonArray = StringValue("(Test)")
 
-            val dictionary = mapOf("(number)" to NumberValue(999)).let(Dictionary::from)
+            val dictionary = "(number): 999".let(Dictionary::fromYaml)
             val resolver = Resolver(dictionary = dictionary, newPatterns = mapOf("(Test)" to listPattern), isNegative = true)
             val filledJsonArray = listPattern.fillInTheBlanks(jsonArray, resolver).value as JSONArrayValue
 

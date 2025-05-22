@@ -7,7 +7,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.specmatic.core.value.StringValue
 import io.specmatic.stub.HttpStub
-import io.specmatic.test.HttpClient
+import io.specmatic.test.LegacyHttpClient
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -32,7 +32,7 @@ class HttpClientTest {
             server.start(wait = false)
 
             val request = HttpRequest().updateMethod("GET").updatePath("/some/redirect")
-            val response = HttpClient("http://localhost:8080").execute(request)
+            val response = LegacyHttpClient("http://localhost:8080").execute(request)
             Assertions.assertEquals(302, response.status)
             Assertions.assertEquals("/newUrl", response.headers["Location"])
         } finally {
@@ -54,7 +54,7 @@ class HttpClientTest {
         val host = "localhost"
         val port = 8080
         val url = "http://localhost:$port"
-        val client = HttpClient(url)
+        val client = LegacyHttpClient(url)
         HttpStub(contractGherkin, emptyList(), host, port).use {
             val response = client.execute(request)
             Assertions.assertNotNull(response)
@@ -79,7 +79,7 @@ class HttpClientTest {
         val host = "localhost"
         val port = 8080
         val url = "http://localhost:$port"
-        val client = HttpClient(url)
+        val client = LegacyHttpClient(url)
 
         HttpStub(contractGherkin, emptyList(), host, port).use {
             client.setServerState(mapOf("server" to StringValue("state")))

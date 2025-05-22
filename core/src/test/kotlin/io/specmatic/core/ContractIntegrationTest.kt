@@ -1,7 +1,7 @@
 package io.specmatic.core
 
 import io.specmatic.core.pattern.parsedJSONObject
-import io.specmatic.test.HttpClient
+import io.specmatic.test.LegacyHttpClient
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -50,7 +50,7 @@ class ContractIntegrationTest {
             server.start(wait = false)
 
             val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
-            val results = contractBehaviour.executeTests(HttpClient("http://localhost:8080"))
+            val results = contractBehaviour.executeTests(LegacyHttpClient("http://localhost:8080"))
             assertThat(results.success()).withFailMessage(results.report()).isTrue()
         } finally {
             server.stop()

@@ -1,0 +1,99 @@
+openapi: '3.0.3'
+info:
+  title: Shadowed Paths
+  version: '1.0'
+servers:
+  - url: https://api.server.test/v1
+paths:
+  /test/{testId}:
+    post:
+      parameters:
+        - $ref: '#/components/parameters/testId'
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/IntObject'
+      responses:
+        '200':
+          description: OK
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/IntObject'
+  /test/latest:
+    post:
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/BoolObject'
+      responses:
+        '200':
+          description: OK
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/BoolObject'
+  /reports/{testId}/latest:
+    post:
+      parameters:
+        - $ref: '#/components/parameters/testId'
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/IntObject'
+      responses:
+        '200':
+          description: OK
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/IntObject'
+  /{testId}/reports/{reportId}:
+    post:
+      parameters:
+        - $ref: '#/components/parameters/reportId'
+        - $ref: '#/components/parameters/testId'
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/BoolObject'
+      responses:
+        '200':
+          description: OK
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/BoolObject'
+components:
+  parameters:
+    reportId:
+      name: reportId
+      in: path
+      required: true
+      schema:
+        type: string
+    testId:
+      name: testId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    IntObject:
+      type: object
+      properties:
+        value:
+          type: integer
+    BoolObject:
+      type: object
+      properties:
+        value:
+          type: boolean

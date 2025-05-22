@@ -47,13 +47,19 @@ internal class HttpRequestPatternKtTest {
         )
         val httpRequest = invalidateSecuritySchemes(HttpRequest("POST", "/"), securitySchema)
         val result = httpRequestPattern.matches(httpRequest, Resolver().disableOverrideUnexpectedKeycheck())
+        val report = result.reportString()
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).satisfiesAnyOf(
-            { assertThat(it).containsOnlyOnce(">> REQUEST.HEADERS.API-KEY") },
-            { assertThat(it).containsOnlyOnce(">> REQUEST.QUERY-PARAMS.API-KEY") },
-            { assertThat(it).containsOnlyOnce(">> REQUEST.HEADERS.Authorization") }
-        )
+        when(securitySchema) {
+            is APIKeyInHeaderSecurityScheme -> assertThat(report).containsOnlyOnce(">> REQUEST.HEADERS.API-KEY")
+            is APIKeyInQueryParamSecurityScheme -> assertThat(report).containsOnlyOnce(">> REQUEST.QUERY-PARAMS.API-KEY")
+            is BasicAuthSecurityScheme, is BearerSecurityScheme -> assertThat(report).containsOnlyOnce(">> REQUEST.HEADERS.Authorization")
+            is CompositeSecurityScheme -> assertThat(report).satisfies(
+                { assertThat(it).containsOnlyOnce(">> REQUEST.HEADERS.Authorization") },
+                { assertThat(it).containsOnlyOnce(">> REQUEST.QUERY-PARAMS.API-KEY") },
+            )
+            else -> throw RuntimeException("Unknown security scheme ${securitySchema::javaClass.name}")
+        }
     }
 
     @Nested
@@ -80,8 +86,11 @@ internal class HttpRequestPatternKtTest {
 
     companion object {
         private fun invalidateSecuritySchemes(request: HttpRequest, scheme: OpenAPISecurityScheme): HttpRequest {
-            if (scheme !is BasicAuthSecurityScheme && scheme !is BearerSecurityScheme) return request
-            return request.copy(headers = request.headers.plus(AUTHORIZATION to "INVALID"))
+            return when (scheme) {
+                is CompositeSecurityScheme -> scheme.schemes.fold(request) { req, it -> invalidateSecuritySchemes(req, it) }
+                is BasicAuthSecurityScheme, is BearerSecurityScheme -> request.copy(headers = request.headers.plus(AUTHORIZATION to "INVALID"))
+                else -> request
+            }
         }
     }
 }

@@ -1,0 +1,25 @@
+{
+    "http-request": {
+        "path": "/secure",
+        "method": "POST",
+        "query": {
+            "apiKey": "123"
+        },
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "body": {
+            "message": "Hello to Secure"
+        }
+    },
+    "http-response": {
+        "status": 200,
+        "body": {
+            "message": "Hello from Secure"
+        },
+        "status-text": "OK",
+        "headers": {
+            "Content-Type": "application/json"
+        }
+    }
+}

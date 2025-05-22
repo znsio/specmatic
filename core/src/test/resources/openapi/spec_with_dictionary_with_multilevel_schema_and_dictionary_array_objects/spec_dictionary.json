@@ -1,3 +1,11 @@
 {
-  "Person.details.addresses[*].street": "22B Baker Street"
+  "Person": {
+    "details": {
+      "addresses": [
+        {
+          "street": "22B Baker Street"
+        }
+      ]
+    }
+  }
 }

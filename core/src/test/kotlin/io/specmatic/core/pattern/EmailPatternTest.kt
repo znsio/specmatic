@@ -2,10 +2,7 @@ package io.specmatic.core.pattern
 
 import io.specmatic.GENERATION
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.EXAMPLES_DIR_SUFFIX
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.Resolver
-import io.specmatic.core.Result
+import io.specmatic.core.*
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
 import io.specmatic.core.value.*
@@ -117,7 +114,8 @@ class EmailPatternTest {
     @Test
     fun `should be able to fix invalid values`() {
         val pattern = JSONObjectPattern(mapOf("email" to EmailPattern()), typeAlias = "(Test)")
-        val resolver = Resolver(dictionary = mapOf("Test.email" to StringValue("SomeDude@example.com")))
+        val dictionary = "Test: { email: SomeDude@example.com }".let(Dictionary::fromYaml)
+        val resolver = Resolver(dictionary = dictionary)
         val invalidValues = listOf(
             StringValue("Unknown"),
             NumberValue(999),

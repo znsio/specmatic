@@ -6,8 +6,15 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
+import com.fasterxml.jackson.databind.DatabindException
+import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.exc.IgnoredPropertyException
+import com.fasterxml.jackson.databind.exc.InvalidFormatException
+import com.fasterxml.jackson.databind.exc.InvalidNullException
+import com.fasterxml.jackson.databind.exc.MismatchedInputException
+import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.SourceProvider.filesystem
 import io.specmatic.core.SourceProvider.git
@@ -969,16 +976,89 @@ fun loadSpecmaticConfigOrDefault(configFileName: String? = null): SpecmaticConfi
 
 fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
     val configFile = File(configFileName ?: configFilePath)
+
     if (!configFile.exists()) {
         throw ContractException("Could not find the Specmatic configuration at path ${configFile.canonicalPath}")
     }
+
     try {
         return configFile.toSpecmaticConfig()
-    } catch(e: LinkageError) {
-        logger.log(e, "A dependency version conflict has been detected. If you are using Spring in a maven project, a common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.")
-        throw e
+    } catch(e: DatabindException) {
+        throw Exception(configErrorMessage(e))
     } catch (e: Throwable) {
-        logger.log(e, "Your configuration file may have some missing configuration sections. Please ensure that the ${configFile.path} file adheres to the schema described at: https://specmatic.io/documentation/specmatic_json.html")
-        throw Exception("Your configuration file may have some missing configuration sections. Please ensure that the ${configFile.path} file adheres to the schema described at: https://specmatic.io/documentation/specmatic_json.html", e)
+        throw Exception("Error parsing config: ${e.message}")
     }
 }
+
+fun configErrorMessage(e: DatabindException): String {
+    val location = if(e.location?.lineNr != null && e.location?.columnNr != null) {
+        " (line ${e.location.lineNr}, column ${e.location.columnNr})"
+    } else {
+        ""
+    }
+
+    val errorPrefix = "Error parsing config$location"
+
+    return when (e) {
+        is InvalidNullException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            "$errorPrefix: $fieldPath must not be null, but found null."
+        }
+
+        is InvalidFormatException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            val actualValueClause = e.value?.let { " ($it is invalid)" }
+            "$errorPrefix: $fieldPath accepts ${expectedType(e)}$actualValueClause"
+        }
+
+        is IgnoredPropertyException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            "$errorPrefix: $fieldPath is not a valid property in the configuration file."
+        }
+
+        is UnrecognizedPropertyException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            val knownProperties = e.knownPropertyIds.joinToString(", ")
+            "$errorPrefix: $fieldPath is not a valid property in the configuration file. Known properties are: $knownProperties."
+        }
+
+        is MismatchedInputException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            "$errorPrefix: $fieldPath accepts ${expectedType(e)}"
+        }
+
+        is JsonMappingException -> {
+            val path = e.path
+            val fieldPath = readablePath(path)
+            "$errorPrefix at $fieldPath: ${e.originalMessage}"
+        }
+
+        else -> {
+            "$errorPrefix: ${e.originalMessage}"
+        }
+    }
+}
+
+private fun expectedType(e: MismatchedInputException): String {
+    val targetType = e.targetType ?: return "an object"
+
+    return if (targetType.isEnum) {
+        "one of the following: ${targetType.enumConstants.orEmpty().joinToString(", ") { it.toString() }}"
+    } else if (targetType.isPrimitive) {
+        targetType.simpleName.orEmpty().lowercase()
+    } else if(targetType.genericSuperclass in listOf(java.lang.Number::class.java, java.lang.String::class.java, java.lang.Boolean::class.java)) {
+        targetType.simpleName.orEmpty().lowercase()
+    } else if (targetType.simpleName == "ArrayList") {
+        "a list"
+    } else {
+        "an object"
+    }
+}
+
+private fun readablePath(path: MutableList<JsonMappingException.Reference>) =
+    path.joinToString(".") { it.fieldName ?: "[${it.index}]" }.replace(".[", "[")

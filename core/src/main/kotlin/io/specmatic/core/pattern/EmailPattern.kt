@@ -35,7 +35,7 @@ class EmailPattern (private val stringPatternDelegate: StringPattern) :
         }
     }
 
-    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
+    override fun fillInTheBlanks(value: Value, resolver: Resolver, removeExtraKeys: Boolean): ReturnValue<Value> {
         return fillInTheBlanksWithPattern(value, resolver, this)
     }
 

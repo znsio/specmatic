@@ -110,13 +110,36 @@ data class HttpRequestPattern(
 
     private fun matchSecurityScheme(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver, failures) = parameters
-
-        val (modifiedHttpRequest, results) = securitySchemes.fold(Pair(httpRequest, emptyList<Result>())) { (request, results), securityScheme ->
-            securityScheme.removeParam(request) to results.plus(securityScheme.matches(request, resolver))
+        val (modifiedHttpRequest, results) = securitySchemes.fold(
+            initial = Pair(httpRequest, emptyList<SecurityMatch>())
+        ) { (request, results), securityScheme ->
+            securityScheme.removeParam(request) to results.plus(
+                SecurityMatch(
+                    presence = when {
+                        securityScheme.isInRequest(httpRequest, complete = true) -> SchemePresence.FULL
+                        securityScheme.isInRequest(httpRequest, complete = false) -> SchemePresence.PARTIAL
+                        else -> SchemePresence.ABSENT
+                    },
+                    result = securityScheme.matches(httpRequest, resolver)
+                )
+            )
         }
 
-        val hasSuccess = results.any { it is Success }
-        val newFailures = if (hasSuccess) emptyList() else results.filterIsInstance<Failure>()
+        SchemePresence.entries.forEach { presence ->
+            val presenceResults = results.filter { it.presence == presence }.map { it.result }
+            val presencesSuccess = presenceResults.filterIsInstance<Success>()
+            val presenceFailures = presenceResults.filterIsInstance<Failure>()
+
+            if (presencesSuccess.isNotEmpty()) {
+                return MatchSuccess(Triple(modifiedHttpRequest, resolver, failures.plus(presenceFailures)))
+            }
+
+            if (presenceFailures.isNotEmpty()) {
+                return MatchSuccess(Triple(modifiedHttpRequest, resolver, failures.plus(presenceFailures)))
+            }
+        }
+
+        val newFailures = results.map { it.result }.filterIsInstance<Failure>()
         return MatchSuccess(Triple(modifiedHttpRequest, resolver, failures.plus(newFailures)))
     }
 
@@ -598,9 +621,9 @@ data class HttpRequestPattern(
                         row,
                         resolver,
                         shouldGenerateMandatoryEntryIfMissing(resolver, status)
-                    )
-                }.map { pattern ->
-                    pattern.ifValue { HttpQueryParamPattern(pattern.value) }
+                    ).map { pattern ->
+                        pattern.ifValue { HttpQueryParamPattern(pattern.value) }
+                    }
                 }
             }
 
@@ -718,7 +741,7 @@ data class HttpRequestPattern(
                 newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }
             } ?: sequenceOf<HttpPathPattern?>(null)
 
-            val newQueryParamsPatterns = httpQueryParamPattern.newBasedOn(resolver).map { HttpQueryParamPattern(it) }
+            val newQueryParamsPatterns = httpQueryParamPattern.newBasedOn(resolver)
             val newBodies = attempt(breadCrumb = "BODY") {
                 resolver.withCyclePrevention(body) { cyclePreventedResolver ->
                     body.newBasedOn(cyclePreventedResolver)
@@ -769,8 +792,7 @@ data class HttpRequestPattern(
                         .map { it.ifValue { HttpPathPattern(it, httpPathPattern.path) } }
                 } ?: sequenceOf(null)
 
-            val newQueryParamsPatterns =
-                httpQueryParamPattern.negativeBasedOn(row, resolver).map { it.ifValue { HttpQueryParamPattern(it) } }
+            val newQueryParamsPatterns = httpQueryParamPattern.negativeBasedOn(row, resolver)
 
             val newBodies: Sequence<ReturnValue<out Pattern>> = returnValue(breadCrumb = "BODY") returnNewBodies@ {
                 val rawRequestBody = row.getFieldOrNull(REQUEST_BODY_FIELD) ?: return@returnNewBodies body.negativeBasedOn(row, resolver)
@@ -939,6 +961,9 @@ data class HttpRequestPattern(
         }
     }
 }
+
+private enum class SchemePresence { FULL, PARTIAL, ABSENT }
+private data class SecurityMatch(val presence: SchemePresence, val result: Result)
 
 fun missingParam(missingValue: String): ContractException {
     return ContractException("$missingValue is missing. Can't generate the contract test.")

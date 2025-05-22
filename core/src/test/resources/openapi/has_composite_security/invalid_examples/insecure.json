@@ -1,0 +1,26 @@
+{
+    "http-request": {
+        "path": "/insecure",
+        "method": "POST",
+        "query": {
+            "apiKey": "1234"
+        },
+        "headers": {
+            "Authorization": "Bearer API-SECRET",
+            "Content-Type": "application/json"
+        },
+        "body": {
+            "message": "Hello to Insecure"
+        }
+    },
+    "http-response": {
+        "status": 200,
+        "body": {
+            "message": "Hello from Insecure"
+        },
+        "status-text": "OK",
+        "headers": {
+            "Content-Type": "application/json"
+        }
+    }
+}

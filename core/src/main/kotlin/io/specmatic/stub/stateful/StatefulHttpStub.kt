@@ -5,9 +5,7 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.cors.*
 import io.ktor.server.plugins.cors.CORS
-import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -44,7 +42,7 @@ import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.*
 import io.specmatic.stub.stateful.StubCache.Companion.idValueFor
 import io.specmatic.test.ExampleProcessor
-import io.specmatic.test.HttpClient
+import io.specmatic.test.LegacyHttpClient
 import java.io.File
 
 const val DEFAULT_ACCEPTED_RESPONSE_QUERY_ENDPOINT = "/monitor"
@@ -149,7 +147,7 @@ class StatefulHttpStub(
         server.start()
     }
 
-    override val client = HttpClient(endPointFromHostAndPort(host, port, null))
+    override val client = LegacyHttpClient(endPointFromHostAndPort(host, port, null))
 
     override fun setExpectation(json: String) {
         return

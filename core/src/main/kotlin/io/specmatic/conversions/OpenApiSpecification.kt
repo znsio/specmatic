@@ -49,8 +49,6 @@ const val SERVICE_TYPE_HTTP = "HTTP"
 const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"
 const val testDirectoryProperty = "specmaticTestsDirectory"
 
-const val NO_SECURITY_SCHEMA_IN_SPECIFICATION = "NO-SECURITY-SCHEME-IN-SPECIFICATION"
-
 var missingRequestExampleErrorMessageForTest: String = "WARNING: Ignoring response example named %s for test or stub data, because no associated request example named %s was found."
 var missingResponseExampleErrorMessageForTest: String = "WARNING: Ignoring request example named %s for test or stub data, because no associated response example named %s was found."
 
@@ -71,7 +69,7 @@ class OpenApiSpecification(
     private val specificationPath: String? = null,
     private val securityConfiguration: SecurityConfiguration? = null,
     private val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-    private val dictionary: Map<String, Value> = loadDictionary(openApiFilePath, specmaticConfig.getStubDictionary()),
+    private val dictionary: Dictionary = loadDictionary(openApiFilePath, specmaticConfig.getStubDictionary()),
     private val strictMode: Boolean = false
 ) : IncludedSpecification, ApiSpecification {
     init {
@@ -169,29 +167,9 @@ class OpenApiSpecification(
             )
         }
 
-        fun loadDictionary(openApiFilePath: String, dictionaryPathFromConfig: String?): Map<String, Value> {
-            val dictionaryFile = getDictionaryFile(File(openApiFilePath), dictionaryPathFromConfig) ?: return emptyMap()
-
-            if (!dictionaryFile.exists()) throw ContractException(
-                breadCrumb = dictionaryFile.path,
-                errorMessage = "Expected dictionary file at ${dictionaryFile.path}, but it does not exist"
-            )
-
-            if (!dictionaryFile.isFile) throw ContractException(
-                breadCrumb = dictionaryFile.path,
-                errorMessage = "Expected dictionary file at ${dictionaryFile.path} to be a file"
-            )
-
-            return runCatching {
-                logger.log("Using dictionary file ${dictionaryFile.path}")
-                readValueAs<JSONObjectValue>(dictionaryFile).jsonObject
-            }.getOrElse { e ->
-                logger.debug(e)
-                throw ContractException(
-                    breadCrumb = dictionaryFile.path,
-                    errorMessage = "Could not parse dictionary file ${dictionaryFile.path}, it must be a valid JSON/YAML object"
-                )
-            }
+        fun loadDictionary(openApiFilePath: String, dictionaryPathFromConfig: String?): Dictionary {
+            val dictionaryFile = getDictionaryFile(File(openApiFilePath), dictionaryPathFromConfig)
+            return if (dictionaryFile != null) Dictionary.from(dictionaryFile) else Dictionary.empty()
         }
 
         private fun getDictionaryFile(openApiFile: File, dictionaryPathFromConfig: String?): File? {
@@ -231,6 +209,8 @@ class OpenApiSpecification(
     }
 
     val patterns = mutableMapOf<String, Pattern>()
+
+    private val pathTree: PathTree = PathTree.from(parsedOpenApi.paths.orEmpty())
 
     fun isOpenAPI31(): Boolean {
         return parsedOpenApi.openapi.startsWith("3.1")
@@ -963,6 +943,31 @@ class OpenApiSpecification(
         }
     }
 
+    private fun parseOperationSecuritySchemas(
+        operation: Operation,
+        method: String,
+        path: String,
+        securitySchemeComponents: Map<String, OpenAPISecurityScheme>
+    ): List<OpenAPISecurityScheme> {
+        logger.debug("Associating security schemes")
+        val securitySchemes = operation.security ?: parsedOpenApi.security
+        if (securitySchemes.isNullOrEmpty()) return listOf(NoSecurityScheme())
+
+        fun getSecurityScheme(name: String): OpenAPISecurityScheme {
+            val scheme = securitySchemeComponents[name]
+                ?: throw ContractException("Security scheme $name not found in $method $path")
+            return scheme
+        }
+
+        return securitySchemes.map {
+            when (it.keys.size) {
+                0 -> NoSecurityScheme()
+                1 -> getSecurityScheme(it.keys.single())
+                else -> CompositeSecurityScheme(it.keys.map(::getSecurityScheme))
+            }
+        }
+    }
+
     private fun toHttpRequestPatterns(
         httpPathPattern: HttpPathPattern,
         httpQueryParamPattern: HttpQueryParamPattern,
@@ -972,21 +977,12 @@ class OpenApiSpecification(
     ): List<RequestPatternsData> {
         logger.debug("Processing requests for $httpMethod")
 
-        val securitySchemes: Map<String, OpenAPISecurityScheme> =
-            parsedOpenApi.components?.securitySchemes?.mapValues { (schemeName, scheme) ->
-                toSecurityScheme(schemeName, scheme)
-            } ?: mapOf(NO_SECURITY_SCHEMA_IN_SPECIFICATION to NoSecurityScheme())
+        val securitySchemeEntries = parsedOpenApi.components?.securitySchemes.orEmpty()
+        val securitySchemeComponents = securitySchemeEntries.entries.associate { (schemeName, scheme) ->
+            schemeName to toSecurityScheme(schemeName, scheme)
+        }
 
-        val securitySchemesForRequestPattern: Map<String, OpenAPISecurityScheme> =
-            (operation.security ?: parsedOpenApi.security.orEmpty())
-                .flatMap { it.keys }
-                .toSet().associateWith {
-                    val securityScheme = securitySchemes[it]
-                        ?: throw ContractException("Security scheme used in $httpMethod ${httpPathPattern.path} does not exist in the spec")
-                    securityScheme
-                }.ifEmpty {
-                    mapOf(NO_SECURITY_SCHEMA_IN_SPECIFICATION to NoSecurityScheme())
-                }
+        val securitySchemesForRequestPattern = parseOperationSecuritySchemas(operation, httpMethod, httpPathPattern.path, securitySchemeComponents)
 
         val parameters = operation.parameters
 
@@ -1004,7 +1000,7 @@ class OpenApiSpecification(
             httpQueryParamPattern = httpQueryParamPattern,
             method = httpMethod,
             headersPattern = headersPattern,
-            securitySchemes = operationSecuritySchemes(operation, securitySchemesForRequestPattern)
+            securitySchemes = securitySchemesForRequestPattern
         )
 
         val exampleQueryParams = namedExampleParams(operation, QueryParameter::class.java)
@@ -1194,23 +1190,6 @@ class OpenApiSpecification(
         operation.requestBody?.`$ref`?.let {
             resolveReferenceToRequestBody(it).second
         } ?: operation.requestBody
-
-    private fun operationSecuritySchemes(
-        operation: Operation,
-        contractSecuritySchemes: Map<String, OpenAPISecurityScheme>
-    ): List<OpenAPISecurityScheme> {
-        logger.debug("Associating security schemes")
-
-        val globalSecurityRequirements: List<String> =
-            parsedOpenApi.security?.map { it.keys.toList() }?.flatten() ?: emptyList()
-        val operationSecurityRequirements: List<String> =
-            operation.security?.map { it.keys.toList() }?.flatten() ?: emptyList()
-        val operationSecurityRequirementsSuperSet: List<String> =
-            globalSecurityRequirements.plus(operationSecurityRequirements).distinct()
-        val operationSecuritySchemes: List<OpenAPISecurityScheme> =
-            contractSecuritySchemes.filter { (name, _: OpenAPISecurityScheme) -> name in operationSecurityRequirementsSuperSet }.values.toList()
-        return operationSecuritySchemes.ifEmpty { listOf(NoSecurityScheme()) }
-    }
 
     private fun toSecurityScheme(schemeName: String, securityScheme: SecurityScheme): OpenAPISecurityScheme {
         val securitySchemeConfiguration =
@@ -1818,7 +1797,7 @@ class OpenApiSpecification(
         val schemaProperties = toSchemaProperties(schema, requiredFields, patternName, typeStack)
         val minProperties: Int? = schema.minProperties
         val maxProperties: Int? = schema.maxProperties
-        val jsonObjectPattern = toJSONObjectPattern(schemaProperties, if(patternName.isNotBlank()) "(${patternName})" else "").copy(
+        val jsonObjectPattern = toJSONObjectPattern(schemaProperties, if(patternName.isNotBlank()) "(${patternName})" else null).copy(
             minProperties = minProperties,
             maxProperties = maxProperties,
             additionalProperties = additionalPropertiesFrom(schema, patternName, typeStack)
@@ -1982,24 +1961,29 @@ class OpenApiSpecification(
                 emptyList()
             else it.split("/")
         }
-        val pathParamMap: Map<String, PathParameter> =
-            parameters.filterIsInstance<PathParameter>().associateBy {
+        val pathParamMap: Map<String, PathParameter> = parameters.filterIsInstance<PathParameter>().associateBy {
                 it.name
             }
 
-        val pathPattern: List<URLPathSegmentPattern> = pathSegments.map { pathSegment ->
+        val pathPattern = pathSegments.mapIndexed { index, pathSegment ->
             logger.debug("Processing path segment $pathSegment")
 
-            if (isParameter(pathSegment)) {
-                val paramName = pathSegment.removeSurrounding("{", "}")
-
-                val param = pathParamMap[paramName]
-                    ?: throw ContractException("The path parameter in $openApiPath is not defined in the specification")
-
-                URLPathSegmentPattern(toSpecmaticPattern(param.schema, emptyList()), paramName)
-            } else {
-                URLPathSegmentPattern(ExactValuePattern(StringValue(pathSegment)))
+            if (!isParameter(pathSegment)) {
+                return@mapIndexed URLPathSegmentPattern(ExactValuePattern(StringValue(pathSegment)))
             }
+
+            val paramName = pathSegment.removeSurrounding("{", "}")
+            val param = pathParamMap[paramName] ?: throw ContractException(
+                errorMessage = "The path parameter in $openApiPath is not defined in the specification"
+            )
+
+            val pathSoFar = pathSegments.take(index + 1).joinToString(separator = "/")
+            val conflicts = pathTree.conflictsFor(pathSoFar)
+            URLPathSegmentPattern(
+                pattern = toSpecmaticPattern(param.schema, emptyList()),
+                key = paramName,
+                conflicts = conflicts
+            )
         }
 
         val specmaticPath = toSpecmaticFormattedPathString(parameters, openApiPath)

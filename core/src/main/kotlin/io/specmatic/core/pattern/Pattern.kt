@@ -78,7 +78,7 @@ interface Pattern {
             HasValue(emptyMap())
     }
 
-    fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
+    fun fillInTheBlanks(value: Value, resolver: Resolver, removeExtraKeys: Boolean = false): ReturnValue<Value> {
         return fillInTheBlanksWithPattern(value, resolver, this)
     }
 

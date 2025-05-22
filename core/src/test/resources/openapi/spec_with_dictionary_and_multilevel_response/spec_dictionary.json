@@ -1,4 +1,6 @@
 {
-  "Name.salutation": "Ms",
-  "Name.full_name": "Lena Schwartz"
+  "Name": {
+    "salutation": "Ms",
+    "full_name": "Lena Schwartz"
+  }
 }

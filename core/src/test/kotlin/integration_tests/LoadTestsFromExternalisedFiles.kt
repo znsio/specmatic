@@ -14,6 +14,7 @@ import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.ADDITIONAL_EXAMPLE_PARAMS_FILE
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
+import io.specmatic.core.utilities.Flags.Companion.IGNORE_INLINE_EXAMPLES
 import io.specmatic.core.value.*
 import io.specmatic.test.ExampleProcessor
 import io.specmatic.test.TestExecutor
@@ -491,6 +492,172 @@ class LoadTestsFromExternalisedFiles {
         })
 
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `should be able to load and use examples when there are shadow-ed paths`() {
+        val openApiFile = File("src/test/resources/openapi/has_shadow_paths/api.yaml")
+        val validExamplesDir = openApiFile.resolveSibling("valid_examples")
+        val feature = Flags.using(EXAMPLE_DIRECTORIES to validExamplesDir.canonicalPath) {
+            OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
+        }
+        assertDoesNotThrow { feature.validateExamplesOrException() }
+
+        val results = feature.executeTests(object: TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val body = request.body as JSONObjectValue
+                val value = body.jsonObject.getValue("value") as ScalarValue
+                when(request.path) {
+                    "/test/latest", "/123/reports/456" -> assertThat(value.nativeValue).isEqualTo(true)
+                    else -> assertThat(value.nativeValue).isEqualTo(123)
+                }
+
+                println(request.toLogString())
+                return HttpResponse(status = 200, body = body)
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `should provide accurate example load failures when shadowed-paths have invalid examples`() {
+        val openApiFile = File("src/test/resources/openapi/has_shadow_paths/api.yaml")
+        val invalidExamplesDir = openApiFile.resolveSibling("invalid_examples")
+        val feature = Flags.using(EXAMPLE_DIRECTORIES to invalidExamplesDir.canonicalPath) {
+            OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
+        }
+        val exception = assertThrows<ContractException> { feature.validateExamplesOrException() }
+
+        assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+        Error loading example for POST /test/(testId:string) -> 200 from ${invalidExamplesDir.resolve("testId_example.json").canonicalPath}
+        >> REQUEST.BODY.value
+        Expected number as per the specification, but the example testId_example had true (boolean).
+        >> RESPONSE.BODY.value
+        Expected number as per the specification, but the example testId_example had true (boolean).
+
+        Error loading example for POST /test/latest -> 200 from ${invalidExamplesDir.resolve("latest_example.json").canonicalPath}
+        >> REQUEST.BODY.value
+        Expected boolean as per the specification, but the example latest_example had 123 (number).
+        >> RESPONSE.BODY.value
+        Expected boolean as per the specification, but the example latest_example had 123 (number).
+        
+        Error loading example for POST /reports/(testId:string)/latest -> 200 from ${invalidExamplesDir.resolve("reports_testId_latest.json").canonicalPath}
+        >> REQUEST.BODY.value
+        Expected number as per the specification, but the example reports_testId_latest had true (boolean).
+        >> RESPONSE.BODY.value
+        Expected number as per the specification, but the example reports_testId_latest had true (boolean).
+        
+        Error loading example for POST /(testId:string)/reports/(reportId:string) -> 200 from ${invalidExamplesDir.resolve("testId_reports_reportId.json").canonicalPath}
+        >> REQUEST.BODY.value 
+        Expected boolean as per the specification, but the example testId_reports_reportId had 123 (number).
+        >> RESPONSE.BODY.value
+        Expected boolean as per the specification, but the example testId_reports_reportId had 123 (number).
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should complain when examples have invalid security-scheme values or unexpected keys in header and query`() {
+        val openApiFile = File("src/test/resources/openapi/has_composite_security/api.yaml")
+        val examplesDir = openApiFile.resolveSibling("invalid_examples")
+        val feature = Flags.using(EXAMPLE_DIRECTORIES to examplesDir.canonicalPath, IGNORE_INLINE_EXAMPLES to "true") {
+            OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
+        }
+        val exception = assertThrows<ContractException> { feature.validateExamplesOrException() }
+
+        assertThat(exception.report()).isEqualToNormalizingWhitespace("""
+        Error loading example for POST /secure -> 200 from ${examplesDir.resolve("secure.json").canonicalPath} 
+        >> REQUEST.HEADERS.Authorization
+        Authorization header must be prefixed with "Bearer"
+
+        Error loading example for POST /partial -> 200 from ${examplesDir.resolve("partial.json").canonicalPath} 
+        >> REQUEST.HEADERS.Authorization
+        Authorization header must be prefixed with "Bearer"
+        
+        Error loading example for POST /overlap -> 200 from ${examplesDir.resolve("overlap.json").canonicalPath}
+        >> REQUEST.HEADERS.Authorization
+        Authorization header must be prefixed with "Bearer"
+
+        Error loading example for POST /insecure -> 200 from ${examplesDir.resolve("insecure.json").canonicalPath} 
+        >> REQUEST.QUERY-PARAMS.apiKey
+        The query param apiKey was found in the example insecure but was not in the specification. 
+        >> REQUEST.HEADERS.Authorization
+        The header Authorization was found in the example insecure but was not in the specification.
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should use values provided in the example for security-schemes and fill-in missing values`() {
+        val openApiFile = File("src/test/resources/openapi/has_composite_security/api.yaml")
+        val examplesDir = openApiFile.resolveSibling("valid_examples")
+        val feature = Flags.using(
+            EXAMPLE_DIRECTORIES to examplesDir.canonicalPath,
+            IGNORE_INLINE_EXAMPLES to "true",
+            "bearerAuth" to "API-SECRET",
+            "apiKeyQuery" to "1234"
+        ) {
+            OpenApiSpecification.fromFile(openApiFile.canonicalPath).toFeature().loadExternalisedExamples()
+        }
+
+        val assertApiKey: (HttpRequest, String?) -> Unit = { request, expected ->
+            assertThat(request.queryParams.asMap()["apiKey"]).isEqualTo(expected)
+        }
+        val assertAuthHeader: (HttpRequest, String?) -> Unit = { request, expected ->
+            assertThat(request.headers["Authorization"]).isEqualTo(expected)
+        }
+
+        val results = feature.executeTests(object: TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val requestBody = request.body as JSONObjectValue
+                val bodyString = requestBody.jsonObject["message"]!!.toStringLiteral()
+                when (request.path) {
+                    "/secure" -> {
+                        assertApiKey(request, "1234")
+                        assertAuthHeader(request, "Bearer API-SECRET")
+                        assertThat(bodyString).isEqualTo("Hello to Secure")
+                    }
+                    "/overlap" -> {
+                        assertThat(request).satisfiesAnyOf(
+                            {
+                                assertApiKey(it, "1234")
+                                assertAuthHeader(it, "Bearer API-SECRET")
+                            },
+                            {
+                                assertApiKey(it, null)
+                                assertAuthHeader(it, "Bearer API-SECRET")
+                            }
+                        )
+                        assertThat(bodyString).isEqualTo("Hello to Overlap")
+                    }
+                    "/partial" -> {
+                        assertThat(request).satisfiesAnyOf(
+                            {
+                                assertApiKey(request, "1234")
+                                assertAuthHeader(request, null)
+                            },
+                            {
+                                assertApiKey(request, null)
+                                assertAuthHeader(request, "Bearer API-SECRET")
+                            }
+                        )
+                        assertThat(bodyString).isEqualTo("Hello to Partial")
+                    }
+                    else -> {
+                        assertApiKey(request, null)
+                        assertAuthHeader(request, null)
+                        assertThat(bodyString).isEqualTo("Hello to Insecure")
+                    }
+                }
+
+                return HttpResponse.ok(requestBody.addEntry("message", bodyString)).also {
+                    println(request.toLogString())
+                    println(it.toLogString())
+                }
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        assertThat(results.testCount).isEqualTo(6)
     }
 
     @Test

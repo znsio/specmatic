@@ -1,3 +1,5 @@
 {
-  "Person.full_name": "Jack Sprat"
+  "Person": {
+    "full_name": "Jack Sprat"
+  }
 }

@@ -1,9 +1,9 @@
 package io.specmatic.core.pattern
 
+import io.specmatic.core.Dictionary
 import io.specmatic.core.HttpQueryParamPattern
 import io.specmatic.core.QueryParameters
 import io.specmatic.core.Resolver
-import io.specmatic.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -11,8 +11,8 @@ class QueryParameterScalarPatternTest {
     @Test
     fun `should be able to fix invalid values`() {
         val pattern = HttpQueryParamPattern(mapOf("email" to QueryParameterScalarPattern(EmailPattern())))
-        val resolver = Resolver(dictionary = mapOf("QUERY-PARAMS.email" to StringValue("SomeDude@example.com")))
-
+        val dictionary = "QUERY-PARAMS: { email: SomeDude@example.com }".let(Dictionary::fromYaml)
+        val resolver = Resolver(dictionary = dictionary)
         val invalidValues = listOf(
             "Unknown",
             "999"

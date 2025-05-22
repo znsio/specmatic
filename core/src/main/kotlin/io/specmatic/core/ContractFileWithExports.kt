@@ -1,7 +1,7 @@
 package io.specmatic.core
 
 import io.specmatic.core.pattern.ContractException
-import io.specmatic.test.HttpClient
+import io.specmatic.test.LegacyHttpClient
 import java.io.File
 
 data class ContractFileWithExports(val path: String, val relativeTo: RelativeTo = NoAnchor) {
@@ -22,7 +22,7 @@ data class ContractFileWithExports(val path: String, val relativeTo: RelativeTo 
         val feature = readFeatureForValue(valueName)
             .copy(testVariables = variables, testBaseURLs = baseURLs)
 
-        val client = HttpClient(
+        val client = LegacyHttpClient(
             baseURLs[path] ?: throw ContractException("Base URL for spec file $path was not supplied.")
         )
 

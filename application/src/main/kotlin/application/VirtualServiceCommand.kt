@@ -113,9 +113,7 @@ For example, to filter by HTTP methods:
             dataDirs = exampleDirs,
             specmaticConfigPath = Configuration.configFilePath,
             strictMode = false
-        ).mapNotNull { eachFeaturePair ->
-            val feature = eachFeaturePair.first
-            val scenarioStubs = eachFeaturePair.second
+        ).mapNotNull { (feature, scenarioStubs) ->
             val metadataFilter = ScenarioMetadataFilter.from(filter)
             val filteredScenarios = ScenarioMetadataFilter.filterUsing(
                 feature.scenarios.asSequence(),

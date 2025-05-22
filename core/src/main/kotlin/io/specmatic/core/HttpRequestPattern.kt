@@ -597,9 +597,9 @@ data class HttpRequestPattern(
                         row,
                         resolver,
                         shouldGenerateMandatoryEntryIfMissing(resolver, status)
-                    )
-                }.map { pattern ->
-                    pattern.ifValue { HttpQueryParamPattern(pattern.value) }
+                    ).map { pattern ->
+                        pattern.ifValue { HttpQueryParamPattern(pattern.value) }
+                    }
                 }
             }
 
@@ -717,7 +717,7 @@ data class HttpRequestPattern(
                 newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }
             } ?: sequenceOf<HttpPathPattern?>(null)
 
-            val newQueryParamsPatterns = httpQueryParamPattern.newBasedOn(resolver).map { HttpQueryParamPattern(it) }
+            val newQueryParamsPatterns = httpQueryParamPattern.newBasedOn(resolver)
             val newBodies = attempt(breadCrumb = "BODY") {
                 resolver.withCyclePrevention(body) { cyclePreventedResolver ->
                     body.newBasedOn(cyclePreventedResolver)
@@ -768,8 +768,7 @@ data class HttpRequestPattern(
                         .map { it.ifValue { HttpPathPattern(it, httpPathPattern.path) } }
                 } ?: sequenceOf(null)
 
-            val newQueryParamsPatterns =
-                httpQueryParamPattern.negativeBasedOn(row, resolver).map { it.ifValue { HttpQueryParamPattern(it) } }
+            val newQueryParamsPatterns = httpQueryParamPattern.negativeBasedOn(row, resolver)
 
             val newBodies: Sequence<ReturnValue<out Pattern>> = returnValue(breadCrumb = "BODY") returnNewBodies@ {
                 val rawRequestBody = row.getFieldOrNull(REQUEST_BODY_FIELD) ?: return@returnNewBodies body.negativeBasedOn(row, resolver)

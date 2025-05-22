@@ -166,6 +166,9 @@ paths:
           required: true
           schema:
             type: number
+          examples:
+            TODO_200_OK:
+              value: 55
       responses:
         "200":
           description: Fetched todo successfully
@@ -173,6 +176,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Todo_ResponseBody"
+              examples:
+                TODO_200_OK:
+                  value:
+                    id: 55
+                    todo: "Buy groceries"
+                    completed: false
+                    userId: 1
         "404":
           description: Todo not found
           content:
@@ -267,7 +277,7 @@ components:
         todos:
           type: array
           items:
-            $ref: "#/components/schemas/Todos"
+            $ref: "#/components/schemas/Todo_ResponseBody"
         total:
           type: number
         skip:

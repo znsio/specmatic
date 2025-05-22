@@ -1,9 +1,11 @@
 package io.specmatic.core
 
 import io.specmatic.core.pattern.*
+import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
 import io.specmatic.core.utilities.URIUtils
+import io.specmatic.core.utilities.withNullPattern
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.StringValue
 import java.net.URI
@@ -35,37 +37,38 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
         }
     }
 
-    fun newBasedOn(
-        row: Row,
-        resolver: Resolver
-    ): Sequence<ReturnValue<Map<String, Pattern>>> {
-        val createdBasedOnExamples = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
+    fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpQueryParamPattern>> {
+        return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val queryParams = queryPatterns.let {
                 if(additionalProperties != null)
                     it.plus(randomString(5) to additionalProperties)
                 else
                     it
             }
+            val patternMap = row.withoutOmittedKeys(queryParams, resolver.defaultExampleResolver)
 
-            val combinations = forEachKeyCombinationIn(
-                row.withoutOmittedKeys(queryParams, resolver.defaultExampleResolver),
-                row
-            ) { entry ->
-                newMapBasedOn(entry, row, resolver)
-            }
-
-            combinations.map { pattern ->
-                pattern.update {
-                    it.mapKeys { withoutOptionality(it.key) }
+            allOrNothingCombinationIn(patternMap, resolver.resolveRow(row)) { pattern ->
+                newMapBasedOn(pattern,row,withNullPattern(resolver))
+            }.map { it: ReturnValue<Map<String, Pattern>> ->
+                it.ifValue {
+                    HttpQueryParamPattern(it.mapKeys { entry -> withoutOptionality(entry.key) })
                 }
             }
         }
-
-        return createdBasedOnExamples
     }
 
-    fun addComplimentaryPatterns(basePatterns: Sequence<ReturnValue<Map<String, Pattern>>>, row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> {
-        return addComplimentaryPatterns(basePatterns, queryPatterns, additionalProperties, row, resolver)
+    fun addComplimentaryPatterns(basePatterns: Sequence<ReturnValue<HttpQueryParamPattern>>, row: Row, resolver: Resolver): Sequence<ReturnValue<HttpQueryParamPattern>> {
+        return addComplimentaryPatterns(
+            basePatterns.map { rValue -> rValue.ifValue { it.queryPatterns } },
+            queryPatterns,
+            additionalProperties,
+            row,
+            resolver
+        ).map { it: ReturnValue<Map<String, Pattern>> ->
+            it.ifValue {
+                HttpQueryParamPattern(it.mapKeys { entry -> withoutOptionality(entry.key) })
+            }
+        }
     }
 
     fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
@@ -123,7 +126,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
             Result.Success()
     }
 
-    fun newBasedOn(resolver: Resolver): Sequence<Map<String, Pattern>> {
+    fun newBasedOn(resolver: Resolver): Sequence<HttpQueryParamPattern> {
         return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val queryParams = queryPatterns.let {
                 if(additionalProperties != null)
@@ -131,13 +134,16 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
                 else
                     it
             }
+
             allOrNothingCombinationIn(
                 queryParams,
                 Row(),
                 null,
-                null, returnValues { entry: Map<String, Pattern> ->
-                    newBasedOn(entry.mapKeys { withoutOptionality(it.key) }, resolver)
-                }).map { it.value }
+                null,
+                returnValues { entry -> newBasedOn(entry.mapKeys { withoutOptionality(it.key) }, resolver) }
+            ).map {
+                HttpQueryParamPattern(it.value)
+            }
         }
     }
 
@@ -149,31 +155,30 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
         } else ""
     }
 
-    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> = returnValue(breadCrumb = "QUERY-PARAM") {
-        attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
-            val queryParams: Map<String, Pattern> = queryPatterns.let {
-                if (additionalProperties != null)
-                    it.plus(randomString(5) to additionalProperties)
-                else
-                    it
-            }
-            val patternMap = queryParams.mapValues {
-                if(it.value is QueryParameterScalarPattern) return@mapValues it.value.pattern as Pattern
-                (it.value as QueryParameterArrayPattern).pattern.firstOrNull() ?: EmptyStringPattern
-            }
+    fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration = NegativePatternConfiguration()): Sequence<ReturnValue<HttpQueryParamPattern>> {
+        return returnValue(breadCrumb = "QUERY-PARAM") {
+            attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
+                val queryParams: Map<String, Pattern> = queryPatterns.let {
+                    if (additionalProperties != null)
+                        it.plus(randomString(5) to additionalProperties)
+                    else
+                        it
+                }
+                val patternMap = queryParams.mapValues {
+                    if (it.value is QueryParameterScalarPattern) return@mapValues it.value.pattern as Pattern
+                    (it.value as QueryParameterArrayPattern).pattern.firstOrNull() ?: EmptyStringPattern
+                }
 
-            forEachKeyCombinationIn(queryParams, row) { entry ->
-                NegativeNonStringlyPatterns().negativeBasedOn(
-                    entry.mapKeys { withoutOptionality(it.key) },
-                    row,
-                    resolver
-                )
-            }.plus(
-                patternsWithNoRequiredKeys(patternMap, "mandatory query param not sent")
-            )
+                allOrNothingCombinationIn(patternMap) { pattern ->
+                    NegativeNonStringlyPatterns().negativeBasedOn(pattern.mapKeys { withoutOptionality(it.key) }, row, resolver, config)
+                }.plus(
+                    patternsWithNoRequiredKeys(patternMap, "mandatory query param not sent")
+                ).map { it: ReturnValue<Map<String, Pattern>> ->
+                    it.ifValue { value -> HttpQueryParamPattern(value) }
+                }
+            }
         }
     }
-
 
     fun matches(uri: URI, queryParams: Map<String, String>, resolver: Resolver = Resolver()): Result {
         return matches(HttpRequest(path = uri.path, queryParametersMap =  queryParams), resolver)

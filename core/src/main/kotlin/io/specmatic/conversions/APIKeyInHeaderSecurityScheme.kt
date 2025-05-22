@@ -34,6 +34,6 @@ data class APIKeyInHeaderSecurityScheme(val name: String, private val apiKey:Str
     override fun isInRow(row: Row): Boolean = row.containsField(name)
 
     override fun isInRequest(request: HttpRequest, complete: Boolean): Boolean {
-        return request.headers.containsKey(name)
+        return request.hasHeader(name)
     }
 }

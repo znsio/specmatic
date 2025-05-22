@@ -45,7 +45,7 @@ data class BearerSecurityScheme(private val configuredToken: String? = null) : O
     }
 
     override fun isInRequest(request: HttpRequest, complete: Boolean): Boolean {
-        return request.headers.containsKey(AUTHORIZATION)
+        return request.hasHeader(AUTHORIZATION)
     }
 
     private fun getAuthorizationHeaderValue(resolver: Resolver): String {

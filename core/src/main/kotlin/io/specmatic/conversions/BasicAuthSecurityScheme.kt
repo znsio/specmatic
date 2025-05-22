@@ -62,7 +62,7 @@ data class BasicAuthSecurityScheme(private val token: String? = null) : OpenAPIS
     override fun isInRow(row: Row): Boolean = row.containsField(AUTHORIZATION)
 
     override fun isInRequest(request: HttpRequest, complete: Boolean): Boolean {
-        return request.headers.containsKey(AUTHORIZATION)
+        return request.hasHeader(AUTHORIZATION)
     }
 
     private fun getAuthorizationHeaderValue(resolver: Resolver): String {

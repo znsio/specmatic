@@ -443,6 +443,37 @@ class DictionaryTest {
         }
     }
 
+    @Test
+    fun `should remove extra-keys which are spec-valid but not valid as per newBasedOn pattern`() {
+        val dictionary = """
+        Schema:
+            arrayOfObjects:
+            - - mandatory: value
+                optional: value
+        """.trimIndent().let(Dictionary::fromYaml)
+        val pattern = JSONObjectPattern(mapOf("arrayOfObjects" to ListPattern(
+            JSONObjectPattern(mapOf("mandatory" to StringPattern(), "optional?" to StringPattern()))
+        )), typeAlias = "(Schema)")
+        val resolver = Resolver(dictionary = dictionary)
+        val newBasedPatterns = pattern.newBasedOn(Row(), resolver).toList()
+
+        assertThat(newBasedPatterns).allSatisfy { basedPattern ->
+            val generated = basedPattern.value.generate(resolver) as JSONObjectValue
+            val array = generated.jsonObject["arrayOfObjects"] as JSONArrayValue
+
+            assertThat(array.list).allSatisfy { item ->
+                val obj = item as JSONObjectValue
+                val mandatory = obj.jsonObject["mandatory"]?.toStringLiteral()
+                val optional = obj.jsonObject["optional"]?.toStringLiteral()
+
+                assertThat(mandatory).isEqualTo("value")
+                if ("optional" in obj.jsonObject) {
+                    assertThat(optional).isEqualTo("value")
+                }
+            }
+        }
+    }
+
     @Nested
     inner class NegativeBasedOnTests {
 

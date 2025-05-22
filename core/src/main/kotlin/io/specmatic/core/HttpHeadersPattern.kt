@@ -4,6 +4,7 @@ import io.ktor.http.*
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.isOptional
+import io.specmatic.core.utilities.withNullPattern
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
@@ -257,32 +258,15 @@ data class HttpHeadersPattern(
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
-
         val filteredPattern = row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver)
-
         val additionalHeadersPattern = extractFromExampleHeadersNotInSpec(filteredPattern, row)
+        val patternMap = filteredPattern + additionalHeadersPattern
 
-        val basedOnExamples = forEachKeyCombinationGivenRowIn(
-            filteredPattern + additionalHeadersPattern,
-            row,
-            resolver
-        ) { pattern ->
-            newMapBasedOn(pattern, row, resolver)
-        }
-
-        val generatedWithoutExamples: Sequence<ReturnValue<Map<String, Pattern>>> = resolver.generation.fillInTheMissingMapPatterns(
-            basedOnExamples.map { it.value },
-            pattern,
-            null,
-            row,
-            resolver
-        )
-
-        return (basedOnExamples + generatedWithoutExamples).map { example ->
-            example.update { map ->
-                map.mapKeys { withoutOptionality(it.key) }
-            }.ifValue {
-                HttpHeadersPattern(it, contentType = contentType)
+        return allOrNothingCombinationIn(patternMap, resolver.resolveRow(row)) { pattern ->
+            newMapBasedOn(pattern, row, withNullPattern(resolver))
+        }.map { value: ReturnValue<Map<String, Pattern>> ->
+            value.ifValue {
+                HttpHeadersPattern(it.mapKeys { entry -> withoutOptionality(entry.key) }, contentType = contentType)
             }
         }
     }
@@ -305,32 +289,20 @@ data class HttpHeadersPattern(
         "content-type"
     )
 
-
-    fun negativeBasedOn(
-        row: Row,
-        resolver: Resolver
-    ): Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = "HEADER") {
-
+    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = "HEADER") {
         allOrNothingCombinationIn(pattern, row, null, null) { pattern ->
             NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
-        }.map { patternMapR ->
+        }.plus(
+            patternsWithNoRequiredKeys(pattern, "mandatory header not sent")
+        ).map { patternMapR ->
             patternMapR.ifValue { patternMap ->
                 HttpHeadersPattern(
                     patternMap.mapKeys { withoutOptionality(it.key) },
                     contentType = contentType
                 )
             }
-        }.plus(patternsWithNoRequiredHeaders(pattern))
-    }
-
-    private fun patternsWithNoRequiredHeaders(
-        patternMap: Map<String, Pattern>
-    ): Sequence<ReturnValue<HttpHeadersPattern>> =
-        patternsWithNoRequiredKeys(patternMap, "mandatory header not sent").map {
-            it.ifValue { pattern ->
-                HttpHeadersPattern(pattern, contentType = contentType)
-            }
         }
+    }
 
     fun newBasedOn(resolver: Resolver): Sequence<HttpHeadersPattern> =
         allOrNothingCombinationIn(

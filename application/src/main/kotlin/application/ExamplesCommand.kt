@@ -15,7 +15,6 @@ import picocli.CommandLine.*
 import java.io.File
 import java.util.concurrent.Callable
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.system.exitProcess
 
 private const val SUCCESS_EXIT_CODE = 0
 private const val FAILURE_EXIT_CODE = 1
@@ -127,7 +126,7 @@ For example, to filter by HTTP methods:
                 val (exitCode, validationResults) = validateExamplesDir(contractFile!!, examplesDir)
 
                 printValidationResult(validationResults.exampleValidationResults, "Example directory")
-                return exitCode
+                return if (exitCode == FAILURE_EXIT_CODE) FAILURE_EXIT_CODE else validationResults.exitCode
             }
 
             if (contractFile != null) return validateImplicitExamplesFrom(contractFile!!)
@@ -243,7 +242,7 @@ For example, to filter by HTTP methods:
                 else {
                     val (exitCode, validationResults)
                             = validateExamplesDir(feature, ExampleModule().defaultExternalExampleDirFrom(contractFile))
-                    if(exitCode == 1) exitProcess(exitCode)
+                    if(exitCode == 1) return exitCode
                     validationResults
                 }
 

@@ -38,8 +38,7 @@ class HttpFilterContext(private val scenario: Scenario) : FilterContext {
                     }
                 }
                 filterKey == FilterKeys.PARAMETERS_PATH -> {
-                    scenario.httpRequestPattern.httpPathPattern?.pathParameters()?.map { it.key }
-                        ?.contains(eachValue) ?: false
+                    scenario.httpRequestPattern.httpPathPattern?.pathSegmentPatterns?.map{it.key}?.contains(eachValue) ?: false
                 }
                 filterKey == FilterKeys.REQUEST_BODY_CONTENT_TYPE -> {
                     try {

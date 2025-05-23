@@ -159,7 +159,8 @@ data class HttpPathPattern(
                             URLPathSegmentPattern(
                                 ExactValuePattern(
                                     value
-                                )
+                                ),
+                                urlPathParamPattern.key
                             )
                         }
                     }

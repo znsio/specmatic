@@ -329,8 +329,8 @@ paths:
             Arguments.of("DESCRIPTION", "create a random user", false, usersPostAPI.scenarios[0]),
 
             // operationId
-            Arguments.of("OPERATION_ID", "createUser", true, usersPostAPI.scenarios[0]),
-            Arguments.of("OPERATION_ID", "createEndpoint", false, usersPostAPI.scenarios[0]),
+            Arguments.of("OPERATION-ID", "createUser", true, usersPostAPI.scenarios[0]),
+            Arguments.of("OPERATION-ID", "createEndpoint", false, usersPostAPI.scenarios[0]),
         )
 
         @JvmStatic

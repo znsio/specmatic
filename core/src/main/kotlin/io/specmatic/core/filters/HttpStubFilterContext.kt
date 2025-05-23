@@ -4,70 +4,64 @@ import io.specmatic.mock.ScenarioStub
 import java.util.regex.Pattern
 import javax.activation.MimeType
 
-
 class HttpStubFilterContext(private val scenario: ScenarioStub) : FilterContext {
     override fun includes(key: String, values: List<String>): Boolean {
+        val filterKey = FilterKeys.fromKey(key)
         return values.any { eachValue ->
             when {
-                key == "PATH" -> {
+                filterKey == FilterKeys.PATH -> {
                     eachValue == scenario.request.path || matchesPath(eachValue, scenario.request.path ?: "")
                 }
-                key == "PARAMETERS.HEADER" -> {
+                filterKey == FilterKeys.PARAMETERS_HEADER -> {
                     scenario.request.headers.keys.caseInsensitiveContains(eachValue)
                 }
-                key.startsWith("PARAMETERS.HEADER.") -> {
-                    // This only applies to examples
-                    val queryKey = key.substringAfter("PARAMETERS.HEADER.").substringBefore("=")
+                key.startsWith(FilterKeys.PARAMETERS_HEADER_KEY.key) -> {
+                    val queryKey = key.substringAfter(FilterKeys.PARAMETERS_HEADER_KEY.key).substringBefore("=")
                     val queryValue = eachValue.substringAfter("=")
                     scenario.request.headers[queryKey] == queryValue
                 }
-                key == "PARAMETERS.QUERY" -> {
+                filterKey == FilterKeys.PARAMETERS_QUERY -> {
                     scenario.request.queryParams.keys.caseSensitiveContains(eachValue)
                 }
-                key.startsWith("PARAMETERS.QUERY.") -> {
-                    // This only applies to examples
-                    val queryKey = key.substringAfter("PARAMETERS.QUERY.").substringBefore("=")
+                key.startsWith(FilterKeys.PARAMETERS_QUERY_KEY.key) -> {
+                    val queryKey = key.substringAfter(FilterKeys.PARAMETERS_QUERY_KEY.key).substringBefore("=")
                     val queryValue = eachValue.substringAfter("=")
-                    scenario.request.queryParams.paramPairs.any { it ->
+                    scenario.request.queryParams.paramPairs.any {
                         it.first == queryKey && it.second == queryValue
                     }
                 }
-                key == "REQUEST-BODY.CONTENT-TYPE" -> {
+                filterKey == FilterKeys.REQUEST_BODY_CONTENT_TYPE -> {
                     try {
                         MimeType(scenario.request.body.httpContentType).match(MimeType(eachValue))
                     } catch (_: Exception) {
                         false
                     }
                 }
-                key == "RESPONSE.CONTENT-TYPE" -> {
+                filterKey == FilterKeys.RESPONSE_CONTENT_TYPE -> {
                     try {
                         MimeType(scenario.response.body.httpContentType).match(MimeType(eachValue))
                     } catch (_: Exception) {
                         false
                     }
                 }
-                key == "METHOD" -> {
+                filterKey == FilterKeys.METHOD -> {
                     scenario.request.method.equals(eachValue, ignoreCase = true)
                 }
-                key == "STATUS" -> {
+                filterKey == FilterKeys.STATUS -> {
                     scenario.response.status == eachValue.toIntOrNull()
                 }
-                else -> {
-                    true
-                }
+                else -> true
             }
         }
     }
 
     override fun compare(filterKey: String, operator: String, filterValue: String): Boolean {
-        if (filterKey.uppercase() == "STATUS") {
-            return evaluateCondition(scenario.response.status, operator, filterValue.toIntOrNull() ?: 0)
-        } else {
-            throw IllegalArgumentException("Unknown filter key: $filterKey")
+        val key = FilterKeys.fromKey(filterKey)
+        return when (key) {
+            FilterKeys.STATUS -> evaluateCondition(scenario.response.status, operator, filterValue.toIntOrNull() ?: 0)
+            else -> throw IllegalArgumentException("Unknown filter key: $filterKey")
         }
     }
-
-
 
     private fun matchesPath(value: String, scenarioValue: String): Boolean {
         return value.contains("*") &&
@@ -75,5 +69,4 @@ class HttpStubFilterContext(private val scenario: ScenarioStub) : FilterContext 
                     value.replace("*", ".*")
                 ).matcher(scenarioValue).matches()
     }
-
 }

@@ -7,17 +7,17 @@ import javax.activation.MimeType
 
 class HttpFilterContext(private val scenario: Scenario) : FilterContext {
     override fun includes(key: String, values: List<String>): Boolean {
+        val filterKey = FilterKeys.fromKey(key)
         return values.any { eachValue ->
             when {
-                key == "PATH" -> {
+                filterKey == FilterKeys.PATH -> {
                     eachValue == scenario.path || matchesPath(eachValue, scenario.path)
                 }
-                key == "PARAMETERS.HEADER" -> {
+                filterKey == FilterKeys.PARAMETERS_HEADER -> {
                     scenario.httpRequestPattern.getHeaderKeys().caseInsensitiveContains(eachValue)
                 }
-                key.startsWith("PARAMETERS.HEADER.") -> {
-                    // This only applies to examples
-                    val queryKey = key.substringAfter("PARAMETERS.HEADER.").substringBefore("=")
+                key.startsWith(FilterKeys.PARAMETERS_HEADER_KEY.key) -> {
+                    val queryKey = key.substringAfter(FilterKeys.PARAMETERS_HEADER_KEY.key).substringBefore("=")
                     val queryValue = eachValue.substringAfter("=")
                     scenario.examples.any { eachExample->
                         eachExample.rows.any { eachRow ->
@@ -25,12 +25,11 @@ class HttpFilterContext(private val scenario: Scenario) : FilterContext {
                         }
                     }
                 }
-                key == "PARAMETERS.QUERY" -> {
+                filterKey == FilterKeys.PARAMETERS_QUERY -> {
                     scenario.httpRequestPattern.getQueryParamKeys().caseSensitiveContains(eachValue)
                 }
-                key.startsWith("PARAMETERS.QUERY.") -> {
-                    // This only applies to examples
-                    val queryKey = key.substringAfter("PARAMETERS.QUERY.").substringBefore("=")
+                key.startsWith(FilterKeys.PARAMETERS_QUERY_KEY.key) -> {
+                    val queryKey = key.substringAfter(FilterKeys.PARAMETERS_QUERY_KEY.key).substringBefore("=")
                     val queryValue = eachValue.substringAfter("=")
                     scenario.examples.any { eachExample->
                         eachExample.rows.any { eachRow ->
@@ -38,52 +37,48 @@ class HttpFilterContext(private val scenario: Scenario) : FilterContext {
                         }
                     }
                 }
-                key == "PARAMETERS.PATH" -> {
-                    scenario.httpRequestPattern.httpPathPattern?.pathParameters()?.map { it -> it.key }
+                filterKey == FilterKeys.PARAMETERS_PATH -> {
+                    scenario.httpRequestPattern.httpPathPattern?.pathParameters()?.map { it.key }
                         ?.contains(eachValue) ?: false
                 }
-                key == "REQUEST-BODY.CONTENT-TYPE" -> {
+                filterKey == FilterKeys.REQUEST_BODY_CONTENT_TYPE -> {
                     try {
                         MimeType(scenario.httpRequestPattern.headersPattern.contentType).match(MimeType(eachValue))
                     } catch (_: Exception) {
                         false
                     }
                 }
-                key == "RESPONSE.CONTENT-TYPE" -> {
+                filterKey == FilterKeys.RESPONSE_CONTENT_TYPE -> {
                     try {
                         MimeType(scenario.httpResponsePattern.headersPattern.contentType).match(MimeType(eachValue))
                     } catch (_: Exception) {
                         false
                     }
                 }
-                key == "METHOD" -> {
+                filterKey == FilterKeys.METHOD -> {
                     scenario.method.equals(eachValue, ignoreCase = true)
                 }
-                key == "STATUS" -> {
+                filterKey == FilterKeys.STATUS -> {
                     scenario.status == eachValue.toIntOrNull()
                 }
-                key == "EXAMPLE-NAME" -> {
+                filterKey == FilterKeys.EXAMPLE_NAME -> {
                     scenario.examples.any { example ->
-                        example.rows.any { eachRow ->
-                            eachRow.name == eachValue
-                        }
+                        example.rows.any { eachRow -> eachRow.name == eachValue }
                     }
                 }
-                key == "TAGS" -> {
+                filterKey == FilterKeys.TAGS -> {
                     scenario.operationMetadata?.tags?.contains(eachValue) ?: false
                 }
-                key == "SUMMARY" -> {
+                filterKey == FilterKeys.SUMMARY -> {
                     scenario.operationMetadata?.summary.equals(eachValue, ignoreCase = true)
                 }
-                key == "OPERATION_ID" -> {
+                filterKey == FilterKeys.OPERATION_ID -> {
                     scenario.operationMetadata?.operationId == eachValue
                 }
-                key == "DESCRIPTION" -> {
+                filterKey == FilterKeys.DESCRIPTION -> {
                     scenario.operationMetadata?.description.equals(eachValue, ignoreCase = true)
                 }
-                else -> {
-                    throw IllegalArgumentException("Unknown filter parameter name: $key")
-                }
+                else -> false
             }
         }
     }

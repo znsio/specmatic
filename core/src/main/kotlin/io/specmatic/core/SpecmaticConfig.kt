@@ -104,7 +104,6 @@ fun String.loadContract(): Feature {
 data class StubConfiguration(
     private val generative: Boolean? = null,
     private val delayInMilliseconds: Long? = null,
-    private val dictionary: String? = null,
     private val includeMandatoryAndRequestedKeysInResponse: Boolean? = null,
     private val startTimeoutInMilliseconds: Long? = null
 ) {
@@ -114,10 +113,6 @@ data class StubConfiguration(
 
     fun getDelayInMilliseconds(): Long? {
         return delayInMilliseconds ?: getLongValue(SPECMATIC_STUB_DELAY)
-    }
-
-    fun getDictionary(): String? {
-        return dictionary ?: getStringValue(SPECMATIC_DICTIONARY)
     }
 
     fun getIncludeMandatoryAndRequestedKeysInResponse(): Boolean? {
@@ -217,7 +212,8 @@ data class SpecmaticConfig(
     private val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
     private val allPatternsMandatory: Boolean? = null,
     private val defaultPatternValues: Map<String, Any> = emptyMap(),
-    private val version: SpecmaticConfigVersion? = null
+    private val version: SpecmaticConfigVersion? = null,
+    private val dictionary: String? = null
 ) {
     companion object {
         fun getReport(specmaticConfig: SpecmaticConfig): ReportConfigurationDetails? {
@@ -459,11 +455,6 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun getStubDictionary(): String? {
-        return stub.getDictionary()
-    }
-
-    @JsonIgnore
     fun getIgnoreInlineExamples(): Boolean {
         return ignoreInlineExamples ?: getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES)
     }
@@ -585,6 +576,11 @@ data class SpecmaticConfig(
         } catch(e: Throwable) {
             throw ContractException("Error loading Specmatic configuration: ${e.message}")
         }
+    }
+
+    @JsonIgnore
+    fun getDictionary(): String? {
+        return dictionary ?: getStringValue(SPECMATIC_DICTIONARY)
     }
 }
 

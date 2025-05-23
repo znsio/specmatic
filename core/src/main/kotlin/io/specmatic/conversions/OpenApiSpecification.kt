@@ -69,7 +69,7 @@ class OpenApiSpecification(
     private val specificationPath: String? = null,
     private val securityConfiguration: SecurityConfiguration? = null,
     private val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-    private val dictionary: Dictionary = loadDictionary(openApiFilePath, specmaticConfig.getStubDictionary()),
+    private val dictionary: Dictionary = loadDictionary(openApiFilePath, specmaticConfig.getDictionary()),
     private val strictMode: Boolean = false
 ) : IncludedSpecification, ApiSpecification {
     init {

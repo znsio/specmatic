@@ -82,7 +82,9 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         }.toSet()
 
         val untrackedFiles = gitCommand.getUntrackedFiles().filter {
-            it.contains(Path(targetPath).toString()) && File(it).isValidSpec()
+            it.contains(Path(targetPath).toString())
+            && File(it).isValidSpec()
+            && getSpecsReferringTo(setOf(it)).isEmpty()
         }.toSet()
 
         if (filesChangedInCurrentBranch.isEmpty() && untrackedFiles.isEmpty()) {

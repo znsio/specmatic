@@ -173,6 +173,60 @@ class BackwardCompatibilityCheckCommandV2Test {
             Files checked: 1 (Passed: 1, Failed: 0)
             """.trimIndent())
         }
+
+        @Test
+        fun `should exclude references of spec from untracked files`() {
+            File("a.yaml").apply {
+                referTo("a.yaml")
+            }.copyTo(tempDir.resolve("a.yaml"))
+            commitAndPush(tempDir, "Initial commit")
+            File("src/test/resources/specifications/spec_with_external_reference/").copyRecursively(tempDir)
+
+            val (stdOut, exception) = captureStandardOutput {
+                assertThrows<SystemExitException> {
+                    SystemExit.throwOnExit {
+                        BackwardCompatibilityCheckCommandV2().apply { repoDir = tempDir.canonicalPath }.call()
+                    }
+                }
+            }
+
+            assertThat(exception.code).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            - Specs that will be skipped (Untracked Files):
+            1. ${tempDir.resolve("api.yaml").canonicalFile.toPath().toRealPath()}
+            """.trimIndent()).containsIgnoringWhitespaces("""
+            Files checked: 0 (Passed: 0, Failed: 0)
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should work if path is relative in windows and linux based os`() {
+            File("a.yaml").apply {
+                referTo("a.yaml")
+            }.copyTo(tempDir.resolve("a.yaml"))
+            commitAndPush(tempDir, "Initial commit")
+            File("src/test/resources/specifications/spec_with_external_reference/").copyRecursively(tempDir)
+            val targetFile = "$tempDir/api.yaml"
+
+            val (stdOut, exception) = captureStandardOutput {
+                assertThrows<SystemExitException> {
+                    SystemExit.throwOnExit {
+                        BackwardCompatibilityCheckCommandV2().apply {
+                            repoDir = tempDir.canonicalPath
+                            targetPath = targetFile
+                        }.call()
+                    }
+                }
+            }
+
+            assertThat(exception.code).isEqualTo(0)
+            assertThat(stdOut).containsIgnoringWhitespaces("""
+            - Specs that will be skipped (Untracked Files):
+            1. ${tempDir.resolve("api.yaml").canonicalFile.toPath().toRealPath()}
+            """.trimIndent()).containsIgnoringWhitespaces("""
+            Files checked: 0 (Passed: 0, Failed: 0)
+            """.trimIndent())
+        }
     }
 
     @Nested

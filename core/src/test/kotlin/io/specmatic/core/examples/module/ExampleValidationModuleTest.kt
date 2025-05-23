@@ -552,6 +552,35 @@ class ExampleValidationModuleTest {
         }
     }
 
+    @Test
+    fun `should be able to validate examples with form-fields in the request`() {
+        val openApiFile = File("src/test/resources/openapi/has_form_fields/api.yaml")
+        val feature = parseContractFileToFeature(openApiFile)
+        val examplesDir = openApiFile.resolveSibling("valid_examples")
+
+        assertThat(examplesDir.listFiles()).allSatisfy { exampleFile ->
+            val result = exampleValidationModule.validateExample(feature, exampleFile)
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
+    @Test
+    fun `should complain when example has invalid form-fields in the request`() {
+        val openApiFile = File("src/test/resources/openapi/has_form_fields/api.yaml")
+        val feature = parseContractFileToFeature(openApiFile)
+        val examplesDir = openApiFile.resolveSibling("invalid_examples")
+
+        assertThat(examplesDir.listFiles()).allSatisfy { exampleFile ->
+            val result = exampleValidationModule.validateExample(feature, exampleFile)
+            val report = result.reportString()
+
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+            assertThat(report).contains(">> REQUEST.FORM-FIELDS.id")
+            assertThat(report).contains("Specification expected number but example contained")
+            assertThat(report).containsAnyOf("\"SHOULD-BE-NUMBER\"", "string")
+        }
+    }
+
     private fun ScenarioStub.toPartialExample(tempDir: File): File {
         val example = JSONObjectValue(mapOf("partial" to this.toJSON()))
         val exampleFile = tempDir.resolve("example.json")

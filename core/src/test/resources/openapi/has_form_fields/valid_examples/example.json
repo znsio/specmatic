@@ -1,0 +1,17 @@
+{
+  "http-request": {
+    "path": "/formFields",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    "form-fields": {
+      "data": "DATA123",
+      "id": "(number)"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "status-text": "OK"
+  }
+}

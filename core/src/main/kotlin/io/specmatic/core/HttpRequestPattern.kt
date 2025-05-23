@@ -12,6 +12,7 @@ import io.specmatic.core.discriminator.DiscriminatorBasedValueGenerator
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
+import io.specmatic.core.utilities.performPatternOp
 import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
@@ -894,7 +895,8 @@ data class HttpRequestPattern(
             path = httpPathPattern?.fixValue(request.path, resolver),
             queryParams = httpQueryParamPattern.fixValue(request.queryParams, resolver),
             headers = headersPattern.fixValue(request.headers, resolver),
-            body = body.fixValue(request.body, resolver)
+            body = body.fixValue(request.body, resolver),
+            formFields = fixFormFields(request, resolver)
         )
     }
 
@@ -904,15 +906,47 @@ data class HttpRequestPattern(
         val queryParams = httpQueryParamPattern.fillInTheBlanks(sanitizedRequest.queryParams, resolver).breadCrumb("QUERY-PARAMS")
         val headers = headersPattern.fillInTheBlanks(sanitizedRequest.headers, resolver).breadCrumb("HEADERS")
         val body = body.fillInTheBlanks(sanitizedRequest.body, resolver).breadCrumb("BODY")
+        val formFields = fillInFormFields(sanitizedRequest, resolver).breadCrumb("FORM-FIELDS")
 
         return HasValue(request)
             .combine(path) { req, it -> req.copy(path = it) }
             .combine(queryParams) { req, it -> req.copy(queryParams = it) }
             .combine(headers) { req, it -> req.copy(headers = it) }
             .combine(body) { req, it -> req.copy(body = it) }
+            .combine(formFields) { req, it -> req.copy(formFields = it) }
             .ifValue { copySecuritySchemes(request, it) }
             .breadCrumb("REQUEST")
             .value
+    }
+
+    private fun fillInFormFields(request: HttpRequest, resolver: Resolver): ReturnValue<Map<String, String>> {
+        return request.formFields.performPatternOp(
+            patternMap = formFieldsPattern,
+            resolver = resolver,
+            operation = { valueMap, patternMap ->
+                fill(
+                    jsonValueMap = valueMap,
+                    jsonPatternMap = patternMap,
+                    resolver = resolver,
+                    typeAlias = "(${FORM_FIELDS_BREADCRUMB})"
+                )
+            }
+        )
+    }
+
+    private fun fixFormFields(request: HttpRequest, resolver: Resolver): Map<String, String> {
+        return request.formFields.performPatternOp(
+            patternMap = formFieldsPattern,
+            resolver = resolver,
+            operation = { valueMap, patternMap ->
+                fix(
+                    jsonValueMap = valueMap,
+                    jsonPatternMap = patternMap,
+                    resolver = resolver,
+                    jsonPattern = JSONObjectPattern(patternMap, typeAlias = "(${FORM_FIELDS_BREADCRUMB})")
+                ).let(::HasValue)
+            }
+        ).value
     }
 
     private fun copySecuritySchemes(originalRequest: HttpRequest, request: HttpRequest): HttpRequest {

@@ -206,14 +206,13 @@ class BackwardCompatibilityCheckCommandV2Test {
             }.copyTo(tempDir.resolve("a.yaml"))
             commitAndPush(tempDir, "Initial commit")
             File("src/test/resources/specifications/spec_with_external_reference/").copyRecursively(tempDir)
-            val targetFile = "$tempDir/api.yaml"
 
             val (stdOut, exception) = captureStandardOutput {
                 assertThrows<SystemExitException> {
                     SystemExit.throwOnExit {
                         BackwardCompatibilityCheckCommandV2().apply {
                             repoDir = tempDir.canonicalPath
-                            targetPath = targetFile
+                            targetPath = "$tempDir/api.yaml"
                         }.call()
                     }
                 }

@@ -25,8 +25,8 @@ dependencies {
     implementation("org.junit.platform:junit-platform-launcher:1.11.4")
     implementation("org.junit.platform:junit-platform-reporting:1.11.4")
 
-    implementation("org.eclipse.jgit:org.eclipse.jgit:7.0.0.202409031743-r")
-    implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.apache:7.0.0.202409031743-r")
+    implementation("org.eclipse.jgit:org.eclipse.jgit:7.2.1.202505142326-r")
+    implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.apache:7.2.1.202505142326-r")
 
     implementation("org.apache.ant:ant-junit:1.10.15")
 

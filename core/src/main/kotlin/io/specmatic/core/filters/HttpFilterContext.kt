@@ -40,6 +40,15 @@ class HttpFilterContext(private val scenario: Scenario) : FilterContext {
                 filterKey == FilterKeys.PARAMETERS_PATH -> {
                     scenario.httpRequestPattern.httpPathPattern?.pathSegmentPatterns?.map{it.key}?.contains(eachValue) ?: false
                 }
+                key.startsWith(FilterKeys.PARAMETERS_PATH_KEY.key) -> {
+                    val pathKey = key.substringAfter(FilterKeys.PARAMETERS_PATH_KEY.key).substringBefore("=")
+                    val pathValue = eachValue.substringAfter("=")
+                    scenario.examples.any { eachExample->
+                        eachExample.rows.any { eachRow ->
+                            eachRow.containsField(pathKey) && eachRow.getField(pathKey) == pathValue
+                        }
+                    }
+                }
                 filterKey == FilterKeys.REQUEST_BODY_CONTENT_TYPE -> {
                     try {
                         MimeType(scenario.httpRequestPattern.headersPattern.contentType).match(MimeType(eachValue))

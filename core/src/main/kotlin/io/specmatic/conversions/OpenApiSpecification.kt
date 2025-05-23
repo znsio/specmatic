@@ -173,7 +173,7 @@ class OpenApiSpecification(
         }
 
         private fun getDictionaryFile(openApiFile: File, dictionaryPathFromConfig: String?): File? {
-            val explicitDictionaryPath = dictionaryPathFromConfig ?: Flags.getStringValue(SPECMATIC_STUB_DICTIONARY)
+            val explicitDictionaryPath = dictionaryPathFromConfig ?: Flags.getStringValue(SPECMATIC_DICTIONARY)
             if (!explicitDictionaryPath.isNullOrEmpty()) return File(explicitDictionaryPath)
 
             val implicitPaths = sequenceOf("_dictionary.yml", "_dictionary.yaml", "_dictionary.json")

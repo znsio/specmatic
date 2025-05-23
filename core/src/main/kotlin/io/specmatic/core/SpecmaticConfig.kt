@@ -73,8 +73,7 @@ const val TEST_DIR_SUFFIX = "_tests"
 const val EXAMPLES_DIR_SUFFIX = "_examples"
 const val SPECMATIC_GITHUB_ISSUES = "https://github.com/znsio/specmatic/issues"
 const val DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
-
-const val SPECMATIC_STUB_DICTIONARY = "SPECMATIC_STUB_DICTIONARY"
+const val SPECMATIC_DICTIONARY = "SPECMATIC_DICTIONARY"
 
 const val MISSING_CONFIG_FILE_MESSAGE = "Config file does not exist. (Could not find file ./specmatic.json OR ./specmatic.yaml OR ./specmatic.yml)"
 
@@ -118,7 +117,7 @@ data class StubConfiguration(
     }
 
     fun getDictionary(): String? {
-        return dictionary ?: getStringValue(SPECMATIC_STUB_DICTIONARY)
+        return dictionary ?: getStringValue(SPECMATIC_DICTIONARY)
     }
 
     fun getIncludeMandatoryAndRequestedKeysInResponse(): Boolean? {

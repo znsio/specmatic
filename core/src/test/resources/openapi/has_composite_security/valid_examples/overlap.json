@@ -1,0 +1,25 @@
+{
+    "http-request": {
+        "path": "/overlap",
+        "method": "POST",
+        "query": {
+            "apiKey": "1234"
+        },
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "body": {
+            "message": "Hello to Overlap"
+        }
+    },
+    "http-response": {
+        "status": 200,
+        "body": {
+            "message": "Hello from Overlap"
+        },
+        "status-text": "OK",
+        "headers": {
+            "Content-Type": "application/json"
+        }
+    }
+}

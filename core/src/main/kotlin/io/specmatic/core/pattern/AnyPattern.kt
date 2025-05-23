@@ -101,7 +101,7 @@ data class AnyPattern(
         return matchingPattern.addTypeAliasesToConcretePattern(concretePattern, resolver, this.typeAlias ?: typeAlias)
     }
 
-    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
+    override fun fillInTheBlanks(value: Value, resolver: Resolver, removeExtraKeys: Boolean): ReturnValue<Value> {
         val patternToConsider = when (val resolvedPattern = resolveToPattern(value, resolver, this)) {
             is ReturnFailure -> return resolvedPattern.cast()
             else -> resolvedPattern.value
@@ -112,7 +112,7 @@ data class AnyPattern(
         val newPatterns = updatedPatterns.filter { it.typeAlias != null }.associateBy { it.typeAlias.orEmpty() }
         val updatedResolver = resolver.copy(newPatterns = resolver.newPatterns.plus(newPatterns) ).updateLookupPath(this.typeAlias)
 
-        val results = updatedPatterns.asSequence().map { it.fillInTheBlanks(value, updatedResolver) }
+        val results = updatedPatterns.asSequence().map { it.fillInTheBlanks(value, updatedResolver, removeExtraKeys) }
         val successfulGeneration = results.firstOrNull { it is HasValue }
         if(successfulGeneration != null) return successfulGeneration
 

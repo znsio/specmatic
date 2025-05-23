@@ -46,7 +46,7 @@ data class ListPattern(
         )
     }
 
-    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
+    override fun fillInTheBlanks(value: Value, resolver: Resolver, removeExtraKeys: Boolean): ReturnValue<Value> {
         val patternToConsider = when (val resolvedPattern = resolveToPattern(value, resolver, this)) {
             is ReturnFailure -> return resolvedPattern.cast()
             else -> (resolvedPattern.value as? ListPattern) ?: return when(resolver.isNegative) {
@@ -65,7 +65,7 @@ data class ListPattern(
 
         return valueToConsider.mapIndexed { index, item ->
             val updatedResolver = resolver.updateLookupPath(this, this.pattern)
-            patternToConsider.fillInTheBlanks(item, updatedResolver).breadCrumb("[$index]")
+            patternToConsider.fillInTheBlanks(item, updatedResolver, removeExtraKeys).breadCrumb("[$index]")
         }.listFold().ifValue(::JSONArrayValue)
     }
 

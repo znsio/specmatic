@@ -409,6 +409,14 @@ data class HttpRequest(
         return headers[SPECMATIC_RESPONSE_CODE_HEADER]?.toIntOrNull()
     }
 
+    fun hasHeader(name: String): Boolean {
+        return headers.containsKey(name)
+    }
+
+    fun hasQueryParam(name: String): Boolean {
+        return queryParams.containsKey(name)
+    }
+
     val generality: Int by lazy {
         val pathScore: Int = path?.split(URL_PATH_DELIMITER)?.count { StringValue(it).isPatternToken() } ?: 0
         val headerScore: Int = headers.values.sumOf { if(isPatternToken(it)) 1 as Int else 0 }

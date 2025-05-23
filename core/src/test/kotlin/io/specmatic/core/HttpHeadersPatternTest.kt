@@ -491,6 +491,22 @@ internal class HttpHeadersPatternTest {
             assertThat(newHeader.pattern).containsOnlyKeys("X-Existing")
             assertThat(newHeader.pattern["X-Existing"]).isInstanceOf(StringPattern::class.java)
         }
+
+        @Test
+        fun `should use allOrNothingCombination when generating patterns`() {
+            val headers = HttpHeadersPattern(1.until(11).associate { index ->
+                "Header${index}${"?".takeIf { index % 2 == 0 }}" to NumberPattern()
+            })
+            val newHeaders = headers.newBasedOn(Row(), Resolver()).toList()
+
+            assertThat(newHeaders).hasSize(2)
+            assertThat(newHeaders.first().value.pattern).hasSize(10).allSatisfy { key, _ ->
+                assertThat(isOptional(key)).isFalse()
+            }
+            assertThat(newHeaders.last().value.pattern).hasSize(5).allSatisfy { key, _ ->
+                assertThat(isOptional(key)).isFalse()
+            }
+        }
     }
 
     @Test

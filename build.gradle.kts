@@ -78,7 +78,9 @@ specmatic {
         githubRelease {
             addFile("unobfuscatedShadowJar", "specmatic.jar")
         }
-        dockerBuild(imageName = "specmatic")
+        dockerBuild {
+            imageName = "specmatic"
+        }
         publish {
             pom {
                 name = "Specmatic Executable"

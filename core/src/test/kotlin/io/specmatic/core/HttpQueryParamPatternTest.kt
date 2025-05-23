@@ -124,7 +124,7 @@ class HttpQueryParamPatternTest {
         val row = Row(listOf("status", "type"), listOf("available", "dog"))
         val generatedPatterns = buildQueryPattern(URI("/pets?status=(string)&type=(string)")).newBasedOn(row, resolver).toList()
         assertEquals(1, generatedPatterns.size)
-        val values = HttpQueryParamPattern(generatedPatterns.first().value).generate(resolver)
+        val values = generatedPatterns.first().value.generate(resolver)
         assertThat(values.single{ it.first == "status"}.second).isEqualTo("available")
         assertThat(values.single{ it.first == "type"}.second).isEqualTo("dog")
     }
@@ -158,7 +158,7 @@ class HttpQueryParamPatternTest {
     @Tag(GENERATION)
     fun `should generate a path with a concrete value given a query param with newBasedOn`() {
         val matcher = buildQueryPattern(URI("/pets?available=(boolean)"))
-        val matchers = matcher.newBasedOn(Row(), Resolver()).toList().map { it.value }
+        val matchers = matcher.newBasedOn(Row(), Resolver()).toList().map { it.value.queryPatterns }
         assertThat(matchers).hasSize(2)
         assertThat(matchers).contains(emptyMap())
         assertThat(matchers).contains(mapOf("available" to BooleanPattern()))
@@ -178,19 +178,17 @@ class HttpQueryParamPatternTest {
     @Test
     fun `should generate negative values for a string`() {
         val urlMatchers =
-            buildQueryPattern(URI("/pets?name=(string)")).negativeBasedOn(Row(), Resolver()).toList().map { it.value }
+            buildQueryPattern(URI("/pets?name=(string)")).negativeBasedOn(Row(), Resolver()).toList().map { it.value.queryPatterns }
         assertThat(urlMatchers).containsExactly(emptyMap())
     }
 
     @Test
     @Tag(GENERATION)
-    fun `should create 2^n matchers on an empty Row`() {
+    fun `should not create 2^n matchers on an empty Row`() {
         val patterns = buildQueryPattern(URI("/pets?status=(string)&type=(string)"))
-        val generatedPatterns = patterns.newBasedOn(Row(), Resolver()).toList().map { it.value }
+        val generatedPatterns = patterns.newBasedOn(Row(), Resolver()).toList().map { it.value.queryPatterns }
         assertThat(generatedPatterns).containsExactlyInAnyOrder(
             emptyMap(),
-            mapOf("status" to StringPattern()),
-            mapOf("type" to StringPattern()),
             mapOf("status" to StringPattern(), "type" to StringPattern()),
         )
     }
@@ -513,7 +511,7 @@ class HttpQueryParamPatternTest {
     fun `an additional query param should be added in a test`() {
         val queryPattern = HttpQueryParamPattern(mapOf("key" to QueryParameterScalarPattern(NumberPattern())), NumberPattern())
 
-        val generatedValue = queryPattern.newBasedOn(Row(), Resolver()).toList().map { it.value }
+        val generatedValue = queryPattern.newBasedOn(Row(), Resolver()).toList().map { it.value.queryPatterns }
 
         assertThat(generatedValue).hasSize(1)
         assertThat(generatedValue.first()).hasSize(2)

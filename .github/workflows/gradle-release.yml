@@ -28,7 +28,7 @@ jobs:
         run: echo ${{ secrets.SPECMATIC_DOCKER_HUB_TOKEN }} | docker login -u ${{ vars.SPECMATIC_DOCKER_HUB_USERNAME }} --password-stdin
 
       - name: 'Build/test'
-        uses: znsio/specmatic-github-workflows/action-build-gradle@main
+        uses: specmatic/specmatic-github-workflows/action-build-gradle@main
         with:
           gradle-extra-args: -Pgithub.actor=${{ vars.SPECMATIC_GITHUB_USER }} -Pgithub.token=${{ secrets.SPECMATIC_GITHUB_TOKEN }}
 

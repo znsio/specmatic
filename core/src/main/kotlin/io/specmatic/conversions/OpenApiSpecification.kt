@@ -60,6 +60,13 @@ internal fun missingResponseExampleErrorMessageForTest(exampleName: String): Str
 
 private const val SPECMATIC_TEST_WITH_NO_REQ_EX = "SPECMATIC-TEST-WITH-NO-REQ-EX"
 
+data class OperationMetadata(
+    val tags: List<String> = emptyList<String>(),
+    val summary: String = "",
+    val description: String = "",
+    val operationId: String = ""
+)
+
 class OpenApiSpecification(
     private val openApiFilePath: String,
     private val parsedOpenApi: OpenAPI,
@@ -461,6 +468,13 @@ class OpenApiSpecification(
 
                         val rowsToBeUsed: List<Row> = specmaticExampleRows
 
+                        val operationMetadata = OperationMetadata(
+                            tags = operation.tags.orEmpty(),
+                            summary = operation.summary.orEmpty(),
+                            description = operation.description.orEmpty(),
+                            operationId = operation.operationId.orEmpty()
+                        )
+
                         ScenarioInfo(
                             scenarioName = scenarioName,
                             patterns = patterns.toMap(),
@@ -472,7 +486,8 @@ class OpenApiSpecification(
                             sourceRepository = sourceRepository,
                             sourceRepositoryBranch = sourceRepositoryBranch,
                             specification = specificationPath,
-                            serviceType = SERVICE_TYPE_HTTP
+                            serviceType = SERVICE_TYPE_HTTP,
+                            operationMetadata = operationMetadata
                         )
                     }
 

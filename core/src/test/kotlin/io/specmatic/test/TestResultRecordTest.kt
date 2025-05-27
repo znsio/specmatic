@@ -1,6 +1,7 @@
 package io.specmatic.test
 
 import io.specmatic.core.TestResult
+import io.specmatic.core.filters.ScenarioMetadata
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -69,7 +70,7 @@ class TestResultRecordTest {
             result = TestResult.Success
         )
 
-        val scenarioMetadata = record.toScenarioMetadata()
+        val scenarioMetadata = record.toScenarioMetadata() as ScenarioMetadata
 
         assertThat(scenarioMetadata.method).isEqualTo("GET")
         assertThat(scenarioMetadata.path).isEqualTo("/example/path")

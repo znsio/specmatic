@@ -15,7 +15,6 @@ import picocli.CommandLine.*
 import java.io.File
 import java.util.concurrent.Callable
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.system.exitProcess
 
 private const val SUCCESS_EXIT_CODE = 0
 private const val FAILURE_EXIT_CODE = 1
@@ -42,21 +41,15 @@ class ExamplesCommand : Callable<Int> {
         @Option(
             names= ["--filter"],
             description = [
-                """
-Filter tests matching the specified filtering criteria
+                """Filter tests matching the specified filtering criteria
 
 You can filter tests based on the following keys:
 - `METHOD`: HTTP methods (e.g., GET, POST)
 - `PATH`: Request paths (e.g., /users, /product)
 - `STATUS`: HTTP response status codes (e.g., 200, 400)
-- `HEADERS`: Request headers (e.g., Accept, X-Request-ID)
-- `QUERY`: Query parameters (e.g., status, productId)
-- `EXAMPLE_NAME`: Example name (e.g., create-product, active-status)
 
-To specify multiple values for the same filter, separate them with commas. 
-For example, to filter by HTTP methods: 
---filter="METHOD=GET,POST"
-           """
+You can find all available filters and their usage at:
+https://docs.specmatic.io/documentation/contract_tests.html#supported-filters--operators"""
             ],
             required = false
         )
@@ -127,7 +120,7 @@ For example, to filter by HTTP methods:
                 val (exitCode, validationResults) = validateExamplesDir(contractFile!!, examplesDir)
 
                 printValidationResult(validationResults.exampleValidationResults, "Example directory")
-                return exitCode
+                return if (exitCode == FAILURE_EXIT_CODE) FAILURE_EXIT_CODE else validationResults.exitCode
             }
 
             if (contractFile != null) return validateImplicitExamplesFrom(contractFile!!)
@@ -243,7 +236,7 @@ For example, to filter by HTTP methods:
                 else {
                     val (exitCode, validationResults)
                             = validateExamplesDir(feature, ExampleModule().defaultExternalExampleDirFrom(contractFile))
-                    if(exitCode == 1) exitProcess(exitCode)
+                    if(exitCode == 1) return exitCode
                     validationResults
                 }
 

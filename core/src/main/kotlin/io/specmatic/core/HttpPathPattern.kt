@@ -1,13 +1,14 @@
 package io.specmatic.core
 
+import io.ktor.util.reflect.*
+import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.Result.Failure
 import io.specmatic.core.Result.Success
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.StringValue
-import io.ktor.util.reflect.*
-import io.specmatic.conversions.convertPathParameterStyle
+import io.swagger.v3.oas.models.parameters.Parameter
+import io.swagger.v3.oas.models.parameters.PathParameter
 import java.net.URI
-import kotlin.collections.joinToString
 
 val OMIT = listOf("(OMIT)", "(omit)")
 
@@ -15,16 +16,24 @@ const val PATH_BREAD_CRUMB = "PATH"
 
 data class HttpPathPattern(
     val pathSegmentPatterns: List<URLPathSegmentPattern>,
-    val path: String
+    val path: String,
 ) {
+
+    fun toRawPath(): String {
+        return pathSegmentPatterns.joinToString("/", prefix = "/") { segment ->
+            segment.key?.let { "{$it}" } ?: segment.pattern.toString()
+        }
+    }
+
     fun encompasses(otherHttpPathPattern: HttpPathPattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if (this.matches(URI.create(otherHttpPathPattern.path), resolver=thisResolver) is Success)
+        if (this.matches(URI.create(otherHttpPathPattern.path), resolver = thisResolver) is Success)
             return Success()
 
         val mismatchedPartResults =
-            this.pathSegmentPatterns.zip(otherHttpPathPattern.pathSegmentPatterns).map { (thisPathItem, otherPathItem) ->
-                thisPathItem.pattern.encompasses(otherPathItem, thisResolver, otherResolver)
-            }
+            this.pathSegmentPatterns.zip(otherHttpPathPattern.pathSegmentPatterns)
+                .map { (thisPathItem, otherPathItem) ->
+                    thisPathItem.pattern.encompasses(otherPathItem, thisResolver, otherResolver)
+                }
 
         val failures = mismatchedPartResults.filterIsInstance<Failure>()
 
@@ -61,7 +70,9 @@ data class HttpPathPattern(
                 val result = urlPathPattern.matches(parsedValue, resolver)
                 if (result is Failure) {
                     when (urlPathPattern.key) {
-                        null -> result.breadCrumb("$PATH_BREAD_CRUMB ($path)").withFailureReason(FailureReason.URLPathMisMatch)
+                        null -> result.breadCrumb("$PATH_BREAD_CRUMB ($path)")
+                            .withFailureReason(FailureReason.URLPathMisMatch)
+
                         else -> result.breadCrumb(urlPathPattern.key).breadCrumb(PATH_BREAD_CRUMB)
                     }
                 } else {
@@ -84,7 +95,8 @@ data class HttpPathPattern(
         val structureMatches = structureMatches(path, resolver)
         if (!structureMatches) return finalMatchResult.withFailureReason(FailureReason.URLPathMisMatch)
 
-        val areAllConflicts = failures.isNotEmpty() && failures.all { it.hasReason(FailureReason.URLPathParamMatchButConflict) }
+        val areAllConflicts =
+            failures.isNotEmpty() && failures.all { it.hasReason(FailureReason.URLPathParamMatchButConflict) }
         if (!areAllConflicts) return finalMatchResult.withFailureReason(FailureReason.URLPathParamMismatchButSameStructure)
 
         val pathParametersCount = pathSegmentPatterns.count { it.pattern !is ExactValuePattern }
@@ -97,6 +109,7 @@ data class HttpPathPattern(
                 """.trimMargin(),
                 failureReason = FailureReason.URLPathParamMatchButConflict
             )
+
             else -> Success()
         }
     }
@@ -125,46 +138,48 @@ data class HttpPathPattern(
         resolver: Resolver
     ): Sequence<List<URLPathSegmentPattern>> {
         val generatedPatterns = newListBasedOn(pathSegmentPatterns.mapIndexed { index, urlPathParamPattern ->
-                val key = urlPathParamPattern.key
-                if (key === null || !row.containsField(key)) return@mapIndexed urlPathParamPattern
-                attempt(breadCrumb = "$PATH_BREAD_CRUMB.${withoutOptionality(key)}") {
-                    val rowValue = row.getField(key)
-                    when {
-                        isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathParamPattern.key}\"") {
-                            val rowValueWithoutWithoutIdentifier = withoutPatternDelimiters(rowValue).split(':').let {
-                                it.getOrNull(1) ?: it.getOrNull(0) ?: throw ContractException("Invalid pattern token $rowValue in example")
-                            }.let {
-                                withPatternDelimiters(it)
-                            }
-                            val rowPattern = resolvedHop(resolver.getPattern(rowValueWithoutWithoutIdentifier), resolver)
-                            val pathSegmentPattern = resolvedHop(urlPathParamPattern.pattern, resolver)
-
-                            if(pathSegmentPattern.javaClass == rowPattern.javaClass) {
-                                urlPathParamPattern
-                            } else {
-                                when (val result = urlPathParamPattern.encompasses(rowPattern, resolver, resolver)) {
-                                    is Success -> urlPathParamPattern.copy(pattern = rowPattern)
-                                    is Failure -> throw ContractException(result.toFailureReport())
-                                }
-                            }
+            val key = urlPathParamPattern.key
+            if (key === null || !row.containsField(key)) return@mapIndexed urlPathParamPattern
+            attempt(breadCrumb = "$PATH_BREAD_CRUMB.${withoutOptionality(key)}") {
+                val rowValue = row.getField(key)
+                when {
+                    isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathParamPattern.key}\"") {
+                        val rowValueWithoutWithoutIdentifier = withoutPatternDelimiters(rowValue).split(':').let {
+                            it.getOrNull(1) ?: it.getOrNull(0)
+                            ?: throw ContractException("Invalid pattern token $rowValue in example")
+                        }.let {
+                            withPatternDelimiters(it)
                         }
+                        val rowPattern = resolvedHop(resolver.getPattern(rowValueWithoutWithoutIdentifier), resolver)
+                        val pathSegmentPattern = resolvedHop(urlPathParamPattern.pattern, resolver)
 
-                        else -> attempt("Format error in example of path parameter \"$key\"") {
-                            val value = urlPathParamPattern.parse(rowValue, resolver)
-
-                            val matchResult = urlPathParamPattern.matches(value, resolver)
-                            if (matchResult is Failure)
-                                throw ContractException("""Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract.""")
-
-                            URLPathSegmentPattern(
-                                ExactValuePattern(
-                                    value
-                                )
-                            )
+                        if (pathSegmentPattern.javaClass == rowPattern.javaClass) {
+                            urlPathParamPattern
+                        } else {
+                            when (val result = urlPathParamPattern.encompasses(rowPattern, resolver, resolver)) {
+                                is Success -> urlPathParamPattern.copy(pattern = rowPattern)
+                                is Failure -> throw ContractException(result.toFailureReport())
+                            }
                         }
                     }
+
+                    else -> attempt("Format error in example of path parameter \"$key\"") {
+                        val value = urlPathParamPattern.parse(rowValue, resolver)
+
+                        val matchResult = urlPathParamPattern.matches(value, resolver)
+                        if (matchResult is Failure)
+                            throw ContractException("""Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract.""")
+
+                        URLPathSegmentPattern(
+                            ExactValuePattern(
+                                value
+                            ),
+                            urlPathParamPattern.key
+                        )
+                    }
                 }
-            }, row, resolver).map { it.value }
+            }
+        }, row, resolver).map { it.value }
 
         //TODO: replace this with Generics
         return generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }
@@ -178,13 +193,15 @@ data class HttpPathPattern(
             attempt(breadCrumb = "$PATH_BREAD_CRUMB.${withoutOptionality(key)}") {
                 val rowValue = row.getField(key)
                 when {
-                    isPatternToken(rowValue) ->  {
+                    isPatternToken(rowValue) -> {
                         val parts = withoutPatternDelimiters(rowValue).split(':')
-                        val tokenBody = parts.getOrNull(1) ?: parts.getOrNull(0) ?: throw ContractException("Invalid pattern token $rowValue in example")
+                        val tokenBody = parts.getOrNull(1) ?: parts.getOrNull(0)
+                        ?: throw ContractException("Invalid pattern token $rowValue in example")
                         val pattern = resolver.getPattern(withPatternDelimiters(tokenBody))
                         resolvedHop(pattern, resolver)
                     }
-                    else ->  {
+
+                    else -> {
                         val exactValue = parsedScalarValue(rowValue)
                         URLPathSegmentPattern(ExactValuePattern(exactValue))
                     }
@@ -309,7 +326,7 @@ data class HttpPathPattern(
             val updatedResolver = resolver.updateLookupPath("PATH-PARAMS", KeyWithPattern(key, keyPattern))
             val result = urlPathPattern.fixValue(urlPathPattern.tryParse(tokenWithoutParameter, updatedResolver), updatedResolver)
             token.takeIf { isPatternToken(tokenWithoutParameter) && isPatternToken(result) } ?: result
-        }.joinToString("/", prefix = "/".takeIf { pathHadPrefix }.orEmpty() )
+        }.joinToString("/", prefix = "/".takeIf { pathHadPrefix }.orEmpty())
     }
 
     fun fillInTheBlanks(path: String?, resolver: Resolver): ReturnValue<String> {
@@ -391,4 +408,3 @@ internal fun pathToPattern(rawPath: String): List<URLPathSegmentPattern> =
             else -> URLPathSegmentPattern(ExactValuePattern(StringValue(part)))
         }
     }
-

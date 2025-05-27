@@ -15,7 +15,7 @@ Will use the OpenAPI file `openapi.yaml` to run contract tests against the servi
 
 #### 2. Running Specmatic Service Virtualization
 ```shell
-docker run -v "$(pwd)/openapi.yaml:/openapi.yaml" znsio/specmatic virtualize "/openapi.yaml"
+docker run -v "$(pwd)/openapi.yaml:/openapi.yaml" -p "9000:9000"  znsio/specmatic virtualize "/openapi.yaml"
 ```
 Will use the OpenAPI file `openapi.yaml` to start a stub server on http://localhost:9000 and will respond to API requests as per the examples in the OpenAPI file.
 

@@ -9,6 +9,7 @@ open class SpecmaticApplication {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
+            setupPicoCli()
             setupLogging()
 
             Thread.setDefaultUncaughtExceptionHandler(UncaughtExceptionHandler())
@@ -24,6 +25,10 @@ open class SpecmaticApplication {
                     exitProcess(exitCode)
                 }
             }
+        }
+
+        private fun setupPicoCli() {
+            System.setProperty("picocli.usage.width", "auto")
         }
 
         private fun setupLogging() {

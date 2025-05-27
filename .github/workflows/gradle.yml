@@ -12,7 +12,7 @@ jobs:
     permissions:
       contents: write # This is required so that the dependency check can push dependency graph to the github repository
     steps:
-      - uses: znsio/specmatic-github-workflows/action-build-gradle@main
+      - uses: specmatic/specmatic-github-workflows/action-build-gradle@main
         with:
           gradle-extra-args: -Pgithub.actor=${{ vars.SPECMATIC_GITHUB_USER }} -Pgithub.token=${{ secrets.SPECMATIC_GITHUB_TOKEN }}
 

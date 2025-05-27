@@ -17,7 +17,7 @@ specmatic {
         "publishAllPublicationsToSpecmaticPrivateRepository",
         "dockerBuildxPublish"
     )
-    publishTo("specmaticPrivate", "https://maven.pkg.github.com/znsio/specmatic-private-maven-repo")
+    publishTo("specmaticPrivate", "https://maven.pkg.github.com/specmatic/specmatic-private-maven-repo")
     withOSSLibrary(project(":specmatic-core")) {
         githubRelease()
         publish {
@@ -29,7 +29,7 @@ specmatic {
                 licenses {
                     license {
                         name = "MIT"
-                        url = "https://github.com/znsio/specmatic/blob/main/License.md"
+                        url = "https://github.com/specmatic/specmatic/blob/main/License.md"
                     }
                 }
                 developers {
@@ -40,7 +40,7 @@ specmatic {
                     }
                 }
                 scm {
-                    connection = "https://github.com/znsio/specmatic"
+                    connection = "https://github.com/specmatic/specmatic"
                     url = "https://specmatic.io/"
                 }
             }
@@ -56,7 +56,7 @@ specmatic {
                 licenses {
                     license {
                         name = "MIT"
-                        url = "https://github.com/znsio/specmatic/blob/main/License.md"
+                        url = "https://github.com/specmatic/specmatic/blob/main/License.md"
                     }
                 }
                 developers {
@@ -67,7 +67,7 @@ specmatic {
                     }
                 }
                 scm {
-                    connection = "https://github.com/znsio/specmatic"
+                    connection = "https://github.com/specmatic/specmatic"
                     url = "https://specmatic.io/"
                 }
             }
@@ -89,7 +89,7 @@ specmatic {
                 licenses {
                     license {
                         name = "MIT"
-                        url = "https://github.com/znsio/specmatic/blob/main/License.md"
+                        url = "https://github.com/specmatic/specmatic/blob/main/License.md"
                     }
                 }
                 developers {
@@ -100,7 +100,7 @@ specmatic {
                     }
                 }
                 scm {
-                    connection = "https://github.com/znsio/specmatic"
+                    connection = "https://github.com/specmatic/specmatic"
                     url = "https://specmatic.io/"
                 }
             }

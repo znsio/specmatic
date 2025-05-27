@@ -1540,7 +1540,7 @@ class OpenApiSpecification(
                     val schemaFragment = if(patternName.isNotBlank()) " in schema $patternName" else " in the schema"
 
                     if(schema.javaClass.simpleName != "Schema")
-                        throw ContractException("${schemaFragment.capitalizeFirstChar()} is not yet supported, please raise an issue on https://github.com/znsio/specmatic/issues")
+                        throw ContractException("${schemaFragment.capitalizeFirstChar()} is not yet supported, please raise an issue on https://github.com/specmatic/specmatic/issues")
                     else
                         AnyNonNullJSONValue()
                 }

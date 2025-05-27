@@ -6,18 +6,13 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
-import io.specmatic.core.EXAMPLES_DIR_SUFFIX
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.KeyData
-import io.specmatic.core.NamedStub
-import io.specmatic.core.URLParts
+import io.specmatic.core.*
+import io.specmatic.core.filters.ExpressionStandardizer
+import io.specmatic.core.filters.HttpRequestFilterContext
+import io.specmatic.core.filters.HttpResponseFilterContext
 import io.specmatic.core.log.logger
-import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
-import io.specmatic.core.toGherkinFeature
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.uniqueNameForApiOperation
 import io.specmatic.mock.ScenarioStub
@@ -36,8 +31,24 @@ import java.io.Closeable
 import java.net.URI
 import java.net.URL
 
-class Proxy(host: String, port: Int, baseURL: String, private val outputDirectory: FileWriter, keyData: KeyData? = null, timeoutInMilliseconds: Long = DEFAULT_TIMEOUT_IN_MILLISECONDS): Closeable {
-    constructor(host: String, port: Int, baseURL: String, proxySpecmaticDataDir: String, keyData: KeyData? = null, timeoutInMilliseconds: Long) : this(host, port, baseURL, RealFileWriter(proxySpecmaticDataDir), keyData, timeoutInMilliseconds)
+class Proxy(
+    host: String,
+    port: Int,
+    baseURL: String,
+    private val outputDirectory: FileWriter,
+    keyData: KeyData? = null,
+    timeoutInMilliseconds: Long = DEFAULT_TIMEOUT_IN_MILLISECONDS,
+    filter: String? = ""
+) : Closeable {
+    constructor(
+        host: String,
+        port: Int,
+        baseURL: String,
+        proxySpecmaticDataDir: String,
+        keyData: KeyData? = null,
+        timeoutInMilliseconds: Long,
+        filter: String
+    ) : this(host, port, baseURL, RealFileWriter(proxySpecmaticDataDir), keyData, timeoutInMilliseconds, filter)
 
     private val stubs = mutableListOf<NamedStub>()
 
@@ -54,8 +65,8 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                 try {
                     val httpRequest = ktorHttpRequestToHttpRequest(call)
 
-                    if(httpRequest.isHealthCheckRequest()) return@intercept
-                    if(httpRequest.isDumpRequest()) return@intercept
+                    if (httpRequest.isHealthCheckRequest()) return@intercept
+                    if (httpRequest.isDumpRequest()) return@intercept
 
                     when (httpRequest.method?.uppercase()) {
                         "CONNECT" -> {
@@ -69,7 +80,16 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                         }
 
                         else -> try {
-                            val client = LegacyHttpClient(proxyURL(httpRequest, baseURL), timeoutInMilliseconds = timeoutInMilliseconds)
+                            if (filter != "" && filterHttpRequest(httpRequest, filter)) {
+                                respondToKtorHttpResponse(call, HttpResponse(404, "This request has been filtered out"))
+                                return@intercept
+                            }
+
+                            // continue as before, if not matching filter
+                            val client = LegacyHttpClient(
+                                proxyURL(httpRequest, baseURL),
+                                timeoutInMilliseconds = timeoutInMilliseconds
+                            )
 
                             val requestToSend = targetHost?.let {
                                 httpRequest.withHost(targetHost)
@@ -77,6 +97,12 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
 
                             val httpResponse = client.execute(requestToSend)
 
+                            if (filter != "" && filterHttpResponse(httpResponse, filter)) {
+                                respondToKtorHttpResponse(call, HttpResponse(404, "This response has been filtered out"))
+                                return@intercept
+                            }
+
+                            // check response for matching filter. if matches, bail!
                             val name =
                                 "${httpRequest.method} ${httpRequest.path}${toQueryString(httpRequest.queryParams.asMap())}"
                             stubs.add(
@@ -124,7 +150,12 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                 this.host = host
                 this.port = port
             }
-            else -> sslConnector(keyStore = keyData.keyStore, keyAlias = keyData.keyAlias, privateKeyPassword = { keyData.keyPassword.toCharArray() }, keyStorePassword = { keyData.keyPassword.toCharArray() }) {
+
+            else -> sslConnector(
+                keyStore = keyData.keyStore,
+                keyAlias = keyData.keyAlias,
+                privateKeyPassword = { keyData.keyPassword.toCharArray() },
+                keyStorePassword = { keyData.keyPassword.toCharArray() }) {
                 this.host = host
                 this.port = port
             }
@@ -134,17 +165,21 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
     private fun toQueryString(queryParams: Map<String, String>): String {
         return queryParams.entries.joinToString("&") { entry ->
             "${entry.key}=${entry.value}"
-        }.let { when {
-            it.isEmpty() -> it
-            else -> "?$it"
-        }}
+        }.let {
+            when {
+                it.isEmpty() -> it
+                else -> "?$it"
+            }
+        }
     }
 
     private fun withoutContentEncodingGzip(httpResponse: HttpResponse): HttpResponse {
-        val contentEncodingKey = httpResponse.headers.keys.find { it.lowercase() == "content-encoding" } ?: "Content-Encoding"
+        val contentEncodingKey =
+            httpResponse.headers.keys.find { it.lowercase() == "content-encoding" } ?: "Content-Encoding"
         return when {
             httpResponse.headers[contentEncodingKey]?.lowercase()?.contains("gzip") == true ->
                 httpResponse.copy(headers = httpResponse.headers.minus(contentEncodingKey))
+
             else ->
                 httpResponse
         }
@@ -166,7 +201,10 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
 
     private fun isFullURL(path: String?): Boolean {
         return path != null && try {
-            URL(URLParts(path).withEncodedPathSegments()); true } catch(e: Throwable) { false }
+            URL(URLParts(path).withEncodedPathSegments()); true
+        } catch (e: Throwable) {
+            false
+        }
     }
 
     init {
@@ -180,12 +218,32 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
         server.stop(0, 0)
     }
 
+    private fun filterHttpRequest(httpRequest: HttpRequest, filter: String?): Boolean {
+        if (filter.isNullOrBlank()) {
+            return true
+        }
+        val filterToEvalEx = ExpressionStandardizer.filterToEvalEx(filter)
+        return filterToEvalEx.with("context", HttpRequestFilterContext(httpRequest))
+            .evaluate()
+            .booleanValue
+    }
+
+    private fun filterHttpResponse(httpResponse: HttpResponse, filter: String?): Boolean {
+        if (filter.isNullOrBlank()) {
+            return true
+        }
+        val filterToEvalEx = ExpressionStandardizer.filterToEvalEx(filter)
+        return filterToEvalEx.with("context", HttpResponseFilterContext(httpResponse))
+            .evaluate()
+            .booleanValue
+    }
+
     private suspend fun dumpSpecAndExamplesIntoOutputDir() = Mutex().withLock {
         val gherkin = toGherkinFeature("New feature", stubs)
         val base = "proxy_generated"
         val featureFileName = "$base.yaml"
 
-        if(stubs.isEmpty()) {
+        if (stubs.isEmpty()) {
             println("No stubs were recorded. No contract will be written.")
             return
         }

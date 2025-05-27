@@ -410,7 +410,13 @@ data class HttpRequest(
     }
 
     fun hasHeader(name: String): Boolean {
-        return headers.containsKey(name)
+        return headers.keys.any { it.equals(name, ignoreCase = true) }
+    }
+
+    fun getHeader(key: String): String? {
+        return headers.filter { it.key.equals(key, ignoreCase = true) }
+            .values
+            .firstOrNull()
     }
 
     fun hasQueryParam(name: String): Boolean {

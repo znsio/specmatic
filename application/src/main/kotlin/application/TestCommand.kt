@@ -28,6 +28,7 @@ import io.specmatic.test.SpecmaticJUnitSupport.Companion.STRICT_MODE
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
+import io.specmatic.test.status.TestExecutionStatus
 import io.specmatic.test.listeners.ContractExecutionListener
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import org.junit.platform.launcher.Launcher
@@ -145,7 +146,7 @@ https://docs.specmatic.io/documentation/contract_tests.html#supported-filters--o
         }
 
         // Configure TestExecutionStatus with the command line option
-        io.specmatic.test.status.TestExecutionStatus.setExitWithErrorOnNoTests(exitWithErrorOnNoTests)
+        TestExecutionStatus.setExitWithErrorOnNoTests(exitWithErrorOnNoTests)
 
         configFileName?.let {
             Configuration.configFilePath = it

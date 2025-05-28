@@ -10,6 +10,7 @@ import io.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport
 import io.specmatic.test.reports.renderers.CoverageReportHtmlRenderer
 import io.specmatic.test.reports.renderers.CoverageReportTextRenderer
 import io.specmatic.test.reports.renderers.ReportRenderer
+import io.specmatic.test.status.TestExecutionStatus
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.assertj.core.api.Assertions.assertThat
@@ -76,7 +77,7 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
         val testsRunCriteriaMet = report.testResultRecords.isNotEmpty()
         if (!testsRunCriteriaMet) {
             // Mark that no tests were run in the TestExecutionStatus
-            io.specmatic.test.status.TestExecutionStatus.markNoTestsRun()
+            TestExecutionStatus.markNoTestsRun()
         }
         
         if (successCriteria.getEnforceOrDefault()) {

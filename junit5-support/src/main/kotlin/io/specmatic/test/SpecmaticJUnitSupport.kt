@@ -14,6 +14,7 @@ import io.specmatic.core.pattern.Examples
 import io.specmatic.core.pattern.Row
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.utilities.*
+import io.specmatic.test.status.TestExecutionStatus
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.value.JSONArrayValue
@@ -90,7 +91,7 @@ open class SpecmaticJUnitSupport {
                 logger.newLine()
                 logger.log("WARNING: No tests were executed. This is often due to filters resulting in 0 matching tests.")
                 // Mark that no tests were run in TestExecutionStatus
-                io.specmatic.test.status.TestExecutionStatus.markNoTestsRun()
+                TestExecutionStatus.markNoTestsRun()
             }
             
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))

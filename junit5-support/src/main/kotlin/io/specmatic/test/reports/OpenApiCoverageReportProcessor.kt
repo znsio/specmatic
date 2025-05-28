@@ -28,14 +28,15 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
         val openAPICoverageReport = openApiCoverageReportInput.generate()
 
         if (openAPICoverageReport.coverageRows.isEmpty()) {
-            logger.log("The Open API coverage report generated is blank.\nThis can happen if your open api specification does not have any paths documented.")
-        } else {
-            val renderers = configureReportRenderers(reportConfiguration)
-            renderers.forEach { renderer ->
-                logger.log(renderer.render(openAPICoverageReport, specmaticConfig))
-            }
-            saveAsJson(openApiCoverageReportInput.generateJsonReport())
+            logger.log("The Open API coverage report generated is blank.\nThis can happen if your open api specification does not have any paths documented or no tests were run.")
         }
+        
+        val renderers = configureReportRenderers(reportConfiguration)
+        renderers.forEach { renderer ->
+            logger.log(renderer.render(openAPICoverageReport, specmaticConfig))
+        }
+        saveAsJson(openApiCoverageReportInput.generateJsonReport())
+        
         assertSuccessCriteria(reportConfiguration, openAPICoverageReport)
     }
 
@@ -71,6 +72,8 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
     ) {
         val successCriteria = reportConfiguration.getSuccessCriteria()
         if (successCriteria.getEnforceOrDefault()) {
+            val noTestsRunMessage = 
+                "No tests were executed. This is often due to filters resulting in 0 matching tests."
             val coverageThresholdNotMetMessage =
                 "Total API coverage: ${report.totalCoveragePercentage}% is less than the specified minimum threshold of ${successCriteria.getMinThresholdPercentageOrDefault()}%. "
             val missedEndpointsCountExceededMessage =
@@ -80,10 +83,15 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
                 report.totalCoveragePercentage >= successCriteria.getMinThresholdPercentageOrDefault()
             val maxMissingEndpointsExceededCriteriaMet =
                 report.missedEndpointsCount <= successCriteria.getMaxMissedEndpointsInSpecOrDefault()
-            val coverageReportSuccessCriteriaMet = minCoverageThresholdCriteriaMet && maxMissingEndpointsExceededCriteriaMet
+            val testsRunCriteriaMet = report.testResultRecords.isNotEmpty()
+            val coverageReportSuccessCriteriaMet = minCoverageThresholdCriteriaMet && maxMissingEndpointsExceededCriteriaMet && testsRunCriteriaMet
+            
             if(!coverageReportSuccessCriteriaMet){
                 logger.newLine()
                 logger.log("Failed the following API Coverage Report success criteria:")
+                if(!testsRunCriteriaMet) {
+                    logger.log(noTestsRunMessage)
+                }
                 if(!minCoverageThresholdCriteriaMet) {
                     logger.log(coverageThresholdNotMetMessage)
                 }

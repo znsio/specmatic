@@ -41,10 +41,12 @@ import kotlin.streams.asStream
 
 interface ContractTestStatisticsMBean {
     fun testsExecuted(): Int
+    fun shouldExitWithError(): Boolean
 }
 
 class ContractTestStatistics : ContractTestStatisticsMBean {
     override fun testsExecuted(): Int = SpecmaticJUnitSupport.openApiCoverageReportInput.testResultRecords.size
+    override fun shouldExitWithError(): Boolean = SpecmaticJUnitSupport.openApiCoverageReportInput.testResultRecords.isEmpty()
 }
 
 @Serializable
@@ -84,6 +86,14 @@ open class SpecmaticJUnitSupport {
         @AfterAll
         @JvmStatic
         fun report() {
+            if(openApiCoverageReportInput.testResultRecords.isEmpty()) {
+                logger.newLine()
+                logger.log("WARNING: No tests were executed. This is often due to filters resulting in 0 matching tests.")
+                if (System.getProperty("specmatic.exitWithErrorOnNoTests") != "false") {
+                    System.setProperty("specmatic.exitCode", "1")
+                }
+            }
+            
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
             val reportConfiguration = getReportConfiguration()
             val config = specmaticConfig?.updateReportConfiguration(reportConfiguration) ?: SpecmaticConfig().updateReportConfiguration(reportConfiguration)

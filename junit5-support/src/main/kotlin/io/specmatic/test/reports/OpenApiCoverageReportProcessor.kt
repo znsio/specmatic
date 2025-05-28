@@ -71,6 +71,14 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
         report: OpenAPICoverageConsoleReport
     ) {
         val successCriteria = reportConfiguration.getSuccessCriteria()
+        
+        // Check if any tests were run
+        val testsRunCriteriaMet = report.testResultRecords.isNotEmpty()
+        if (!testsRunCriteriaMet) {
+            // Mark that no tests were run in the TestExecutionStatus
+            io.specmatic.test.status.TestExecutionStatus.markNoTestsRun()
+        }
+        
         if (successCriteria.getEnforceOrDefault()) {
             val noTestsRunMessage = 
                 "No tests were executed. This is often due to filters resulting in 0 matching tests."
@@ -83,7 +91,6 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
                 report.totalCoveragePercentage >= successCriteria.getMinThresholdPercentageOrDefault()
             val maxMissingEndpointsExceededCriteriaMet =
                 report.missedEndpointsCount <= successCriteria.getMaxMissedEndpointsInSpecOrDefault()
-            val testsRunCriteriaMet = report.testResultRecords.isNotEmpty()
             val coverageReportSuccessCriteriaMet = minCoverageThresholdCriteriaMet && maxMissingEndpointsExceededCriteriaMet && testsRunCriteriaMet
             
             if(!coverageReportSuccessCriteriaMet){
@@ -101,17 +108,11 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
                 logger.newLine()
             }
             
-            // Set exit code regardless of success criteria enforcement
-            if (!testsRunCriteriaMet && System.getProperty("specmatic.exitWithErrorOnNoTests") != "false") {
-                System.setProperty("specmatic.exitCode", "1")
-            }
-            
             assertThat(coverageReportSuccessCriteriaMet).withFailMessage("One or more API Coverage report's success criteria were not met.").isTrue
-        } else if (report.testResultRecords.isEmpty() && System.getProperty("specmatic.exitWithErrorOnNoTests") != "false") {
-            // Even if success criteria is not enforced, set exit code when no tests run
+        } else if (!testsRunCriteriaMet) {
+            // Even if success criteria is not enforced, log when no tests run
             logger.newLine()
             logger.log("No tests were executed. This is often due to filters resulting in 0 matching tests.")
-            System.setProperty("specmatic.exitCode", "1")
         }
     }
 }

@@ -134,12 +134,18 @@ https://docs.specmatic.io/documentation/contract_tests.html#supported-filters--o
     )
     var strictMode: Boolean = false
 
+    @Option(names = ["--exit-with-error-on-no-tests"], description = ["If set to false, will not exit with error when no tests are run"], required = false)
+    var exitWithErrorOnNoTests: Boolean = true
+
     override fun call() = try {
         setParallelism()
 
         if(verboseMode) {
             logger = Verbose()
         }
+
+        // Configure TestExecutionStatus with the command line option
+        io.specmatic.test.status.TestExecutionStatus.setExitWithErrorOnNoTests(exitWithErrorOnNoTests)
 
         configFileName?.let {
             Configuration.configFilePath = it

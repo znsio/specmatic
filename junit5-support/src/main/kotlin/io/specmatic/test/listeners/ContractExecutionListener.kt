@@ -2,6 +2,7 @@ package io.specmatic.test.listeners
 
 import io.specmatic.core.log.logger
 import io.specmatic.test.SpecmaticJUnitSupport
+import io.specmatic.test.status.TestExecutionStatus
 import org.junit.platform.engine.TestDescriptor
 import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.launcher.TestExecutionListener
@@ -34,11 +35,11 @@ class ContractExecutionListener : TestExecutionListener {
         private val printer: ContractExecutionPrinter = getContractExecutionPrinter()
 
         fun exitProcess() {
-            val exitStatus = System.getProperty("specmatic.exitCode")?.toIntOrNull() ?: when (failure != 0 || couldNotStart) {
-                true -> 1
-                false -> 0
+            // If there were test failures or we couldn't start, mark it in TestExecutionStatus
+            if (failure != 0 || couldNotStart) {
+                TestExecutionStatus.markTestFailure()
             }
-            exitProcess(exitStatus)
+            exitProcess(TestExecutionStatus.getExitCode())
         }
     }
 

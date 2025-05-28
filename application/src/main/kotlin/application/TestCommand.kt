@@ -145,9 +145,6 @@ https://docs.specmatic.io/documentation/contract_tests.html#supported-filters--o
             logger = Verbose()
         }
 
-        // Configure TestExecutionStatus with the command line option
-        TestExecutionStatus.setExitWithErrorOnNoTests(exitWithErrorOnNoTests)
-
         configFileName?.let {
             Configuration.configFilePath = it
             System.setProperty(CONFIG_FILE_PATH, it)
@@ -222,6 +219,13 @@ https://docs.specmatic.io/documentation/contract_tests.html#supported-filters--o
             } else {
                 throw ContractException("Was expecting a JUnit report file called TEST-junit-jupiter.xml inside $junitReportDirName but could not find it.")
             }
+        }
+
+        // Use ContractExecutionListener to determine exit code directly
+        if (!ContractExecutionListener.testsRan() && exitWithErrorOnNoTests) {
+            logger.newLine()
+            logger.log("WARNING: No tests were executed. Exiting with error code as configured.")
+            kotlin.system.exitProcess(1)
         }
 
         ContractExecutionListener.exitProcess()

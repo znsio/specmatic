@@ -34,12 +34,34 @@ class ContractExecutionListener : TestExecutionListener {
         private val exceptionsThrown = mutableListOf<Throwable>()
         private val printer: ContractExecutionPrinter = getContractExecutionPrinter()
 
+        /**
+         * Check if any tests ran during execution
+         * @return true if at least one test ran, false otherwise
+         */
+        fun testsRan(): Boolean {
+            return success + failure + aborted > 0
+        }
+
+        /**
+         * Get the appropriate exit code based on test execution results
+         * @param exitWithErrorOnNoTests Whether to return an error code when no tests run
+         * @return 0 for success, non-zero for failure
+         */
+        fun getExitCode(exitWithErrorOnNoTests: Boolean): Int {
+            return when {
+                failure > 0 || couldNotStart -> 1
+                !testsRan() && exitWithErrorOnNoTests -> 1
+                else -> 0
+            }
+        }
+
         fun exitProcess() {
             // If there were test failures or we couldn't start, mark it in TestExecutionStatus
             if (failure != 0 || couldNotStart) {
                 TestExecutionStatus.markTestFailure()
             }
-            exitProcess(TestExecutionStatus.getExitCode())
+            // Use our internal getExitCode method with default value of true for exitWithErrorOnNoTests
+            exitProcess(getExitCode(true))
         }
     }
 

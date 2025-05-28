@@ -75,10 +75,6 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
         
         // Check if any tests were run
         val testsRunCriteriaMet = report.testResultRecords.isNotEmpty()
-        if (!testsRunCriteriaMet) {
-            // Mark that no tests were run in the TestExecutionStatus
-            TestExecutionStatus.markNoTestsRun()
-        }
         
         if (successCriteria.getEnforceOrDefault()) {
             val noTestsRunMessage = 

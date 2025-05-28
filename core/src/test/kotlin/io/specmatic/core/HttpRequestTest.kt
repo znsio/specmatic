@@ -206,19 +206,18 @@ internal class HttpRequestTest {
             ).stream()
 
         @JvmStatic
-        fun urlPathToExpectedPathGenerality(): List<Pair<String?, Int>> =
-            listOf(
-                Pair(null, 0),
-                Pair("", 0),
-                Pair("/", 0),
-                Pair("/persons", 0),
-                Pair("/persons/1", 0),
-                Pair("/(string)", 1),
-                Pair("/persons/(string)", 1),
-                Pair("/persons/(string)/1", 1),
-                Pair("/persons/(string)/1/(string)", 2),
-                Pair("/persons/group/(string)/1/(string)", 2),
-            )
+        fun urlPathToExpectedPathGenerality(): Stream<Arguments> = Stream.of(
+            Arguments.of(null, 0),
+            Arguments.of("", 0),
+            Arguments.of("/", 0),
+            Arguments.of("/persons", 0),
+            Arguments.of("/persons/1", 0),
+            Arguments.of("/(string)", 1),
+            Arguments.of("/persons/(string)", 1),
+            Arguments.of("/persons/(string)/1", 1),
+            Arguments.of("/persons/(string)/1/(string)", 2),
+            Arguments.of("/persons/group/(string)/1/(string)", 2),
+        )
     }
 
     @ParameterizedTest
@@ -412,8 +411,8 @@ internal class HttpRequestTest {
 
     @ParameterizedTest
     @MethodSource("urlPathToExpectedPathGenerality")
-    fun `should include path params to calculate generality`(pathToExpectedGenerality: Pair<String?, Int>) {
-        val request = HttpRequest(path = pathToExpectedGenerality.first)
-        assertThat(request.generality).isEqualTo(pathToExpectedGenerality.second)
+    fun `should include path params to calculate generality`(path: String?, expectedGenerality: Int) {
+        val request = HttpRequest(path = path)
+        assertThat(request.generality).isEqualTo(expectedGenerality)
     }
 }

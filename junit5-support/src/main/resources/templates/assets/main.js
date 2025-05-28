@@ -40,6 +40,11 @@ function addScenarios(scenarios) {
     scenariosList.replaceChildren(noScenarioFoundMessage());
   } finally {
     updateSummaryHeader(scenarios, selectedResponse);
+    
+    // Apply the current filter to the scenarios
+    const currentFilter = getActiveFilter();
+    updateScenarios(currentFilter);
+    
     scrollYPosition = window.scrollY;
     mainElement.setAttribute("data-item", "details");
     scrollTo(0, 0);

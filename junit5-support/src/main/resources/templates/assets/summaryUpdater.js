@@ -30,14 +30,12 @@ function updateSummaryHeader(scenarios, selectedResponse) {
   const testsCount = calculateTestGroups(scenarios);
   const backgroundColor = colorToBackground[selectedResponse.color];
   const coveragePercentage = selectedResponse.coverage;
-  initialData.activeFilter = getActiveFilter();
 
   updateTestsCount(testsCount);
   updateCoverageInfo(coveragePercentage, firstGroupTitle.textContent);
   updateSummaryBackground(backgroundColor);
   updateCoverageFilter(backgroundColor);
   updateMarkAndBadge(backgroundColor);
-  updateLiStyle("All");
   headerSummary.setAttribute("data-panel", "details");
 }
 

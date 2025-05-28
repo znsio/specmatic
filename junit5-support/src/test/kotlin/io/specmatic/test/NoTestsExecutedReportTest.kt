@@ -5,6 +5,7 @@ import io.specmatic.test.reports.OpenApiCoverageReportProcessor
 import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
+import io.specmatic.test.status.TestExecutionStatus
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.AfterEach
@@ -19,8 +20,8 @@ class NoTestsExecutedReportTest {
 
     @BeforeEach
     fun setup() {
-        // Clear any previous system property
-        System.clearProperty("specmatic.exitCode")
+        // Reset TestExecutionStatus
+        TestExecutionStatus.reset()
         
         // Create temp report directory
         val reportDir = File(tempReportDir)
@@ -59,8 +60,8 @@ class NoTestsExecutedReportTest {
     fun tearDown() {
         // Clean up test directory
         File(tempReportDir).deleteRecursively()
-        System.clearProperty("specmatic.exitCode")
-        System.clearProperty("specmatic.exitWithErrorOnNoTests")
+        // Reset TestExecutionStatus
+        TestExecutionStatus.reset()
     }
 
     @Test
@@ -104,7 +105,7 @@ class NoTestsExecutedReportTest {
     @Test
     fun `should set exit code to failure when no tests run`() {
         // Given
-        System.clearProperty("specmatic.exitCode")
+        TestExecutionStatus.reset()
         val reportInput = OpenApiCoverageReportInput("/path/to/config")
         val processor = OpenApiCoverageReportProcessor(reportInput)
         val report = OpenAPICoverageConsoleReport(
@@ -121,14 +122,15 @@ class NoTestsExecutedReportTest {
         }
         
         // Then
-        assertEquals("1", System.getProperty("specmatic.exitCode"), "Exit code should be set to failure")
+        assertEquals(1, TestExecutionStatus.getExitCode(), "Exit code should be set to failure")
+        assertTrue(TestExecutionStatus.hasNoTestsRun(), "Should mark that no tests were run")
     }
     
     @Test
     fun `should not set exit code to failure when configured not to`() {
         // Given
-        System.clearProperty("specmatic.exitCode")
-        System.setProperty("specmatic.exitWithErrorOnNoTests", "false")
+        TestExecutionStatus.reset()
+        TestExecutionStatus.setExitWithErrorOnNoTests(false)
         val reportInput = OpenApiCoverageReportInput("/path/to/config")
         val processor = OpenApiCoverageReportProcessor(reportInput)
         val report = OpenAPICoverageConsoleReport(
@@ -145,6 +147,7 @@ class NoTestsExecutedReportTest {
         }
         
         // Then
-        assertEquals(null, System.getProperty("specmatic.exitCode"), "Exit code should not be set when configured not to")
+        assertEquals(0, TestExecutionStatus.getExitCode(), "Exit code should not be set to failure when configured not to")
+        assertTrue(TestExecutionStatus.hasNoTestsRun(), "Should still mark that no tests were run")
     }
 }

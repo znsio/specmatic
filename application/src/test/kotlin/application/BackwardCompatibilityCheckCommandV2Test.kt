@@ -139,7 +139,7 @@ class BackwardCompatibilityCheckCommandV2Test {
 
             assertThat(exception.code).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
-            - Specs that will be skipped (untracked files that are not referred to in other specs):
+            - Specs that will be skipped (untracked specs, or schema files that are not referred to in other specs):
             1. ${tempDir.resolve("contract.yaml").toPath().toRealPath()}
             """.trimIndent()).containsIgnoringWhitespaces("""
             Files checked: 0 (Passed: 0, Failed: 0)
@@ -167,7 +167,7 @@ class BackwardCompatibilityCheckCommandV2Test {
             assertThat(stdOut).containsIgnoringWhitespaces("""
             - Specs that have changed: 
             1. $gitApiFile
-            - Specs that will be skipped (untracked files that are not referred to in other specs):
+            - Specs that will be skipped (untracked specs, or schema files that are not referred to in other specs):
             1. ${tempDir.resolve("contract.yaml").canonicalFile.toPath().toRealPath()}
             """.trimIndent()).containsIgnoringWhitespaces("""
             Files checked: 1 (Passed: 1, Failed: 0)
@@ -192,7 +192,7 @@ class BackwardCompatibilityCheckCommandV2Test {
 
             assertThat(exception.code).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
-            - Specs that will be skipped (untracked files that are not referred to in other specs):
+            - Specs that will be skipped (untracked specs, or schema files that are not referred to in other specs):
             1. ${tempDir.resolve("api.yaml").canonicalFile.toPath().toRealPath()}
             """.trimIndent()).containsIgnoringWhitespaces("""
             Files checked: 0 (Passed: 0, Failed: 0)
@@ -220,7 +220,7 @@ class BackwardCompatibilityCheckCommandV2Test {
 
             assertThat(exception.code).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
-            - Specs that will be skipped (untracked files that are not referred to in other specs):
+            - Specs that will be skipped (untracked specs, or schema files that are not referred to in other specs):
             1. ${tempDir.resolve("api.yaml").canonicalFile.toPath().toRealPath()}
             """.trimIndent()).containsIgnoringWhitespaces("""
             Files checked: 0 (Passed: 0, Failed: 0)

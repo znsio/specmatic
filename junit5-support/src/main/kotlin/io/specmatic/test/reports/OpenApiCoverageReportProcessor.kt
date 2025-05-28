@@ -100,7 +100,18 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
                 }
                 logger.newLine()
             }
+            
+            // Set exit code regardless of success criteria enforcement
+            if (!testsRunCriteriaMet && System.getProperty("specmatic.exitWithErrorOnNoTests") != "false") {
+                System.setProperty("specmatic.exitCode", "1")
+            }
+            
             assertThat(coverageReportSuccessCriteriaMet).withFailMessage("One or more API Coverage report's success criteria were not met.").isTrue
+        } else if (report.testResultRecords.isEmpty() && System.getProperty("specmatic.exitWithErrorOnNoTests") != "false") {
+            // Even if success criteria is not enforced, set exit code when no tests run
+            logger.newLine()
+            logger.log("No tests were executed. This is often due to filters resulting in 0 matching tests.")
+            System.setProperty("specmatic.exitCode", "1")
         }
     }
 }

@@ -89,9 +89,6 @@ open class SpecmaticJUnitSupport {
             if(openApiCoverageReportInput.testResultRecords.isEmpty()) {
                 logger.newLine()
                 logger.log("WARNING: No tests were executed. This is often due to filters resulting in 0 matching tests.")
-                if (System.getProperty("specmatic.exitWithErrorOnNoTests") != "false") {
-                    System.setProperty("specmatic.exitCode", "1")
-                }
             }
             
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))

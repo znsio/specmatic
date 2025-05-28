@@ -169,7 +169,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         filesReferringToChangedFiles.printSummaryOfChangedSpecs("Specs referring to the changed specs")
         specificationsOfChangedExternalisedExamples
             .printSummaryOfChangedSpecs("Specs whose externalised examples were changed")
-        untrackedFiles.printSummaryOfChangedSpecs("Specs that will be skipped (untracked files that are not referred to in other specs)")
+        untrackedFiles.printSummaryOfChangedSpecs("Specs that will be skipped (untracked specs, or schema files that are not referred to in other specs)")
         logger.log("-".repeat(20))
         logger.log(newLine)
     }

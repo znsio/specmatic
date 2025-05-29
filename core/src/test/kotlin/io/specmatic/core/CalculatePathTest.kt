@@ -726,4 +726,176 @@ internal class CalculatePathTest {
         
         assertThat(paths).containsExactlyInAnyOrder("{Person}.officeAddress{AddressRef}", "{Person}.homeAddress{Address}")
     }
+    
+    @Test
+    fun `calculatePath should handle deeply nested AnyPattern with typeAlias`() {
+        // Test case 1: Nested structure with typeAlias at multiple levels
+        val level3Pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "data" to AnyPattern(listOf(StringPattern(), NumberPattern()))
+            ),
+            typeAlias = "Level3Object"
+        )
+        
+        val level2Pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "level3" to level3Pattern
+            ),
+            typeAlias = "Level2Object"
+        )
+        
+        val level1Pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "level2" to level2Pattern
+            ),
+            typeAlias = "Level1Object"
+        )
+
+        val value = JSONObjectValue(mapOf(
+            "level2" to JSONObjectValue(mapOf(
+                "level3" to JSONObjectValue(mapOf(
+                    "data" to StringValue("test")
+                ))
+            ))
+        ))
+
+        val paths = level1Pattern.calculatePath(value, Resolver())
+        
+        assertThat(paths).containsExactly("{Level1Object}.level2.{Level2Object}.level3.{Level3Object}.data{string}")
+    }
+    
+    @Test
+    fun `calculatePath should handle nested AnyPattern containing JSONObjectPattern`() {
+        // Test case 2: Nested structure with AnyPattern containing JSONObjectPattern
+        val innerObjectPattern = JSONObjectPattern(
+            pattern = mapOf(
+                "innerData" to StringPattern()
+            ),
+            typeAlias = "InnerObject"
+        )
+        
+        val pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "field" to AnyPattern(listOf(
+                    innerObjectPattern,
+                    StringPattern()
+                ))
+            ),
+            typeAlias = "OuterObject"
+        )
+
+        val value = JSONObjectValue(mapOf(
+            "field" to JSONObjectValue(mapOf(
+                "innerData" to StringValue("test")
+            ))
+        ))
+
+        val paths = pattern.calculatePath(value, Resolver())
+        
+        assertThat(paths).containsExactly("{OuterObject}.field{InnerObject}")
+    }
+    
+    @Test
+    fun `calculatePath should handle nested AnyPattern with DeferredPattern`() {
+        // Test case 3: Nested structure using DeferredPattern without direct typeAlias
+        val patterns = mapOf(
+            "(NestedData)" to JSONObjectPattern(
+                pattern = mapOf(
+                    "value" to StringPattern()
+                )
+            )
+        )
+        
+        val pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "level1" to JSONObjectPattern(
+                    pattern = mapOf(
+                        "level2" to AnyPattern(listOf(
+                            DeferredPattern("(NestedData)"),
+                            NumberPattern()
+                        ))
+                    ),
+                    typeAlias = "MiddleLevel"
+                )
+            ),
+            typeAlias = "TopLevel"
+        )
+
+        val value = JSONObjectValue(mapOf(
+            "level1" to JSONObjectValue(mapOf(
+                "level2" to JSONObjectValue(mapOf(
+                    "value" to StringValue("test")
+                ))
+            ))
+        ))
+
+        val paths = pattern.calculatePath(value, Resolver(newPatterns = patterns))
+        
+        assertThat(paths).containsExactly("{TopLevel}.level1.{MiddleLevel}.level2{NestedData}")
+    }
+    
+    @Test
+    fun `calculatePath should handle multiple nested AnyPatterns without typeAlias`() {
+        // Test case 4: Multiple levels of nesting without typeAlias at some levels
+        val pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "level1" to JSONObjectPattern(
+                    pattern = mapOf(
+                        "level2" to JSONObjectPattern(
+                            pattern = mapOf(
+                                "level3" to AnyPattern(listOf(StringPattern(), NumberPattern()))
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        val value = JSONObjectValue(mapOf(
+            "level1" to JSONObjectValue(mapOf(
+                "level2" to JSONObjectValue(mapOf(
+                    "level3" to NumberValue(42)
+                ))
+            ))
+        ))
+
+        val paths = pattern.calculatePath(value, Resolver())
+        
+        assertThat(paths).containsExactly("level1.level2.level3{number}")
+    }
+    
+    @Test 
+    fun `calculatePath should handle AnyPattern containing nested JSONObjectPattern with own AnyPatterns`() {
+        // Test case 5: AnyPattern containing JSONObjectPattern that itself has AnyPatterns
+        // This tests whether we can properly find nested AnyPatterns inside matched JSONObjectPatterns
+        val nestedObjectWithAnyPattern = JSONObjectPattern(
+            pattern = mapOf(
+                "nestedField" to AnyPattern(listOf(StringPattern(), NumberPattern()))
+            ),
+            typeAlias = "NestedObjectWithAny"
+        )
+        
+        val pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "container" to AnyPattern(listOf(
+                    nestedObjectWithAnyPattern,
+                    StringPattern()
+                ))
+            ),
+            typeAlias = "Container"
+        )
+
+        val value = JSONObjectValue(mapOf(
+            "container" to JSONObjectValue(mapOf(
+                "nestedField" to StringValue("test")
+            ))
+        ))
+
+        val paths = pattern.calculatePath(value, Resolver())
+        
+        // The expectation is that:
+        // 1. container matches the AnyPattern which resolves to NestedObjectWithAny
+        // 2. Since NestedObjectWithAny itself has an AnyPattern, we should see that path too
+        assertThat(paths).containsExactly("{Container}.container{NestedObjectWithAny}.nestedField{string}")
+    }
 }

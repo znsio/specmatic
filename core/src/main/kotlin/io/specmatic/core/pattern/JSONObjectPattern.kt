@@ -512,8 +512,9 @@ data class JSONObjectPattern(
         }
         
         return if (anyPatternPaths.isNotEmpty()) {
-            val anyPatternInfo = anyPatternPaths.first()
-            listOf("$pathPrefix{$anyPatternInfo}")
+            anyPatternPaths.map { anyPatternInfo ->
+                "$pathPrefix{$anyPatternInfo}"
+            }
         } else {
             listOf(pathPrefix)
         }

@@ -893,9 +893,38 @@ internal class CalculatePathTest {
 
         val paths = pattern.calculatePath(value, Resolver())
         
-        // The expectation is that:
-        // 1. container matches the AnyPattern which resolves to NestedObjectWithAny
-        // 2. Since NestedObjectWithAny itself has an AnyPattern, we should see that path too
-        assertThat(paths).containsExactly("{Container}.container{NestedObjectWithAny}.nestedField{string}")
+        // The expectation is that the AnyPattern should resolve to just the typeAlias
+        // of the matching pattern, similar to existing tests like {Person}.officeAddress{AddressRef}
+        assertThat(paths).containsExactly("{Container}.container{NestedObjectWithAny}")
+    }
+    
+    @Test
+    fun `calculatePath should handle oneOf AnyPattern at level 3 without typeAlias`() {
+        // Test case from problem statement: "Nested structure with oneOf at level 3"
+        val pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "level1" to JSONObjectPattern(
+                    pattern = mapOf(
+                        "level2" to JSONObjectPattern(
+                            pattern = mapOf(
+                                "level3" to AnyPattern(listOf(StringPattern(), NumberPattern()))
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        val value = JSONObjectValue(mapOf(
+            "level1" to JSONObjectValue(mapOf(
+                "level2" to JSONObjectValue(mapOf(
+                    "level3" to StringValue("test")
+                ))
+            ))
+        ))
+
+        val paths = pattern.calculatePath(value, Resolver())
+        
+        assertThat(paths).containsExactly("level1.level2.level3{string}")
     }
 }

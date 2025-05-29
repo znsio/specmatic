@@ -27,5 +27,7 @@ data class NumberValue(val number: Number) : Value, ScalarValue {
     override val nativeValue: Number
         get() = number
 
+    override fun specificity(): Int = 1
+
     override fun toString() = number.toString()
 }

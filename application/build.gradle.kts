@@ -5,7 +5,7 @@ plugins {
 }
 
 dependencies {
-    implementation("io.netty:netty-codec-http:4.1.118.Final")
+    implementation("io.netty:netty-codec-http:4.2.1.Final")
     implementation("joda-time:joda-time:2.14.0")
     implementation("net.minidev:json-smart:2.5.2")
 
@@ -26,8 +26,8 @@ dependencies {
     implementation("org.junit.platform:junit-platform-launcher:1.11.4")
     implementation("org.junit.platform:junit-platform-reporting:1.11.4")
 
-    implementation("org.eclipse.jgit:org.eclipse.jgit:7.0.0.202409031743-r")
-    implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.apache:7.0.0.202409031743-r")
+    implementation("org.eclipse.jgit:org.eclipse.jgit:7.2.1.202505142326-r")
+    implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.apache:7.2.1.202505142326-r")
 
     implementation("org.apache.ant:ant-junit:1.10.15")
 
@@ -35,7 +35,7 @@ dependencies {
     implementation(project(":junit5-support"))
 
     implementation("io.ktor:ktor-client-cio:2.3.13")
-    implementation("io.swagger.parser.v3:swagger-parser:2.1.27") {
+    implementation("io.swagger.parser.v3:swagger-parser:2.1.29") {
         exclude(group = "org.mozilla", module = "rhino")
     }
     implementation("org.mozilla:rhino:1.7.15")

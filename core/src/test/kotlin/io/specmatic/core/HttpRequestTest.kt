@@ -492,8 +492,9 @@ internal class HttpRequestTest {
 
     @Test
     fun `should calculate specificity for empty string body`() {
-        val request = HttpRequest("POST", "/", body = EmptyString)
-        assertThat(request.specificity).isEqualTo(2) // "/" + empty string
+        // When body is explicitly set to StringValue(""), it should count as specificity 1
+        val request = HttpRequest("POST", "/", body = StringValue(""))
+        assertThat(request.specificity).isEqualTo(2) // "/" + empty string body
     }
 
     @Test

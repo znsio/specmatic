@@ -540,9 +540,8 @@ data class AnyPattern(
             if (nestedPaths.isNotEmpty()) {
                 // If we have a typeAlias, prefix it to the nested paths
                 if (patternTypeAlias != null && patternTypeAlias.isNotBlank()) {
-                    val cleanAlias = patternTypeAlias.removeSurrounding("(", ")")
                     return nestedPaths.map { nestedPath ->
-                        "$cleanAlias.$nestedPath"
+                        "$patternTypeAlias.$nestedPath"
                     }.toSet()
                 } else {
                     // No typeAlias, just return the nested paths as-is
@@ -551,16 +550,14 @@ data class AnyPattern(
             } else {
                 // JSONObjectPattern but no nested AnyPatterns found
                 if (patternTypeAlias != null && patternTypeAlias.isNotBlank()) {
-                    val cleanAlias = patternTypeAlias.removeSurrounding("(", ")")
-                    return setOf(cleanAlias)
+                    return setOf(patternTypeAlias)
                 }
             }
         }
         
         // If the matching pattern has a typeAlias, use it
         if (patternTypeAlias != null && patternTypeAlias.isNotBlank()) {
-            val cleanAlias = patternTypeAlias.removeSurrounding("(", ")")
-            return setOf(cleanAlias)
+            return setOf(patternTypeAlias)
         }
         
         // If no typeAlias and it's a simple scalar pattern, return the scalar type name

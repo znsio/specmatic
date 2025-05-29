@@ -141,7 +141,7 @@ class ThreadSafeListOfStubs(
         if(exactMatch != null)
             return Pair(exactMatch.second, listMatchResults)
 
-        val partialMatch = getPartialBySpecificityAndGenerality(grouped[StubType.Partial].orEmpty())
+        val partialMatch = getPartialBySpecificityAndGenerality(grouped[StubType.Partial].orEmpty().map { it.second })
 
         if(partialMatch != null)
             return Pair(partialMatch.second, listMatchResults)
@@ -234,11 +234,11 @@ class ThreadSafeListOfStubs(
         return ThreadSafeListOfStubs(mutableListOf(), specToBaseUrlMap)
     }
 
-    internal fun getPartialBySpecificityAndGenerality(partials: List<Pair<Result, HttpStubData>>): Pair<Result, HttpStubData>? {
+    internal fun getPartialBySpecificityAndGenerality(partials: List<HttpStubData>): Pair<Result, HttpStubData>? {
         if (partials.isEmpty()) return null
         
         // Group by specificity (highest first)
-        val groupedBySpecificity = partials.groupBy { (_, stubData) ->
+        val groupedBySpecificity = partials.groupBy { stubData ->
             stubData.originalRequest?.specificity ?: 0
         }.toSortedMap(reverseOrder())
         
@@ -247,16 +247,16 @@ class ThreadSafeListOfStubs(
         
         // If only one partial in the highest specificity group, use it
         if (highestSpecificityGroup.size == 1) {
-            return highestSpecificityGroup.single()
+            return Result.Success() to highestSpecificityGroup.single()
         }
         
         // Multiple partials in highest specificity group - group by generality (lowest first)
-        val groupedByGenerality = highestSpecificityGroup.groupBy { (_, stubData) ->
+        val groupedByGenerality = highestSpecificityGroup.groupBy { stubData ->
             stubData.originalRequest?.generality ?: 0
         }.toSortedMap()
         
         // Get the group with lowest generality and pick the first one
-        return groupedByGenerality.entries.first().value.first()
+        return Result.Success() to groupedByGenerality.entries.first().value.first()
     }
 }
 

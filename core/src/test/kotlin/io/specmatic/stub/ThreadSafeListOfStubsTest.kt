@@ -219,8 +219,8 @@ class ThreadSafeListOfStubsTest {
             )
             
             val partials = listOf(
-                Pair(Result.Success(), lowSpecificityStub),
-                Pair(Result.Success(), highSpecificityStub)
+                lowSpecificityStub,
+                highSpecificityStub
             )
             
             val expectations = ThreadSafeListOfStubs(mutableListOf(), emptyMap())
@@ -255,8 +255,8 @@ class ThreadSafeListOfStubsTest {
             )
             
             val partials = listOf(
-                Pair(Result.Success(), highGeneralityStub),
-                Pair(Result.Success(), lowGeneralityStub)
+                highGeneralityStub,
+                lowGeneralityStub
             )
             
             val expectations = ThreadSafeListOfStubs(mutableListOf(), emptyMap())

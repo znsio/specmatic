@@ -22,7 +22,9 @@ internal class HttpRequestPatternTest {
         val httpRequest = HttpRequest().updateWith(URI("/unmatched_path"))
         httpRequestPattern.matches(httpRequest, Resolver()).let {
             assertThat(it).isInstanceOf(Failure::class.java)
-            assertThat((it as Failure).toMatchFailureDetails()).isEqualTo(MatchFailureDetails(listOf("REQUEST", "PATH (/unmatched_path)"), listOf("""Expected "matching_path", actual was "unmatched_path"""")))
+            assertThat((it as Failure).toMatchFailureDetails()).isEqualTo(MatchFailureDetails(
+                listOf("REQUEST", "PARAMETERS.PATH (/unmatched_path)"), listOf("""Expected "matching_path", actual was "unmatched_path""""))
+            )
         }
     }
 

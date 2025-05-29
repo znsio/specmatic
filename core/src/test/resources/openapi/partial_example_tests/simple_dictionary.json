@@ -1,5 +1,9 @@
 {
   "PARAMETERS": {
+    "PATH": {
+      "creatorId": 123,
+      "petId": 999
+    },
     "HEADER": {
       "CREATOR-ID": 123,
       "PET-ID": 999
@@ -8,10 +12,6 @@
       "creatorId": 123,
       "petId": 999
     }
-  },
-  "PATH-PARAMS": {
-    "creatorId": 123,
-    "petId": 999
   },
   "NewPet": {
     "creatorId": 123,

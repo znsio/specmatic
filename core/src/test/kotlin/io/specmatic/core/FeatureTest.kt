@@ -2117,7 +2117,7 @@ paths:
         ).toFeature()
 
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
-            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PATH.id")
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PARAMETERS.PATH.id")
         })
     }
 
@@ -2301,7 +2301,7 @@ components:
         ).toFeature()
 
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
-            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PATH.id")
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PARAMETERS.PATH.id")
             assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PARAMETERS.QUERY.enabled")
             assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PARAMETERS.HEADER.X-Token")
             assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADER.X-Value")

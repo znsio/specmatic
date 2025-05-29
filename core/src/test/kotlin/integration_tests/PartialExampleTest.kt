@@ -156,7 +156,7 @@ class PartialExampleTest {
         println(output)
 
         assertThat(output).contains(">> REQUEST.BODY.department")
-        assertThat(output).contains(">> REQUEST.PATH.personId")
+        assertThat(output).contains(">> REQUEST.PARAMETERS.PATH.personId")
         assertThat(output).contains(">> REQUEST.PARAMETERS.HEADER.id")
         assertThat(output).contains(">> REQUEST.PARAMETERS.QUERY.data")
         assertThat(output).contains(">> RESPONSE.HEADER.data")

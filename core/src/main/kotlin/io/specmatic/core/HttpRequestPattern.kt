@@ -672,8 +672,8 @@ data class HttpRequestPattern(
             val newFormDataPartLists: Sequence<ReturnValue<List<MultiPartFormDataPattern>>> =
                 newMultiPartBasedOn(multiPartFormDataPattern, row, resolver).map { HasValue(it) }
 
-            newHttpPathPatterns.flatMap("PATH") { newPathParamPattern ->
-                newQueryParamsPatterns.flatMap("QUERY") { newQueryParamPattern ->
+            newHttpPathPatterns.flatMap(BreadCrumb.PARAM_PATH.value) { newPathParamPattern ->
+                newQueryParamsPatterns.flatMap(BreadCrumb.PARAM_QUERY.value) { newQueryParamPattern ->
                     newBodies.flatMap("BODY") { newBody ->
                         newHeadersPattern.flatMap(BreadCrumb.PARAM_HEADER.value) { newHeadersPattern ->
                             newFormFieldsPatterns.flatMap("FORM-FIELDS") { newFormFieldsPattern ->
@@ -907,7 +907,9 @@ data class HttpRequestPattern(
 
     fun fillInTheBlanks(request: HttpRequest, resolver: Resolver): HttpRequest {
         val sanitizedRequest = withoutSecuritySchemes(request)
-        val path = httpPathPattern?.fillInTheBlanks(sanitizedRequest.path, resolver)?.breadCrumb("PATH-PARAMS") ?: HasValue(null)
+        val path = httpPathPattern?.fillInTheBlanks(
+            path = sanitizedRequest.path, resolver = resolver
+        )?.breadCrumb(BreadCrumb.PARAM_PATH.value) ?: HasValue(null)
 
         val queryParams = httpQueryParamPattern.fillInTheBlanks(
             queryParams = sanitizedRequest.queryParams, resolver = resolver

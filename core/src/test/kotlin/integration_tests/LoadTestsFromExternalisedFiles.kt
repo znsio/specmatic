@@ -1101,9 +1101,9 @@ class LoadTestsFromExternalisedFiles {
             assertThat(exception.report()).isEqualToNormalizingWhitespace("""
             Error loading example for PATCH /creators/(creatorId:number)/pets/(petId:number) -> 201 from ${invalidExamplesDir.resolve("pets_post.json").canonicalPath}
 
-            >> REQUEST.PATH.creatorId  
+            >> REQUEST.PARAMETERS.PATH.creatorId  
             Expected number as per the specification, but the example pets_post had "abc".
-            >> REQUEST.PATH.petId  
+            >> REQUEST.PARAMETERS.PATH.petId  
             Expected number as per the specification, but the example pets_post had string.
             
             >> REQUEST.PARAMETERS.QUERY.creatorId

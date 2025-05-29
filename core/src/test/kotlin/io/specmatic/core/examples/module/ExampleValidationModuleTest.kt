@@ -140,7 +140,7 @@ class ExampleValidationModuleTest {
         assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
         In scenario ""
         API: GET /test/(id:number)/name/(name:string) -> 200
-        >> REQUEST.PATH.id
+        >> REQUEST.PARAMETERS.PATH.id
         Specification expected number but example contained "abc"
         """.trimIndent())
     }

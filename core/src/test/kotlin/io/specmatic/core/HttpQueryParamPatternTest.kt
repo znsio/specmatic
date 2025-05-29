@@ -694,8 +694,7 @@ class HttpQueryParamPatternTest {
         fun `should not generate missing optional keys`() {
             val queryParams = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean?" to BooleanPattern()))
             val params = QueryParameters(mapOf("number" to "999"))
-            val dictionary = mapOf("QUERY-PARAMS.boolean" to BooleanValue(true)).let(Dictionary::from)
-            val filledParams = queryParams.fillInTheBlanks(params, Resolver(dictionary = dictionary)).value
+            val filledParams = queryParams.fillInTheBlanks(params, Resolver()).value
 
             assertThat(filledParams.asMap()).isEqualTo(mapOf("number" to "999"))
         }
@@ -726,7 +725,7 @@ class HttpQueryParamPatternTest {
         fun `should generate missing optional keys when allPatternsMandatory is set`() {
             val queryParams = HttpQueryParamPattern(mapOf("number" to NumberPattern(), "boolean?" to BooleanPattern()))
             val params = QueryParameters(mapOf("number" to "999"))
-            val dictionary = "QUERY-PARAMS: { boolean: true }".let(Dictionary::fromYaml)
+            val dictionary = "PARAMETERS: { QUERY: { boolean: true } }".let(Dictionary::fromYaml)
             val filledParams = queryParams.fillInTheBlanks(
                 params, Resolver(dictionary = dictionary).withAllPatternsAsMandatory()
             ).value

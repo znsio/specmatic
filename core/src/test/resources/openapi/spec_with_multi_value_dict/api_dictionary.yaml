@@ -1,12 +1,12 @@
-PATH-PARAMS:
-  creatorId:
-    - 123
-    - 456
-  petId:
-    - 123
-    - 456
-
 PARAMETERS:
+  PATH:
+    creatorId:
+      - 123
+      - 456
+    petId:
+      - 123
+      - 456
+
   HEADER:
     CREATOR-ID:
       - 123

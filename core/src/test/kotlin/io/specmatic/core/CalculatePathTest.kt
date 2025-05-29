@@ -1,24 +1,10 @@
 package io.specmatic.core
 
-import io.specmatic.core.pattern.AnyPattern
-import io.specmatic.core.pattern.JSONObjectPattern
-import io.specmatic.core.pattern.JSONArrayPattern
-import io.specmatic.core.pattern.ListPattern
-import io.specmatic.core.pattern.StringPattern
-import io.specmatic.core.pattern.NumberPattern
-import io.specmatic.core.pattern.DeferredPattern
-import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.pattern.*
 import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
-import io.specmatic.core.HttpRequestPattern
-import io.specmatic.core.HttpResponsePattern
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.Scenario
-import io.specmatic.core.Feature
-import io.specmatic.core.Resolver
-import io.specmatic.core.HttpHeadersPattern
-import io.specmatic.core.buildHttpPathPattern
+import io.specmatic.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -102,8 +88,8 @@ internal class CalculatePathTest {
         val scenario = Scenario(
             name = "test",
             httpRequestPattern = HttpRequestPattern(
-                body = JSONArrayPattern(
-                    pattern = listOf(AnyPattern(listOf(StringPattern(), NumberPattern())))
+                body = ListPattern(
+                    pattern = AnyPattern(listOf(StringPattern(), NumberPattern()))
                 )
             ),
             httpResponsePattern = HttpResponsePattern(
@@ -279,8 +265,8 @@ internal class CalculatePathTest {
     fun `calculatePath should find AnyPatterns in arrays`() {
         val pattern = JSONObjectPattern(
             pattern = mapOf(
-                "items" to JSONArrayPattern(
-                    pattern = listOf(AnyPattern(listOf(StringPattern(), NumberPattern())))
+                "items" to ListPattern(
+                    pattern = AnyPattern(listOf(StringPattern(), NumberPattern()))
                 )
             ),
             typeAlias = "ArrayContainer"
@@ -314,8 +300,8 @@ internal class CalculatePathTest {
         
         val pattern = JSONObjectPattern(
             pattern = mapOf(
-                "items" to JSONArrayPattern(
-                    pattern = listOf(arrayItemPattern)
+                "items" to ListPattern(
+                    pattern = arrayItemPattern
                 )
             ),
             typeAlias = "ArrayContainer"
@@ -366,8 +352,8 @@ internal class CalculatePathTest {
     fun `calculatePath should handle empty arrays`() {
         val pattern = JSONObjectPattern(
             pattern = mapOf(
-                "items" to JSONArrayPattern(
-                    pattern = listOf(AnyPattern(listOf(StringPattern(), NumberPattern())))
+                "items" to ListPattern(
+                    pattern = AnyPattern(listOf(StringPattern(), NumberPattern()))
                 )
             ),
             typeAlias = "EmptyArrayContainer"

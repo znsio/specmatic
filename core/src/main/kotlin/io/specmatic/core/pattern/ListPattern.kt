@@ -246,31 +246,26 @@ data class ListPattern(
     fun calculatePath(value: Value, resolver: Resolver): Set<String> {
         if (value !is JSONArrayValue) return emptySet()
         
-        val paths = mutableSetOf<String>()
-        
-        value.list.forEachIndexed { index, arrayItem ->
+        return value.list.flatMapIndexed { index, arrayItem ->
             val resolvedPattern = resolvedHop(pattern, resolver)
             when (resolvedPattern) {
                 is AnyPattern -> {
                     // For AnyPattern, get the path and add array index prefix
                     val anyPatternPaths = resolvedPattern.calculatePath(arrayItem, resolver)
-                    anyPatternPaths.forEach { path ->
-                        val indexedPath = "[$index]{$path}"
-                        paths.add(indexedPath)
+                    anyPatternPaths.map { path ->
+                        "[$index]{$path}"
                     }
                 }
                 is JSONObjectPattern -> {
                     // For JSONObjectPattern, recursively get paths and add array index prefix
                     val nestedPaths = resolvedPattern.calculatePath(arrayItem, resolver)
-                    nestedPaths.forEach { nestedPath ->
-                        val indexedPath = "[$index].$nestedPath"
-                        paths.add(indexedPath)
+                    nestedPaths.map { nestedPath ->
+                        "[$index].$nestedPath"
                     }
                 }
+                else -> emptyList()
             }
-        }
-        
-        return paths
+        }.toSet()
     }
 }
 

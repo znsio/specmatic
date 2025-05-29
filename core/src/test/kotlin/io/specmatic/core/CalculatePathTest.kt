@@ -579,4 +579,124 @@ internal class CalculatePathTest {
         
         assertThat(paths).containsExactlyInAnyOrder("[0]{AddressRef}", "[1]{Address}")
     }
+    
+    @Test
+    fun `calculatePath should handle array of AnyPattern objects in ListPattern`() {
+        // Pattern: JSONObjectPattern with ListPattern containing AnyPattern
+        
+        val patterns = mapOf(
+            "(Address)" to JSONObjectPattern(
+                pattern = mapOf(
+                    "street" to StringPattern(),
+                    "locality" to StringPattern()
+                )
+            ),
+            "(AddressRef)" to JSONObjectPattern(
+                pattern = mapOf(
+                    "address_id" to NumberPattern()
+                )
+            )
+        )
+        
+        val scenario = Scenario(
+            name = "test",
+            httpRequestPattern = HttpRequestPattern(
+                body = JSONObjectPattern(
+                    pattern = mapOf(
+                        "name" to StringPattern(),
+                        "addresses" to ListPattern(
+                            pattern = AnyPattern(
+                                pattern = listOf(
+                                    DeferredPattern("(Address)"),
+                                    DeferredPattern("(AddressRef)")
+                                )
+                            )
+                        )
+                    ),
+                    typeAlias = "Person"
+                )
+            ),
+            httpResponsePattern = HttpResponsePattern(
+                headersPattern = HttpHeadersPattern(),
+                status = 200,
+                body = StringPattern()
+            ),
+            patterns = patterns
+        )
+        
+        val httpRequest = HttpRequest(
+            method = "POST",
+            path = "/test",
+            body = JSONObjectValue(mapOf(
+                "name" to StringValue("Jack"),
+                "addresses" to JSONArrayValue(listOf(
+                    JSONObjectValue(mapOf("address_id" to NumberValue(123))),
+                    JSONObjectValue(mapOf("street" to StringValue("Baker Street"), "locality" to StringValue("London")))
+                ))
+            ))
+        )
+        
+        val paths = scenario.calculatePath(httpRequest)
+        
+        assertThat(paths).containsExactlyInAnyOrder("Person.addresses[0]{AddressRef}", "Person.addresses[1]{Address}")
+    }
+    
+    @Test
+    fun `calculatePath should handle multiple paths from different AnyPattern fields`() {
+        // Pattern: JSONObjectPattern with multiple fields that resolve to AnyPatterns
+        
+        val patterns = mapOf(
+            "(Address)" to JSONObjectPattern(
+                pattern = mapOf(
+                    "street" to StringPattern(),
+                    "locality" to StringPattern()
+                )
+            ),
+            "(AddressRef)" to JSONObjectPattern(
+                pattern = mapOf(
+                    "address_id" to NumberPattern()
+                )
+            ),
+            "(AddressOrRef)" to AnyPattern(
+                pattern = listOf(
+                    DeferredPattern("(Address)"),
+                    DeferredPattern("(AddressRef)")
+                )
+            )
+        )
+        
+        val scenario = Scenario(
+            name = "test",
+            httpRequestPattern = HttpRequestPattern(
+                body = JSONObjectPattern(
+                    pattern = mapOf(
+                        "name" to StringPattern(),
+                        "officeAddress" to DeferredPattern("(AddressOrRef)"),
+                        "homeAddress" to DeferredPattern("(AddressOrRef)")
+                    ),
+                    typeAlias = "Person"
+                )
+            ),
+            httpResponsePattern = HttpResponsePattern(
+                headersPattern = HttpHeadersPattern(),
+                status = 200,
+                body = StringPattern()
+            ),
+            patterns = patterns
+        )
+        
+        val httpRequest = HttpRequest(
+            method = "POST",
+            path = "/test",
+            body = JSONObjectValue(mapOf(
+                "name" to StringValue("Jack"),
+                "officeAddress" to JSONObjectValue(mapOf("address_id" to NumberValue(123))),
+                "homeAddress" to JSONObjectValue(mapOf("street" to StringValue("Baker Street"), "locality" to StringValue("London")))
+            ))
+        )
+        
+        val paths = scenario.calculatePath(httpRequest)
+        
+        assertThat(paths).containsExactlyInAnyOrder("Person.officeAddress", "Person.homeAddress")
+    }
 }

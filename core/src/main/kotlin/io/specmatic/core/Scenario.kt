@@ -792,6 +792,8 @@ data class Scenario(
         val bodyPattern = resolvedHop(this.httpRequestPattern.body, this.resolver)
         return when (bodyPattern) {
             is JSONObjectPattern -> bodyPattern.calculatePath(httpRequest.body, this.resolver)
+            is AnyPattern -> bodyPattern.calculatePath(httpRequest.body, this.resolver)
+            is ListPattern -> bodyPattern.calculatePath(httpRequest.body, this.resolver)
             else -> emptySet()
         }
     }

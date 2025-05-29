@@ -527,12 +527,26 @@ data class JSONObjectPattern(
                                     val resolvedArrayPattern = resolvedHop(arrayPattern, resolver)
                                     when (resolvedArrayPattern) {
                                         is AnyPattern -> {
-                                            val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
-                                                "$typeAlias.$key[$index]"
+                                            val anyPatternPaths = resolvedArrayPattern.calculatePath(arrayItem, resolver)
+                                            if (anyPatternPaths.isNotEmpty()) {
+                                                // Use specific pattern info when available
+                                                anyPatternPaths.forEach { anyPath ->
+                                                    val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
+                                                        "$typeAlias.$key[$index]{$anyPath}"
+                                                    } else {
+                                                        "$key[$index]{$anyPath}"
+                                                    }
+                                                    paths.add(pathPrefix)
+                                                }
                                             } else {
-                                                "$key[$index]"
+                                                // Fall back to just the location when no specific pattern info
+                                                val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
+                                                    "$typeAlias.$key[$index]"
+                                                } else {
+                                                    "$key[$index]"
+                                                }
+                                                paths.add(pathPrefix)
                                             }
-                                            paths.add(pathPrefix)
                                         }
                                         is JSONObjectPattern -> {
                                             val nestedPaths = resolvedArrayPattern.calculatePath(arrayItem, resolver)

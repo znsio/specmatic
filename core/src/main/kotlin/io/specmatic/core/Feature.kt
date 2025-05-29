@@ -292,9 +292,9 @@ data class Feature(
         val matchingScenario = scenarios.firstOrNull { scenario ->
             val resolver = scenario.resolver
             if (responseStatus == 400) {
-                scenario.httpRequestPattern.matches(httpRequest, resolver) is Success
-            } else {
                 scenario.httpRequestPattern.matchesPathStructureMethodAndContentType(httpRequest, resolver) is Success
+            } else {
+                scenario.httpRequestPattern.matchesPathAndMethod(httpRequest, resolver) is Success
             }
         }
         

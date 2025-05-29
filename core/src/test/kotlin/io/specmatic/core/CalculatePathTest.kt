@@ -6,6 +6,7 @@ import io.specmatic.core.pattern.JSONArrayPattern
 import io.specmatic.core.pattern.ListPattern
 import io.specmatic.core.pattern.StringPattern
 import io.specmatic.core.pattern.NumberPattern
+import io.specmatic.core.pattern.DeferredPattern
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.StringValue
@@ -358,5 +359,224 @@ internal class CalculatePathTest {
         val paths = pattern.calculatePath(value, Resolver())
         
         assertThat(paths).isEmpty()
+    }
+    
+    @Test
+    fun `calculatePath should handle AnyPattern at top level with typeAlias - Example 7`() {
+        val patterns = mapOf(
+            "(Address)" to JSONObjectPattern(
+                pattern = mapOf("street" to StringPattern(), "locality" to StringPattern())
+            ),
+            "(AddressRef)" to JSONObjectPattern(
+                pattern = mapOf("address_id" to NumberPattern())
+            )
+        )
+        
+        val scenario = Scenario(
+            name = "test",
+            httpRequestPattern = HttpRequestPattern(
+                body = AnyPattern(
+                    pattern = listOf(
+                        DeferredPattern(pattern = "(Address)"),
+                        DeferredPattern(pattern = "(AddressRef)")
+                    ),
+                    typeAlias = "(AddressOrRef)"
+                )
+            ),
+            httpResponsePattern = HttpResponsePattern(
+                headersPattern = HttpHeadersPattern(),
+                status = 200,
+                body = StringPattern()
+            ),
+            patterns = patterns
+        )
+
+        val httpRequest = HttpRequest(
+            method = "POST",
+            path = "/test",
+            body = JSONObjectValue(mapOf("address_id" to NumberValue(123)))
+        )
+
+        val paths = scenario.calculatePath(httpRequest)
+        
+        assertThat(paths).containsExactly("AddressRef")
+    }
+    
+    @Test
+    fun `calculatePath should handle AnyPattern at top level without typeAlias - Example 8`() {
+        val patterns = mapOf(
+            "(Address)" to JSONObjectPattern(
+                pattern = mapOf("street" to StringPattern(), "locality" to StringPattern())
+            ),
+            "(AddressRef)" to JSONObjectPattern(
+                pattern = mapOf("address_id" to NumberPattern())
+            )
+        )
+        
+        val scenario = Scenario(
+            name = "test",
+            httpRequestPattern = HttpRequestPattern(
+                body = AnyPattern(
+                    pattern = listOf(
+                        DeferredPattern(pattern = "(Address)"),
+                        DeferredPattern(pattern = "(AddressRef)")
+                    )
+                    // No typeAlias for the AnyPattern itself
+                )
+            ),
+            httpResponsePattern = HttpResponsePattern(
+                headersPattern = HttpHeadersPattern(),
+                status = 200,
+                body = StringPattern()
+            ),
+            patterns = patterns
+        )
+
+        val httpRequest = HttpRequest(
+            method = "POST",
+            path = "/test",
+            body = JSONObjectValue(mapOf("address_id" to NumberValue(123)))
+        )
+
+        val paths = scenario.calculatePath(httpRequest)
+        
+        assertThat(paths).containsExactly("AddressRef")
+    }
+    
+    @Test
+    fun `calculatePath should handle AnyPattern where one option has no typeAlias - Example 9`() {
+        val patterns = mapOf(
+            "(Address)" to JSONObjectPattern(
+                pattern = mapOf("street" to StringPattern(), "locality" to StringPattern())
+            )
+        )
+        
+        val scenario = Scenario(
+            name = "test",
+            httpRequestPattern = HttpRequestPattern(
+                body = AnyPattern(
+                    pattern = listOf(
+                        DeferredPattern(pattern = "(Address)"),
+                        JSONObjectPattern(pattern = mapOf("address_id" to NumberPattern()))
+                    )
+                )
+            ),
+            httpResponsePattern = HttpResponsePattern(
+                headersPattern = HttpHeadersPattern(),
+                status = 200,
+                body = StringPattern()
+            ),
+            patterns = patterns
+        )
+
+        val httpRequest = HttpRequest(
+            method = "POST",
+            path = "/test",
+            body = JSONObjectValue(mapOf("address_id" to NumberValue(123)))
+        )
+
+        val paths = scenario.calculatePath(httpRequest)
+        
+        assertThat(paths).containsExactly("{[1]}")
+    }
+    
+    @Test
+    fun `calculatePath should handle array of AnyPattern objects - Example 10`() {
+        val patterns = mapOf(
+            "(Address)" to JSONObjectPattern(
+                pattern = mapOf("street" to StringPattern(), "locality" to StringPattern())
+            ),
+            "(AddressRef)" to JSONObjectPattern(
+                pattern = mapOf("address_id" to NumberPattern())
+            )
+        )
+        
+        val scenario = Scenario(
+            name = "test",
+            httpRequestPattern = HttpRequestPattern(
+                body = JSONObjectPattern(
+                    pattern = mapOf(
+                        "name" to StringPattern(),
+                        "addresses" to ListPattern(
+                            pattern = AnyPattern(
+                                pattern = listOf(
+                                    DeferredPattern(pattern = "(Address)"),
+                                    DeferredPattern(pattern = "(AddressRef)")
+                                )
+                            )
+                        )
+                    ),
+                    typeAlias = "Person"
+                )
+            ),
+            httpResponsePattern = HttpResponsePattern(
+                headersPattern = HttpHeadersPattern(),
+                status = 200,
+                body = StringPattern()
+            ),
+            patterns = patterns
+        )
+
+        val httpRequest = HttpRequest(
+            method = "POST",
+            path = "/test",
+            body = JSONObjectValue(mapOf(
+                "name" to StringValue("Jack"),
+                "addresses" to JSONArrayValue(listOf(
+                    JSONObjectValue(mapOf("address_id" to NumberValue(123))),
+                    JSONObjectValue(mapOf("street" to StringValue("Baker Street"), "locality" to StringValue("London")))
+                ))
+            ))
+        )
+
+        val paths = scenario.calculatePath(httpRequest)
+        
+        assertThat(paths).containsExactlyInAnyOrder("Person.addresses[0]{AddressRef}", "Person.addresses[1]{Address}")
+    }
+    
+    @Test
+    fun `calculatePath should handle top-level array of AnyPatterns - Example 11`() {
+        val patterns = mapOf(
+            "(Address)" to JSONObjectPattern(
+                pattern = mapOf("street" to StringPattern(), "locality" to StringPattern())
+            ),
+            "(AddressRef)" to JSONObjectPattern(
+                pattern = mapOf("address_id" to NumberPattern())
+            )
+        )
+        
+        val scenario = Scenario(
+            name = "test",
+            httpRequestPattern = HttpRequestPattern(
+                body = ListPattern(
+                    pattern = AnyPattern(
+                        pattern = listOf(
+                            DeferredPattern(pattern = "(Address)"),
+                            DeferredPattern(pattern = "(AddressRef)")
+                        )
+                    ),
+                    typeAlias = "(AddressList)"
+                )
+            ),
+            httpResponsePattern = HttpResponsePattern(
+                headersPattern = HttpHeadersPattern(),
+                status = 200,
+                body = StringPattern()
+            ),
+            patterns = patterns
+        )
+
+        val httpRequest = HttpRequest(
+            method = "POST",
+            path = "/test",
+            body = JSONArrayValue(listOf(
+                JSONObjectValue(mapOf("address_id" to NumberValue(123))),
+                JSONObjectValue(mapOf("street" to StringValue("Baker Street"), "locality" to StringValue("London")))
+            ))
+        )
+
+        val paths = scenario.calculatePath(httpRequest)
+        
+        assertThat(paths).containsExactlyInAnyOrder("[0]{AddressRef}", "[1]{Address}")
     }
 }

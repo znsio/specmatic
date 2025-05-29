@@ -71,7 +71,7 @@ data class HttpRequestPattern(
         }
     }
 
-    private fun matchesPathAndMethod(
+    fun matchesPathAndMethod(
         incomingHttpRequest: HttpRequest,
         resolver: Resolver
     ): Result {

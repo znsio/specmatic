@@ -41,9 +41,7 @@ interface Value {
         return 0
     }
 
-    fun specificity(): Int {
-        return 0
-    }
+    fun specificity(): Int
 }
 
 fun Value.mergeWith(other: Value): Value {

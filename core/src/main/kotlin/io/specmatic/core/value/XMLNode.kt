@@ -318,6 +318,10 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
             it.attributes["name"]?.toStringLiteral() == valueOfNameAttribute
         } ?: throw ContractException("Couldn't find name attribute")
     }
+
+    override fun specificity(): Int {
+        TODO("Not yet implemented")
+    }
 }
 
 fun xmlNode(name: String, attributes: Map<String, String> = emptyMap(), childrenFn: XMLNodeBuilder.() -> Unit = {}): XMLNode {

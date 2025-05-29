@@ -289,4 +289,70 @@ internal class CalculatePathTest {
             "ArrayContainer.items[1].ArrayItem.data"
         )
     }
+
+    @Test
+    fun `calculatePath should handle ListPattern with AnyPattern`() {
+        val pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "items" to ListPattern(
+                    pattern = AnyPattern(listOf(StringPattern(), NumberPattern()))
+                )
+            ),
+            typeAlias = "ListContainer"
+        )
+
+        val value = JSONObjectValue(mapOf(
+            "items" to JSONArrayValue(listOf(
+                StringValue("item1"),
+                NumberValue(42)
+            ))
+        ))
+
+        val paths = pattern.calculatePath(value)
+        
+        assertThat(paths).containsExactlyInAnyOrder(
+            "ListContainer.items[0]",
+            "ListContainer.items[1]"
+        )
+    }
+
+    @Test
+    fun `calculatePath should handle empty arrays`() {
+        val pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "items" to JSONArrayPattern(
+                    pattern = listOf(AnyPattern(listOf(StringPattern(), NumberPattern())))
+                )
+            ),
+            typeAlias = "EmptyArrayContainer"
+        )
+
+        val value = JSONObjectValue(mapOf(
+            "items" to JSONArrayValue(emptyList())
+        ))
+
+        val paths = pattern.calculatePath(value)
+        
+        assertThat(paths).isEmpty()
+    }
+
+    @Test
+    fun `calculatePath should handle missing optional keys`() {
+        val pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "requiredField" to StringPattern(),
+                "optionalField?" to AnyPattern(listOf(StringPattern(), NumberPattern()))
+            ),
+            typeAlias = "OptionalFieldObject"
+        )
+
+        val value = JSONObjectValue(mapOf(
+            "requiredField" to StringValue("value")
+            // optionalField is missing
+        ))
+
+        val paths = pattern.calculatePath(value)
+        
+        assertThat(paths).isEmpty()
+    }
 }

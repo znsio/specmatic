@@ -13,6 +13,7 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.Examples.Companion.examplesFrom
 import io.specmatic.core.utilities.*
 import io.specmatic.core.value.*
+import io.specmatic.core.Result.Success
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStubData
@@ -285,6 +286,19 @@ data class Feature(
         } finally {
             serverState = emptyMap()
         }
+    }
+
+    fun calculatePath(httpRequest: HttpRequest, responseStatus: Int): Set<String> {
+        val matchingScenario = scenarios.firstOrNull { scenario ->
+            val resolver = scenario.resolver
+            if (responseStatus == 400) {
+                scenario.httpRequestPattern.matchesPathStructureMethodAndContentType(httpRequest, resolver) is Success
+            } else {
+                scenario.httpRequestPattern.matchesPathAndMethod(httpRequest, resolver) is Success
+            }
+        }
+        
+        return matchingScenario?.calculatePath(httpRequest) ?: emptySet()
     }
 
     private fun matchingScenarioToResultList(

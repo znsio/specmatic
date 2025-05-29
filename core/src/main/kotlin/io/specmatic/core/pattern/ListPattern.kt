@@ -242,6 +242,31 @@ data class ListPattern(
     override fun jsonObjectPattern(resolver: Resolver): JSONObjectPattern? {
         return null
     }
+
+    fun calculatePath(value: Value, resolver: Resolver): Set<String> {
+        if (value !is JSONArrayValue) return emptySet()
+        
+        return value.list.flatMapIndexed { index, arrayItem ->
+            val resolvedPattern = resolvedHop(pattern, resolver)
+            when (resolvedPattern) {
+                is AnyPattern -> {
+                    // For AnyPattern, get the path and add array index prefix
+                    val anyPatternPaths = resolvedPattern.calculatePath(arrayItem, resolver)
+                    anyPatternPaths.map { path ->
+                        "[$index]{$path}"
+                    }
+                }
+                is JSONObjectPattern -> {
+                    // For JSONObjectPattern, recursively get paths and add array index prefix
+                    val nestedPaths = resolvedPattern.calculatePath(arrayItem, resolver)
+                    nestedPaths.map { nestedPath ->
+                        "[$index].$nestedPath"
+                    }
+                }
+                else -> emptyList()
+            }
+        }.toSet()
+    }
 }
 
 private fun withEmptyType(pattern: Pattern, resolver: Resolver): Resolver {

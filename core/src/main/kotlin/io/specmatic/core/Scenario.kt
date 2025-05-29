@@ -788,6 +788,16 @@ data class Scenario(
 
     fun isA4xxScenario(): Boolean = this.httpResponsePattern.status in 400..499
 
+    fun calculatePath(httpRequest: HttpRequest): Set<String> {
+        val bodyPattern = resolvedHop(this.httpRequestPattern.body, this.resolver)
+        return when (bodyPattern) {
+            is JSONObjectPattern -> bodyPattern.calculatePath(httpRequest.body, this.resolver)
+            is AnyPattern -> bodyPattern.calculatePath(httpRequest.body, this.resolver)
+            is ListPattern -> bodyPattern.calculatePath(httpRequest.body, this.resolver)
+            else -> emptySet()
+        }
+    }
+
     fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?): Scenario {
         return this.copy(
             isNegative = true,

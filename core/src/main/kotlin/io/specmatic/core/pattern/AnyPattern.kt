@@ -510,6 +510,36 @@ data class AnyPattern(
         return randomString(10)
     }
 
+    fun calculatePath(value: Value, resolver: Resolver): Set<String> {
+        // Find which pattern in the list matches the given value
+        val matchingPatternIndex = pattern.indexOfFirst { pattern ->
+            val resolvedPattern = resolvedHop(pattern, resolver)
+            resolvedPattern.matches(value, resolver) is Result.Success
+        }
+        
+        if (matchingPatternIndex == -1) {
+            return emptySet()
+        }
+        
+        val matchingPattern = resolvedHop(pattern[matchingPatternIndex], resolver)
+        val originalPattern = pattern[matchingPatternIndex]
+        
+        // If the matching pattern has a typeAlias, use it
+        val patternTypeAlias = originalPattern.typeAlias
+        if (patternTypeAlias != null && patternTypeAlias.isNotBlank()) {
+            val cleanAlias = patternTypeAlias.removeSurrounding("(", ")")
+            return setOf(cleanAlias)
+        }
+        
+        // If no typeAlias and it's a simple scalar pattern, return empty
+        if (matchingPattern is StringPattern || matchingPattern is NumberPattern || matchingPattern is BooleanPattern) {
+            return emptySet()
+        }
+        
+        // If no typeAlias but it's a complex pattern, return the index in the format {[index]}
+        return setOf("{[$matchingPatternIndex]}")
+    }
+
     private fun allValuesAreScalar() = pattern.all { it is ExactValuePattern && it.pattern is ScalarValue }
 
     private fun hasNoAmbiguousPatterns(): Boolean {

@@ -791,7 +791,7 @@ data class Scenario(
     fun calculatePath(httpRequest: HttpRequest): Set<String> {
         val bodyPattern = resolvedHop(this.httpRequestPattern.body, this.resolver)
         return when (bodyPattern) {
-            is JSONObjectPattern -> bodyPattern.calculatePath(httpRequest.body)
+            is JSONObjectPattern -> bodyPattern.calculatePath(httpRequest.body, this.resolver)
             else -> emptySet()
         }
     }

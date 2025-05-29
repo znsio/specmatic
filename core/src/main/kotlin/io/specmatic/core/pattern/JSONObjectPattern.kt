@@ -482,7 +482,7 @@ data class JSONObjectPattern(
         return pattern[withoutOptionality(key)] ?: pattern[withOptionality(key)]
     }
 
-    fun calculatePath(value: Value): Set<String> {
+    fun calculatePath(value: Value, resolver: Resolver): Set<String> {
         if (value !is JSONObjectValue) return emptySet()
         
         val paths = mutableSetOf<String>()
@@ -491,7 +491,7 @@ data class JSONObjectPattern(
         value.jsonObject.forEach { (key, childValue) ->
             val childPattern = patternForKey(key)
             if (childPattern != null) {
-                val resolvedPattern = resolvedHop(childPattern, Resolver())
+                val resolvedPattern = resolvedHop(childPattern, resolver)
                 when (resolvedPattern) {
                     is AnyPattern -> {
                         // Add path for this AnyPattern
@@ -504,7 +504,7 @@ data class JSONObjectPattern(
                     }
                     is JSONObjectPattern -> {
                         // Recursively check nested object patterns
-                        val nestedPaths = resolvedPattern.calculatePath(childValue)
+                        val nestedPaths = resolvedPattern.calculatePath(childValue, resolver)
                         nestedPaths.forEach { nestedPath ->
                             val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
                                 "$typeAlias.$key.$nestedPath"
@@ -524,7 +524,7 @@ data class JSONObjectPattern(
                                     else -> null
                                 }
                                 if (arrayPattern != null) {
-                                    val resolvedArrayPattern = resolvedHop(arrayPattern, Resolver())
+                                    val resolvedArrayPattern = resolvedHop(arrayPattern, resolver)
                                     when (resolvedArrayPattern) {
                                         is AnyPattern -> {
                                             val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
@@ -535,7 +535,7 @@ data class JSONObjectPattern(
                                             paths.add(pathPrefix)
                                         }
                                         is JSONObjectPattern -> {
-                                            val nestedPaths = resolvedArrayPattern.calculatePath(arrayItem)
+                                            val nestedPaths = resolvedArrayPattern.calculatePath(arrayItem, resolver)
                                             nestedPaths.forEach { nestedPath ->
                                                 val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
                                                     "$typeAlias.$key[$index].$nestedPath"

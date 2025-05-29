@@ -32,7 +32,7 @@ internal class CalculatePathTest {
             "data" to StringValue("some data")
         ))
 
-        val paths = pattern.calculatePath(value)
+        val paths = pattern.calculatePath(value, Resolver())
         
         assertThat(paths).containsExactly("User.data")
     }
@@ -51,7 +51,7 @@ internal class CalculatePathTest {
             "value" to NumberValue(42)
         ))
 
-        val paths = pattern.calculatePath(value)
+        val paths = pattern.calculatePath(value, Resolver())
         
         assertThat(paths).containsExactly("value")
     }
@@ -99,7 +99,7 @@ internal class CalculatePathTest {
             "id" to StringValue("123")
         ))
 
-        val paths = pattern.calculatePath(value)
+        val paths = pattern.calculatePath(value, Resolver())
         
         assertThat(paths).isEmpty()
     }
@@ -112,7 +112,7 @@ internal class CalculatePathTest {
             )
         )
 
-        val paths = pattern.calculatePath(StringValue("not an object"))
+        val paths = pattern.calculatePath(StringValue("not an object"), Resolver())
         
         assertThat(paths).isEmpty()
     }
@@ -141,7 +141,7 @@ internal class CalculatePathTest {
             ))
         ))
 
-        val paths = pattern.calculatePath(value)
+        val paths = pattern.calculatePath(value, Resolver())
         
         assertThat(paths).containsExactly("MainObject.nested.NestedObject.nestedData")
     }
@@ -163,14 +163,16 @@ internal class CalculatePathTest {
             "regularField" to StringValue("regular")
         ))
 
-        val paths = pattern.calculatePath(value)
+        val paths = pattern.calculatePath(value, Resolver())
         
         assertThat(paths).containsExactlyInAnyOrder("MultiAnyObject.data1", "MultiAnyObject.data2")
     }
 
     @Test
-    fun `Feature calculatePath should iterate through scenarios and find paths`() {
+    fun `Feature calculatePath should find paths from first matching scenario`() {
         val requestPattern1 = HttpRequestPattern(
+            method = "POST",
+            httpPathPattern = buildHttpPathPattern("/test"),
             body = JSONObjectPattern(
                 pattern = mapOf(
                     "field1" to AnyPattern(listOf(StringPattern(), NumberPattern()))
@@ -191,6 +193,8 @@ internal class CalculatePathTest {
         )
 
         val requestPattern2 = HttpRequestPattern(
+            method = "POST",
+            httpPathPattern = buildHttpPathPattern("/test"),
             body = JSONObjectPattern(
                 pattern = mapOf(
                     "field2" to AnyPattern(listOf(StringPattern(), NumberPattern()))
@@ -224,9 +228,9 @@ internal class CalculatePathTest {
             ))
         )
 
-        val paths = feature.calculatePath(httpRequest)
+        val paths = feature.calculatePath(httpRequest, 200)
         
-        assertThat(paths).containsExactlyInAnyOrder("Request1.field1", "Request2.field2")
+        assertThat(paths).containsExactly("Request1.field1")
     }
 
     @Test
@@ -248,7 +252,7 @@ internal class CalculatePathTest {
             ))
         ))
 
-        val paths = pattern.calculatePath(value)
+        val paths = pattern.calculatePath(value, Resolver())
         
         assertThat(paths).containsExactlyInAnyOrder(
             "ArrayContainer.items[0]",
@@ -282,7 +286,7 @@ internal class CalculatePathTest {
             ))
         ))
 
-        val paths = pattern.calculatePath(value)
+        val paths = pattern.calculatePath(value, Resolver())
         
         assertThat(paths).containsExactlyInAnyOrder(
             "ArrayContainer.items[0].ArrayItem.data",
@@ -308,7 +312,7 @@ internal class CalculatePathTest {
             ))
         ))
 
-        val paths = pattern.calculatePath(value)
+        val paths = pattern.calculatePath(value, Resolver())
         
         assertThat(paths).containsExactlyInAnyOrder(
             "ListContainer.items[0]",
@@ -331,7 +335,7 @@ internal class CalculatePathTest {
             "items" to JSONArrayValue(emptyList())
         ))
 
-        val paths = pattern.calculatePath(value)
+        val paths = pattern.calculatePath(value, Resolver())
         
         assertThat(paths).isEmpty()
     }
@@ -351,7 +355,7 @@ internal class CalculatePathTest {
             // optionalField is missing
         ))
 
-        val paths = pattern.calculatePath(value)
+        val paths = pattern.calculatePath(value, Resolver())
         
         assertThat(paths).isEmpty()
     }

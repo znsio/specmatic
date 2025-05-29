@@ -11,6 +11,14 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.NumberValue
+import io.specmatic.core.HttpRequestPattern
+import io.specmatic.core.HttpResponsePattern
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.Scenario
+import io.specmatic.core.Feature
+import io.specmatic.core.Resolver
+import io.specmatic.core.HttpHeadersPattern
+import io.specmatic.core.buildHttpPathPattern
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -84,8 +92,41 @@ internal class CalculatePathTest {
         val paths = scenario.calculatePath(httpRequest)
         
         // Since we have an AnyPattern at the top level that matches a scalar type,
-        // it should return the scalar type name
-        assertThat(paths).containsExactly("string")
+        // it should return the scalar type name in braces
+        assertThat(paths).containsExactly("{string}")
+    }
+
+    @Test
+    fun `calculatePath should handle array at top level`() {
+        // Create a scenario with an array at the top level containing AnyPattern elements
+        val scenario = Scenario(
+            name = "test",
+            httpRequestPattern = HttpRequestPattern(
+                body = JSONArrayPattern(
+                    pattern = listOf(AnyPattern(listOf(StringPattern(), NumberPattern())))
+                )
+            ),
+            httpResponsePattern = HttpResponsePattern(
+                headersPattern = HttpHeadersPattern(),
+                status = 200,
+                body = StringPattern()
+            )
+        )
+
+        val httpRequest = HttpRequest(
+            method = "POST",
+            path = "/test",
+            body = JSONArrayValue(listOf(
+                StringValue("first item"),
+                NumberValue(42),
+                StringValue("third item")
+            ))
+        )
+
+        val paths = scenario.calculatePath(httpRequest)
+        
+        // For array at top level, paths should be in the format "[0]{string}", "[1]{number}", etc.
+        assertThat(paths).containsExactlyInAnyOrder("[0]{string}", "[1]{number}", "[2]{string}")
     }
 
     @Test

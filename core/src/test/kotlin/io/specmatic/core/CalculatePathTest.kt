@@ -697,6 +697,6 @@ internal class CalculatePathTest {
         
         val paths = scenario.calculatePath(httpRequest)
         
-        assertThat(paths).containsExactlyInAnyOrder("Person.officeAddress", "Person.homeAddress")
+        assertThat(paths).containsExactlyInAnyOrder("Person.officeAddress{AddressRef}", "Person.homeAddress{Address}")
     }
 }

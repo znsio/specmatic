@@ -487,89 +487,103 @@ data class JSONObjectPattern(
         
         // For each property in the value, check if the pattern is an AnyPattern
         return value.jsonObject.flatMap { (key, childValue) ->
-            val childPattern = patternForKey(key)
-            if (childPattern != null) {
-                val resolvedPattern = resolvedHop(childPattern, resolver)
-                when (resolvedPattern) {
-                    is AnyPattern -> {
-                        // Add path for this AnyPattern
-                        val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
-                            "$typeAlias.$key"
-                        } else {
-                            key
-                        }
-                        listOf(pathPrefix)
-                    }
-                    is JSONObjectPattern -> {
-                        // Recursively check nested object patterns
-                        val nestedPaths = resolvedPattern.calculatePath(childValue, resolver)
-                        nestedPaths.map { nestedPath ->
-                            if (typeAlias != null && typeAlias.isNotBlank()) {
-                                "$typeAlias.$key.$nestedPath"
-                            } else {
-                                "$key.$nestedPath"
-                            }
-                        }
-                    }
-                    is JSONArrayPattern, is ListPattern -> {
-                        // Handle arrays - check if array contains AnyPatterns
-                        if (childValue is JSONArrayValue) {
-                            childValue.list.flatMapIndexed { index, arrayItem ->
-                                val arrayPattern = when (resolvedPattern) {
-                                    is JSONArrayPattern -> resolvedPattern.pattern.firstOrNull()
-                                    is ListPattern -> resolvedPattern.pattern
-                                    else -> null
-                                }
-                                if (arrayPattern != null) {
-                                    val resolvedArrayPattern = resolvedHop(arrayPattern, resolver)
-                                    when (resolvedArrayPattern) {
-                                        is AnyPattern -> {
-                                            val anyPatternPaths = resolvedArrayPattern.calculatePath(arrayItem, resolver)
-                                            if (anyPatternPaths.isNotEmpty()) {
-                                                // Use specific pattern info when available
-                                                anyPatternPaths.map { anyPath ->
-                                                    if (typeAlias != null && typeAlias.isNotBlank()) {
-                                                        "$typeAlias.$key[$index]{$anyPath}"
-                                                    } else {
-                                                        "$key[$index]{$anyPath}"
-                                                    }
-                                                }
-                                            } else {
-                                                // Fall back to just the location when no specific pattern info
-                                                val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
-                                                    "$typeAlias.$key[$index]"
-                                                } else {
-                                                    "$key[$index]"
-                                                }
-                                                listOf(pathPrefix)
-                                            }
-                                        }
-                                        is JSONObjectPattern -> {
-                                            val nestedPaths = resolvedArrayPattern.calculatePath(arrayItem, resolver)
-                                            nestedPaths.map { nestedPath ->
-                                                if (typeAlias != null && typeAlias.isNotBlank()) {
-                                                    "$typeAlias.$key[$index].$nestedPath"
-                                                } else {
-                                                    "$key[$index].$nestedPath"
-                                                }
-                                            }
-                                        }
-                                        else -> emptyList()
-                                    }
-                                } else {
-                                    emptyList()
-                                }
-                            }
-                        } else {
-                            emptyList()
-                        }
-                    }
-                    else -> emptyList()
-                }
-            } else {
-                emptyList()
-            }
+            calculatePathForKey(key, childValue, resolver)
         }.toSet()
+    }
+    
+    private fun calculatePathForKey(key: String, childValue: Value, resolver: Resolver): List<String> {
+        val childPattern = patternForKey(key) ?: return emptyList()
+        val resolvedPattern = resolvedHop(childPattern, resolver)
+        
+        return when (resolvedPattern) {
+            is AnyPattern -> calculatePathForAnyPattern(key, childValue, resolvedPattern, resolver)
+            is JSONObjectPattern -> calculatePathForJSONObjectPattern(key, childValue, resolvedPattern, resolver)
+            is JSONArrayPattern, is ListPattern -> calculatePathForArrayPattern(key, childValue, resolvedPattern, resolver)
+            else -> emptyList()
+        }
+    }
+    
+    private fun calculatePathForAnyPattern(key: String, childValue: Value, anyPattern: AnyPattern, resolver: Resolver): List<String> {
+        val anyPatternPaths = anyPattern.calculatePath(childValue, resolver)
+        val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
+            "$typeAlias.$key"
+        } else {
+            key
+        }
+        
+        return if (anyPatternPaths.isNotEmpty()) {
+            val anyPatternInfo = anyPatternPaths.first()
+            listOf("$pathPrefix{$anyPatternInfo}")
+        } else {
+            listOf(pathPrefix)
+        }
+    }
+    
+    private fun calculatePathForJSONObjectPattern(key: String, childValue: Value, objectPattern: JSONObjectPattern, resolver: Resolver): List<String> {
+        val nestedPaths = objectPattern.calculatePath(childValue, resolver)
+        return nestedPaths.map { nestedPath ->
+            if (typeAlias != null && typeAlias.isNotBlank()) {
+                "$typeAlias.$key.$nestedPath"
+            } else {
+                "$key.$nestedPath"
+            }
+        }
+    }
+    
+    private fun calculatePathForArrayPattern(key: String, childValue: Value, arrayPattern: Pattern, resolver: Resolver): List<String> {
+        if (childValue !is JSONArrayValue) return emptyList()
+        
+        return childValue.list.flatMapIndexed { index, arrayItem ->
+            calculatePathForArrayItem(key, index, arrayItem, arrayPattern, resolver)
+        }
+    }
+    
+    private fun calculatePathForArrayItem(key: String, index: Int, arrayItem: Value, arrayPattern: Pattern, resolver: Resolver): List<String> {
+        val elementPattern = when (arrayPattern) {
+            is JSONArrayPattern -> arrayPattern.pattern.firstOrNull()
+            is ListPattern -> arrayPattern.pattern
+            else -> null
+        } ?: return emptyList()
+        
+        val resolvedElementPattern = resolvedHop(elementPattern, resolver)
+        
+        return when (resolvedElementPattern) {
+            is AnyPattern -> calculatePathForArrayAnyPattern(key, index, arrayItem, resolvedElementPattern, resolver)
+            is JSONObjectPattern -> calculatePathForArrayJSONObjectPattern(key, index, arrayItem, resolvedElementPattern, resolver)
+            else -> emptyList()
+        }
+    }
+    
+    private fun calculatePathForArrayAnyPattern(key: String, index: Int, arrayItem: Value, anyPattern: AnyPattern, resolver: Resolver): List<String> {
+        val anyPatternPaths = anyPattern.calculatePath(arrayItem, resolver)
+        
+        return if (anyPatternPaths.isNotEmpty()) {
+            anyPatternPaths.map { anyPath ->
+                if (typeAlias != null && typeAlias.isNotBlank()) {
+                    "$typeAlias.$key[$index]{$anyPath}"
+                } else {
+                    "$key[$index]{$anyPath}"
+                }
+            }
+        } else {
+            val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
+                "$typeAlias.$key[$index]"
+            } else {
+                "$key[$index]"
+            }
+            listOf(pathPrefix)
+        }
+    }
+    
+    private fun calculatePathForArrayJSONObjectPattern(key: String, index: Int, arrayItem: Value, objectPattern: JSONObjectPattern, resolver: Resolver): List<String> {
+        val nestedPaths = objectPattern.calculatePath(arrayItem, resolver)
+        return nestedPaths.map { nestedPath ->
+            if (typeAlias != null && typeAlias.isNotBlank()) {
+                "$typeAlias.$key[$index].$nestedPath"
+            } else {
+                "$key[$index].$nestedPath"
+            }
+        }
     }
 }
 

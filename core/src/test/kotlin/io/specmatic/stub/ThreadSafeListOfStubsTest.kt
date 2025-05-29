@@ -223,11 +223,10 @@ class ThreadSafeListOfStubsTest {
                 highSpecificityStub
             )
             
-            val expectations = ThreadSafeListOfStubs(mutableListOf(), emptyMap())
-            val result = expectations.getPartialBySpecificityAndGenerality(partials)
+            val result = ThreadSafeListOfStubs.getPartialBySpecificityAndGenerality(partials)
             
             assertNotNull(result)
-            assertEquals(highSpecificityStub, result!!.second)
+            assertEquals(highSpecificityStub, result)
         }
         
         @Test
@@ -259,11 +258,10 @@ class ThreadSafeListOfStubsTest {
                 lowGeneralityStub
             )
             
-            val expectations = ThreadSafeListOfStubs(mutableListOf(), emptyMap())
-            val result = expectations.getPartialBySpecificityAndGenerality(partials)
+            val result = ThreadSafeListOfStubs.getPartialBySpecificityAndGenerality(partials)
             
             assertNotNull(result)
-            assertEquals(lowGeneralityStub, result!!.second)
+            assertEquals(lowGeneralityStub, result)
         }
     }
 

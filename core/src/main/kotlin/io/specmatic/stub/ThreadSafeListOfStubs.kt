@@ -141,7 +141,7 @@ class ThreadSafeListOfStubs(
         if(exactMatch != null)
             return Pair(exactMatch.second, listMatchResults)
 
-        val partialMatch = grouped[StubType.Partial].orEmpty().find { (result, _) -> result is Result.Success }
+        val partialMatch = getPartialBySpecificityAndGenerality(grouped[StubType.Partial].orEmpty())
 
         if(partialMatch != null)
             return Pair(partialMatch.second, listMatchResults)
@@ -232,6 +232,31 @@ class ThreadSafeListOfStubs(
 
     private fun emptyStubs(): ThreadSafeListOfStubs {
         return ThreadSafeListOfStubs(mutableListOf(), specToBaseUrlMap)
+    }
+
+    internal fun getPartialBySpecificityAndGenerality(partials: List<Pair<Result, HttpStubData>>): Pair<Result, HttpStubData>? {
+        if (partials.isEmpty()) return null
+        
+        // Group by specificity (highest first)
+        val groupedBySpecificity = partials.groupBy { (_, stubData) ->
+            stubData.originalRequest?.specificity ?: Int.MIN_VALUE
+        }.toSortedMap(reverseOrder())
+        
+        // Get the group with highest specificity
+        val highestSpecificityGroup = groupedBySpecificity.entries.firstOrNull()?.value ?: return null
+        
+        // If only one partial in the highest specificity group, use it
+        if (highestSpecificityGroup.size == 1) {
+            return highestSpecificityGroup.first()
+        }
+        
+        // Multiple partials in highest specificity group - group by generality (lowest first)
+        val groupedByGenerality = highestSpecificityGroup.groupBy { (_, stubData) ->
+            stubData.originalRequest?.generality ?: Int.MAX_VALUE
+        }.toSortedMap()
+        
+        // Get the group with lowest generality and pick the first one
+        return groupedByGenerality.entries.firstOrNull()?.value?.firstOrNull()
     }
 }
 

@@ -27,7 +27,7 @@ class ExampleModule {
                 is Result.Success -> example to matchResult
                 is Result.Failure -> {
                     val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs("").none { breadCrumb ->
-                        breadCrumb.contains(BreadCrumb.PARAM_PATH.value)
+                        breadCrumb.contains(BreadCrumb.PATH.value)
                                 || breadCrumb.contains(METHOD_BREAD_CRUMB)
                                 || breadCrumb.contains(BreadCrumb.REQUEST.plus(BreadCrumb.PARAM_HEADER).with(CONTENT_TYPE))
                                 || breadCrumb.contains("STATUS")

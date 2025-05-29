@@ -219,6 +219,21 @@ internal class HttpRequestTest {
                 Pair("/persons/(string)/1/(string)", 2),
                 Pair("/persons/group/(string)/1/(string)", 2),
             )
+
+        @JvmStatic
+        fun urlPathToExpectedPathSpecificity(): List<Pair<String?, Int>> =
+            listOf(
+                Pair(null, 0),
+                Pair("", 1),
+                Pair("/", 1),
+                Pair("/persons", 1),
+                Pair("/persons/1", 2),
+                Pair("/(string)", 0),
+                Pair("/persons/(string)", 1),
+                Pair("/persons/(string)/1", 2),
+                Pair("/persons/(string)/1/(string)", 2),
+                Pair("/persons/group/(string)/1/(string)", 3),
+            )
     }
 
     @ParameterizedTest
@@ -415,5 +430,60 @@ internal class HttpRequestTest {
     fun `should include path params to calculate generality`(pathToExpectedGenerality: Pair<String?, Int>) {
         val request = HttpRequest(path = pathToExpectedGenerality.first)
         assertThat(request.generality).isEqualTo(pathToExpectedGenerality.second)
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "10, 10, 2",
+        "(string), 10, 1",
+        "10, (string), 1",
+        "(string), (string), 0",
+        ignoreLeadingAndTrailingWhitespace = true
+    )
+    fun `should calculate specificity score based on the number of concrete values seen`(id: String, count: String, specificity: Int) {
+        val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"id": "$id", "count": "$count"}"""))
+        assertThat(request.specificity).isEqualTo(specificity)
+    }
+
+    @ParameterizedTest
+    @MethodSource("urlPathToExpectedPathSpecificity")
+    fun `should include path params to calculate specificity`(pathToExpectedSpecificity: Pair<String?, Int>) {
+        val request = HttpRequest(path = pathToExpectedSpecificity.first)
+        assertThat(request.specificity).isEqualTo(pathToExpectedSpecificity.second)
+    }
+
+    @Test
+    fun `should calculate specificity for complex nested JSON object body`() {
+        val request = HttpRequest("POST", "/person/(style:string)", body = parsedJSONObject("""{"name": "Jason", "address": {"street": "Baker Street", "plot": "(string)"}}"""))
+        assertThat(request.specificity).isEqualTo(3) // "person", "Jason", "Baker Street"
+    }
+
+    @Test
+    fun `should calculate specificity for JSON array body with objects`() {
+        val request = HttpRequest("POST", "/person", body = parsedJSONArray("""[{"name": "Marlowe", "address": {"street": "(string)", "plot": "(number)"}, "age": 10}]"""))
+        assertThat(request.specificity).isEqualTo(3) // "person", "Marlowe", 10
+    }
+
+    @Test
+    fun `should calculate specificity for query params and headers`() {
+        val request = HttpRequest(
+            "GET", 
+            "/person", 
+            headers = mapOf("X-TraceID" to "abc123", "X-LoginID" to "sdffds"),
+            queryParametersMap = mapOf("street" to "Baker Street")
+        )
+        assertThat(request.specificity).isEqualTo(4) // "person", "Baker Street", "abc123", "sdffds"
+    }
+
+    @Test
+    fun `should calculate specificity for empty string body`() {
+        val request = HttpRequest("POST", "/", body = EmptyString)
+        assertThat(request.specificity).isEqualTo(2) // "/" + empty string
+    }
+
+    @Test
+    fun `should calculate specificity for pattern body`() {
+        val request = HttpRequest("POST", "/data", body = StringValue("(string)"))
+        assertThat(request.specificity).isEqualTo(1) // only "/data"
     }
 }

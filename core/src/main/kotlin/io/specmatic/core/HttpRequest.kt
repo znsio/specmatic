@@ -431,6 +431,21 @@ data class HttpRequest(
 
         pathScore + headerScore + queryScore + bodyScore
     }
+
+    val specificity: Int by lazy {
+        val pathScore: Int = when {
+            path == null -> 0
+            path == "" || path == "/" -> 1
+            else -> path.split(URL_PATH_DELIMITER).count { segment -> 
+                segment.isNotEmpty() && !StringValue(segment).isPatternToken() 
+            }
+        }
+        val headerScore: Int = headers.values.sumOf { if(!isPatternToken(it)) 1 as Int else 0 }
+        val queryScore: Int = queryParams.paramPairs.sumOf { if(!isPatternToken(it.second)) 1 as Int else 0 }
+        val bodyScore: Int = body.specificity()
+
+        pathScore + headerScore + queryScore + bodyScore
+    }
 }
 
 private fun setIfNotEmpty(dest: MutableMap<String, Value>, key: String, data: Map<String, Any>) {

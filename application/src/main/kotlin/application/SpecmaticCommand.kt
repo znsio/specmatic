@@ -2,6 +2,7 @@ package application
 
 import application.backwardCompatibility.BackwardCompatibilityCheckCommandV2
 import picocli.AutoComplete.GenerateCompletion
+import picocli.CommandLine
 import picocli.CommandLine.Command
 import java.util.concurrent.Callable
 
@@ -9,6 +10,7 @@ import java.util.concurrent.Callable
         name = "specmatic",
         mixinStandardHelpOptions = true,
         versionProvider = VersionProvider::class,
+        scope = CommandLine.ScopeType.INHERIT,
         subcommands = [
             BackwardCompatibilityCheckCommandV2::class,
             CompareCommand::class,

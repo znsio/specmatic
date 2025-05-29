@@ -481,6 +481,81 @@ data class JSONObjectPattern(
     fun patternForKey(key: String): Pattern? {
         return pattern[withoutOptionality(key)] ?: pattern[withOptionality(key)]
     }
+
+    fun calculatePath(value: Value): Set<String> {
+        if (value !is JSONObjectValue) return emptySet()
+        
+        val paths = mutableSetOf<String>()
+        
+        // For each property in the value, check if the pattern is an AnyPattern
+        value.jsonObject.forEach { (key, childValue) ->
+            val childPattern = patternForKey(key)
+            if (childPattern != null) {
+                val resolvedPattern = resolvedHop(childPattern, Resolver())
+                when (resolvedPattern) {
+                    is AnyPattern -> {
+                        // Add path for this AnyPattern
+                        val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
+                            "$typeAlias.$key"
+                        } else {
+                            key
+                        }
+                        paths.add(pathPrefix)
+                    }
+                    is JSONObjectPattern -> {
+                        // Recursively check nested object patterns
+                        val nestedPaths = resolvedPattern.calculatePath(childValue)
+                        nestedPaths.forEach { nestedPath ->
+                            val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
+                                "$typeAlias.$key.$nestedPath"
+                            } else {
+                                "$key.$nestedPath"
+                            }
+                            paths.add(pathPrefix)
+                        }
+                    }
+                    is JSONArrayPattern, is ListPattern -> {
+                        // Handle arrays - check if array contains AnyPatterns
+                        if (childValue is JSONArrayValue) {
+                            childValue.list.forEachIndexed { index, arrayItem ->
+                                val arrayPattern = when (resolvedPattern) {
+                                    is JSONArrayPattern -> resolvedPattern.pattern.firstOrNull()
+                                    is ListPattern -> resolvedPattern.pattern
+                                    else -> null
+                                }
+                                if (arrayPattern != null) {
+                                    val resolvedArrayPattern = resolvedHop(arrayPattern, Resolver())
+                                    when (resolvedArrayPattern) {
+                                        is AnyPattern -> {
+                                            val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
+                                                "$typeAlias.$key[$index]"
+                                            } else {
+                                                "$key[$index]"
+                                            }
+                                            paths.add(pathPrefix)
+                                        }
+                                        is JSONObjectPattern -> {
+                                            val nestedPaths = resolvedArrayPattern.calculatePath(arrayItem)
+                                            nestedPaths.forEach { nestedPath ->
+                                                val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
+                                                    "$typeAlias.$key[$index].$nestedPath"
+                                                } else {
+                                                    "$key[$index].$nestedPath"
+                                                }
+                                                paths.add(pathPrefix)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return paths
+    }
 }
 
 fun generate(jsonPatternMap: Map<String, Pattern>, resolver: Resolver, jsonPattern: JSONObjectPattern): Map<String, Value> {

@@ -287,6 +287,17 @@ data class Feature(
         }
     }
 
+    fun calculatePath(httpRequest: HttpRequest): Set<String> {
+        val allPaths = mutableSetOf<String>()
+        
+        scenarios.forEach { scenario ->
+            val scenarioPaths = scenario.calculatePath(httpRequest)
+            allPaths.addAll(scenarioPaths)
+        }
+        
+        return allPaths
+    }
+
     private fun matchingScenarioToResultList(
         httpRequest: HttpRequest,
         serverState: Map<String, Value>,

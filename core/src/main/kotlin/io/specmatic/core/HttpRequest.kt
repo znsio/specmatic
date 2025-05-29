@@ -431,6 +431,19 @@ data class HttpRequest(
 
         pathScore + headerScore + queryScore + bodyScore
     }
+
+    val specificity: Int by lazy {
+        pathSpecificity() + headerSpecificity() + queryParamsSpecificity() + bodySpecificity()
+    }
+
+    internal fun bodySpecificity(): Int = body.specificity()
+
+    internal fun queryParamsSpecificity(): Int = queryParams.paramPairs.count { !isPatternToken(it.second) }
+
+    internal fun headerSpecificity(): Int = headers.values.count { !isPatternToken(it)}
+
+    internal fun pathSpecificity(): Int = (if (path == "/") "" else path)
+        ?.split(URL_PATH_DELIMITER)?.count { !StringValue(it).isPatternToken() } ?: 0
 }
 
 private fun setIfNotEmpty(dest: MutableMap<String, Value>, key: String, data: Map<String, Any>) {

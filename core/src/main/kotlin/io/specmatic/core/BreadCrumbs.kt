@@ -9,8 +9,10 @@ value class BreadCrumb(val value: String) {
         val REQUEST = BreadCrumb("REQUEST")
         val RESPONSE = BreadCrumb("RESPONSE")
         val HEADER = BreadCrumb("HEADER")
+        val QUERY = BreadCrumb("QUERY")
         val PARAMETERS = BreadCrumb("PARAMETERS")
-        val PARAM_HEADER = PARAMETERS.plus("HEADER")
+        val PARAM_HEADER = PARAMETERS.plus(HEADER)
+        val PARAM_QUERY = PARAMETERS.plus(QUERY)
         val SOAP_ACTION = BreadCrumb("SOAPAction")
 
         private fun combine(vararg breadCrumbs: String): String {

@@ -355,13 +355,14 @@ data class HttpHeadersPattern(
         return Result.fromFailures(failures)
     }
 
-    fun addComplimentaryPatterns(basePatterns: Sequence<ReturnValue<HttpHeadersPattern>>, row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
+    fun addComplimentaryPatterns(basePatterns: Sequence<ReturnValue<HttpHeadersPattern>>, row: Row, resolver: Resolver, breadCrumb: String): Sequence<ReturnValue<HttpHeadersPattern>> {
         return addComplimentaryPatterns(
             basePatterns.map { it.ifValue { it.pattern } },
             pattern,
             null,
             row,
             resolver,
+            breadCrumb
         ).map {
             it.ifValue {
                 HttpHeadersPattern(it, contentType = contentType)
@@ -377,8 +378,9 @@ data class HttpHeadersPattern(
         row: Row,
         resolver: Resolver,
         generateMandatoryEntryIfMissing: Boolean,
+        breadCrumb: String
     ): Sequence<ReturnValue<HttpHeadersPattern>> {
-        return attempt(breadCrumb = BreadCrumb.HEADER.value) {
+        return attempt(breadCrumb = breadCrumb) {
             readFrom(this.pattern, row, resolver, generateMandatoryEntryIfMissing)
         }.map {
             HasValue(HttpHeadersPattern(it, contentType = contentType))

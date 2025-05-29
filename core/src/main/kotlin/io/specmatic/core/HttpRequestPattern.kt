@@ -554,11 +554,13 @@ data class HttpRequestPattern(
     }
 
     private fun HttpRequest.generateAndUpdateHeaders(resolver: Resolver): HttpRequest {
-        return this.copy(
-            headers = headersPattern.generate(
-                resolver.updateLookupPath(BreadCrumb.PARAMETERS.value)
+        return attempt(breadCrumb = BreadCrumb.PARAMETERS.value) {
+            this.copy(
+                headers = headersPattern.generate(
+                    resolver.updateLookupPath(BreadCrumb.PARAMETERS.value)
+                )
             )
-        )
+        }
     }
 
     private fun HttpRequest.generateAndUpdateFormFieldsValues(resolver: Resolver): HttpRequest {
@@ -611,7 +613,7 @@ data class HttpRequestPattern(
                 newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }.map { HasValue(it) }
             } ?: sequenceOf(HasValue(null))
 
-            val newQueryParamsPatterns: Sequence<ReturnValue<HttpQueryParamPattern>> = returnValue(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
+            val newQueryParamsPatterns: Sequence<ReturnValue<HttpQueryParamPattern>> = returnValue(breadCrumb = BreadCrumb.PARAM_QUERY.value) {
                 if (status.toString().startsWith("2")) {
                     httpQueryParamPattern.addComplimentaryPatterns(
                         httpQueryParamPattern.newBasedOn(row, resolver),
@@ -634,13 +636,15 @@ data class HttpRequestPattern(
                     headersPattern.addComplimentaryPatterns(
                         headersPattern.newBasedOn(row, resolver),
                         row,
-                        resolver
+                        resolver,
+                        BreadCrumb.PARAM_HEADER.value
                     )
                 } else {
                     headersPattern.readFrom(
                         row,
                         resolver,
-                        shouldGenerateMandatoryEntryIfMissing(resolver, status)
+                        shouldGenerateMandatoryEntryIfMissing(resolver, status),
+                        BreadCrumb.PARAM_HEADER.value
                     )
                 }
             }
@@ -904,12 +908,16 @@ data class HttpRequestPattern(
     fun fillInTheBlanks(request: HttpRequest, resolver: Resolver): HttpRequest {
         val sanitizedRequest = withoutSecuritySchemes(request)
         val path = httpPathPattern?.fillInTheBlanks(sanitizedRequest.path, resolver)?.breadCrumb("PATH-PARAMS") ?: HasValue(null)
-        val queryParams = httpQueryParamPattern.fillInTheBlanks(sanitizedRequest.queryParams, resolver).breadCrumb("QUERY-PARAMS")
-        val body = body.fillInTheBlanks(sanitizedRequest.body, resolver).breadCrumb("BODY")
+
+        val queryParams = httpQueryParamPattern.fillInTheBlanks(
+            queryParams = sanitizedRequest.queryParams, resolver = resolver
+        ).breadCrumb(BreadCrumb.PARAM_QUERY.value)
 
         val headers = headersPattern.fillInTheBlanks(
             headers = sanitizedRequest.headers, resolver = resolver.updateLookupPath(BreadCrumb.PARAMETERS.value)
         ).breadCrumb(BreadCrumb.PARAM_HEADER.value)
+
+        val body = body.fillInTheBlanks(sanitizedRequest.body, resolver).breadCrumb("BODY")
 
         return HasValue(request)
             .combine(path) { req, it -> req.copy(path = it) }

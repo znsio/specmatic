@@ -12,14 +12,14 @@ data class BasicAuthSecurityScheme(private val token: String? = null) : OpenAPIS
         val authHeaderValue: String = httpRequest.headers[AUTHORIZATION] ?: return when(resolver.mockMode) {
             true -> Result.Success()
             else -> Result.Failure(
-                breadCrumb = "HEADERS.$AUTHORIZATION",
+                breadCrumb = BreadCrumb.HEADER.with(AUTHORIZATION),
                 message = resolver.mismatchMessages.expectedKeyWasMissing("Header", AUTHORIZATION)
             )
         }
 
         if (!authHeaderValue.lowercase().startsWith("basic")) {
             return Result.Failure(
-                breadCrumb = "HEADERS.$AUTHORIZATION",
+                breadCrumb = BreadCrumb.HEADER.with(AUTHORIZATION),
                 message = "$AUTHORIZATION header must be prefixed with \"Basic\""
             )
         }
@@ -81,6 +81,7 @@ data class BasicAuthSecurityScheme(private val token: String? = null) : OpenAPIS
         return "Basic $validToken"
     }
 
+    // TODO: Fix dictionary lookup to look into HEADER.AUTHORIZATION and provide feedback
     private fun dictionaryHasValidToken(resolver: Resolver) =
         resolver.hasDictionaryToken(AUTHORIZATION) && resolver.getDictionaryToken(AUTHORIZATION).toStringLiteral().let {
             it.lowercase()

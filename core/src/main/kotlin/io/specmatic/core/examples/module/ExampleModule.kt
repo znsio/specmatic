@@ -29,7 +29,7 @@ class ExampleModule {
                     val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs("").none { breadCrumb ->
                         breadCrumb.contains(PATH_BREAD_CRUMB)
                                 || breadCrumb.contains(METHOD_BREAD_CRUMB)
-                                || breadCrumb.contains("REQUEST.HEADERS.Content-Type")
+                                || breadCrumb.contains(BreadCrumb.REQUEST.plus(BreadCrumb.PARAM_HEADER).with(CONTENT_TYPE))
                                 || breadCrumb.contains("STATUS")
                     } || matchResult.hasReason(FailureReason.URLPathParamMismatchButSameStructure)
                     if (isFailureRelatedToScenario) { example to matchResult } else null

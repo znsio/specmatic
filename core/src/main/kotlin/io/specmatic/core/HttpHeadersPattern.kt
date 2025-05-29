@@ -9,8 +9,6 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
-const val HEADERS_BREADCRUMB = "HEADERS"
-
 data class HttpHeadersPattern(
     val pattern: Map<String, Pattern> = emptyMap(),
     val ancestorHeaders: Map<String, Pattern>? = null,
@@ -36,7 +34,7 @@ data class HttpHeadersPattern(
                 ::returnResult
 
         return when (result) {
-            is Result.Failure -> result.breadCrumb("HEADERS")
+            is Result.Failure -> result.breadCrumb(BreadCrumb.HEADER.value)
             else -> result
         }
     }
@@ -84,7 +82,7 @@ data class HttpHeadersPattern(
                 return MatchFailure(
                     Result.Failure(
                         resolver.mismatchMessages.mismatchMessage(contentType, contentTypeHeaderValueFromRequest),
-                        breadCrumb = "Content-Type",
+                        breadCrumb = CONTENT_TYPE,
                         failureReason = FailureReason.ContentTypeMismatch
                     )
                 )
@@ -114,7 +112,7 @@ data class HttpHeadersPattern(
 
         keyErrors.find { it.name == "SOAPAction" }?.apply {
             return MatchFailure(
-                this.missingKeyToResult("header", resolver.mismatchMessages).breadCrumb("SOAPAction")
+                this.missingKeyToResult("header", resolver.mismatchMessages).breadCrumb(BreadCrumb.SOAP_ACTION.value)
                     .copy(failureReason = FailureReason.SOAPActionMismatch)
             )
         }
@@ -209,10 +207,12 @@ data class HttpHeadersPattern(
 
     fun generate(resolver: Resolver): Map<String, String> {
         val generatedHeaders = pattern.mapValues { (key, pattern) ->
-            attempt(breadCrumb = "HEADERS.$key") {
-                toStringLiteral(resolver.withCyclePrevention(pattern) {
-                    it.generate("HEADERS", key, pattern)
-                })
+            attempt(breadCrumb = BreadCrumb.HEADER.with(key)) {
+                toStringLiteral(
+                    resolver.updateLookupForParam(BreadCrumb.HEADER.value).withCyclePrevention(pattern) {
+                        it.generate(null, key, pattern)
+                    }
+                )
             }
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
 
@@ -248,7 +248,7 @@ data class HttpHeadersPattern(
     }
 
     fun generateWithAll(resolver: Resolver): Map<String, String> {
-        return attempt(breadCrumb = "HEADERS") {
+        return attempt(breadCrumb = BreadCrumb.HEADER.value) {
             pattern.mapValues { (key, pattern) ->
                 attempt(breadCrumb = key) {
                     pattern.generateWithAll(resolver).toStringLiteral()
@@ -289,7 +289,7 @@ data class HttpHeadersPattern(
         "content-type"
     )
 
-    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = "HEADER") {
+    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = BreadCrumb.HEADER.value) {
         allOrNothingCombinationIn(pattern, row, null, null) { pattern ->
             NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
         }.plus(
@@ -339,7 +339,7 @@ data class HttpHeadersPattern(
 
         val results = listOf(missingHeaderResult).plus(valueResults)
 
-        return Result.fromResults(results).breadCrumb("HEADER")
+        return Result.fromResults(results).breadCrumb(BreadCrumb.HEADER.value)
     }
 
     private fun checkAllMissingHeaders(
@@ -378,7 +378,7 @@ data class HttpHeadersPattern(
         resolver: Resolver,
         generateMandatoryEntryIfMissing: Boolean,
     ): Sequence<ReturnValue<HttpHeadersPattern>> {
-        return attempt(breadCrumb = HEADERS_BREADCRUMB) {
+        return attempt(breadCrumb = BreadCrumb.HEADER.value) {
             readFrom(this.pattern, row, resolver, generateMandatoryEntryIfMissing)
         }.map {
             HasValue(HttpHeadersPattern(it, contentType = contentType))
@@ -398,8 +398,8 @@ data class HttpHeadersPattern(
 
         return fill(
             jsonPatternMap = pattern, jsonValueMap = headersValue,
-            resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys),
-            typeAlias = "($HEADERS_BREADCRUMB)"
+            resolver = resolver.updateLookupForParam(BreadCrumb.HEADER.value).withUnexpectedKeyCheck(IgnoreUnexpectedKeys),
+            typeAlias = null
         ).realise(
             hasValue = { valuesMap, _ -> HasValue(valuesMap.mapValues { it.value.toStringLiteral() }) },
             orException = { e -> e.cast() }, orFailure = { f -> f.cast() }
@@ -414,13 +414,13 @@ data class HttpHeadersPattern(
         if (headersWithContentType.isEmpty() && pattern.isEmpty()) return emptyMap()
         val headersValue = headersWithContentType.mapValues { (key, value) ->
             val pattern = pattern[key] ?: pattern["$key?"] ?: return@mapValues StringValue(value)
-
             try { pattern.parse(value, resolver) } catch(e: Exception) { StringValue(value) }
         }
+
         val fixedHeaders = fix(
             jsonPatternMap = pattern, jsonValueMap = headersValue,
-            resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).withoutAllPatternsAsMandatory(),
-            jsonPattern = JSONObjectPattern(pattern, typeAlias = "($HEADERS_BREADCRUMB)")
+            resolver = resolver.updateLookupForParam(BreadCrumb.HEADER.value).withUnexpectedKeyCheck(IgnoreUnexpectedKeys).withoutAllPatternsAsMandatory(),
+            jsonPattern = JSONObjectPattern(pattern, typeAlias = null)
         )
 
         return fixedHeaders.mapValues { it.value.toStringLiteral() }

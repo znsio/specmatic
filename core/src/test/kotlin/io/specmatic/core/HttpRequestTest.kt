@@ -515,6 +515,8 @@ internal class HttpRequestTest {
             Arguments.of(BooleanValue(true), 1),
             Arguments.of(BinaryValue("testData".toByteArray()), 1),
             Arguments.of(NullValue, 1),
+            Arguments.of(JSONObjectValue(emptyMap()), 0),
+            Arguments.of(JSONArrayValue(emptyList()), 0),
             Arguments.of(NoBodyValue, 0),
 
             Arguments.of(parsedJSONArray("""["10", "20"]"""), 2),

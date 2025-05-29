@@ -506,7 +506,7 @@ data class JSONObjectPattern(
     private fun calculatePathForAnyPattern(key: String, childValue: Value, anyPattern: AnyPattern, resolver: Resolver): List<String> {
         val anyPatternPaths = anyPattern.calculatePath(childValue, resolver)
         val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
-            "$typeAlias.$key"
+            "{$typeAlias}.$key"
         } else {
             key
         }
@@ -523,7 +523,7 @@ data class JSONObjectPattern(
         val nestedPaths = objectPattern.calculatePath(childValue, resolver)
         return nestedPaths.map { nestedPath ->
             if (typeAlias != null && typeAlias.isNotBlank()) {
-                "$typeAlias.$key.$nestedPath"
+                "{$typeAlias}.$key.$nestedPath"
             } else {
                 "$key.$nestedPath"
             }
@@ -560,14 +560,14 @@ data class JSONObjectPattern(
         return if (anyPatternPaths.isNotEmpty()) {
             anyPatternPaths.map { anyPath ->
                 if (typeAlias != null && typeAlias.isNotBlank()) {
-                    "$typeAlias.$key[$index]{$anyPath}"
+                    "{$typeAlias}.$key[$index]{$anyPath}"
                 } else {
                     "$key[$index]{$anyPath}"
                 }
             }
         } else {
             val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
-                "$typeAlias.$key[$index]"
+                "{$typeAlias}.$key[$index]"
             } else {
                 "$key[$index]"
             }
@@ -579,7 +579,7 @@ data class JSONObjectPattern(
         val nestedPaths = objectPattern.calculatePath(arrayItem, resolver)
         return nestedPaths.map { nestedPath ->
             if (typeAlias != null && typeAlias.isNotBlank()) {
-                "$typeAlias.$key[$index].$nestedPath"
+                "{$typeAlias}.$key[$index].$nestedPath"
             } else {
                 "$key[$index].$nestedPath"
             }

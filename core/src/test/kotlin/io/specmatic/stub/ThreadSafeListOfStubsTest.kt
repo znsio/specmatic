@@ -205,7 +205,6 @@ class ThreadSafeListOfStubsTest {
                 response = HttpResponse.ok(""),
                 responsePattern = HttpResponsePattern(HttpResponse.OK),
                 resolver = Resolver(),
-                originalRequest = lowSpecificityRequest,
                 partial = ScenarioStub(request = lowSpecificityRequest, response = HttpResponse.ok(parsedJSONObject("{\"id\": 1}")))
             )
             
@@ -214,7 +213,6 @@ class ThreadSafeListOfStubsTest {
                 response = HttpResponse.ok(""),
                 responsePattern = HttpResponsePattern(HttpResponse.OK),
                 resolver = Resolver(),
-                originalRequest = highSpecificityRequest,
                 partial = ScenarioStub(request = highSpecificityRequest, response = HttpResponse.ok(parsedJSONObject("{\"id\": 2}")))
             )
             
@@ -240,7 +238,6 @@ class ThreadSafeListOfStubsTest {
                 response = HttpResponse.ok(""),
                 responsePattern = HttpResponsePattern(HttpResponse.OK),
                 resolver = Resolver(),
-                originalRequest = lowGeneralityRequest,
                 partial = ScenarioStub(request = lowGeneralityRequest, response = HttpResponse.ok(parsedJSONObject("{\"id\": 1}")))
             )
             
@@ -249,7 +246,6 @@ class ThreadSafeListOfStubsTest {
                 response = HttpResponse.ok(""),
                 responsePattern = HttpResponsePattern(HttpResponse.OK),
                 resolver = Resolver(),
-                originalRequest = highGeneralityRequest,
                 partial = ScenarioStub(request = highGeneralityRequest, response = HttpResponse.ok(parsedJSONObject("{\"id\": 2}")))
             )
             

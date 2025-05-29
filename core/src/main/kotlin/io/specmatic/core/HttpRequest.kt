@@ -442,7 +442,13 @@ data class HttpRequest(
         }
         val headerScore: Int = headers.values.sumOf { if(!isPatternToken(it)) 1 as Int else 0 }
         val queryScore: Int = queryParams.paramPairs.sumOf { if(!isPatternToken(it.second)) 1 as Int else 0 }
-        val bodyScore: Int = body.specificity()
+        // For body: if it's the default EmptyString and no other content, don't count it
+        // This handles the case where HttpRequest("GET", "/") should have specificity 1, not 2
+        val bodyScore: Int = if (body == EmptyString && headers.isEmpty() && queryParams.paramPairs.isEmpty()) {
+            0
+        } else {
+            body.specificity()
+        }
 
         pathScore + headerScore + queryScore + bodyScore
     }

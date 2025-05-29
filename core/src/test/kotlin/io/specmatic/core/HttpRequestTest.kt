@@ -34,6 +34,21 @@ internal class HttpRequestTest {
     }
 
     @Test
+    fun `should calculate basic specificity correctly`() {
+        // Path "/" should have specificity of 1 (just the path, default body doesn't count)
+        val request1 = HttpRequest("GET", "/")
+        assertThat(request1.specificity).isEqualTo(1)
+        
+        // Path "" should have specificity of 1  
+        val request2 = HttpRequest("GET", "")  
+        assertThat(request2.specificity).isEqualTo(1)
+        
+        // Path "/person" should have specificity of 1
+        val request3 = HttpRequest("GET", "/person")
+        assertThat(request3.specificity).isEqualTo(1)
+    }
+
+    @Test
     fun `when serialised to json, the request should contain form fields`() {
         val json = HttpRequest("POST", "/").copy(formFields = mapOf("Data" to "10")).toJSON()
         val value = json.jsonObject.getValue("form-fields") as JSONObjectValue
@@ -434,10 +449,10 @@ internal class HttpRequestTest {
 
     @ParameterizedTest
     @CsvSource(
-        "10, 10, 2",
-        "(string), 10, 1",
-        "10, (string), 1",
-        "(string), (string), 0",
+        "10, 10, 3",           // path "/" (1) + 2 concrete values in body = 3
+        "(string), 10, 2",     // path "/" (1) + 1 concrete value in body = 2
+        "10, (string), 2",     // path "/" (1) + 1 concrete value in body = 2
+        "(string), (string), 1", // path "/" (1) + 0 concrete values in body = 1
         ignoreLeadingAndTrailingWhitespace = true
     )
     fun `should calculate specificity score based on the number of concrete values seen`(id: String, count: String, specificity: Int) {

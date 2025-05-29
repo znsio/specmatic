@@ -56,6 +56,10 @@ data class StringValue(val string: String = "") : Value, ScalarValue, XMLValue {
     }
 
     override fun specificity(): Int {
-        return if(isPatternToken(string)) 0 else 1
+        return when {
+            isPatternToken(string) -> 0
+            string.isEmpty() -> 1 // Empty strings should count as 1 when explicitly used as body
+            else -> 1
+        }
     }
 }

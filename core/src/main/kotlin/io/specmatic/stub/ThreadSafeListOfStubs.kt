@@ -112,9 +112,7 @@ class ThreadSafeListOfStubs(
             )
 
             try {
-                val originalRequest =
-                    if (stubData.partial != null) stubData.partial.request
-                    else stubData.originalRequest
+                val originalRequest = stubData.resolveOriginalRequest()
 
                 stubResponse.resolveSubstitutions(
                     httpRequest,
@@ -135,7 +133,7 @@ class ThreadSafeListOfStubs(
         }
 
         val exactMatch = grouped[StubType.Exact].orEmpty().sortedBy {
-            it.second.originalRequest?.generality ?: Int.MAX_VALUE
+            it.second.resolveOriginalRequest()?.generality ?: Int.MAX_VALUE
         }.find { (result, _) -> result is Result.Success }
 
         if(exactMatch != null)
@@ -175,9 +173,7 @@ class ThreadSafeListOfStubs(
             )
 
             try {
-                val originalRequest =
-                    if (stubData.partial != null) stubData.partial.request
-                    else stubData.originalRequest
+                val originalRequest = stubData.resolveOriginalRequest()
 
                 stubResponse.resolveSubstitutions(
                     httpRequest,

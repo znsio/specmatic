@@ -941,8 +941,7 @@ fun getHttpResponse(
             return FoundStubbedResponse(
                 httpStubResponse.resolveSubstitutions(
                     httpRequest,
-                    if (httpStubData.partial != null) httpStubData.partial.request else httpStubData.originalRequest
-                        ?: httpRequest,
+                    httpStubData.resolveOriginalRequest() ?: httpRequest,
                     httpStubData.data,
                 )
             )

@@ -15,13 +15,13 @@ PARAMETERS:
       - 123
       - 456
 
-QUERY-PARAMS:
-  creatorId:
-    - 123
-    - 456
-  petId:
-    - 123
-    - 456
+  QUERY:
+    creatorId:
+      - 123
+      - 456
+    petId:
+      - 123
+      - 456
 
 NewPet:
   creatorId:

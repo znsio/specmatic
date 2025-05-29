@@ -49,11 +49,11 @@ internal class HttpRequestPatternKtTest {
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         when(securitySchema) {
             is APIKeyInHeaderSecurityScheme -> assertThat(report).containsOnlyOnce(">> REQUEST.PARAMETERS.HEADER.API-KEY")
-            is APIKeyInQueryParamSecurityScheme -> assertThat(report).containsOnlyOnce(">> REQUEST.PARAMETERS.QUERY-PARAMS.API-KEY")
+            is APIKeyInQueryParamSecurityScheme -> assertThat(report).containsOnlyOnce(">> REQUEST.PARAMETERS.QUERY.API-KEY")
             is BasicAuthSecurityScheme, is BearerSecurityScheme -> assertThat(report).containsOnlyOnce(">> REQUEST.PARAMETERS.HEADER.Authorization")
             is CompositeSecurityScheme -> assertThat(report).satisfies(
                 { assertThat(it).containsOnlyOnce(">> REQUEST.PARAMETERS.HEADER.Authorization") },
-                { assertThat(it).containsOnlyOnce(">> REQUEST.PARAMETERS.QUERY-PARAMS.API-KEY") },
+                { assertThat(it).containsOnlyOnce(">> REQUEST.PARAMETERS.QUERY.API-KEY") },
             )
             else -> throw RuntimeException("Unknown security scheme ${securitySchema::javaClass.name}")
         }

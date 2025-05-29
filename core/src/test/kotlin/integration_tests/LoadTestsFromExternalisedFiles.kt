@@ -579,7 +579,7 @@ class LoadTestsFromExternalisedFiles {
         Authorization header must be prefixed with "Bearer"
 
         Error loading example for POST /insecure -> 200 from ${examplesDir.resolve("insecure.json").canonicalPath} 
-        >> REQUEST.QUERY-PARAMS.apiKey
+        >> REQUEST.PARAMETERS.QUERY.apiKey
         The query param apiKey was found in the example insecure but was not in the specification. 
         >> REQUEST.PARAMETERS.HEADER.Authorization
         The header Authorization was found in the example insecure but was not in the specification.
@@ -1106,9 +1106,9 @@ class LoadTestsFromExternalisedFiles {
             >> REQUEST.PATH.petId  
             Expected number as per the specification, but the example pets_post had string.
             
-            >> REQUEST.QUERY-PARAMS.creatorId
+            >> REQUEST.PARAMETERS.QUERY.creatorId
             Expected number as per the specification, but the example pets_post had "abc".
-            >> REQUEST.QUERY-PARAMS.petId
+            >> REQUEST.PARAMETERS.QUERY.petId
             Expected number as per the specification, but the example pets_post had string.
 
             >> REQUEST.PARAMETERS.HEADER.CREATOR-ID

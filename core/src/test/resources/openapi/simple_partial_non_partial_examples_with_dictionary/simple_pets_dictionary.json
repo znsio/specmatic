@@ -2,13 +2,13 @@
   "PARAMETERS": {
     "HEADER": {
       "CREATOR-ID": "John"
+    },
+    "QUERY": {
+      "tag": "cat"
     }
   },
   "PATH-PARAMS": {
     "id": 1
-  },
-  "QUERY-PARAMS": {
-    "tag": "cat"
   },
   "NewPet": {
     "name": "Tom",

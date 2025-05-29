@@ -665,7 +665,7 @@ Scenario: JSON API to get account details with fact check
             assertThat(secureResponse.body.toStringLiteral()).isEqualToNormalizingWhitespace("""
             In scenario "Secure endpoint requiring Bearer token and query API key. Response: Success"
             API: POST /secure -> 200
-            >> REQUEST.PARAMETERS.QUERY-PARAMS.apiKey
+            >> REQUEST.PARAMETERS.QUERY.apiKey
             Api-key named apiKey in the contract was not found in the request
             """.trimIndent())
 
@@ -678,7 +678,7 @@ Scenario: JSON API to get account details with fact check
             API: POST /partial -> 200
             >> REQUEST.PARAMETERS.HEADER.Authorization
             Header named Authorization in the contract was not found in the request
-            >> REQUEST.PARAMETERS.QUERY-PARAMS.apiKey
+            >> REQUEST.PARAMETERS.QUERY.apiKey
             Api-key named apiKey in the contract was not found in the request
             """.trimIndent())
 
@@ -691,7 +691,7 @@ Scenario: JSON API to get account details with fact check
             API: POST /overlap -> 200
             >> REQUEST.PARAMETERS.HEADER.Authorization
             Header named Authorization in the contract was not found in the request
-            >> REQUEST.PARAMETERS.QUERY-PARAMS.apiKey
+            >> REQUEST.PARAMETERS.QUERY.apiKey
             Api-key named apiKey in the contract was not found in the request
             >> REQUEST.PARAMETERS.HEADER.Authorization
             Header named Authorization in the contract was not found in the request

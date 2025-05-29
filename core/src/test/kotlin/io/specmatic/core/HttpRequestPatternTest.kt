@@ -647,7 +647,7 @@ internal class HttpRequestPatternTest {
 
         val testDescriptions = negativeTestScenarios.map { it.second }.filterIsInstance<HasValue<*>>().map { it.value as Scenario }.map { it.testDescription() }
 
-        assertThat(testDescriptions.count { it.matches(Regex("^.*QUERY-PARAM.*enum.*$")) }).isEqualTo(4)
+        assertThat(testDescriptions.count { it.matches(Regex("^.*PARAMETERS.QUERY.*enum.*$")) }).isEqualTo(4)
     }
 
     @Test

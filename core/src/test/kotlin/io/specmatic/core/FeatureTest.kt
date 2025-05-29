@@ -466,7 +466,7 @@ paths:
             In scenario "Get account balance"
             API: GET /balance -> 200
             
-              >> REQUEST.QUERY-PARAMS.account-id
+              >> REQUEST.PARAMETERS.QUERY.account-id
               
                  Expected number, actual was "abc"
             """.trimIndent().trimmedLinesList())
@@ -1957,7 +1957,7 @@ paths:
         ).toFeature()
 
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
-            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.QUERY-PARAMS.enabled")
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PARAMETERS.QUERY.enabled")
         })
     }
 
@@ -2010,7 +2010,7 @@ paths:
         ).toFeature()
 
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
-            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.QUERY-PARAMS.enabled")
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PARAMETERS.QUERY.enabled")
         })
     }
 
@@ -2302,7 +2302,7 @@ components:
 
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
             assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PATH.id")
-            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.QUERY-PARAMS.enabled")
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PARAMETERS.QUERY.enabled")
             assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PARAMETERS.HEADER.X-Token")
             assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADER.X-Value")
             assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.BODY")
@@ -2470,7 +2470,7 @@ paths:
 
         assertThatThrownBy {
             feature.validateExamplesOrException()
-        }.hasMessageContaining("REQUEST.QUERY-PARAMS.enabled")
+        }.hasMessageContaining("REQUEST.PARAMETERS.QUERY.enabled")
     }
 
     @Test

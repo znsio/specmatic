@@ -202,20 +202,20 @@ class ThreadSafeListOfStubsTest {
             
             val lowSpecificityStub = HttpStubData(
                 requestType = lowSpecificityRequest.toPattern(),
-                response = HttpResponse.ok(parsedJSONObject("{\"id\": 1}")),
+                response = HttpResponse.ok(""),
                 responsePattern = HttpResponsePattern(HttpResponse.OK),
                 resolver = Resolver(),
                 originalRequest = lowSpecificityRequest,
-                partial = ScenarioStub(request = lowSpecificityRequest, response = HttpResponse.ok(""))
+                partial = ScenarioStub(request = lowSpecificityRequest, response = HttpResponse.ok(parsedJSONObject("{\"id\": 1}")))
             )
             
             val highSpecificityStub = HttpStubData(
                 requestType = highSpecificityRequest.toPattern(),
-                response = HttpResponse.ok(parsedJSONObject("{\"id\": 2}")),
+                response = HttpResponse.ok(""),
                 responsePattern = HttpResponsePattern(HttpResponse.OK),
                 resolver = Resolver(),
                 originalRequest = highSpecificityRequest,
-                partial = ScenarioStub(request = highSpecificityRequest, response = HttpResponse.ok(""))
+                partial = ScenarioStub(request = highSpecificityRequest, response = HttpResponse.ok(parsedJSONObject("{\"id\": 2}")))
             )
             
             val partials = listOf(
@@ -238,20 +238,20 @@ class ThreadSafeListOfStubsTest {
             
             val lowGeneralityStub = HttpStubData(
                 requestType = lowGeneralityRequest.toPattern(),
-                response = HttpResponse.ok(parsedJSONObject("{\"id\": 1}")),
+                response = HttpResponse.ok(""),
                 responsePattern = HttpResponsePattern(HttpResponse.OK),
                 resolver = Resolver(),
                 originalRequest = lowGeneralityRequest,
-                partial = ScenarioStub(request = lowGeneralityRequest, response = HttpResponse.ok(""))
+                partial = ScenarioStub(request = lowGeneralityRequest, response = HttpResponse.ok(parsedJSONObject("{\"id\": 1}")))
             )
             
             val highGeneralityStub = HttpStubData(
                 requestType = highGeneralityRequest.toPattern(),
-                response = HttpResponse.ok(parsedJSONObject("{\"id\": 2}")),
+                response = HttpResponse.ok(""),
                 responsePattern = HttpResponsePattern(HttpResponse.OK),
                 resolver = Resolver(),
                 originalRequest = highGeneralityRequest,
-                partial = ScenarioStub(request = highGeneralityRequest, response = HttpResponse.ok(""))
+                partial = ScenarioStub(request = highGeneralityRequest, response = HttpResponse.ok(parsedJSONObject("{\"id\": 2}")))
             )
             
             val partials = listOf(

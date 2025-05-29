@@ -239,24 +239,24 @@ class ThreadSafeListOfStubs(
         
         // Group by specificity (highest first)
         val groupedBySpecificity = partials.groupBy { (_, stubData) ->
-            stubData.originalRequest?.specificity ?: Int.MIN_VALUE
+            stubData.originalRequest?.specificity ?: 0
         }.toSortedMap(reverseOrder())
         
         // Get the group with highest specificity
-        val highestSpecificityGroup = groupedBySpecificity.entries.firstOrNull()?.value ?: return null
+        val highestSpecificityGroup = groupedBySpecificity.entries.first().value
         
         // If only one partial in the highest specificity group, use it
         if (highestSpecificityGroup.size == 1) {
-            return highestSpecificityGroup.first()
+            return highestSpecificityGroup.single()
         }
         
         // Multiple partials in highest specificity group - group by generality (lowest first)
         val groupedByGenerality = highestSpecificityGroup.groupBy { (_, stubData) ->
-            stubData.originalRequest?.generality ?: Int.MAX_VALUE
+            stubData.originalRequest?.generality ?: 0
         }.toSortedMap()
         
         // Get the group with lowest generality and pick the first one
-        return groupedByGenerality.entries.firstOrNull()?.value?.firstOrNull()
+        return groupedByGenerality.entries.first().value.first()
     }
 }
 

@@ -423,9 +423,9 @@ class ExampleValidationModuleTest {
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
-        >> REQUEST.HEADERS.EXTRA-HEADER
+        >> REQUEST.PARAMETERS.HEADER.EXTRA-HEADER
         Header EXTRA-HEADER in the example is not in the specification
-        >> RESPONSE.HEADERS.EXTRA-HEADER
+        >> RESPONSE.HEADER.EXTRA-HEADER
         Header EXTRA-HEADER in the example is not in the specification
         """.trimIndent())
     }
@@ -452,9 +452,9 @@ class ExampleValidationModuleTest {
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
-        >> REQUEST.HEADERS.EXTRA-HEADER
+        >> REQUEST.PARAMETERS.HEADER.EXTRA-HEADER
         Header EXTRA-HEADER in the example is not in the specification
-        >> RESPONSE.HEADERS.EXTRA-HEADER
+        >> RESPONSE.HEADER.EXTRA-HEADER
         Header EXTRA-HEADER in the example is not in the specification
         """.trimIndent())
     }

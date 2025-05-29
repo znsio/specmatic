@@ -7057,9 +7057,9 @@ components:
 
         val testDescriptionList = tests.map { it.testDescription() }
         assertThat(testDescriptionList).containsExactlyInAnyOrder(
-            " Scenario: GET /items -> 200 [REQUEST.HEADERS.X-region selected FIRST from enum]",
-            " Scenario: GET /items -> 200 [REQUEST.HEADERS.X-region selected SECOND from enum]",
-            " Scenario: GET /items -> 200 [REQUEST.HEADERS.X-region selected THIRD from enum]"
+            " Scenario: GET /items -> 200 [REQUEST.PARAMETERS.HEADER.X-region selected FIRST from enum]",
+            " Scenario: GET /items -> 200 [REQUEST.PARAMETERS.HEADER.X-region selected SECOND from enum]",
+            " Scenario: GET /items -> 200 [REQUEST.PARAMETERS.HEADER.X-region selected THIRD from enum]"
         )
     }
 

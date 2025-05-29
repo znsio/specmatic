@@ -538,7 +538,7 @@ class DictionaryTest {
 
         @Test
         fun `negative based headers should still be generated when dictionary contains substitutions`() {
-            val dictionary = mapOf("HEADERS.ID" to NumberValue(123)).let(Dictionary::from)
+            val dictionary = "PARAMETERS: { HEADER: { ID: 123 } }".let(Dictionary::fromYaml)
             val scenario = Scenario(ScenarioInfo(
                 httpRequestPattern = HttpRequestPattern(
                     httpPathPattern = buildHttpPathPattern("/orders"), method = "GET",
@@ -566,6 +566,7 @@ class DictionaryTest {
             })
 
             assertThat(result.results).hasSize(4)
+            assertThat(result.successCount).isEqualTo(1)
         }
 
         @Test

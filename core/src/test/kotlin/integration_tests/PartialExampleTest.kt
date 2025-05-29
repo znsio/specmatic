@@ -123,7 +123,7 @@ class PartialExampleTest {
             val response = stub.client.execute(request)
 
             assertThat(response.status).isEqualTo(400)
-            assertThat(response.body.toStringLiteral()).contains(">> REQUEST.HEADERS.words")
+            assertThat(response.body.toStringLiteral()).contains(">> REQUEST.PARAMETERS.HEADER.words")
         }
     }
 
@@ -157,9 +157,9 @@ class PartialExampleTest {
 
         assertThat(output).contains(">> REQUEST.BODY.department")
         assertThat(output).contains(">> REQUEST.PATH.personId")
-        assertThat(output).contains(">> REQUEST.HEADERS.id")
+        assertThat(output).contains(">> REQUEST.PARAMETERS.HEADER.id")
         assertThat(output).contains(">> REQUEST.QUERY-PARAMS.data")
-        assertThat(output).contains(">> RESPONSE.HEADERS.data")
+        assertThat(output).contains(">> RESPONSE.HEADER.data")
         assertThat(output).contains(">> RESPONSE.BODY.location")
     }
 

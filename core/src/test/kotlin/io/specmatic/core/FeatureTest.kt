@@ -320,7 +320,7 @@ paths:
             In scenario "Get balance info"
             API: GET /balance -> 200
             
-              >> REQUEST.HEADERS.x-loginId
+              >> REQUEST.PARAMETERS.HEADER.x-loginId
               
                  Expected header named "x-loginId" was missing
               """.trimIndent().trimmedLinesList())
@@ -1849,7 +1849,7 @@ paths:
         ).toFeature()
 
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
-            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.HEADERS.X-Test-Header")
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PARAMETERS.HEADER.X-Test-Header")
         })
     }
 
@@ -1902,8 +1902,8 @@ paths:
         ).toFeature()
 
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
-            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.HEADERS.X-Test-Header")
-            assertThat(exceptionCauseMessage(exception)).doesNotContain("REQUEST.HEADERS.X-Test-Header?")
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PARAMETERS.HEADER.X-Test-Header")
+            assertThat(exceptionCauseMessage(exception)).doesNotContain("REQUEST.PARAMETERS.HEADER.X-Test-Header?")
         })
     }
 
@@ -2064,7 +2064,7 @@ paths:
         ).toFeature()
 
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
-            assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADERS.X-Value")
+            assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADER.X-Value")
         })
     }
 
@@ -2170,8 +2170,8 @@ paths:
         ).toFeature()
 
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
-            assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADERS.X-Value")
-            assertThat(exceptionCauseMessage(exception)).doesNotContain("RESPONSE.HEADERS.X-Value?")
+            assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADER.X-Value")
+            assertThat(exceptionCauseMessage(exception)).doesNotContain("RESPONSE.HEADER.X-Value?")
         })
     }
 
@@ -2229,7 +2229,7 @@ paths:
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
             assertThat(exceptionCauseMessage(exception)).contains(">> REQUEST.BODY.data")
             assertThat(exceptionCauseMessage(exception)).contains(">> REQUEST.BODY.info")
-            assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADERS.X-Value")
+            assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADER.X-Value")
             assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.BODY")
         })
     }
@@ -2303,8 +2303,8 @@ components:
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
             assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PATH.id")
             assertThat(exceptionCauseMessage(exception)).contains("REQUEST.QUERY-PARAMS.enabled")
-            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.HEADERS.X-Token")
-            assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADERS.X-Value")
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PARAMETERS.HEADER.X-Token")
+            assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADER.X-Value")
             assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.BODY")
         })
     }

@@ -378,7 +378,7 @@ class ScenarioTest {
         assertThat(exception.report()).isEqualToNormalizingWhitespace(
             """
         Error loading example named  for POST / -> 200
-        >> REQUEST.HEADERS.Authorization
+        >> REQUEST.PARAMETERS.HEADER.Authorization
         Authorization header must be prefixed with "Basic"
         """.trimIndent()
         )
@@ -426,9 +426,9 @@ class ScenarioTest {
         assertThat(exception.report()).isEqualToNormalizingWhitespace(
             """
         Error loading example named example.json for POST / -> 200
-        >> REQUEST.HEADERS.X-EXTRA-HEADERS
+        >> REQUEST.PARAMETERS.HEADER.X-EXTRA-HEADERS
         The header X-EXTRA-HEADERS was found in the example example.json but was not in the specification.
-        >> RESPONSE.HEADERS.X-EXTRA-HEADERS
+        >> RESPONSE.HEADER.X-EXTRA-HEADERS
         The header X-EXTRA-HEADERS was found in the example example.json but was not in the specification.
         """.trimIndent()
         )
@@ -477,9 +477,9 @@ class ScenarioTest {
         assertThat(exception.report()).isEqualToNormalizingWhitespace(
             """
         Error loading example named partial-example.json for POST / -> 200
-        >> REQUEST.HEADERS.X-EXTRA-HEADERS
+        >> REQUEST.PARAMETERS.HEADER.X-EXTRA-HEADERS
         The header X-EXTRA-HEADERS was found in the example partial-example.json but was not in the specification.
-        >> RESPONSE.HEADERS.X-EXTRA-HEADERS
+        >> RESPONSE.HEADER.X-EXTRA-HEADERS
         The header X-EXTRA-HEADERS was found in the example partial-example.json but was not in the specification.
         """.trimIndent()
         )

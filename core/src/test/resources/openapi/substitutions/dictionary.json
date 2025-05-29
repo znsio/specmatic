@@ -1,10 +1,12 @@
 {
+  "RESPONSE": {
+    "HEADER": {
+      "X-Region": "Asia",
+      "X-Data-Token": "pqr"
+    }
+  },
   "QUERY-PARAMS": {
     "id": 10
-  },
-  "HEADERS": {
-    "X-Region": "Asia",
-    "X-Data-Token": "pqr"
   },
   "*": {
     "id": 10,

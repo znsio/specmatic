@@ -460,7 +460,7 @@ internal class HttpRequestPatternTest {
 
         val result = type.matches(request, Resolver())
         val reportText = result.reportString()
-        assertThat(reportText).contains(">> REQUEST.HEADERS.X-Data")
+        assertThat(reportText).contains(">> REQUEST.PARAMETERS.HEADER.X-Data")
         assertThat(reportText).contains(">> REQUEST.BODY.id")
     }
 

@@ -232,7 +232,7 @@ class BackwardCompatibilityCheckCommandV2Test {
                     SystemExit.throwOnExit {
                         BackwardCompatibilityCheckCommandV2().apply {
                             repoDir = tempDir.canonicalPath
-                            targetPath = "${tempDir.canonicalPath}/other-api.yaml"
+                            targetPath = "$tempDir/other-api.yaml"
                         }.call()
                     }
                 }

@@ -8,7 +8,7 @@ import io.specmatic.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-internal class CalculatePathTest {
+internal class CalculatePathUnitTest {
 
     @Test
     fun `calculatePath should find AnyPattern in simple object with typeAlias`() {

@@ -228,7 +228,7 @@ class BackwardCompatibilityCheckCommandV2Test {
             commitAndPush(tempDir, "Initial commit")
             File(tempDir, "other-api.yaml").writeText(otherApiSpec)
 
-            val (stdOut, exception) = captureStandardOutput {
+            val (stdOut, exception) = captureStandardOutput(captureStdErr = true) {
                 assertThrows<SystemExitException> {
                     SystemExit.throwOnExit {
                         BackwardCompatibilityCheckCommandV2().apply {

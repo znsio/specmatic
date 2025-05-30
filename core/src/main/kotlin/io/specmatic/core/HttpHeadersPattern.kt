@@ -4,6 +4,7 @@ import io.ktor.http.*
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.isOptional
+import io.specmatic.core.utilities.performPatternOp
 import io.specmatic.core.utilities.withNullPattern
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
@@ -391,18 +392,17 @@ data class HttpHeadersPattern(
         } else headers
 
         if (headersWithContentType.isEmpty() && pattern.isEmpty()) return HasValue(emptyMap())
-        val headersValue = headersWithContentType.mapValues { (key, value) ->
-            val pattern = pattern[key] ?: pattern["$key?"] ?: return@mapValues StringValue(value)
-            runCatching { pattern.parse(value, resolver) }.getOrDefault(StringValue(value))
-        }
-
-        return fill(
-            jsonPatternMap = pattern, jsonValueMap = headersValue,
+        return headersWithContentType.performPatternOp(
+            patternMap = pattern,
             resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys),
-            typeAlias = "($HEADERS_BREADCRUMB)"
-        ).realise(
-            hasValue = { valuesMap, _ -> HasValue(valuesMap.mapValues { it.value.toStringLiteral() }) },
-            orException = { e -> e.cast() }, orFailure = { f -> f.cast() }
+            operation = { valueMap, patternMap ->
+                fill(
+                    jsonValueMap = valueMap,
+                    jsonPatternMap = patternMap,
+                    resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys),
+                    typeAlias = "($HEADERS_BREADCRUMB)"
+                )
+            }
         )
     }
 
@@ -412,20 +412,19 @@ data class HttpHeadersPattern(
         } else headers
 
         if (headersWithContentType.isEmpty() && pattern.isEmpty()) return emptyMap()
-        val headersValue = headersWithContentType.mapValues { (key, value) ->
-            val pattern = pattern[key] ?: pattern["$key?"] ?: return@mapValues StringValue(value)
-
-            try { pattern.parse(value, resolver) } catch(e: Exception) { StringValue(value) }
-        }
-        val fixedHeaders = fix(
-            jsonPatternMap = pattern, jsonValueMap = headersValue,
-            resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).withoutAllPatternsAsMandatory(),
-            jsonPattern = JSONObjectPattern(pattern, typeAlias = "($HEADERS_BREADCRUMB)")
-        )
-
-        return fixedHeaders.mapValues { it.value.toStringLiteral() }
+        return headersWithContentType.performPatternOp(
+            patternMap = pattern,
+            resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys),
+            operation = { valueMap, patternMap ->
+                fix(
+                    jsonValueMap = valueMap,
+                    jsonPatternMap = patternMap,
+                    resolver = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).withoutAllPatternsAsMandatory(),
+                    jsonPattern = JSONObjectPattern(patternMap, typeAlias = "($HEADERS_BREADCRUMB)")
+                ).let(::HasValue)
+            }
+        ).value
     }
-
 }
 
 internal fun logContentTypeAndPatternMismatchWarning(contentType: String) {

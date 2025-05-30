@@ -44,7 +44,7 @@ internal class HttpResponsePatternTest {
         assertThat(result.toMatchFailureDetailList()).hasSize(2)
 
         val resultText = result.reportString()
-        assertThat(resultText).contains(">> RESPONSE.HEADERS.X-Data")
+        assertThat(resultText).contains(">> RESPONSE.HEADER.X-Data")
         assertThat(resultText).contains(">> RESPONSE.BODY")
     }
 

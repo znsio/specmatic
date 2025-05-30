@@ -5,10 +5,12 @@ import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
+import io.specmatic.mock.ScenarioStub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.io.File
 
-internal class CalculatePathUnitTest {
+internal class CalculatePathTest {
 
     @Test
     fun `calculatePath should find AnyPattern in simple object with typeAlias`() {
@@ -926,5 +928,42 @@ internal class CalculatePathUnitTest {
         val paths = pattern.calculatePath(value, Resolver())
         
         assertThat(paths).containsExactly("level1.level2.level3{string}")
+    }
+
+    @Test
+    fun `calculatePath should find paths in product examples`() {
+        // Load Feature from YAML file
+        val basePath = "src/test/resources/req_traversal_path"
+        val feature = parseContractFileToFeature("$basePath/product.yaml")
+
+        // Load HTTP requests from example files
+        val exampleFiles = listOf(
+            "$basePath/product_examples/post_products_1.json",
+            "$basePath/product_examples/post_products_2.json",
+            "$basePath/product_examples/post_products_3.json"
+        )
+
+        val httpRequests = exampleFiles.map { filePath ->
+            val fileContent = File(filePath).readText()
+            val jsonValue = parsedValue(fileContent) as JSONObjectValue
+            val requestJson = jsonValue.jsonObject["partial"] as JSONObjectValue
+            val httpRequestJson = requestJson.jsonObject["http-request"] as JSONObjectValue
+            requestFromJSON(httpRequestJson.jsonObject)
+        }
+
+        val stubs = exampleFiles.map { filePath ->
+            val stub = ScenarioStub.readFromFile(File(filePath))
+            assertThat(feature.calculatePath(stub.request, stub.response.status)).containsExactly("example1.path")
+        }
+
+        // Test calculatePath for each request
+        val request1Paths = feature.calculatePath(httpRequests[0], 201)
+        assertThat(request1Paths).containsExactly("example1.path")
+
+        val request2Paths = feature.calculatePath(httpRequests[1], 201)
+        assertThat(request2Paths).containsExactly("example2.path")
+
+        val request3Paths = feature.calculatePath(httpRequests[2], 201)
+        assertThat(request3Paths).containsExactly("example3.path")
     }
 }

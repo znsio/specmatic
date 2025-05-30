@@ -1,0 +1,41 @@
+{
+  "partial": {
+    "http-request": {
+      "method": "POST",
+      "path": "/products",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "price": 49.99,
+        "manufacturer": {
+          "manufacturer_id_ref": 42,
+          "manufacturer_region": "East Coast"
+        },
+        "warehouse": {
+          "name": "Central Distribution Center"
+        }
+      }
+    },
+    "http-response": {
+      "status": 201,
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "id": 2,
+        "name": "Smart Gadget",
+        "price": 49.99,
+        "category": "Electronics",
+        "manufacturer": {
+          "manufacturer_id_ref": 42,
+          "manufacturer_region": "East Coast"
+        },
+        "warehouse": {
+          "name": "Central Distribution Center",
+          "address": "456 Logistics Lane, Industrial Park, CA 94026"
+        }
+      }
+    }
+  }
+} 

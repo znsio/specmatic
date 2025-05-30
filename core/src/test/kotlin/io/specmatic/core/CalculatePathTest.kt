@@ -893,9 +893,9 @@ internal class CalculatePathTest {
 
         val paths = pattern.calculatePath(value, Resolver())
         
-        // The expectation is that the AnyPattern should resolve to just the typeAlias
-        // of the matching pattern, similar to existing tests like {Person}.officeAddress{AddressRef}
-        assertThat(paths).containsExactly("{Container}.container{NestedObjectWithAny}")
+        // The expectation is that the AnyPattern should find the nested AnyPattern and include
+        // the complete path through the nested patterns, including the nested field
+        assertThat(paths).containsExactly("{Container}.container{NestedObjectWithAny}.nestedField{string}")
     }
     
     @Test

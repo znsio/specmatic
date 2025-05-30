@@ -538,15 +538,8 @@ data class AnyPattern(
         if (matchingPattern is JSONObjectPattern) {
             val nestedPaths = matchingPattern.calculatePath(value, resolver)
             if (nestedPaths.isNotEmpty()) {
-                // If we have a typeAlias, prefix it to the nested paths
-                if (patternTypeAlias != null && patternTypeAlias.isNotBlank()) {
-                    return nestedPaths.map { nestedPath ->
-                        "$patternTypeAlias.$nestedPath"
-                    }.toSet()
-                } else {
-                    // No typeAlias, just return the nested paths as-is
-                    return nestedPaths
-                }
+                // The nested paths already contain the proper formatting, just return them
+                return nestedPaths
             } else {
                 // JSONObjectPattern but no nested AnyPatterns found
                 if (patternTypeAlias != null && patternTypeAlias.isNotBlank()) {

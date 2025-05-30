@@ -227,14 +227,6 @@ class BackwardCompatibilityCheckCommandV2Test {
             commitAndPush(tempDir, "Initial commit")
             File(tempDir, "other-api.yaml").writeText(otherApiSpec)
 
-            println("Temp dir: $tempDir")
-            println("Temp dir canonical path: ${tempDir.canonicalPath}")
-
-            println("Temp dir files:")
-            tempDir.listFiles().forEach {
-                println("- ${it}")
-            }
-
             val (stdOut, exception) = captureStandardOutput(redirectStdErrToStdout = true) {
                 assertThrows<SystemExitException> {
                     SystemExit.throwOnExit {

@@ -201,20 +201,44 @@ class BackwardCompatibilityCheckCommandV2Test {
 
         @Test
         fun `should work if path is relative in windows and linux based os`() {
-            File("file-ab.yaml").apply {
-                referTo("file-ab.yaml")
-            }.copyTo(tempDir.resolve("file-ab.yaml"))
+            val baseApiSpec = """
+            openapi: 3.0.0
+            info:
+              title: Base API
+              version: 1.0.0
+            paths:
+              /health:
+                get:
+                  summary: Health check
+                  responses:
+                    '200':
+                      description: OK
+            """.trimIndent()
+
+            val otherApiSpec = """
+            openapi: 3.0.0
+            info:
+              title: Other API
+              version: 1.0.0
+            paths:
+              /status:
+                get:
+                  summary: Status check
+                  responses:
+                    '200':
+                      description: OK
+            """.trimIndent()
+
+            File(tempDir, "base-api.yaml").writeText(baseApiSpec)
             commitAndPush(tempDir, "Initial commit")
-            File("file-xy.yaml").apply {
-                referTo("file-xy.yaml")
-            }.copyTo(tempDir.resolve("file-xy.yaml"))
+            File(tempDir, "other-api.yaml").writeText(otherApiSpec)
 
             val (stdOut, exception) = captureStandardOutput {
                 assertThrows<SystemExitException> {
                     SystemExit.throwOnExit {
                         BackwardCompatibilityCheckCommandV2().apply {
                             repoDir = tempDir.canonicalPath
-                            targetPath = "$tempDir/file-xy.yaml"
+                            targetPath = "$tempDir/other-api.yaml"
                         }.call()
                     }
                 }
@@ -223,7 +247,7 @@ class BackwardCompatibilityCheckCommandV2Test {
             assertThat(exception.code).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
             - Specs that will be skipped (untracked specs, or schema files that are not referred to in other specs):
-            1. ${tempDir.resolve("file-xy.yaml").canonicalFile.toPath().toRealPath()}
+            1. ${tempDir.resolve("other-api.yaml").canonicalFile.toPath().toRealPath()}
             """.trimIndent()).containsIgnoringWhitespaces("""
             Files checked: 0 (Passed: 0, Failed: 0)
             """.trimIndent())

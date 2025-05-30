@@ -19,7 +19,6 @@ import java.util.concurrent.Callable
             ProxyCommand::class,
             ExamplesCommand::class,
             StubCommand::class,
-            VirtualServiceCommand::class,
             TestCommand::class,
             CentralContractRepoReportCommand::class,
             ConfigCommand::class

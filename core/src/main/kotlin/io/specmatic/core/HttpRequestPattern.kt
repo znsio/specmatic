@@ -807,7 +807,7 @@ data class HttpRequestPattern(
                 this.body.negativeBasedOn(row.noteRequestBody(), resolver)
             }
 
-            val newHeadersPattern = headersPattern.negativeBasedOn(row, resolver)
+            val newHeadersPattern = headersPattern.negativeBasedOn(row, resolver, BreadCrumb.PARAM_HEADER.value)
             val newFormFieldsPatterns = newMapBasedOn(formFieldsPattern, row, resolver).map { it.value }
             val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
 

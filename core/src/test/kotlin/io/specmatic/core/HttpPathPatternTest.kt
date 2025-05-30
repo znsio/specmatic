@@ -358,7 +358,7 @@ internal class HttpPathPatternTest {
     @Test
     fun `should generate negative values for a number`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to NumberPattern()))
-        val newHeaders = headers.negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
+        val newHeaders = headers.negativeBasedOn(Row(), Resolver(), BreadCrumb.PARAM_HEADER.value).map { it.value }.toList()
 
         assertThat(newHeaders).containsExactlyInAnyOrder(
             HttpHeadersPattern(mapOf("X-TraceID" to StringPattern())),

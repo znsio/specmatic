@@ -289,7 +289,7 @@ data class HttpHeadersPattern(
         "content-type"
     )
 
-    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = BreadCrumb.HEADER.value) {
+    fun negativeBasedOn(row: Row, resolver: Resolver, breadCrumb: String): Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = breadCrumb) {
         allOrNothingCombinationIn(pattern, row, null, null) { pattern ->
             NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
         }.plus(

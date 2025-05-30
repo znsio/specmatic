@@ -171,7 +171,7 @@ internal class CalculatePathTest {
 
         val paths = pattern.calculatePath(value, Resolver())
         
-        assertThat(paths).containsExactly("{MainObject}.nested.{NestedObject}.nestedData{string}")
+        assertThat(paths).containsExactly("{MainObject}.nested{NestedObject}.nestedData{string}")
     }
 
     @Test
@@ -317,8 +317,8 @@ internal class CalculatePathTest {
         val paths = pattern.calculatePath(value, Resolver())
         
         assertThat(paths).containsExactlyInAnyOrder(
-            "{ArrayContainer}.items[0].{ArrayItem}.data{string}",
-            "{ArrayContainer}.items[1].{ArrayItem}.data{number}"
+            "{ArrayContainer}.items[0]{ArrayItem}.data{string}",
+            "{ArrayContainer}.items[1]{ArrayItem}.data{number}"
         )
     }
 

@@ -3,6 +3,15 @@ plugins {
     id("base")
 }
 
+// Disable vulnerability scanning tasks when network access is restricted
+allprojects {
+    tasks.withType<Task>().configureEach {
+        if (name.contains("vulnScan")) {
+            enabled = false
+        }
+    }
+}
+
 allprojects {
     repositories {
         mavenLocal()

@@ -8,6 +8,7 @@ value class BreadCrumb(val value: String) {
     companion object {
         val REQUEST = BreadCrumb("REQUEST")
         val RESPONSE = BreadCrumb("RESPONSE")
+        val BODY = BreadCrumb("BODY")
         val PATH = BreadCrumb("PATH")
         val HEADER = BreadCrumb("HEADER")
         val QUERY = BreadCrumb("QUERY")

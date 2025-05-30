@@ -2,8 +2,8 @@ package io.specmatic.test.reports.coverage
 
 import io.specmatic.conversions.SERVICE_TYPE_HTTP
 import io.specmatic.core.TestResult
-import io.specmatic.core.filters.ScenarioMetadataFilter
-import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
+import io.specmatic.core.filters.ExpressionStandardizer
+import io.specmatic.core.filters.TestRecordFilter
 import io.specmatic.test.API
 import io.specmatic.test.TestResultRecord
 import io.specmatic.test.reports.coverage.console.GroupedTestResultRecords
@@ -14,7 +14,7 @@ import io.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport
 import kotlin.math.roundToInt
 
 class OpenApiCoverageReportInput(
-    private var configFilePath:String,
+    private var configFilePath: String,
     internal val testResultRecords: MutableList<TestResultRecord> = mutableListOf(),
     private val applicationAPIs: MutableList<API> = mutableListOf(),
     private val excludedAPIs: MutableList<String> = mutableListOf(),
@@ -32,7 +32,7 @@ class OpenApiCoverageReportInput(
         applicationAPIs.addAll(apis)
     }
 
-    fun addExcludedAPIs(apis: List<String>){
+    fun addExcludedAPIs(apis: List<String>) {
         excludedAPIs.addAll(apis)
     }
 
@@ -50,7 +50,8 @@ class OpenApiCoverageReportInput(
 
     fun generate(): OpenAPICoverageConsoleReport {
         val testResults = testResultRecords.filter { testResult -> excludedAPIs.none { it == testResult.path } }
-        val testResultsWithNotImplementedEndpoints = identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults)
+        val testResultsWithNotImplementedEndpoints =
+            identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults)
         var allTests = addTestResultsForMissingEndpoints(testResultsWithNotImplementedEndpoints)
         allTests = addTestResultsForTestsNotGeneratedBySpecmatic(allTests, allEndpoints)
         allTests = identifyWipTestsAndUpdateResult(allTests)
@@ -94,40 +95,54 @@ class OpenApiCoverageReportInput(
         }
 
         val partiallyMissedAPICount = testsGroupedByPath.count { (_, tests) ->
-            tests.any {it.result == TestResult.MissingInSpec } && tests.any { it.result != TestResult.MissingInSpec }
+            tests.any { it.result == TestResult.MissingInSpec } && tests.any { it.result != TestResult.MissingInSpec }
         }
 
         val partiallyNotImplementedAPICount = testsGroupedByPath.count { (_, tests) ->
             tests.any { it.result == TestResult.NotImplemented } && tests.any { it.result != TestResult.NotImplemented }
         }
 
-        return OpenAPICoverageConsoleReport(apiCoverageRows, allTests, totalAPICount, missedAPICount, notImplementedAPICount, partiallyMissedAPICount, partiallyNotImplementedAPICount)
+        return OpenAPICoverageConsoleReport(
+            apiCoverageRows,
+            allTests,
+            totalAPICount,
+            missedAPICount,
+            notImplementedAPICount,
+            partiallyMissedAPICount,
+            partiallyNotImplementedAPICount
+        )
     }
 
-    private fun addTestResultsForTestsNotGeneratedBySpecmatic(allTests: List<TestResultRecord>, allEndpoints: List<Endpoint>): List<TestResultRecord> {
+    private fun addTestResultsForTestsNotGeneratedBySpecmatic(
+        allTests: List<TestResultRecord>,
+        allEndpoints: List<Endpoint>
+    ): List<TestResultRecord> {
         val endpointsWithoutTests =
             allEndpoints.filter { endpoint ->
                 allTests.none { it.path == endpoint.path && it.method == endpoint.method && it.responseStatus == endpoint.responseStatus }
                         && excludedAPIs.none { it == endpoint.path }
             }
         return allTests.plus(
-            endpointsWithoutTests.map { endpoint ->  TestResultRecord(
-                endpoint.path,
-                endpoint.method,
-                endpoint.responseStatus,
-                TestResult.NotCovered,
-                endpoint.sourceProvider,
-                endpoint.sourceRepository,
-                endpoint.sourceRepositoryBranch,
-                endpoint.specification,
-                endpoint.serviceType
-            ) }
+            endpointsWithoutTests.map { endpoint ->
+                TestResultRecord(
+                    endpoint.path,
+                    endpoint.method,
+                    endpoint.responseStatus,
+                    TestResult.NotCovered,
+                    endpoint.sourceProvider,
+                    endpoint.sourceRepository,
+                    endpoint.sourceRepositoryBranch,
+                    endpoint.specification,
+                    endpoint.serviceType
+                )
+            }
         )
     }
 
     fun generateJsonReport(): OpenApiCoverageJsonReport {
         val testResults = testResultRecords.filter { testResult -> excludedAPIs.none { it == testResult.path } }
-        val testResultsWithNotImplementedEndpoints = identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults)
+        val testResultsWithNotImplementedEndpoints =
+            identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults)
         val allTests = addTestResultsForMissingEndpoints(testResultsWithNotImplementedEndpoints)
         return OpenApiCoverageJsonReport(configFilePath, allTests)
     }
@@ -143,10 +158,8 @@ class OpenApiCoverageReportInput(
     }
 
     private fun addTestResultsForMissingEndpoints(testResults: List<TestResultRecord>): List<TestResultRecord> {
-        if(!endpointsAPISet)
+        if (!endpointsAPISet)
             return testResults
-
-        val filter = ScenarioMetadataFilter.from(filterExpression)
 
         val testResultsForMissingAPIs = applicationAPIs.filter { api ->
             val noTestResultFoundForThisAPI = allEndpoints.none { it.path == api.path && it.method == api.method }
@@ -163,7 +176,12 @@ class OpenApiCoverageReportInput(
             )
         }
 
-        return filterUsing((testResults + testResultsForMissingAPIs).asSequence(), filter).toList()
+
+        val filterExpression = ExpressionStandardizer.filterToEvalEx(filterExpression)
+
+        return (testResults + testResultsForMissingAPIs).filter { eachTestResult ->
+            filterExpression.with("context", TestRecordFilter(eachTestResult)).evaluate().booleanValue
+        }
     }
 
     private fun calculateTotalCoveragePercentage(methodMap: Map<String, Map<String?, Map<String, List<TestResultRecord>>>>): Int {
@@ -206,7 +224,8 @@ class OpenApiCoverageReportInput(
                 continue
             }
 
-            val isInApplicationAPI = applicationAPIs.any { api -> api.path == failedTestResult.path && api.method == failedTestResult.method }
+            val isInApplicationAPI =
+                applicationAPIs.any { api -> api.path == failedTestResult.path && api.method == failedTestResult.method }
             notImplementedAndMissingTests.add(failedTestResult.copy(result = if (isInApplicationAPI) TestResult.Failed else TestResult.NotImplemented))
         }
 
@@ -215,7 +234,7 @@ class OpenApiCoverageReportInput(
 
     private fun checkForInvalidTestsAndUpdateResult(allTests: List<TestResultRecord>): List<TestResultRecord> {
         val invalidTestResults = allTests.filterNot(::isTestResultValid)
-        val updatedInvalidTestResults = invalidTestResults.map { it.copy( isValid = false ) }
+        val updatedInvalidTestResults = invalidTestResults.map { it.copy(isValid = false) }
 
         return allTests.minus(invalidTestResults.toSet()).plus(updatedInvalidTestResults)
     }

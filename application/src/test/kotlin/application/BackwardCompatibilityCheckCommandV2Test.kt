@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
@@ -21,17 +22,11 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 class BackwardCompatibilityCheckCommandV2Test {
-    private lateinit var tempDir: File
-    private lateinit var remoteDir: File
+    @TempDir private lateinit var tempDir: File
+    @TempDir private lateinit var remoteDir: File
 
     @BeforeEach
     fun setup() {
-        tempDir = Files.createTempDirectory("git-local").toFile()
-        tempDir.deleteOnExit()
-
-        remoteDir = Files.createTempDirectory("git-remote").toFile()
-        remoteDir.deleteOnExit()
-
         ProcessBuilder("git", "init", "--bare")
             .directory(remoteDir)
             .inheritIO()

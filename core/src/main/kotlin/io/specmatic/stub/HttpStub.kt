@@ -781,7 +781,7 @@ class HttpStub(
 
 class CouldNotParseRequest(innerException: Throwable) : Exception(exceptionCauseMessage(innerException))
 
-internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
+suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
     try {
         val (body, formFields, multiPartFormData) = bodyFromCall(call)
 
@@ -895,7 +895,7 @@ internal fun toParams(queryParameters: Parameters): List<Pair<String, String>> =
         }
     }
 
-internal suspend fun respondToKtorHttpResponse(
+suspend fun respondToKtorHttpResponse(
     call: ApplicationCall,
     httpResponse: HttpResponse,
     delayInMilliSeconds: Long? = null,

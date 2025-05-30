@@ -507,11 +507,12 @@ data class JSONObjectPattern(
     
     /**
      * Checks if a path needs to be wrapped in braces.
-     * Returns true for simple identifiers (typeAlias) or scalar type names.
+     * Returns true for simple identifiers (like typeAlias names or scalar type names).
+     * Simple identifiers are strings that start with a letter and contain only letters and numbers.
+     * This includes scalar type names like "string", "number", and "boolean".
      */
     private fun needsBraces(path: String): Boolean {
-        return path.matches("^[a-zA-Z][a-zA-Z0-9]*$".toRegex()) || 
-               path in setOf("string", "number", "boolean")
+        return path.matches("^[a-zA-Z][a-zA-Z0-9]*$".toRegex())
     }
     
     private fun calculatePathForAnyPattern(key: String, childValue: Value, anyPattern: AnyPattern, resolver: Resolver): List<String> {

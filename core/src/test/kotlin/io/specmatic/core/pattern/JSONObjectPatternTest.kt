@@ -2512,7 +2512,7 @@ components:
         @Test
         fun `should work with additional patterns`() {
             val jsonObjectPattern = JSONObjectPattern(
-                pattern = emptyMap(),
+                pattern = mapOf("key-in-pattern" to ExactValuePattern(StringValue("some string value"))),
                 additionalProperties = AdditionalProperties.FreeForm,
                 typeAlias = "(Test)"
             )
@@ -2526,10 +2526,12 @@ components:
                 "field7": "bar"
             }
             }""".trimIndent())
-            val filledInValue = jsonObjectPattern.fillInTheBlanks(validValue, Resolver()).value
-            filledInValue as JSONObjectValue
+            val actualFilledInValue =
+                jsonObjectPattern.fillInTheBlanks(validValue, Resolver()).value as JSONObjectValue
 
-            assertThat(validValue).isEqualTo(filledInValue)
+            val expectedFilledInValue = validValue.addEntry("key-in-pattern", "some string value")
+
+            assertThat(actualFilledInValue).isEqualTo(expectedFilledInValue)
         }
     }
 

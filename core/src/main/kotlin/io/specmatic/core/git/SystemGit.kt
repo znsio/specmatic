@@ -94,9 +94,9 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
 
     override fun getFilesChangedInCurrentBranch(baseBranch: String): List<String> {
         val committedLocalChanges =
-            execute(Configuration.gitCommand, "diff", baseBranch, "HEAD", "--name-status").lines()
+            execute(Configuration.gitCommand, "diff", baseBranch, "HEAD", "--name-status").trim().lines()
         val uncommittedChanges =
-            execute(Configuration.gitCommand, "diff", "HEAD", "--name-status").lines()
+            execute(Configuration.gitCommand, "diff", "HEAD", "--name-status").trim().lines()
 
         return (committedLocalChanges + uncommittedChanges).map {
             it.split("\t").last()

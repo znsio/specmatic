@@ -909,7 +909,7 @@ paths:
                 In scenario "hello world. Response: Says hello"
                 API: GET /hello/(id:number) -> 200
 
-                  >> REQUEST.HEADERS.X-Value
+                  >> REQUEST.PARAMETERS.HEADER.X-Value
                   
                      ${ContractAndStubMismatchMessages.mismatchMessage("number", """"data" """.trim())}
                 """.trimIndent().trimmedLinesList())

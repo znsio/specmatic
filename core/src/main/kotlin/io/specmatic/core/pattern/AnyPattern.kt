@@ -531,9 +531,15 @@ data class AnyPattern(
             return setOf(cleanAlias)
         }
         
-        // If no typeAlias and it's a simple scalar pattern, return empty
+        // If no typeAlias and it's a simple scalar pattern, return the scalar type name
         if (matchingPattern is StringPattern || matchingPattern is NumberPattern || matchingPattern is BooleanPattern) {
-            return emptySet()
+            val scalarTypeName = when (matchingPattern) {
+                is StringPattern -> "string"
+                is NumberPattern -> "number"
+                is BooleanPattern -> "boolean"
+                else -> null
+            }
+            return if (scalarTypeName != null) setOf(scalarTypeName) else emptySet()
         }
         
         // If no typeAlias but it's a complex pattern, return the index in the format {[index]}

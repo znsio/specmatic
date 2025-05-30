@@ -110,6 +110,9 @@ class ExpressionStandardizer {
 
     companion object {
         fun filterToEvalEx(filterExpression: String): Expression {
+            if (filterExpression.isBlank()) {
+                return Expression("true", ExpressionConfiguration.builder().build())
+            }
             val expressionStandardizer = ExpressionStandardizer()
             val evalExExpression = expressionStandardizer.tokenizeExpression(filterExpression)
             val functions = mapOf(

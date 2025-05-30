@@ -524,11 +524,40 @@ data class AnyPattern(
         val matchingPattern = resolvedHop(pattern[matchingPatternIndex], resolver)
         val originalPattern = pattern[matchingPatternIndex]
         
+        // Handle DeferredPattern specially to preserve typeAlias information
+        val patternTypeAlias = when (originalPattern) {
+            is DeferredPattern -> {
+                // For DeferredPattern, extract typeAlias and remove parentheses using withoutPatternDelimiters
+                withoutPatternDelimiters(originalPattern.pattern)
+            }
+            else -> originalPattern.typeAlias?.let { withoutPatternDelimiters(it) }
+        }
+        
+        // If the resolved pattern is a JSONObjectPattern with nested AnyPatterns, 
+        // we need to recurse to get the nested paths
+        if (matchingPattern is JSONObjectPattern) {
+            val nestedPaths = matchingPattern.calculatePath(value, resolver)
+            if (nestedPaths.isNotEmpty()) {
+                // If we have a typeAlias, prefix it to the nested paths
+                if (patternTypeAlias != null && patternTypeAlias.isNotBlank()) {
+                    return nestedPaths.map { nestedPath ->
+                        "$patternTypeAlias.$nestedPath"
+                    }.toSet()
+                } else {
+                    // No typeAlias, just return the nested paths as-is
+                    return nestedPaths
+                }
+            } else {
+                // JSONObjectPattern but no nested AnyPatterns found
+                if (patternTypeAlias != null && patternTypeAlias.isNotBlank()) {
+                    return setOf(patternTypeAlias)
+                }
+            }
+        }
+        
         // If the matching pattern has a typeAlias, use it
-        val patternTypeAlias = originalPattern.typeAlias
         if (patternTypeAlias != null && patternTypeAlias.isNotBlank()) {
-            val cleanAlias = patternTypeAlias.removeSurrounding("(", ")")
-            return setOf(cleanAlias)
+            return setOf(patternTypeAlias)
         }
         
         // If no typeAlias and it's a simple scalar pattern, return the scalar type name

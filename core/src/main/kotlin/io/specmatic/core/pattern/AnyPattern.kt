@@ -527,10 +527,10 @@ data class AnyPattern(
         // Handle DeferredPattern specially to preserve typeAlias information
         val patternTypeAlias = when (originalPattern) {
             is DeferredPattern -> {
-                // For DeferredPattern, the typeAlias is the pattern itself (e.g., "(Address)")
-                originalPattern.typeAlias.removeSurrounding("(", ")")
+                // For DeferredPattern, extract typeAlias and remove parentheses using withoutPatternDelimiters
+                withoutPatternDelimiters(originalPattern.pattern)
             }
-            else -> originalPattern.typeAlias
+            else -> originalPattern.typeAlias?.let { withoutPatternDelimiters(it) }
         }
         
         // If the resolved pattern is a JSONObjectPattern with nested AnyPatterns, 

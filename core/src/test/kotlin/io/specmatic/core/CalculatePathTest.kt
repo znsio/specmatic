@@ -18,7 +18,7 @@ internal class CalculatePathTest {
                 "id" to StringPattern(),
                 "data" to AnyPattern(listOf(StringPattern(), NumberPattern()))
             ),
-            typeAlias = "User"
+            typeAlias = "(User)"
         )
 
         // Create a value that matches this pattern
@@ -151,7 +151,7 @@ internal class CalculatePathTest {
             pattern = mapOf(
                 "nestedData" to AnyPattern(listOf(StringPattern(), NumberPattern()))
             ),
-            typeAlias = "NestedObject"
+            typeAlias = "(NestedObject)"
         )
         
         val pattern = JSONObjectPattern(
@@ -159,7 +159,7 @@ internal class CalculatePathTest {
                 "id" to StringPattern(),
                 "nested" to nestedPattern
             ),
-            typeAlias = "MainObject"
+            typeAlias = "(MainObject)"
         )
 
         val value = JSONObjectValue(mapOf(
@@ -182,7 +182,7 @@ internal class CalculatePathTest {
                 "data2" to AnyPattern(listOf(StringPattern(), NumberPattern())),
                 "regularField" to StringPattern()
             ),
-            typeAlias = "MultiAnyObject"
+            typeAlias = "(MultiAnyObject)"
         )
 
         val value = JSONObjectValue(mapOf(
@@ -205,7 +205,7 @@ internal class CalculatePathTest {
                 pattern = mapOf(
                     "field1" to AnyPattern(listOf(StringPattern(), NumberPattern()))
                 ),
-                typeAlias = "Request1"
+                typeAlias = "(Request1)"
             )
         )
         val responsePattern1 = HttpResponsePattern(
@@ -227,7 +227,7 @@ internal class CalculatePathTest {
                 pattern = mapOf(
                     "field2" to AnyPattern(listOf(StringPattern(), NumberPattern()))
                 ),
-                typeAlias = "Request2"
+                typeAlias = "(Request2)"
             )
         )
         val responsePattern2 = HttpResponsePattern(
@@ -269,7 +269,7 @@ internal class CalculatePathTest {
                     pattern = AnyPattern(listOf(StringPattern(), NumberPattern()))
                 )
             ),
-            typeAlias = "ArrayContainer"
+            typeAlias = "(ArrayContainer)"
         )
 
         val value = JSONObjectValue(mapOf(
@@ -295,7 +295,7 @@ internal class CalculatePathTest {
             pattern = mapOf(
                 "data" to AnyPattern(listOf(StringPattern(), NumberPattern()))
             ),
-            typeAlias = "ArrayItem"
+            typeAlias = "(ArrayItem)"
         )
         
         val pattern = JSONObjectPattern(
@@ -304,7 +304,7 @@ internal class CalculatePathTest {
                     pattern = arrayItemPattern
                 )
             ),
-            typeAlias = "ArrayContainer"
+            typeAlias = "(ArrayContainer)"
         )
 
         val value = JSONObjectValue(mapOf(
@@ -330,7 +330,7 @@ internal class CalculatePathTest {
                     pattern = AnyPattern(listOf(StringPattern(), NumberPattern()))
                 )
             ),
-            typeAlias = "ListContainer"
+            typeAlias = "(ListContainer)"
         )
 
         val value = JSONObjectValue(mapOf(
@@ -356,7 +356,7 @@ internal class CalculatePathTest {
                     pattern = AnyPattern(listOf(StringPattern(), NumberPattern()))
                 )
             ),
-            typeAlias = "EmptyArrayContainer"
+            typeAlias = "(EmptyArrayContainer)"
         )
 
         val value = JSONObjectValue(mapOf(
@@ -375,7 +375,7 @@ internal class CalculatePathTest {
                 "requiredField" to StringPattern(),
                 "optionalField?" to AnyPattern(listOf(StringPattern(), NumberPattern()))
             ),
-            typeAlias = "OptionalFieldObject"
+            typeAlias = "(OptionalFieldObject)"
         )
 
         val value = JSONObjectValue(mapOf(
@@ -533,7 +533,7 @@ internal class CalculatePathTest {
                             )
                         )
                     ),
-                    typeAlias = "Person"
+                    typeAlias = "(Person)"
                 )
             ),
             httpResponsePattern = HttpResponsePattern(
@@ -640,7 +640,7 @@ internal class CalculatePathTest {
                             )
                         )
                     ),
-                    typeAlias = "Person"
+                    typeAlias = "(Person)"
                 )
             ),
             httpResponsePattern = HttpResponsePattern(
@@ -701,7 +701,7 @@ internal class CalculatePathTest {
                         "officeAddress" to DeferredPattern("(AddressOrRef)"),
                         "homeAddress" to DeferredPattern("(AddressOrRef)")
                     ),
-                    typeAlias = "Person"
+                    typeAlias = "(Person)"
                 )
             ),
             httpResponsePattern = HttpResponsePattern(
@@ -734,21 +734,21 @@ internal class CalculatePathTest {
             pattern = mapOf(
                 "data" to AnyPattern(listOf(StringPattern(), NumberPattern()))
             ),
-            typeAlias = "Level3Object"
+            typeAlias = "(Level3Object)"
         )
         
         val level2Pattern = JSONObjectPattern(
             pattern = mapOf(
                 "level3" to level3Pattern
             ),
-            typeAlias = "Level2Object"
+            typeAlias = "(Level2Object)"
         )
         
         val level1Pattern = JSONObjectPattern(
             pattern = mapOf(
                 "level2" to level2Pattern
             ),
-            typeAlias = "Level1Object"
+            typeAlias = "(Level1Object)"
         )
 
         val value = JSONObjectValue(mapOf(
@@ -761,7 +761,7 @@ internal class CalculatePathTest {
 
         val paths = level1Pattern.calculatePath(value, Resolver())
         
-        assertThat(paths).containsExactly("{Level1Object}.level2.{Level2Object}.level3.{Level3Object}.data{string}")
+        assertThat(paths).containsExactly("{Level1Object}.level2{Level2Object}.level3{Level3Object}.data{string}")
     }
     
     @Test
@@ -771,7 +771,7 @@ internal class CalculatePathTest {
             pattern = mapOf(
                 "innerData" to StringPattern()
             ),
-            typeAlias = "InnerObject"
+            typeAlias = "(InnerObject)"
         )
         
         val pattern = JSONObjectPattern(
@@ -781,7 +781,7 @@ internal class CalculatePathTest {
                     StringPattern()
                 ))
             ),
-            typeAlias = "OuterObject"
+            typeAlias = "(OuterObject)"
         )
 
         val value = JSONObjectValue(mapOf(
@@ -815,10 +815,10 @@ internal class CalculatePathTest {
                             NumberPattern()
                         ))
                     ),
-                    typeAlias = "MiddleLevel"
+                    typeAlias = "(MiddleLevel)"
                 )
             ),
-            typeAlias = "TopLevel"
+            typeAlias = "(TopLevel)"
         )
 
         val value = JSONObjectValue(mapOf(
@@ -831,7 +831,7 @@ internal class CalculatePathTest {
 
         val paths = pattern.calculatePath(value, Resolver(newPatterns = patterns))
         
-        assertThat(paths).containsExactly("{TopLevel}.level1.{MiddleLevel}.level2{NestedData}")
+        assertThat(paths).containsExactly("{TopLevel}.level1{MiddleLevel}.level2{NestedData}")
     }
     
     @Test
@@ -872,7 +872,7 @@ internal class CalculatePathTest {
             pattern = mapOf(
                 "nestedField" to AnyPattern(listOf(StringPattern(), NumberPattern()))
             ),
-            typeAlias = "NestedObjectWithAny"
+            typeAlias = "(NestedObjectWithAny)"
         )
         
         val pattern = JSONObjectPattern(
@@ -882,7 +882,7 @@ internal class CalculatePathTest {
                     StringPattern()
                 ))
             ),
-            typeAlias = "Container"
+            typeAlias = "(Container)"
         )
 
         val value = JSONObjectValue(mapOf(

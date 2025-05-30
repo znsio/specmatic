@@ -514,16 +514,13 @@ data class JSONObjectPattern(
         
         return if (anyPatternPaths.isNotEmpty()) {
             anyPatternPaths.map { anyPatternInfo ->
-                // Check if anyPatternInfo is already a typeAlias (contains letters) or a scalar type
-                val formattedInfo = if (anyPatternInfo.matches("^[a-zA-Z][a-zA-Z0-9]*$".toRegex())) {
-                    // It's a typeAlias, wrap in braces
-                    "{$anyPatternInfo}"
-                } else if (anyPatternInfo in setOf("string", "number", "boolean")) {
-                    // It's a scalar type, wrap in braces
-                    "{$anyPatternInfo}"
-                } else {
-                    // It's already formatted or an index, use as-is
-                    anyPatternInfo
+                val formattedInfo = when {
+                    // Simple identifier (typeAlias) - needs braces
+                    anyPatternInfo.matches("^[a-zA-Z][a-zA-Z0-9]*$".toRegex()) -> "{$anyPatternInfo}"
+                    // Scalar type name - needs braces  
+                    anyPatternInfo in setOf("string", "number", "boolean") -> "{$anyPatternInfo}"
+                    // Complex path or already formatted - use as-is
+                    else -> anyPatternInfo
                 }
                 "$pathPrefix$formattedInfo"
             }

@@ -3,7 +3,7 @@ package application
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 
-fun <ReturnType> captureStandardOutput(captureStdErr: Boolean = false, fn: () -> ReturnType): Pair<String, ReturnType> {
+fun <ReturnType> captureStandardOutput(redirectStdErrToStdout: Boolean = false, fn: () -> ReturnType): Pair<String, ReturnType> {
     val originalErr = System.err
     val originalOut = System.out
 
@@ -11,15 +11,15 @@ fun <ReturnType> captureStandardOutput(captureStdErr: Boolean = false, fn: () ->
     val newOut = PrintStream(byteArrayOutputStreamOut)
     System.setOut(newOut)
 
-    if (captureStdErr) {
-        val byteArrayOutputStreamErr = ByteArrayOutputStream()
-        val newErr = PrintStream(byteArrayOutputStreamErr)
-        System.setErr(newErr)
+    if (redirectStdErrToStdout) {
+        System.setErr(newOut)
     }
 
     val result = try {
         fn()
     } finally {
+        newOut.flush()
+
         System.setOut(originalOut)
         System.setErr(originalErr)
     }

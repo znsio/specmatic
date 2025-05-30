@@ -18,7 +18,6 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
-import java.nio.file.Files
 import java.nio.file.Paths
 
 class BackwardCompatibilityCheckCommandV2Test {
@@ -228,7 +227,7 @@ class BackwardCompatibilityCheckCommandV2Test {
             commitAndPush(tempDir, "Initial commit")
             File(tempDir, "other-api.yaml").writeText(otherApiSpec)
 
-            val (stdOut, exception) = captureStandardOutput(captureStdErr = true) {
+            val (stdOut, exception) = captureStandardOutput(redirectStdErrToStdout = true) {
                 assertThrows<SystemExitException> {
                     SystemExit.throwOnExit {
                         BackwardCompatibilityCheckCommandV2().apply {

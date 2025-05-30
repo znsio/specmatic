@@ -142,7 +142,7 @@ data class ScenarioAsTest(
             }
 
             val result = validators.asSequence().mapNotNull {
-                it.postValidate(testScenario, request, responseToCheckAndStore)
+                it.postValidate(testScenario, originalScenario, request, responseToCheckAndStore)
             }.firstOrNull() ?: Result.Success()
 
             testScenario.exampleRow?.let { ExampleProcessor.store(it, request, responseToCheckAndStore) }

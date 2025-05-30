@@ -201,18 +201,20 @@ class BackwardCompatibilityCheckCommandV2Test {
 
         @Test
         fun `should work if path is relative in windows and linux based os`() {
-            File("a.yaml").apply {
-                referTo("a.yaml")
-            }.copyTo(tempDir.resolve("a.yaml"))
+            File("file-ab.yaml").apply {
+                referTo("file-ab.yaml")
+            }.copyTo(tempDir.resolve("file-ab.yaml"))
             commitAndPush(tempDir, "Initial commit")
-            File("src/test/resources/specifications/spec_with_external_reference/").copyRecursively(tempDir)
+            File("file-xy.yaml").apply {
+                referTo("file-xy.yaml")
+            }.copyTo(tempDir.resolve("file-xy.yaml"))
 
             val (stdOut, exception) = captureStandardOutput {
                 assertThrows<SystemExitException> {
                     SystemExit.throwOnExit {
                         BackwardCompatibilityCheckCommandV2().apply {
                             repoDir = tempDir.canonicalPath
-                            targetPath = "$tempDir/api.yaml"
+                            targetPath = "$tempDir/file-xy.yaml"
                         }.call()
                     }
                 }
@@ -221,7 +223,7 @@ class BackwardCompatibilityCheckCommandV2Test {
             assertThat(exception.code).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
             - Specs that will be skipped (untracked specs, or schema files that are not referred to in other specs):
-            1. ${tempDir.resolve("api.yaml").canonicalFile.toPath().toRealPath()}
+            1. ${tempDir.resolve("file-xy.yaml").canonicalFile.toPath().toRealPath()}
             """.trimIndent()).containsIgnoringWhitespaces("""
             Files checked: 0 (Passed: 0, Failed: 0)
             """.trimIndent())

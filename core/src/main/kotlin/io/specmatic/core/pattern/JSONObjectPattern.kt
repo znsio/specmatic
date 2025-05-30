@@ -530,7 +530,12 @@ data class JSONObjectPattern(
                     needsBraces(anyPatternInfo) -> "{$anyPatternInfo}"
                     else -> anyPatternInfo
                 }
-                "$pathPrefix$formattedInfo"
+                // Use same logic as calculatePathForJSONObjectPattern - check if formattedInfo starts with {
+                if (formattedInfo.startsWith("{")) {
+                    "$pathPrefix$formattedInfo"
+                } else {
+                    "$pathPrefix.$formattedInfo"
+                }
             }
         } else {
             listOf(pathPrefix)
@@ -597,9 +602,18 @@ data class JSONObjectPattern(
                 
                 if (typeAlias != null && typeAlias.isNotBlank()) {
                     val cleanTypeAlias = withoutPatternDelimiters(typeAlias)
-                    "{$cleanTypeAlias}.$key[$index]$formattedPath"
+                    // Use same logic as calculatePathForArrayJSONObjectPattern - check if formattedPath starts with {
+                    if (formattedPath.startsWith("{")) {
+                        "{$cleanTypeAlias}.$key[$index]$formattedPath"
+                    } else {
+                        "{$cleanTypeAlias}.$key[$index].$formattedPath"
+                    }
                 } else {
-                    "$key[$index]$formattedPath"
+                    if (formattedPath.startsWith("{")) {
+                        "$key[$index]$formattedPath"
+                    } else {
+                        "$key[$index].$formattedPath"
+                    }
                 }
             }
         } else {

@@ -1,0 +1,8 @@
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+    <SOAP-ENV:Header/>
+    <SOAP-ENV:Body>
+        <OrderId xmlns="http://www.example.com/orders">
+            <id>10</id>
+        </OrderId>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>

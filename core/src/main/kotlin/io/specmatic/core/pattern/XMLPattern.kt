@@ -310,7 +310,10 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
         val resolvedPattern = dereferenceType(resolver)
 
-        val nonSpecmaticAttributes = resolvedPattern.pattern.attributes.filterNot { it.key.startsWith(SPECMATIC_XML_ATTRIBUTE_PREFIX) }
+        val nonSpecmaticAttributes =
+            resolvedPattern.pattern.attributes.filterNot {
+                it.key.startsWith(SPECMATIC_XML_ATTRIBUTE_PREFIX)
+            }
 
         val newAttributes = nonSpecmaticAttributes.mapKeys { entry ->
             withoutOptionality(entry.key)
@@ -468,7 +471,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     }
 
     private fun dereferenceType(resolver: Resolver): XMLPattern {
-        if (!hasType()) {
+        if (pattern.isConcrete()) {
             return this
         }
 
@@ -478,12 +481,10 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 pattern = resolved.pattern.copy(
                         name = this.pattern.name,
                         realName = this.pattern.realName,
-                        attributes = resolved.pattern.attributes.plus(this.pattern.attributes)
+                        attributes = resolved.pattern.attributes.plus(this.pattern.attributes),
                 )
         )
     }
-
-    private fun hasType(): Boolean = pattern.attributes.containsKey(TYPE_ATTRIBUTE_NAME)
 
     fun occurMultipleTimes(): Boolean = pattern.getNodeOccurrence() == NodeOccurrence.Multiple
 

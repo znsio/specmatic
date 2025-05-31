@@ -40,9 +40,22 @@ class WSDLTest {
         val wsdlFile = File("src/test/resources/wsdl/order_api.wsdl")
         val feature = wsdlContentToFeature(checkExists(wsdlFile).readText(), wsdlFile.canonicalPath)
 
+        // Create a TestExecutor that acts like a WSDL stub, returning proper SOAP responses
         val result = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                return HttpResponse.OK
+                // For WSDL/SOAP services, return a proper SOAP response with all required elements
+                val soapResponse = """
+                    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="http://www.example.com/orders">
+                        <soapenv:Header/>
+                        <soapenv:Body>
+                            <tns:OrderId>
+                                <tns:id>12345</tns:id>
+                            </tns:OrderId>
+                        </soapenv:Body>
+                    </soapenv:Envelope>
+                """.trimIndent()
+                
+                return HttpResponse(200, soapResponse, mapOf("Content-Type" to "text/xml"))
             }
         })
 

@@ -180,7 +180,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 is ListPattern -> ConsumeResult(
                     resolvedType.matches(
                         this.listOf(
-                            consumeResult.remainder.drop(index),
+                            consumeResult.remainder,
                             resolver
                         ), resolver
                     ),
@@ -321,7 +321,35 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     override fun generate(resolver: Resolver): XMLNode {
         val name = pattern.name
 
-        val nonSpecmaticAttributes = pattern.attributes.filterNot { it.key.startsWith(SPECMATIC_XML_ATTRIBUTE_PREFIX) }
+        // Apply type resolution only if this pattern has a type reference and its nodes are empty
+        // This preserves the behavior for patterns that have already been processed by newBasedOn
+        val resolvedPattern = if (this.pattern.attributes.containsKey(TYPE_ATTRIBUTE_NAME) && this.pattern.nodes.isEmpty()) {
+            val typeName = this.pattern.getAttributeValue(TYPE_ATTRIBUTE_NAME)
+            val referredType = resolvedHop(resolver.getPattern("($typeName)"), resolver)
+
+            if(referredType is XMLPattern) {
+                val xmlType = (referredType.let {
+                    it as? XMLPattern
+                        ?: throw ContractException("Expected XMLPattern but got $it")
+                })
+                val attributesFromReferring = this.pattern.attributes.filterKeys { it != TYPE_ATTRIBUTE_NAME }
+                val attributesFromReferred = xmlType.pattern.attributes.filterKeys { it != TYPE_ATTRIBUTE_NAME }
+                val attributes = attributesFromReferred + attributesFromReferring
+                xmlType.copy(
+                    pattern = xmlType.pattern.copy(
+                        name = this.pattern.name,
+                        realName = this.pattern.realName,
+                        attributes = attributes
+                    )
+                )
+            } else {
+                this
+            }
+        } else {
+            this
+        }
+
+        val nonSpecmaticAttributes = resolvedPattern.pattern.attributes.filterNot { it.key.startsWith(SPECMATIC_XML_ATTRIBUTE_PREFIX) }
 
         val newAttributes = nonSpecmaticAttributes.mapKeys { entry ->
             withoutOptionality(entry.key)
@@ -335,7 +363,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             StringValue(it.value.toStringLiteral())
         }
 
-        val nodes = pattern.nodes.asSequence().map {
+        val nodes = resolvedPattern.pattern.nodes.asSequence().map {
             resolvedHop(it, resolver)
         }.map { pattern ->
             attempt(breadCrumb = name) {

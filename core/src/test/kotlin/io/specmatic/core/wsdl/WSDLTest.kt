@@ -58,7 +58,6 @@ class WSDLTest {
     }
 
     @Test
-    @Disabled
     fun `when a WSDL with an example is run as a test against a stub of itself the tests should pass`() {
         val wsdlFile = File("src/test/resources/wsdl/with_examples/order_api.wsdl")
         val feature = wsdlContentToFeature(checkExists(wsdlFile).readText(), wsdlFile.canonicalPath)

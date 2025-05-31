@@ -1,12 +1,15 @@
 package io.specmatic.core.wsdl
 
 import io.specmatic.Utils.readTextResource
+import io.specmatic.conversions.wsdlContentToFeature
+import io.specmatic.core.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import io.specmatic.core.CONTRACT_EXTENSION
-import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.value.toXMLNode
 import io.specmatic.core.wsdl.parser.WSDL
+import io.specmatic.test.TestExecutor
+import org.junit.jupiter.api.Disabled
+import java.io.File
 
 class WSDLTest {
     @Test
@@ -30,6 +33,25 @@ class WSDLTest {
         val generatedGherkin: String = wsdl.convertToGherkin().trim()
 
         assertThat(parseGherkinStringToFeature(generatedGherkin)).isEqualTo(parseGherkinStringToFeature(expectedGherkin))
+    }
+
+    @Test
+    @Disabled
+    fun `WSDL self loop test should not fail`() {
+        val wsdlFile = File("src/test/resources/wsdl/order_api.wsdl")
+        val feature = wsdlContentToFeature(checkExists(wsdlFile).readText(), wsdlFile.canonicalPath)
+
+        val result = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK
+            }
+        })
+
+        println(result.report())
+
+        assertThat(result.report()).doesNotContain("Expected xml, got string")
+        assertThat(result.success()).isTrue()
+        assertThat(result.successCount).isGreaterThan(0)
     }
 
     private fun readContracts(filename: String): Pair<String, String> {

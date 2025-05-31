@@ -37,7 +37,7 @@ class WSDLTest {
     }
 
     @Test
-    fun `when a WSDL is run as stub and then as contract tests against itself the tests should pass`() {
+    fun `when a WSDL containing references is run as stub and then as contract tests against itself the tests should pass`() {
         val wsdlFile = File("src/test/resources/wsdl/order_api.wsdl")
         val feature = wsdlContentToFeature(checkExists(wsdlFile).readText(), wsdlFile.canonicalPath)
 
@@ -53,6 +53,27 @@ class WSDLTest {
 
         assertThat(result.report()).doesNotContain("Expected xml, got string")
         assertThat(result.report()).doesNotContain("Didn't get enough values")
+        assertThat(result.success()).isTrue()
+        assertThat(result.successCount).isGreaterThan(0)
+    }
+
+    @Test
+    @Disabled
+    fun `when a WSDL with an example is run as a test against a stub of itself the tests should pass`() {
+        val wsdlFile = File("src/test/resources/wsdl/with_examples/order_api.wsdl")
+        val feature = wsdlContentToFeature(checkExists(wsdlFile).readText(), wsdlFile.canonicalPath)
+
+        val result = HttpStub(feature).use { stub ->
+            feature.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    return stub.client.execute(request)
+                }
+            })
+        }
+
+        println(result.report())
+
+        assertThat(result.report()).contains("<productid>123</productid>")
         assertThat(result.success()).isTrue()
         assertThat(result.successCount).isGreaterThan(0)
     }

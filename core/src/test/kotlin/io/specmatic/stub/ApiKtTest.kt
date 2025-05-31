@@ -6,6 +6,7 @@ import io.specmatic.core.*
 import io.specmatic.core.log.DebugLogger
 import io.specmatic.core.log.withLogger
 import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.value.*
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
@@ -571,6 +572,24 @@ Feature: Math API
               No matching REST stub or contract found for method POST and path /test
 """.trimIndent())
         println(errorMessage)
+    }
+
+    @Test
+    fun `loadIfOpenAPISpecification should handle invalid files gracefully by catching exceptions`() {
+        // Test with a non-existent file - should catch exception and return null
+        val nonExistentFile = ContractPathData("", "/non/existent/file.yaml")
+        val result1 = loadIfOpenAPISpecification(nonExistentFile, SpecmaticConfig())
+        assertThat(result1).isNull()
+
+        // Test with an invalid YAML file - should catch exception and return null  
+        val invalidYamlFile = ContractPathData("", "/tmp/test_files/invalid.yaml")
+        val result2 = loadIfOpenAPISpecification(invalidYamlFile, SpecmaticConfig())
+        assertThat(result2).isNull()
+        
+        // Test with an invalid file extension - should catch exception and return null
+        val invalidExtensionFile = ContractPathData("", "/tmp/test_files/invalid.txt")
+        val result3 = loadIfOpenAPISpecification(invalidExtensionFile, SpecmaticConfig())
+        assertThat(result3).isNull()
     }
 }
 

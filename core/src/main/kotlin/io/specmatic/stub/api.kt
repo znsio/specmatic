@@ -823,6 +823,11 @@ fun implicitContractDataDir(contractPath: String, customBase: String? = null): F
 }
 
 fun loadIfOpenAPISpecification(contractPathData: ContractPathData, specmaticConfig: SpecmaticConfig): Pair<String, Feature>? {
+    if(!File(contractPathData.path).exists()) {
+        logger.log("Skipping the file '${contractPathData.path}' as it does not exist")
+        return null
+    }
+
     return try {
         Pair(contractPathData.path, parseContractFileToFeature(contractPathData.path, CommandHook(HookName.stub_load_contract), contractPathData.provider, contractPathData.repository, contractPathData.branch, contractPathData.specificationPath).copy(specmaticConfig = specmaticConfig))
     } catch (e: Throwable) {

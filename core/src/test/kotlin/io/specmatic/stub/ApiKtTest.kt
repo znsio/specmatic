@@ -3,16 +3,21 @@ package io.specmatic.stub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import io.specmatic.core.*
-import io.specmatic.core.log.DebugLogger
-import io.specmatic.core.log.withLogger
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.value.*
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.trimmedLinesList
+import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.PrintStream
+import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.io.path.createFile
 
 internal class ApiKtTest {
     @Test
@@ -574,22 +579,25 @@ Feature: Math API
         println(errorMessage)
     }
 
-    @Test
-    fun `loadIfOpenAPISpecification should handle invalid files gracefully by catching exceptions`() {
-        // Test with a non-existent file - should catch exception and return null
-        val nonExistentFile = ContractPathData("", "/non/existent/file.yaml")
-        val result1 = loadIfOpenAPISpecification(nonExistentFile, SpecmaticConfig())
-        assertThat(result1).isNull()
+    @ParameterizedTest
+    @CsvSource(
+        "Filename, Should Create, Expected output",
+        "missing_file.yaml, false, Skipping the file",
+        "invalid_spec.yaml, true, Could not parse contract",
+        "not_a_spec.txt, true, Could not parse contract",
+        useHeadersInDisplayName = true
+    )
+    fun `loadIfOpenAPISpecification should handle invalid files gracefully by catching exceptions`(fileName: String, shouldCreate: Boolean, expectedOutput: String, @TempDir tempDir: File) {
+        val file = tempDir.resolve("invalid.yaml")
 
-        // Test with an invalid YAML file - should catch exception and return null  
-        val invalidYamlFile = ContractPathData("", "/tmp/test_files/invalid.yaml")
-        val result2 = loadIfOpenAPISpecification(invalidYamlFile, SpecmaticConfig())
-        assertThat(result2).isNull()
-        
-        // Test with an invalid file extension - should catch exception and return null
-        val invalidExtensionFile = ContractPathData("", "/tmp/test_files/invalid.txt")
-        val result3 = loadIfOpenAPISpecification(invalidExtensionFile, SpecmaticConfig())
-        assertThat(result3).isNull()
+        if(shouldCreate) {
+            file.createNewFile()
+        }
+
+        val contractPathData = ContractPathData("", file.path)
+        val (output, result) = captureStandardOutput {  loadIfOpenAPISpecification(contractPathData, SpecmaticConfig()) }
+        assertThat(result).isNull()
+        assertThat(output).contains(expectedOutput)
     }
 }
 

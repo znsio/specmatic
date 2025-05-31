@@ -14,7 +14,7 @@ import io.specmatic.core.wsdl.payload.SOAPPayload
 
 data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, val wsdl: WSDL, val namespaceQualification: NamespaceQualification? = null): WSDLElement {
     override fun deriveSpecmaticTypes(specmaticTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
-        if(specmaticTypeName in typeStack) {
+        if(wsdlTypeReference in typeStack) {
             // Create a stub node for recursive reference to prevent infinite loops
             val qualification = namespaceQualification ?: wsdl.getQualification(element, wsdlTypeReference)
             
@@ -34,7 +34,7 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
             complexType.generateChildren(
                 specmaticTypeName,
                 existingTypes,
-                typeStack.plus(specmaticTypeName)
+                typeStack.plus(wsdlTypeReference)
             )
         } catch(e: ContractException) {
             logger.debug(e, "Error getting types for WSDL type \"$wsdlTypeReference\", ${element.oneLineDescription}")

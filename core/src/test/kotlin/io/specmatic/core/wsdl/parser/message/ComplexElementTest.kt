@@ -24,7 +24,7 @@ internal class ComplexElementTest {
 
         val complexElement = ComplexElement("ns0:PersonRequest", element, wsdl)
         val preExistingTypes = mapOf("Name" to XMLPattern("<name>(string)</name>"))
-        val wsdlTypeInfo = complexElement.deriveSpecmaticTypes("PersonRequest", preExistingTypes, setOf("PersonRequest"))
+        val wsdlTypeInfo = complexElement.deriveSpecmaticTypes("PersonRequest", preExistingTypes, setOf("ns0:PersonRequest"))
 
         // When recursion is detected, an in-place reference node should be created
         val expectedInPlaceNode = toXMLNode("<Person $TYPE_ATTRIBUTE_NAME=\"PersonRequest\"/>")

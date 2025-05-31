@@ -52,6 +52,7 @@ class WSDLTest {
         println(result.report())
 
         assertThat(result.report()).doesNotContain("Expected xml, got string")
+        assertThat(result.report()).doesNotContain("Didn't get enough values")
         assertThat(result.success()).isTrue()
         assertThat(result.successCount).isGreaterThan(0)
     }

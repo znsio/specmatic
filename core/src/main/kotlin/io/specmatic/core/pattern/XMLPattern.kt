@@ -180,7 +180,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 is ListPattern -> ConsumeResult(
                     resolvedType.matches(
                         this.listOf(
-                            consumeResult.remainder.subList(index, pattern.nodes.indices.last),
+                            consumeResult.remainder.drop(index),
                             resolver
                         ), resolver
                     ),
@@ -207,7 +207,20 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                         } else if (expectingEmpty(sampleData, resolvedType, resolver)) {
                             ConsumeResult(Success())
                         } else {
-                            resolvedType.matches(consumeResult.remainder, resolver).cast("xml")
+                            // Handle case where remainder contains StringValues that should be XMLNodes
+                            val xmlCompatibleRemainder = consumeResult.remainder.map { value ->
+                                when {
+                                    value is StringValue && resolvedType is XMLPattern -> {
+                                        try {
+                                            resolvedType.parse(value.string, resolver)
+                                        } catch (e: Throwable) {
+                                            value
+                                        }
+                                    }
+                                    else -> value
+                                }
+                            }
+                            resolvedType.matches(xmlCompatibleRemainder, resolver).cast("xml")
                         }
                     } catch (e: ContractException) {
                         ConsumeResult(e.failure(), consumeResult.remainder)

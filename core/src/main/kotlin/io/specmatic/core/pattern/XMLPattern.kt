@@ -207,20 +207,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                         } else if (expectingEmpty(sampleData, resolvedType, resolver)) {
                             ConsumeResult(Success())
                         } else {
-                            // Handle case where remainder contains StringValues that should be XMLNodes
-                            val xmlCompatibleRemainder = consumeResult.remainder.map { value ->
-                                when {
-                                    value is StringValue && resolvedType is XMLPattern -> {
-                                        try {
-                                            resolvedType.parse(value.string, resolver)
-                                        } catch (e: Throwable) {
-                                            value
-                                        }
-                                    }
-                                    else -> value
-                                }
-                            }
-                            resolvedType.matches(xmlCompatibleRemainder, resolver).cast("xml")
+                            resolvedType.matches(consumeResult.remainder, resolver).cast("xml")
                         }
                     } catch (e: ContractException) {
                         ConsumeResult(e.failure(), consumeResult.remainder)
@@ -321,33 +308,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     override fun generate(resolver: Resolver): XMLNode {
         val name = pattern.name
 
-        // Apply type resolution only if this pattern has a type reference and its nodes are empty
-        // This preserves the behavior for patterns that have already been processed by newBasedOn
-        val resolvedPattern = if (this.pattern.attributes.containsKey(TYPE_ATTRIBUTE_NAME) && this.pattern.nodes.isEmpty()) {
-            val typeName = this.pattern.getAttributeValue(TYPE_ATTRIBUTE_NAME)
-            val referredType = resolvedHop(resolver.getPattern("($typeName)"), resolver)
-
-            if(referredType is XMLPattern) {
-                val xmlType = (referredType.let {
-                    it as? XMLPattern
-                        ?: throw ContractException("Expected XMLPattern but got $it")
-                })
-                val attributesFromReferring = this.pattern.attributes.filterKeys { it != TYPE_ATTRIBUTE_NAME }
-                val attributesFromReferred = xmlType.pattern.attributes.filterKeys { it != TYPE_ATTRIBUTE_NAME }
-                val attributes = attributesFromReferred + attributesFromReferring
-                xmlType.copy(
-                    pattern = xmlType.pattern.copy(
-                        name = this.pattern.name,
-                        realName = this.pattern.realName,
-                        attributes = attributes
-                    )
-                )
-            } else {
-                this
-            }
-        } else {
-            this
-        }
+        val resolvedPattern = dereferenceType(resolver)
 
         val nonSpecmaticAttributes = resolvedPattern.pattern.attributes.filterNot { it.key.startsWith(SPECMATIC_XML_ATTRIBUTE_PREFIX) }
 

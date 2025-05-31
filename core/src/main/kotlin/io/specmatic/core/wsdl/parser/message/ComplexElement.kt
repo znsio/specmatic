@@ -18,7 +18,14 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
             // Create a stub node for recursive reference to prevent infinite loops
             val qualification = namespaceQualification ?: wsdl.getQualification(element, wsdlTypeReference)
             val stubNode = toXMLNode("<${qualification.nodeName}>(string)</${qualification.nodeName}>")
-            return WSDLTypeInfo(listOf(stubNode), existingTypes)
+            
+            // Create an in-place reference node similar to the normal flow
+            val inPlaceNode = toXMLNode("<${qualification.nodeName} $TYPE_ATTRIBUTE_NAME=\"$specmaticTypeName\"/>")
+            
+            // Create a type mapping for the recursive type using the stub content
+            val types = existingTypes.plus(specmaticTypeName to XMLPattern(stubNode))
+            
+            return WSDLTypeInfo(listOf(inPlaceNode), types)
         }
 
         val childTypeInfo = try {

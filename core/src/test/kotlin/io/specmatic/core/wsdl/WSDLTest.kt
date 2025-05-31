@@ -36,7 +36,6 @@ class WSDLTest {
     }
 
     @Test
-    @Disabled
     fun `WSDL self loop test should not fail`() {
         val wsdlFile = File("src/test/resources/wsdl/order_api.wsdl")
         val feature = wsdlContentToFeature(checkExists(wsdlFile).readText(), wsdlFile.canonicalPath)

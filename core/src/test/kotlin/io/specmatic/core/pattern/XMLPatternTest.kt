@@ -817,8 +817,11 @@ internal class XMLPatternTest {
             val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
             val row = Row(listOf("nameid"), listOf("10"))
             val newValues =
-                nameType.newBasedOn(row, resolver).map { it.value as XMLPattern }.map { it.generate(resolver) }
-                    .toList()
+                nameType.newBasedOn(row, resolver).map {
+                    it.value as XMLPattern
+                }.map {
+                    it.generate(resolver)
+                }.toList()
 
             assertThat(newValues.isNotEmpty())
 

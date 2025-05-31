@@ -7,6 +7,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import io.specmatic.core.value.toXMLNode
 import io.specmatic.core.wsdl.parser.WSDL
+import io.specmatic.stub.HttpStub
 import io.specmatic.test.TestExecutor
 import org.junit.jupiter.api.Disabled
 import java.io.File
@@ -36,20 +37,22 @@ class WSDLTest {
     }
 
     @Test
-    @Disabled
     fun `when a WSDL is run as stub and then as contract tests against itself the tests should pass`() {
         val wsdlFile = File("src/test/resources/wsdl/order_api.wsdl")
         val feature = wsdlContentToFeature(checkExists(wsdlFile).readText(), wsdlFile.canonicalPath)
 
-        val result = feature.executeTests(object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                return HttpResponse.OK
-            }
-        })
+        val result = HttpStub(feature).use { stub ->
+            feature.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    return stub.client.execute(request)
+                }
+            })
+        }
 
         println(result.report())
 
         assertThat(result.report()).doesNotContain("Expected xml, got string")
+        assertThat(result.report()).doesNotContain("Didn't get enough values")
         assertThat(result.success()).isTrue()
         assertThat(result.successCount).isGreaterThan(0)
     }

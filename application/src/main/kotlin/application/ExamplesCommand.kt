@@ -10,7 +10,7 @@ import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.stub.isOpenAPI
+import org.yaml.snakeyaml.Yaml
 import picocli.CommandLine.*
 import java.io.File
 import java.util.concurrent.Callable
@@ -191,7 +191,7 @@ https://docs.specmatic.io/documentation/contract_tests.html#supported-filters--o
 
         private fun validateAllExamplesAssociatedToEachSpecIn(specsDir: File, examplesBaseDir: File): List<ValidationResults> {
             val ordinal = AtomicInteger(1)
-            val allSpecFiles = specsDir.walk().filter(File::isFile).filter { isOpenAPI(it.canonicalPath) }
+            val allSpecFiles = specsDir.walk().filter(::isOpenAPI)
 
             val validationResults = allSpecFiles.map { specFile ->
                 val relativeSpecPath = specsDir.toPath().relativize(specFile.toPath()).toString()
@@ -308,6 +308,18 @@ https://docs.specmatic.io/documentation/contract_tests.html#supported-filters--o
             return this.any { it.value is Result.Failure }
         }
 
+        private fun isOpenAPI(file: File): Boolean {
+            if (!file.isFile || file.extension !in OPENAPI_FILE_EXTENSIONS) return false
+            return runCatching {
+                file.reader().use { reader ->
+                    val content = Yaml().load<Any>(reader)
+                    content is Map<*, *> && content.containsKey("openapi")
+                }
+            }.getOrElse { e ->
+                logger.log(e, "Could not read file ${file.path}")
+                false
+            }
+        }
     }
 
 }

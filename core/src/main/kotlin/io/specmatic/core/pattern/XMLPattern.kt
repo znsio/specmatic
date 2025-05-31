@@ -103,11 +103,6 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         xmlValue.name.substringAfter(":") == this.pattern.name
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        // Special handling for empty string when expecting XML (common in test scenarios)
-        if (sampleData is StringValue && sampleData.string.trim().isEmpty()) {
-            return Success()
-        }
-        
         if (sampleData !is XMLNode)
             return Failure("Expected xml, got ${sampleData?.displayableType()}").breadCrumb(pattern.name)
 

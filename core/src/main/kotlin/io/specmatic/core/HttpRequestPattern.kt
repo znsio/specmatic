@@ -942,6 +942,10 @@ data class HttpRequestPattern(
             securityScheme.removeParam(req)
         }
     }
+
+    fun getSOAPAction(): String? {
+        return headersPattern.getSOAPAction()
+    }
 }
 
 private enum class SchemePresence { FULL, PARTIAL, ABSENT }

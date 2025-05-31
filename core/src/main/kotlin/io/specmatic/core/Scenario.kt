@@ -746,7 +746,15 @@ data class Scenario(
             }
         }
 
-    val apiDescription: String = "$method $path ${disambiguate()}-> $statusInDescription"
+    val apiDescription: String
+        get() {
+            val soapActionInfo = httpRequestPattern.getSOAPAction()
+            return if (soapActionInfo != null) {
+                "$method $path SOAPAction $soapActionInfo ${disambiguate()}-> $statusInDescription"
+            } else {
+                "$method $path ${disambiguate()}-> $statusInDescription"
+            }
+        }
 
     override fun testDescription(): String {
         val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | EX:${exampleName.trim()}" }

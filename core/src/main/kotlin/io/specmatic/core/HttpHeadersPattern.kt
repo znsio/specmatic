@@ -428,6 +428,17 @@ data class HttpHeadersPattern(
         return fixedHeaders.mapValues { it.value.toStringLiteral() }
     }
 
+    fun getSOAPAction(): String? {
+        return pattern.entries
+            .firstOrNull { it.key.equals("SOAPAction", ignoreCase = true) }
+            ?.let { (_, pattern) ->
+                when (pattern) {
+                    is ExactValuePattern -> pattern.pattern.toStringLiteral()
+                    else -> null
+                }
+            }
+    }
+
 }
 
 internal fun logContentTypeAndPatternMismatchWarning(contentType: String) {

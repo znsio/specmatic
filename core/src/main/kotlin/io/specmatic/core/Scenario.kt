@@ -748,24 +748,13 @@ data class Scenario(
 
     val apiDescription: String
         get() {
-            val soapActionInfo = extractSOAPActionInfo()
+            val soapActionInfo = httpRequestPattern.headersPattern.getSOAPAction()
             return if (soapActionInfo != null) {
-                "$method $path SOAP Action $soapActionInfo ${disambiguate()}->$statusInDescription"
+                "$method $path SOAPAction $soapActionInfo ${disambiguate()}-> $statusInDescription"
             } else {
                 "$method $path ${disambiguate()}-> $statusInDescription"
             }
         }
-
-    private fun extractSOAPActionInfo(): String? {
-        return httpRequestPattern.headersPattern.pattern.entries
-            .firstOrNull { it.key.equals("SOAPAction", ignoreCase = true) }
-            ?.let { (_, pattern) ->
-                when (pattern) {
-                    is ExactValuePattern -> pattern.pattern.toStringLiteral()
-                    else -> null
-                }
-            }
-    }
 
     override fun testDescription(): String {
         val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | EX:${exampleName.trim()}" }

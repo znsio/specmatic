@@ -512,9 +512,7 @@ data class JSONObjectPattern(
      * This includes scalar type names like "string", "number", and "boolean".
      */
     private fun needsBraces(path: String): Boolean {
-        if (path.isEmpty()) return false
-        if (!path.first().isLetter()) return false
-        return path.all { it.isLetterOrDigit() }
+        return path.isNotEmpty() && path.first().isLetter() && path.all { it.isLetterOrDigit() }
     }
     
     private fun calculatePathForAnyPattern(key: String, childValue: Value, anyPattern: AnyPattern, resolver: Resolver): List<String> {

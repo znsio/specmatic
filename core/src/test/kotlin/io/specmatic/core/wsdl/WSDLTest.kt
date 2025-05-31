@@ -72,12 +72,7 @@ class WSDLTest {
 
         println(result.report())
 
-        // Temporary: Let's see what the report actually contains
-        println("=== FULL TEST REPORT ===")
-        println(result.report())
-        println("=== END REPORT ===")
-
-        // assertThat(result.report()).contains("<productid>123</productid>")
+        assertThat(result.report()).contains("<productid>123</productid>")
         assertThat(result.success()).isTrue()
         assertThat(result.successCount).isGreaterThan(0)
     }

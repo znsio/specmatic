@@ -292,7 +292,16 @@ data class HttpHeadersPattern(
     )
 
     fun negativeBasedOn(row: Row, resolver: Resolver, breadCrumb: String): Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = breadCrumb) {
-        val patternMap = pattern.minus(BreadCrumb.SOAP_ACTION.value)
+        val soapActionEntry =
+            this.withModifiedSoapActionIfNotInRow(row, resolver).pattern.entries.find {
+                it.key.equals(BreadCrumb.SOAP_ACTION.value, ignoreCase = true)
+            }
+
+        val soapActionPattern: Map<String, Pattern> = soapActionEntry?.let { (soapActionKey, soapActionPattern) ->
+            mapOf(soapActionKey to resolvedHop(soapActionPattern, resolver))
+        } ?: emptyMap()
+
+        val patternMap = soapActionEntry?.let { pattern.minus(it.key) } ?: pattern
         if (patternMap.isEmpty()) return@returnValue emptySequence()
 
         allOrNothingCombinationIn(patternMap, row, null, null) { pattern ->
@@ -302,7 +311,7 @@ data class HttpHeadersPattern(
         ).map { patternMapR ->
             patternMapR.ifValue { patternMap ->
                 HttpHeadersPattern(
-                    patternMap.mapKeys { withoutOptionality(it.key) },
+                    patternMap.mapKeys { withoutOptionality(it.key) }.plus(soapActionPattern),
                     contentType = contentType
                 )
             }

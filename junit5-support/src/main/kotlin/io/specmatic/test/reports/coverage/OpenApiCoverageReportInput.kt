@@ -149,7 +149,7 @@ class OpenApiCoverageReportInput(
 
     private fun List<TestResultRecord>.groupRecords(): GroupedTestResultRecords {
         return groupBy { it.path }.mapValues { (_, pathMap) ->
-            pathMap.groupBy { it.method }.mapValues { (_, methodMap) ->
+            pathMap.groupBy { it.soapAction ?: it.method }.mapValues { (_, methodMap) ->
                 methodMap.groupBy { it.requestContentType }.mapValues { (_, contentTypeMap) ->
                     contentTypeMap.groupBy { it.responseStatus.toString() }
                 }

@@ -8,5 +8,6 @@ data class OpenApiCoverageOperation(
     val method: String,
     val responseCode: Int = 0,
     val count: Int = 0,
-    val coverageStatus: String
+    val coverageStatus: String,
+    val soapAction: String? = null
 )

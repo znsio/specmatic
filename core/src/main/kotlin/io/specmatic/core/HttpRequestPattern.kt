@@ -943,8 +943,8 @@ data class HttpRequestPattern(
         }
     }
 
-    fun getSOAPAction(resolver: Resolver): String? {
-        return when(val soapActionPattern = headersPattern.getSOAPActionPattern(resolver, onlyUnescaped = true)) {
+    fun getSOAPAction(): String? {
+        return when(val soapActionPattern = headersPattern.getSOAPActionPattern()) {
             is ExactValuePattern -> soapActionPattern.pattern.toStringLiteral()
             else -> null
         }

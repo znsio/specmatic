@@ -749,7 +749,7 @@ data class Scenario(
 
     val apiDescription: String
         get() {
-            val soapActionInfo = httpRequestPattern.getSOAPAction(this.resolver)
+            val soapActionInfo = httpRequestPattern.getSOAPAction()
             return if (soapActionInfo != null) {
                 "$method $path SOAPAction $soapActionInfo ${disambiguate()}-> $statusInDescription"
             } else {
@@ -867,7 +867,7 @@ data class Scenario(
     private fun matchesOperationIfWsdl(row: Row): Boolean {
         if (!this.isGherkinScenario) return true
 
-        val soapActionPattern = this.httpRequestPattern.headersPattern.getSOAPActionPattern(this.resolver, onlyUnescaped = false)
+        val soapActionPattern = this.httpRequestPattern.headersPattern.getSOAPActionPattern()
         val hasSoapActionField = row.containsField(BreadCrumb.SOAP_ACTION.value)
         if (soapActionPattern == null) return !hasSoapActionField
         if (!hasSoapActionField) return false

@@ -4,6 +4,7 @@ import io.ktor.http.*
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.isOptional
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.withNullPattern
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
@@ -258,7 +259,8 @@ data class HttpHeadersPattern(
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
-        val filteredPattern = row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver)
+        val withoutEscapedSoapAction = withModifiedSoapActionIfNotInRow(row, resolver).pattern
+        val filteredPattern = row.withoutOmittedKeys(withoutEscapedSoapAction, resolver.defaultExampleResolver)
         val additionalHeadersPattern = extractFromExampleHeadersNotInSpec(filteredPattern, row)
         val patternMap = filteredPattern + additionalHeadersPattern
 
@@ -290,10 +292,11 @@ data class HttpHeadersPattern(
     )
 
     fun negativeBasedOn(row: Row, resolver: Resolver, breadCrumb: String): Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = breadCrumb) {
-        allOrNothingCombinationIn(pattern, row, null, null) { pattern ->
+        val withoutEscapedSoapAction = withModifiedSoapActionIfNotInRow(row, resolver).pattern
+        allOrNothingCombinationIn(withoutEscapedSoapAction, row, null, null) { pattern ->
             NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
         }.plus(
-            patternsWithNoRequiredKeys(pattern, "mandatory header not sent")
+            patternsWithNoRequiredKeys(withoutEscapedSoapAction, "mandatory header not sent")
         ).map { patternMapR ->
             patternMapR.ifValue { patternMap ->
                 HttpHeadersPattern(
@@ -306,7 +309,7 @@ data class HttpHeadersPattern(
 
     fun newBasedOn(resolver: Resolver): Sequence<HttpHeadersPattern> =
         allOrNothingCombinationIn(
-            withUnescapedSoapAction(resolver).pattern,
+            withModifiedSoapActionIfNotInRow(null, resolver).pattern,
             Row(),
             null,
             null, returnValues { pattern: Map<String, Pattern> ->
@@ -428,7 +431,8 @@ data class HttpHeadersPattern(
         return fixedHeaders.mapValues { it.value.toStringLiteral() }
     }
 
-    private fun withUnescapedSoapAction(resolver: Resolver): HttpHeadersPattern {
+    private fun withModifiedSoapActionIfNotInRow(row: Row?, resolver: Resolver): HttpHeadersPattern {
+        if (row?.containsField(BreadCrumb.SOAP_ACTION.value) == true) return this
         val (soapActionKey, soapActionPattern) = pattern.entries.find {
             it.key.equals(BreadCrumb.SOAP_ACTION.value, ignoreCase = true)
         } ?: return this
@@ -436,16 +440,18 @@ data class HttpHeadersPattern(
         val resolvedPattern = resolvedHop(soapActionPattern, resolver)
         if (resolvedPattern !is AnyPattern) return this
 
+        val preferEscaped = Flags.getBooleanValue(Flags.SPECMATIC_ESCAPE_SOAP_ACTION)
         val updatedSoapActionPattern = resolvedPattern.pattern.filterIsInstance<ExactValuePattern>().firstOrNull {
-            it.pattern.toStringLiteral().escapeIfNeeded() != it.pattern.toStringLiteral()
-        } ?: resolvedPattern
+            val soapAction = it.pattern.toStringLiteral()
+            val escapedSoapAction = soapAction.escapeIfNeeded()
+            if (preferEscaped) soapAction == escapedSoapAction else soapAction != escapedSoapAction
+        } ?: return this
 
         return this.copy(pattern = pattern.plus(soapActionKey to updatedSoapActionPattern))
     }
 
-    fun getSOAPActionPattern(resolver: Resolver, onlyUnescaped: Boolean = false): Pattern? {
-        val patternMap = if (onlyUnescaped) withUnescapedSoapAction(resolver).pattern else pattern
-        return patternMap.entries.find { it.key.equals(BreadCrumb.SOAP_ACTION.value, ignoreCase = true) }?.value
+    fun getSOAPActionPattern(): Pattern? {
+        return pattern.entries.find { it.key.equals(BreadCrumb.SOAP_ACTION.value, ignoreCase = true) }?.value
     }
 }
 

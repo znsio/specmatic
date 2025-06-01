@@ -43,7 +43,7 @@ class ScenarioTestGenerationException(
             serviceType = scenario.serviceType,
             actualResponseStatus = 0,
             scenarioResult = result,
-            soapAction = scenario.httpRequestPattern.getSOAPAction(),
+            soapAction = scenario.httpRequestPattern.getSOAPAction().takeIf { scenario.isGherkinScenario },
             isGherkin = scenario.isGherkinScenario
         )
     }

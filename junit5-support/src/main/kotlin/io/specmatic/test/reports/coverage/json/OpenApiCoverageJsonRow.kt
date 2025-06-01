@@ -31,17 +31,14 @@ class OpenApiCoverageJsonRow {
 
     private fun buildOpenApiCoverageOperations(testResults: List<TestResultRecord>): List<OpenApiCoverageOperation> =
         testResults.groupBy {
-            GroupedResult(it.path, it.method, it.responseStatus, it.soapAction)
+            Triple(it.path, it.method, it.responseStatus)
         }.map { (operationGroup, operationRows) ->
             OpenApiCoverageOperation(
-                path = operationGroup.path,
-                method = operationGroup.method,
-                responseCode = operationGroup.responseStatusCode,
-                soapAction = operationGroup.soapAction,
+                path = operationGroup.first,
+                method = operationGroup.second,
+                responseCode = operationGroup.third,
                 count = operationRows.count { it.isExercised },
                 coverageStatus = Remarks.resolve(operationRows).toString()
             )
         }
-
-    private data class GroupedResult(val path: String, val method: String, val responseStatusCode: Int, val soapAction: String?)
 }

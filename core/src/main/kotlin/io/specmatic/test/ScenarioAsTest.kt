@@ -49,7 +49,7 @@ data class ScenarioAsTest(
             serviceType = serviceType,
             actualResponseStatus = response?.status ?: 0,
             scenarioResult = result,
-            soapAction = scenario.httpRequestPattern.getSOAPAction(),
+            soapAction = scenario.httpRequestPattern.getSOAPAction().takeIf { scenario.isGherkinScenario },
             isGherkin = scenario.isGherkinScenario
         )
     }

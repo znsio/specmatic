@@ -529,6 +529,17 @@ class ScenarioTest {
         }
     }
 
+    @Test
+    fun `disambiguate should return the provided value with a space`() {
+        val scenario = Scenario(
+            name = "test scenario",
+            httpRequestPattern = HttpRequestPattern(method = "GET", httpPathPattern = HttpPathPattern.from("/")),
+            httpResponsePattern = HttpResponsePattern(status = 200),
+            disambiguate = { "[1] " }
+        )
+        assertThat(scenario.testDescription().trim()).isEqualTo("Scenario: GET / [1] -> 200")
+    }
+
     @Nested
     inner class AttributeSelectionTest {
         @Test

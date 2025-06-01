@@ -14,24 +14,18 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
-import java.nio.file.Files
 import java.nio.file.Paths
 
 class BackwardCompatibilityCheckCommandV2Test {
-    private lateinit var tempDir: File
-    private lateinit var remoteDir: File
+    @TempDir private lateinit var tempDir: File
+    @TempDir private lateinit var remoteDir: File
 
     @BeforeEach
     fun setup() {
-        tempDir = Files.createTempDirectory("git-local").toFile()
-        tempDir.deleteOnExit()
-
-        remoteDir = Files.createTempDirectory("git-remote").toFile()
-        remoteDir.deleteOnExit()
-
         ProcessBuilder("git", "init", "--bare")
             .directory(remoteDir)
             .inheritIO()
@@ -201,18 +195,44 @@ class BackwardCompatibilityCheckCommandV2Test {
 
         @Test
         fun `should work if path is relative in windows and linux based os`() {
-            File("a.yaml").apply {
-                referTo("a.yaml")
-            }.copyTo(tempDir.resolve("a.yaml"))
-            commitAndPush(tempDir, "Initial commit")
-            File("src/test/resources/specifications/spec_with_external_reference/").copyRecursively(tempDir)
+            val baseApiSpec = """
+            openapi: 3.0.0
+            info:
+              title: Base API
+              version: 1.0.0
+            paths:
+              /health:
+                get:
+                  summary: Health check
+                  responses:
+                    '200':
+                      description: OK
+            """.trimIndent()
 
-            val (stdOut, exception) = captureStandardOutput {
+            val otherApiSpec = """
+            openapi: 3.0.0
+            info:
+              title: Other API
+              version: 1.0.0
+            paths:
+              /status:
+                get:
+                  summary: Status check
+                  responses:
+                    '200':
+                      description: OK
+            """.trimIndent()
+
+            File(tempDir, "base-api.yaml").writeText(baseApiSpec)
+            commitAndPush(tempDir, "Initial commit")
+            File(tempDir, "other-api.yaml").writeText(otherApiSpec)
+
+            val (stdOut, exception) = captureStandardOutput(redirectStdErrToStdout = true) {
                 assertThrows<SystemExitException> {
                     SystemExit.throwOnExit {
                         BackwardCompatibilityCheckCommandV2().apply {
                             repoDir = tempDir.canonicalPath
-                            targetPath = "$tempDir/api.yaml"
+                            targetPath = "${tempDir.canonicalPath}/other-api.yaml"
                         }.call()
                     }
                 }
@@ -221,7 +241,7 @@ class BackwardCompatibilityCheckCommandV2Test {
             assertThat(exception.code).isEqualTo(0)
             assertThat(stdOut).containsIgnoringWhitespaces("""
             - Specs that will be skipped (untracked specs, or schema files that are not referred to in other specs):
-            1. ${tempDir.resolve("api.yaml").canonicalFile.toPath().toRealPath()}
+            1. ${tempDir.resolve("other-api.yaml").canonicalFile.toPath().toRealPath()}
             """.trimIndent()).containsIgnoringWhitespaces("""
             Files checked: 0 (Passed: 0, Failed: 0)
             """.trimIndent())

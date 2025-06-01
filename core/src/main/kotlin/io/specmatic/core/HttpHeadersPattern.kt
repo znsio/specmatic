@@ -306,7 +306,7 @@ data class HttpHeadersPattern(
 
     fun newBasedOn(resolver: Resolver): Sequence<HttpHeadersPattern> =
         allOrNothingCombinationIn(
-            pattern,
+            withUnescapedSoapAction(resolver).pattern,
             Row(),
             null,
             null, returnValues { pattern: Map<String, Pattern> ->
@@ -428,6 +428,25 @@ data class HttpHeadersPattern(
         return fixedHeaders.mapValues { it.value.toStringLiteral() }
     }
 
+    private fun withUnescapedSoapAction(resolver: Resolver): HttpHeadersPattern {
+        val (soapActionKey, soapActionPattern) = pattern.entries.find {
+            it.key.equals(BreadCrumb.SOAP_ACTION.value, ignoreCase = true)
+        } ?: return this
+
+        val resolvedPattern = resolvedHop(soapActionPattern, resolver)
+        if (resolvedPattern !is AnyPattern) return this
+
+        val updatedSoapActionPattern = resolvedPattern.pattern.filterIsInstance<ExactValuePattern>().firstOrNull {
+            it.pattern.toStringLiteral().escapeIfNeeded() != it.pattern.toStringLiteral()
+        } ?: resolvedPattern
+
+        return this.copy(pattern = pattern.plus(soapActionKey to updatedSoapActionPattern))
+    }
+
+    fun getSOAPActionPattern(resolver: Resolver, onlyUnescaped: Boolean = false): Pattern? {
+        val patternMap = if (onlyUnescaped) withUnescapedSoapAction(resolver).pattern else pattern
+        return patternMap.entries.find { it.key.equals(BreadCrumb.SOAP_ACTION.value, ignoreCase = true) }?.value
+    }
 }
 
 internal fun logContentTypeAndPatternMismatchWarning(contentType: String) {

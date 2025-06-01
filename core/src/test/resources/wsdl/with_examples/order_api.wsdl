@@ -1,0 +1,241 @@
+<definitions name="OrderAPI" 
+             targetNamespace="http://www.example.com/orders"
+             xmlns:tns="http://www.example.com/orders"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns="http://schemas.xmlsoap.org/wsdl/">
+
+    <types>
+        <xsd:schema targetNamespace="http://www.example.com/orders">
+            <!-- Define the Product complex type -->
+            <xsd:complexType name="Product">
+                <xsd:sequence>
+                    <xsd:element name="name" type="xsd:string"/>
+                    <xsd:element name="type" type="xsd:string"/>
+                    <xsd:element name="inventory" type="xsd:int"/>
+                    <xsd:element name="id" type="xsd:int"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <!-- Define the Product element -->
+            <xsd:element name="Product" type="tns:Product"/>
+
+            <!-- Define the CreateProductRequest complex type -->
+            <xsd:complexType name="CreateProduct">
+                <xsd:sequence>
+                    <xsd:element name="name" type="xsd:string"/>
+                    <xsd:element name="type" type="xsd:string"/>
+                    <xsd:element name="inventory" type="xsd:int"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <xsd:element name="CreateProduct" type="tns:CreateProduct"/>
+
+            <!-- Define the Id complex type -->
+            <xsd:complexType name="Id">
+                <xsd:sequence>
+                    <xsd:element name="id" type="xsd:int" minOccurs="1" maxOccurs="1"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <!-- Define the Id element -->
+            <xsd:element name="Id" type="tns:Id"/>
+            <xsd:element name="OrderId" type="tns:Id"/>
+
+            <!-- Define the Order complex type -->
+            <xsd:complexType name="Order">
+                <xsd:sequence>
+                    <xsd:element name="productid" type="xsd:int"/>
+                    <xsd:element name="count" type="xsd:int"/>
+                    <xsd:element name="status" type="xsd:string"/>
+                    <xsd:element name="id" type="xsd:int"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <!-- Define the Order element -->
+            <xsd:element name="Order" type="tns:Order"/>
+
+            <!-- Define the Order complex type -->
+            <xsd:complexType name="CreateOrder">
+                <xsd:sequence>
+                    <xsd:element name="productid" type="xsd:int"/>
+                    <xsd:element name="count" type="xsd:int"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <!-- Define the CreateOrder element -->
+            <xsd:element name="CreateOrder" type="tns:CreateOrder"/>
+
+            <!-- Define the FindAvailableProducts element -->
+            <xsd:element name="FindAvailableProducts">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="type" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <!-- Define the FindAvailableProductsResponse element -->
+            <xsd:element name="FindAvailableProductsResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="products" type="tns:Product" minOccurs="0" maxOccurs="unbounded"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <!-- Define the UpdateProductImageRequest element -->
+            <xsd:element name="UpdateProductImageRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                        <xsd:element name="image" type="xsd:base64Binary"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <!-- Define the UpdateProductImageResponse element -->
+            <xsd:element name="UpdateProductImageResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="message" type="xsd:string"/>
+                        <xsd:element name="productId" type="xsd:int"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <!-- Define the ErrorResponseBody complex type -->
+            <xsd:complexType name="ErrorResponseBody">
+                <xsd:sequence>
+                    <xsd:element name="id" type="xsd:int"/>
+                    <xsd:element name="timestamp" type="xsd:string"/>
+                    <xsd:element name="status" type="xsd:int"/>
+                    <xsd:element name="error" type="xsd:string"/>
+                    <xsd:element name="message" type="xsd:string"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <!-- Define the ErrorResponseBody element -->
+            <xsd:element name="ErrorResponseBody" type="tns:ErrorResponseBody"/>
+        </xsd:schema>
+    </types>
+
+    <!-- Message Definitions -->
+    <message name="ProductMessage">
+        <part name="parameters" element="tns:Product"/>
+    </message>
+
+    <message name="CreateProductMessage">
+        <part name="parameters" element="tns:CreateProduct"/>
+    </message>
+
+    <message name="ProductIdMessage">
+        <part name="parameters" element="tns:Id"/>
+    </message>
+
+    <message name="CreatedOrderIdMessage">
+        <part name="OrderId" element="tns:OrderId"/>
+    </message>
+
+    <message name="CreatedProductIdMessage">
+        <part name="parameters" element="tns:Id"/>
+    </message>
+
+    <message name="FindAvailableProductsRequest">
+        <part name="parameters" element="tns:FindAvailableProducts"/>
+    </message>
+
+    <message name="FindAvailableProductsResponse">
+        <part name="parameters" element="tns:FindAvailableProductsResponse"/>
+    </message>
+
+    <message name="UpdateProductImageRequest">
+        <part name="parameters" element="tns:UpdateProductImageRequest"/>
+    </message>
+
+    <message name="UpdateProductImageResponse">
+        <part name="parameters" element="tns:UpdateProductImageResponse"/>
+    </message>
+
+    <message name="CreateOrderMessage">
+        <part name="parameters" element="tns:CreateOrder"/>
+    </message>
+
+    <message name="ErrorResponseMessage">
+        <part name="parameters" element="tns:ErrorResponseBody"/>
+    </message>
+
+    <!-- PortType Definition -->
+    <portType name="OrderAPIPortType">
+        <!-- Product Operations -->
+        <operation name="createProduct">
+            <input message="tns:CreateProductMessage"/>
+            <output message="tns:CreatedProductIdMessage"/>
+        </operation>
+        <operation name="getProduct">
+            <input message="tns:ProductIdMessage"/>
+            <output message="tns:ProductMessage"/>
+        </operation>
+        <operation name="findAvailableProducts">
+            <input message="tns:FindAvailableProductsRequest"/>
+            <output message="tns:FindAvailableProductsResponse"/>
+        </operation>
+
+        <!-- Order Operations -->
+        <operation name="createOrder">
+            <input message="tns:CreateOrderMessage"/>
+            <output message="tns:CreatedOrderIdMessage"/>
+        </operation>
+    </portType>
+
+    <!-- Binding Definition -->
+    <binding name="OrderAPIBinding" type="tns:OrderAPIPortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <!-- Product Operations -->
+        <operation name="createProduct">
+            <soap:operation soapAction="/orders/createProduct"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="getProduct">
+            <soap:operation soapAction="/orders/getProduct"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="findAvailableProducts">
+            <soap:operation soapAction="/orders/findAvailableProducts"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+
+        <!-- Order Operations -->
+        <operation name="createOrder">
+            <soap:operation soapAction="/orders/createOrder"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+    </binding>
+
+    <!-- Service Definition -->
+    <service name="OrderAPIService">
+        <port name="OrderAPIPort" binding="tns:OrderAPIBinding">
+            <soap:address location="http://localhost:8090/"/>
+        </port>
+    </service>
+</definitions>

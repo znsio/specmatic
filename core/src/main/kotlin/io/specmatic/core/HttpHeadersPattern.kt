@@ -292,11 +292,13 @@ data class HttpHeadersPattern(
     )
 
     fun negativeBasedOn(row: Row, resolver: Resolver, breadCrumb: String): Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = breadCrumb) {
-        val withoutEscapedSoapAction = withModifiedSoapActionIfNotInRow(row, resolver).pattern
-        allOrNothingCombinationIn(withoutEscapedSoapAction, row, null, null) { pattern ->
+        val patternMap = pattern.minus(BreadCrumb.SOAP_ACTION.value)
+        if (patternMap.isEmpty()) return@returnValue emptySequence()
+
+        allOrNothingCombinationIn(patternMap, row, null, null) { pattern ->
             NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
         }.plus(
-            patternsWithNoRequiredKeys(withoutEscapedSoapAction, "mandatory header not sent")
+            patternsWithNoRequiredKeys(patternMap, "mandatory header not sent")
         ).map { patternMapR ->
             patternMapR.ifValue { patternMap ->
                 HttpHeadersPattern(
@@ -361,7 +363,7 @@ data class HttpHeadersPattern(
     fun addComplimentaryPatterns(basePatterns: Sequence<ReturnValue<HttpHeadersPattern>>, row: Row, resolver: Resolver, breadCrumb: String): Sequence<ReturnValue<HttpHeadersPattern>> {
         return addComplimentaryPatterns(
             basePatterns.map { it.ifValue { it.pattern } },
-            pattern,
+            withModifiedSoapActionIfNotInRow(row, resolver).pattern,
             null,
             row,
             resolver,
@@ -432,7 +434,7 @@ data class HttpHeadersPattern(
     }
 
     private fun withModifiedSoapActionIfNotInRow(row: Row?, resolver: Resolver): HttpHeadersPattern {
-        if (row?.containsField(BreadCrumb.SOAP_ACTION.value) == true) return this
+        val soapActionValue = row?.getFieldOrNull(BreadCrumb.SOAP_ACTION.value)
         val (soapActionKey, soapActionPattern) = pattern.entries.find {
             it.key.equals(BreadCrumb.SOAP_ACTION.value, ignoreCase = true)
         } ?: return this
@@ -442,12 +444,25 @@ data class HttpHeadersPattern(
 
         val preferEscaped = Flags.getBooleanValue(Flags.SPECMATIC_ESCAPE_SOAP_ACTION)
         val updatedSoapActionPattern = resolvedPattern.pattern.filterIsInstance<ExactValuePattern>().firstOrNull {
-            val soapAction = it.pattern.toStringLiteral()
-            val escapedSoapAction = soapAction.escapeIfNeeded()
-            if (preferEscaped) soapAction == escapedSoapAction else soapAction != escapedSoapAction
+            isPreferredSoapActionPattern(soapActionValue, it, preferEscaped, resolver)
         } ?: return this
 
         return this.copy(pattern = pattern.plus(soapActionKey to updatedSoapActionPattern))
+    }
+
+    private fun isPreferredSoapActionPattern(soapActionValue: String?, soapActionPattern: ExactValuePattern, preferEscaped: Boolean, resolver: Resolver): Boolean {
+        if (soapActionValue == null) {
+            val patternValue = soapActionPattern.pattern.toStringLiteral()
+            return when {
+                preferEscaped -> patternValue == patternValue.escapeIfNeeded()
+                else -> patternValue != patternValue.escapeIfNeeded()
+            }
+        }
+
+        return runCatching {
+            val soapAction = soapActionPattern.parse(soapActionValue, resolver)
+            soapActionPattern.matches(soapAction, resolver).isSuccess()
+        }.getOrDefault(false)
     }
 
     fun getSOAPActionPattern(): Pattern? {

@@ -487,7 +487,6 @@ data class JSONObjectPattern(
     fun calculatePath(value: Value, resolver: Resolver): Set<String> {
         if (value !is JSONObjectValue) return emptySet()
         
-        // For each property in the value, check if the pattern is an AnyPattern
         return value.jsonObject.flatMap { (key, childValue) ->
             calculatePathForKey(key, childValue, resolver)
         }.toSet()
@@ -505,19 +504,13 @@ data class JSONObjectPattern(
         }
     }
     
-    /**
-     * Checks if a path needs to be wrapped in braces.
-     * Returns true for simple identifiers (like typeAlias names or scalar type names).
-     * Simple identifiers are strings that start with a letter and contain only letters and numbers.
-     * This includes scalar type names like "string", "number", and "boolean".
-     */
     private fun needsBraces(path: String): Boolean {
-        return path.isNotEmpty() && path.all { it.isLetterOrDigit() } && path.first().isLetter()
+        return path.isNotEmpty() && path.all { it.isLetterOrDigit() }
     }
     
     private fun calculatePathForAnyPattern(key: String, childValue: Value, anyPattern: AnyPattern, resolver: Resolver): List<String> {
         val anyPatternPaths = anyPattern.calculatePath(childValue, resolver)
-        val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
+        val pathPrefix = if (!typeAlias.isNullOrBlank()) {
             val cleanTypeAlias = withoutPatternDelimiters(typeAlias)
             "{$cleanTypeAlias}.$key"
         } else {
@@ -530,7 +523,7 @@ data class JSONObjectPattern(
                     needsBraces(anyPatternInfo) -> "{$anyPatternInfo}"
                     else -> anyPatternInfo
                 }
-                // Use same logic as calculatePathForJSONObjectPattern - check if formattedInfo starts with {
+
                 if (formattedInfo.startsWith("{")) {
                     "$pathPrefix$formattedInfo"
                 } else {
@@ -547,14 +540,13 @@ data class JSONObjectPattern(
         return nestedPaths.map { nestedPath ->
             if (!typeAlias.isNullOrBlank()) {
                 val cleanTypeAlias = withoutPatternDelimiters(typeAlias)
-                // If nestedPath starts with a typeAlias (in braces), don't add a dot before it
+
                 if (nestedPath.startsWith("{")) {
                     "{$cleanTypeAlias}.$key$nestedPath"
                 } else {
                     "{$cleanTypeAlias}.$key.$nestedPath"
                 }
             } else {
-                // If nestedPath starts with a typeAlias (in braces), don't add a dot before it
                 if (nestedPath.startsWith("{")) {
                     "$key$nestedPath"
                 } else {
@@ -593,16 +585,14 @@ data class JSONObjectPattern(
         
         return if (anyPatternPaths.isNotEmpty()) {
             anyPatternPaths.map { anyPath ->
-                // Format the anyPath using the same logic as calculatePathForAnyPattern
                 val formattedPath = if (needsBraces(anyPath)) {
                     "{$anyPath}"
                 } else {
                     anyPath
                 }
                 
-                if (typeAlias != null && typeAlias.isNotBlank()) {
+                if (!typeAlias.isNullOrBlank()) {
                     val cleanTypeAlias = withoutPatternDelimiters(typeAlias)
-                    // Use same logic as calculatePathForArrayJSONObjectPattern - check if formattedPath starts with {
                     if (formattedPath.startsWith("{")) {
                         "{$cleanTypeAlias}.$key[$index]$formattedPath"
                     } else {
@@ -617,7 +607,7 @@ data class JSONObjectPattern(
                 }
             }
         } else {
-            val pathPrefix = if (typeAlias != null && typeAlias.isNotBlank()) {
+            val pathPrefix = if (!typeAlias.isNullOrBlank()) {
                 val cleanTypeAlias = withoutPatternDelimiters(typeAlias)
                 "{$cleanTypeAlias}.$key[$index]"
             } else {
@@ -630,9 +620,8 @@ data class JSONObjectPattern(
     private fun calculatePathForArrayJSONObjectPattern(key: String, index: Int, arrayItem: Value, objectPattern: JSONObjectPattern, resolver: Resolver): List<String> {
         val nestedPaths = objectPattern.calculatePath(arrayItem, resolver)
         return nestedPaths.map { nestedPath ->
-            if (typeAlias != null && typeAlias.isNotBlank()) {
+            if (!typeAlias.isNullOrBlank()) {
                 val cleanTypeAlias = withoutPatternDelimiters(typeAlias)
-                // Similar logic to calculatePathForJSONObjectPattern - check if nestedPath starts with {
                 if (nestedPath.startsWith("{")) {
                     "{$cleanTypeAlias}.$key[$index]$nestedPath"
                 } else {
@@ -658,7 +647,6 @@ fun generate(jsonPatternMap: Map<String, Pattern>, resolver: Resolver, jsonPatte
         .mapKeys { entry -> withoutOptionality(entry.key) }
         .mapValues { (key, pattern) ->
             attempt(breadCrumb = key) {
-                // Handle cycle (represented by null value) by marking this property as removable
                 val canBeOmitted = optionalProps.contains(key)
 
                 val value = Optional.ofNullable(

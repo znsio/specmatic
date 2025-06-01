@@ -167,7 +167,7 @@ data class JSONObjectPattern(
         })
     }
 
-    override fun jsonObjectPattern(resolver: Resolver): JSONObjectPattern? {
+    override fun jsonObjectPattern(resolver: Resolver): JSONObjectPattern {
         return this
     }
 
@@ -545,7 +545,7 @@ data class JSONObjectPattern(
     private fun calculatePathForJSONObjectPattern(key: String, childValue: Value, objectPattern: JSONObjectPattern, resolver: Resolver): List<String> {
         val nestedPaths = objectPattern.calculatePath(childValue, resolver)
         return nestedPaths.map { nestedPath ->
-            if (typeAlias != null && typeAlias.isNotBlank()) {
+            if (!typeAlias.isNullOrBlank()) {
                 val cleanTypeAlias = withoutPatternDelimiters(typeAlias)
                 // If nestedPath starts with a typeAlias (in braces), don't add a dot before it
                 if (nestedPath.startsWith("{")) {

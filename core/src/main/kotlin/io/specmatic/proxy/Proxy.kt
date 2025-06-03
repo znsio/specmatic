@@ -10,6 +10,8 @@ import io.specmatic.core.*
 import io.specmatic.core.filters.ExpressionStandardizer
 import io.specmatic.core.filters.HttpRequestFilterContext
 import io.specmatic.core.filters.HttpResponseFilterContext
+import io.specmatic.core.log.LogMessage
+import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
@@ -30,6 +32,23 @@ import kotlinx.coroutines.withContext
 import java.io.Closeable
 import java.net.URI
 import java.net.URL
+import io.ktor.server.websocket.*
+import io.ktor.websocket.*
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
+import java.util.Collections
+
+private val connections = Collections.newSetFromMap<DefaultWebSocketSession>(ConcurrentHashMap())
+
+@Serializable
+private data class RequestData(
+    val method: String,
+    val path: String,
+    val status: Int
+)
 
 class Proxy(
     host: String,
@@ -38,7 +57,8 @@ class Proxy(
     private val outputDirectory: FileWriter,
     keyData: KeyData? = null,
     timeoutInMilliseconds: Long = DEFAULT_TIMEOUT_IN_MILLISECONDS,
-    filter: String? = ""
+    filter: String? = "",
+    log: (event: LogMessage) -> Unit = ::consoleLog,
 ) : Closeable {
     constructor(
         host: String,
@@ -47,8 +67,9 @@ class Proxy(
         proxySpecmaticDataDir: String,
         keyData: KeyData? = null,
         timeoutInMilliseconds: Long,
-        filter: String
-    ) : this(host, port, baseURL, RealFileWriter(proxySpecmaticDataDir), keyData, timeoutInMilliseconds, filter)
+        filter: String,
+        log: (event: LogMessage) -> Unit = ::consoleLog
+    ) : this(host, port, baseURL, RealFileWriter(proxySpecmaticDataDir), keyData, timeoutInMilliseconds, filter, log)
 
     private val stubs = mutableListOf<NamedStub>()
 
@@ -61,12 +82,15 @@ class Proxy(
 
     private val environment = applicationEngineEnvironment {
         module {
+            install(WebSockets)
+
             intercept(ApplicationCallPipeline.Call) {
                 try {
                     val httpRequest = ktorHttpRequestToHttpRequest(call)
 
                     if (httpRequest.isHealthCheckRequest()) return@intercept
                     if (httpRequest.isDumpRequest()) return@intercept
+                    if (httpRequest.isWebsocketRequest()) return@intercept
 
                     when (httpRequest.method?.uppercase()) {
                         "CONNECT" -> {
@@ -88,7 +112,8 @@ class Proxy(
                             // continue as before, if not matching filter
                             val client = LegacyHttpClient(
                                 proxyURL(httpRequest, baseURL),
-                                timeoutInMilliseconds = timeoutInMilliseconds
+                                timeoutInMilliseconds = timeoutInMilliseconds,
+                                log = log
                             )
 
                             val requestToSend = targetHost?.let {
@@ -116,6 +141,17 @@ class Proxy(
                                 )
                             )
 
+                            val requestData = RequestData(
+                                method = httpRequest.method ?: "",
+                                path = httpRequest.path ?: "",
+                                status = httpResponse.status
+                            )
+                            connections.forEach { session ->
+                                session.launch {
+                                    session.send(Frame.Text(Json.encodeToString(requestData)))
+                                }
+                            }
+
                             respondToKtorHttpResponse(call, withoutContentEncodingGzip(httpResponse))
                         } catch (e: Throwable) {
                             logger.log(e)
@@ -142,6 +178,21 @@ class Proxy(
 
             routing {
                 post(DUMP_ENDPOINT) { handleDumpRequest(call) }
+
+                webSocket(WS_ENDPOINT) {
+                    connections += this
+                    try {
+                        for (frame in incoming) {
+                            if (frame is Frame.Text) {
+                                println("WebSocket message: ${frame.readText()}")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        println("WebSocket error: ${e.message}")
+                    } finally {
+                        connections -= this
+                    }
+                }
             }
         }
 
@@ -273,9 +324,14 @@ class Proxy(
 
     companion object {
         private const val DUMP_ENDPOINT = "/_specmatic/proxy/dump"
+        private const val WS_ENDPOINT = "/_specmatic/proxy/ws"
 
         private fun HttpRequest.isDumpRequest(): Boolean {
             return (this.path == DUMP_ENDPOINT) && (this.method == HttpMethod.Post.value)
+        }
+
+        private fun HttpRequest.isWebsocketRequest(): Boolean {
+            return (this.path == WS_ENDPOINT)
         }
     }
 }

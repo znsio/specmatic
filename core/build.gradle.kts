@@ -17,6 +17,7 @@ dependencies {
     implementation("io.ktor:ktor-client-core-jvm:2.3.13")
     implementation("io.ktor:ktor-client-apache:2.3.13")
     implementation("io.ktor:ktor-server-cors:2.3.13")
+    implementation("io.ktor:ktor-server-websockets:2.3.13")
     implementation("io.ktor:ktor-server-double-receive:2.3.13")
     implementation("io.ktor:ktor-server-content-negotiation:2.3.13")
     implementation("io.ktor:ktor-serialization-jackson:2.3.13")

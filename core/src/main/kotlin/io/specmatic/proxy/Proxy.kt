@@ -31,6 +31,10 @@ import java.io.Closeable
 import java.net.URI
 import java.net.URL
 
+fun interface RequestObserver {
+    fun onRequestHandled(httpRequest: HttpRequest, httpResponse: HttpResponse)
+}
+
 class Proxy(
     host: String,
     port: Int,
@@ -38,7 +42,8 @@ class Proxy(
     private val outputDirectory: FileWriter,
     keyData: KeyData? = null,
     timeoutInMilliseconds: Long = DEFAULT_TIMEOUT_IN_MILLISECONDS,
-    filter: String? = ""
+    filter: String? = "",
+    private val requestObserver: RequestObserver? = null
 ) : Closeable {
     constructor(
         host: String,
@@ -47,7 +52,8 @@ class Proxy(
         proxySpecmaticDataDir: String,
         keyData: KeyData? = null,
         timeoutInMilliseconds: Long,
-        filter: String
+        filter: String,
+        requestObserver: RequestObserver? = null
     ) : this(host, port, baseURL, RealFileWriter(proxySpecmaticDataDir), keyData, timeoutInMilliseconds, filter)
 
     private val stubs = mutableListOf<NamedStub>()
@@ -115,6 +121,8 @@ class Proxy(
                                     )
                                 )
                             )
+
+                            requestObserver?.onRequestHandled(httpRequest, httpResponse)
 
                             respondToKtorHttpResponse(call, withoutContentEncodingGzip(httpResponse))
                         } catch (e: Throwable) {

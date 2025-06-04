@@ -14,6 +14,10 @@ interface ResponseValidator {
     fun postValidate(scenario: Scenario, originalScenario: Scenario, httpRequest: HttpRequest, httpResponse: HttpResponse): Result? {
         return null
     }
+
+    fun resultValidator(testScenario: Scenario, request: HttpRequest, response: HttpResponse?, result: Result): Result {
+        return result
+    }
 }
 
 interface ContractTest : HasScenarioMetadata {

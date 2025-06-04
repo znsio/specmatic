@@ -80,8 +80,10 @@ data class ScenarioAsTest(
             testExecutor
         }
 
-        val (result, response) = executeTestAndReturnResultAndResponse(scenario, newExecutor, flagsBased)
-        return Pair(result.updateScenario(scenario), response)
+        val executionResult = executeTestAndReturnResultAndResponse(scenario, newExecutor, flagsBased)
+        return validators.fold(executionResult) { result , validator ->
+            result.copy(result = validator.resultValidator(scenario, result.request, result.response, result.result))
+        }.let { it.result to it.response }
     }
 
     override fun plusValidator(validator: ResponseValidator): ScenarioAsTest {
@@ -90,11 +92,7 @@ data class ScenarioAsTest(
         )
     }
 
-    private fun executeTestAndReturnResultAndResponse(
-        testScenario: Scenario,
-        testExecutor: TestExecutor,
-        flagsBased: FlagsBased
-    ): Pair<Result, HttpResponse?> {
+    private fun executeTestAndReturnResultAndResponse(testScenario: Scenario, testExecutor: TestExecutor, flagsBased: FlagsBased): ExecutionResult {
         val request = testScenario.generateHttpRequest(flagsBased).let {
             workflow.updateRequest(it, originalScenario)
         }.addHeaderIfMissing(SPECMATIC_RESPONSE_CODE_HEADER, testScenario.status.toString())
@@ -107,18 +105,14 @@ data class ScenarioAsTest(
             //TODO: Review - Do we need workflow anymore
             workflow.extractDataFrom(response, originalScenario)
 
-            val validatorResult =
-                validators.asSequence().map { it.validate(scenario, response) }.filterNotNull().firstOrNull()
+            val validatorResult = validators.asSequence().map { it.validate(scenario, response) }.filterNotNull().firstOrNull()
             if (validatorResult is Result.Failure) {
-                return Pair(validatorResult.withBindings(testScenario.bindings, response), response)
+                return ExecutionResult(request, response, validatorResult, scenario.bindings)
             }
 
             val testResult = validatorResult ?: testResult(request, response, testScenario, flagsBased)
-            if (testResult is Result.Failure && !(response.isAcceptedHenceValid() && ResponseMonitor.isMonitorLinkPresent(
-                    response
-                ))
-            ) {
-                return Pair(testResult.withBindings(testScenario.bindings, response), response)
+            if (testResult is Result.Failure && !(response.isAcceptedHenceValid() && ResponseMonitor.isMonitorLinkPresent(response))) {
+                return ExecutionResult(request, response, testResult, scenario.bindings)
             }
 
             val responseToCheckAndStore = when (testResult) {
@@ -127,32 +121,23 @@ data class ScenarioAsTest(
                     val awaitedResponse = ResponseMonitor(feature, originalScenario, response).waitForResponse(client)
                     when (awaitedResponse) {
                         is HasValue -> awaitedResponse.value
-                        is HasFailure -> return Pair(
-                            awaitedResponse.failure.withBindings(
-                                testScenario.bindings,
-                                response
-                            ), response
-                        )
-
-                        is HasException -> return Pair(
-                            awaitedResponse.toFailure().withBindings(testScenario.bindings, response), response
-                        )
+                        is HasFailure -> return ExecutionResult(request, response, awaitedResponse.failure, scenario.bindings)
+                        is HasException -> return ExecutionResult(request, response, awaitedResponse.toFailure(), scenario.bindings)
                     }
                 }
-
                 else -> response
             }
 
             val result = validators.asSequence().mapNotNull {
                 it.postValidate(testScenario, originalScenario, request, responseToCheckAndStore)
             }.firstOrNull() ?: Result.Success()
-
             testScenario.exampleRow?.let { ExampleProcessor.store(it, request, responseToCheckAndStore) }
-            return Pair(result.withBindings(testScenario.bindings, response), response)
+
+            return ExecutionResult(request, response, result, scenario.bindings)
         } catch (exception: Throwable) {
-            return Pair(
-                Result.Failure(exceptionCauseMessage(exception))
-                    .also { failure -> failure.updateScenario(testScenario) }, null
+            return ExecutionResult(
+                request = request,
+                result = Result.Failure(exceptionCauseMessage(exception)).updateScenario(testScenario)
             )
         }
     }
@@ -187,6 +172,14 @@ data class ScenarioAsTest(
         if (scenario.status == 202 && this.status == 202) return false
         return feature.isAcceptedResponsePossible(scenario)
     }
+}
+
+private data class ExecutionResult(val request: HttpRequest, val response: HttpResponse? = null, val result: Result) {
+    constructor(request: HttpRequest, response: HttpResponse, result: Result, bindings:Map<String, String>): this(
+        request = request,
+        response = response,
+        result = result.withBindings(bindings, response)
+    )
 }
 
 private fun LogMessage.withComment(comment: String?): LogMessage {

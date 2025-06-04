@@ -32,7 +32,7 @@ import java.net.URI
 import java.net.URL
 
 fun interface RequestObserver {
-    fun onRequestHandled(method: String?, path: String?, status: Int)
+    fun onRequestHandled(httpRequest: HttpRequest, httpResponse: HttpResponse)
 }
 
 class Proxy(
@@ -122,7 +122,7 @@ class Proxy(
                                 )
                             )
 
-                            requestObserver?.onRequestHandled(httpRequest.method, httpRequest.path, httpResponse.status)
+                            requestObserver?.onRequestHandled(httpRequest, httpResponse)
 
                             respondToKtorHttpResponse(call, withoutContentEncodingGzip(httpResponse))
                         } catch (e: Throwable) {

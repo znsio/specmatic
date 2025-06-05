@@ -7,20 +7,18 @@
 
     <types>
         <xsd:schema targetNamespace="http://www.example.com/orders">
-            <!-- Define the Product complex type -->
-            <xsd:complexType name="Product">
+            <!-- Simplified CreateProduct complex type -->
+            <xsd:complexType name="CreateProduct">
                 <xsd:sequence>
                     <xsd:element name="name" type="xsd:string"/>
                     <xsd:element name="type" type="xsd:string"/>
-                    <xsd:element name="inventory" type="xsd:int"/>
-                    <xsd:element name="id" type="xsd:int"/>
                 </xsd:sequence>
             </xsd:complexType>
 
-            <!-- Define the Product element -->
-            <xsd:element name="Product" type="tns:Product"/>
+            <!-- Define the CreateProduct element -->
+            <xsd:element name="CreateProduct" type="tns:CreateProduct"/>
 
-            <!-- Define the Id complex type -->
+            <!-- Define the Id complex type for response -->
             <xsd:complexType name="Id">
                 <xsd:sequence>
                     <xsd:element name="id" type="xsd:int" minOccurs="1" maxOccurs="1"/>
@@ -33,20 +31,20 @@
     </types>
 
     <!-- Message Definitions -->
-    <message name="ProductMessage">
-        <part name="parameters" element="tns:Product"/>
+    <message name="CreateProductMessage">
+        <part name="parameters" element="tns:CreateProduct"/>
     </message>
 
-    <message name="ProductIdMessage">
+    <message name="CreatedProductIdMessage">
         <part name="parameters" element="tns:Id"/>
     </message>
 
     <!-- PortType Definition -->
     <portType name="OrderAPIPortType">
         <!-- Product Operations -->
-        <operation name="getProduct">
-            <input message="tns:ProductIdMessage"/>
-            <output message="tns:ProductMessage"/>
+        <operation name="createProduct">
+            <input message="tns:CreateProductMessage"/>
+            <output message="tns:CreatedProductIdMessage"/>
         </operation>
     </portType>
 
@@ -54,8 +52,8 @@
     <binding name="OrderAPIBinding" type="tns:OrderAPIPortType">
         <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
         <!-- Product Operations -->
-        <operation name="getProduct">
-            <soap:operation soapAction="/orders/getProduct"/>
+        <operation name="createProduct">
+            <soap:operation soapAction="/orders/createProduct"/>
             <input>
                 <soap:body use="literal"/>
             </input>

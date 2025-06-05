@@ -66,7 +66,7 @@ class OpenApiCoverageReportInput(
         groupedTestResultRecords = allTests.groupRecords()
         groupedTestResultRecords.forEach { (path, methodMap) ->
             val routeAPIRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf()
-            val totalCoveragePercentage = calculateTotalCoveragePercentage(methodMap)
+            val totalCoveragePercentage = calculateTotalCoveragePercentage(path, methodMap)
             methodMap.forEach { (method, contentTypeMap) ->
                 contentTypeMap.forEach { (requestContentType, responseCodeMap) ->
                     responseCodeMap.forEach { (responseStatus, testResults) ->
@@ -190,9 +190,11 @@ class OpenApiCoverageReportInput(
         }
     }
 
-    private fun calculateTotalCoveragePercentage(methodMap: Map<String, Map<String?, Map<String, List<TestResultRecord>>>>): Int {
+    private fun calculateTotalCoveragePercentage(path: String, methodMap: Map<String, Map<String?, Map<String, List<TestResultRecord>>>>): Int {
         val (totalCount, coveredCount) = calculateCoverageCounts(methodMap)
-        return (coveredCount.toFloat() / totalCount * 100).roundToInt()
+        val pathCoverage = (coveredCount.toFloat() / totalCount * 100).roundToInt()
+        TestReportHooks.onEachListener { onPathCoverageCalculated(path, pathCoverage) }
+        return pathCoverage
     }
 
     private fun calculateCoverageCounts(methodMap: Map<String, Map<String?, Map<String, List<TestResultRecord>>>>): Pair<Int, Int> {

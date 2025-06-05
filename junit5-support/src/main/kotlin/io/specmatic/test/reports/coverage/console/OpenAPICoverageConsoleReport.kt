@@ -2,6 +2,7 @@ package io.specmatic.test.reports.coverage.console
 
 import io.specmatic.test.TestInteractionsLog
 import io.specmatic.test.TestResultRecord
+import io.specmatic.test.reports.TestReportHooks
 import kotlin.math.roundToInt
 
 // GroupedBy Path -> soapAction ?: method -> RequestContentType -> ResponseStatusCode
@@ -20,6 +21,11 @@ data class OpenAPICoverageConsoleReport(
     val totalCoveragePercentage: Int = calculateTotalCoveragePercentage()
     val httpLogMessages = TestInteractionsLog.testHttpLogMessages
     val isGherkinReport = testResultRecords.all { it.isGherkin }
+
+    init {
+        val totalCoverage = calculateTotalCoveragePercentage()
+        TestReportHooks.onEachListener { onCoverageCalculated(totalCoverage) }
+    }
 
     private fun calculateTotalCoveragePercentage(): Int {
         if (totalEndpointsCount == 0) return 0

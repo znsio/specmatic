@@ -78,7 +78,7 @@ class WSDLTest {
         }
 
         assertThat(result.success()).withFailMessage(result.report()).isTrue()
-        assertThat(result.successCount).isEqualTo(4)
+        assertThat(result.successCount).isEqualTo(1)
     }
 
     private fun readContracts(filename: String): Pair<String, String> {

@@ -339,11 +339,11 @@ open class SpecmaticJUnitSupport {
     ): Stream<DynamicTest> {
         try {
             if (queryActuator().failed && actuatorFromSwagger(testBaseURL).failed) {
-                openApiCoverageReportInput.setEndpointsAPIFlag(true)
+                openApiCoverageReportInput.setEndpointsAPIFlag(false)
                 logger.log("EndpointsAPI and SwaggerUI URL missing; cannot calculate actual coverage")
             }
         } catch (exception: Throwable) {
-            openApiCoverageReportInput.setEndpointsAPIFlag(true)
+            openApiCoverageReportInput.setEndpointsAPIFlag(false)
             logger.log(exception, "Failed to query actuator with error")
         }
 

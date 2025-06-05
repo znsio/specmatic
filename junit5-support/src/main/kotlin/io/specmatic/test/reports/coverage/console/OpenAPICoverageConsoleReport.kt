@@ -23,8 +23,7 @@ data class OpenAPICoverageConsoleReport(
     val isGherkinReport = testResultRecords.all { it.isGherkin }
 
     init {
-        val totalCoverage = calculateTotalCoveragePercentage()
-        TestReportHooks.onEachListener { onCoverageCalculated(totalCoverage) }
+        TestReportHooks.onEachListener { onCoverageCalculated(totalCoveragePercentage) }
     }
 
     private fun calculateTotalCoveragePercentage(): Int {

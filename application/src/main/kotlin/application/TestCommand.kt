@@ -28,6 +28,7 @@ import io.specmatic.test.SpecmaticJUnitSupport.Companion.STRICT_MODE
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
+import io.specmatic.test.status.TestExecutionStatus
 import io.specmatic.test.listeners.ContractExecutionListener
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import org.junit.platform.launcher.Launcher
@@ -134,6 +135,9 @@ https://docs.specmatic.io/documentation/contract_tests.html#supported-filters--o
     )
     var strictMode: Boolean = false
 
+    @Option(names = ["--exit-with-error-on-no-tests"], description = ["If set to false, will not exit with error when no tests are run"], required = false)
+    var exitWithErrorOnNoTests: Boolean = true
+
     override fun call() = try {
         setParallelism()
 
@@ -215,6 +219,13 @@ https://docs.specmatic.io/documentation/contract_tests.html#supported-filters--o
             } else {
                 throw ContractException("Was expecting a JUnit report file called TEST-junit-jupiter.xml inside $junitReportDirName but could not find it.")
             }
+        }
+
+        // Use ContractExecutionListener to determine exit code directly
+        if (!ContractExecutionListener.testsRan() && exitWithErrorOnNoTests) {
+            logger.newLine()
+            logger.log("WARNING: No tests were executed. Exiting with error code as configured.")
+            kotlin.system.exitProcess(1)
         }
 
         ContractExecutionListener.exitProcess()

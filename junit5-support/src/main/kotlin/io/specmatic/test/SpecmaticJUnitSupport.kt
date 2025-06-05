@@ -14,6 +14,7 @@ import io.specmatic.core.pattern.Examples
 import io.specmatic.core.pattern.Row
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.utilities.*
+import io.specmatic.test.status.TestExecutionStatus
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.value.JSONArrayValue
@@ -41,10 +42,12 @@ import kotlin.streams.asStream
 
 interface ContractTestStatisticsMBean {
     fun testsExecuted(): Int
+    fun shouldExitWithError(): Boolean
 }
 
 class ContractTestStatistics : ContractTestStatisticsMBean {
     override fun testsExecuted(): Int = SpecmaticJUnitSupport.openApiCoverageReportInput.testResultRecords.size
+    override fun shouldExitWithError(): Boolean = SpecmaticJUnitSupport.openApiCoverageReportInput.testResultRecords.isEmpty()
 }
 
 @Serializable
@@ -84,6 +87,11 @@ open class SpecmaticJUnitSupport {
         @AfterAll
         @JvmStatic
         fun report() {
+            if(openApiCoverageReportInput.testResultRecords.isEmpty()) {
+                logger.newLine()
+                logger.log("WARNING: No tests were executed. This is often due to filters resulting in 0 matching tests.")
+            }
+            
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
             val reportConfiguration = getReportConfiguration()
             val config = specmaticConfig?.updateReportConfiguration(reportConfiguration) ?: SpecmaticConfig().updateReportConfiguration(reportConfiguration)

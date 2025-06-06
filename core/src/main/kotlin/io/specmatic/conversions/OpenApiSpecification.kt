@@ -125,6 +125,29 @@ class OpenApiSpecification(
             }
         }
 
+        //Note - Used by external libraries as of now
+        fun checkSpecValidity(openApiFilePath: String) {
+            val parseResult: SwaggerParseResult =
+                OpenAPIV3Parser().readContents(
+                    PassThroughHook().readContract(openApiFilePath),
+                    null,
+                    resolveExternalReferences(),
+                    openApiFilePath
+                )
+            if (parseResult.openAPI == null) {
+                throw ContractException("Could not parse contract $openApiFilePath, please validate the syntax using https://editor.swagger.io")
+            }
+            if (parseResult.messages?.isNotEmpty() == true) {
+                throw ContractException(
+                    "The OpenAPI file $openApiFilePath was read successfully but with some issues: ${
+                        parseResult.messages.joinToString(
+                            "\n"
+                        )
+                    }"
+                )
+            }
+        }
+
         fun fromYAML(
             yamlContent: String,
             openApiFilePath: String,

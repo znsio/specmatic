@@ -2955,4 +2955,190 @@ paths:
             )
         }
     }
+
+    @Nested
+    inner class CalculatePathTests {
+        @Test
+        fun `calculatePath should return empty set when no scenarios exist`() {
+            val feature = Feature(scenarios = emptyList(), name = "EmptyFeature")
+            val httpRequest = HttpRequest(method = "GET", path = "/test", body = StringValue("test"))
+
+            val paths = feature.calculatePath(httpRequest, 200)
+
+            assertThat(paths).isEmpty()
+        }
+
+        @Test
+        fun `calculatePath should return empty set when no scenarios match`() {
+            val scenario = Scenario(
+                name = "test",
+                httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    httpPathPattern = buildHttpPathPattern("/different"),
+                    body = StringPattern()
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 200,
+                    body = StringPattern()
+                )
+            )
+            val feature = Feature(scenarios = listOf(scenario), name = "TestFeature")
+            val httpRequest = HttpRequest(method = "GET", path = "/test", body = StringValue("test"))
+
+            val paths = feature.calculatePath(httpRequest, 200)
+
+            assertThat(paths).isEmpty()
+        }
+
+        @Test
+        fun `calculatePath should return paths from first matching scenario`() {
+            val scenario1 = Scenario(
+                name = "scenario1",
+                httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    httpPathPattern = buildHttpPathPattern("/test"),
+                    body = JSONObjectPattern(
+                        mapOf("field1" to AnyPattern(listOf(StringPattern()))),
+                        typeAlias = "(Request1)"
+                    )
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 200,
+                    body = StringPattern()
+                )
+            )
+            val scenario2 = Scenario(
+                name = "scenario2",
+                httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    httpPathPattern = buildHttpPathPattern("/test"),
+                    body = JSONObjectPattern(
+                        mapOf("field2" to AnyPattern(listOf(NumberPattern()))),
+                        typeAlias = "(Request2)"
+                    )
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 200,
+                    body = StringPattern()
+                )
+            )
+            val feature = Feature(scenarios = listOf(scenario1, scenario2), name = "TestFeature")
+            val httpRequest = HttpRequest(
+                method = "POST",
+                path = "/test",
+                body = JSONObjectValue(mapOf("field1" to StringValue("value")))
+            )
+
+            val paths = feature.calculatePath(httpRequest, 200)
+
+            assertThat(paths).containsExactly("{Request1}.field1{string}")
+        }
+
+        @Test
+        fun `calculatePath should handle 400 status code with different matching logic`() {
+            val scenario = Scenario(
+                name = "test",
+                httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    httpPathPattern = buildHttpPathPattern("/test"),
+                    body = JSONObjectPattern(
+                        mapOf("data" to AnyPattern(listOf(StringPattern()))),
+                        typeAlias = "(BadRequest)"
+                    )
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 400,
+                    body = StringPattern()
+                )
+            )
+            val feature = Feature(scenarios = listOf(scenario), name = "TestFeature")
+            val httpRequest = HttpRequest(
+                method = "POST",
+                path = "/test",
+                body = JSONObjectValue(mapOf("data" to StringValue("invalid")))
+            )
+
+            val paths = feature.calculatePath(httpRequest, 400)
+
+            assertThat(paths).containsExactly("{BadRequest}.data{string}")
+        }
+
+        @Test
+        fun `calculatePath should handle multiple scenarios with same path and method`() {
+            val scenario1 = Scenario(
+                name = "scenario1",
+                httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    httpPathPattern = buildHttpPathPattern("/test"),
+                    body = JSONObjectPattern(mapOf("type" to ExactValuePattern(StringValue("type1"))))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 200,
+                    body = StringPattern()
+                )
+            )
+            val scenario2 = Scenario(
+                name = "scenario2",
+                httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    httpPathPattern = buildHttpPathPattern("/test"),
+                    body = JSONObjectPattern(
+                        mapOf(
+                            "type" to ExactValuePattern(StringValue("type2")),
+                            "data" to AnyPattern(listOf(StringPattern()))
+                        ),
+                        typeAlias = "(Type2Request)"
+                    )
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 200,
+                    body = StringPattern()
+                )
+            )
+            val feature = Feature(scenarios = listOf(scenario1, scenario2), name = "TestFeature")
+            val httpRequest = HttpRequest(
+                method = "POST",
+                path = "/test",
+                body = JSONObjectValue(mapOf("type" to StringValue("type2"), "data" to StringValue("test")))
+            )
+
+            val paths = feature.calculatePath(httpRequest, 200)
+
+            // Should match second scenario since first one doesn't have the 'data' field
+            assertThat(paths).containsExactly("{Type2Request}.data{string}")
+        }
+
+        @Test
+        fun `calculatePath should handle scenario with no AnyPatterns`() {
+            val scenario = Scenario(
+                name = "test",
+                httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    httpPathPattern = buildHttpPathPattern("/test"),
+                    body = JSONObjectPattern(mapOf("field" to StringPattern()))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 200,
+                    body = StringPattern()
+                )
+            )
+            val feature = Feature(scenarios = listOf(scenario), name = "TestFeature")
+            val httpRequest = HttpRequest(
+                method = "POST",
+                path = "/test",
+                body = JSONObjectValue(mapOf("field" to StringValue("test")))
+            )
+
+            val paths = feature.calculatePath(httpRequest, 200)
+
+            assertThat(paths).isEmpty()
+        }
+    }
 }

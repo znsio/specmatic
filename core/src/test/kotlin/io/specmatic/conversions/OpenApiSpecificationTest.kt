@@ -10799,6 +10799,13 @@ paths:
         ))
     }
 
+    @Test
+    fun should_pass_checkSpecValidity_with_valid_openapi_file() {
+        assertThatCode {
+            OpenApiSpecification.checkSpecValidity("openApiTest.yaml")
+        }.doesNotThrowAnyException()
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

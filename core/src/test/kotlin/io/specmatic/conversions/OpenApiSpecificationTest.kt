@@ -10806,6 +10806,27 @@ paths:
         }.doesNotThrowAnyException()
     }
 
+    @Test
+    fun should_throw_ContractException_checkSpecValidity_with_invalid_openapi_file() {
+        val invalidOpenApiContent = """
+            invalid yaml content
+            this is not valid yaml: [
+        """.trimIndent()
+        
+        val invalidOpenApiFile = File("invalidOpenApi.yaml")
+        invalidOpenApiFile.createNewFile()
+        invalidOpenApiFile.writeText(invalidOpenApiContent)
+        
+        try {
+            assertThatThrownBy {
+                OpenApiSpecification.checkSpecValidity("invalidOpenApi.yaml")
+            }.isInstanceOf(ContractException::class.java)
+              .hasMessageContaining("Could not parse contract invalidOpenApi.yaml")
+        } finally {
+            invalidOpenApiFile.delete()
+        }
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

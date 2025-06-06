@@ -283,5 +283,7 @@ data class Endpoint(
     val sourceRepository: String? = null,
     val sourceRepositoryBranch: String? = null,
     val specification: String? = null,
-    val serviceType: String? = null
+    val serviceType: String? = null,
+    val requestContentType: String? = null,
+    val responseContentType: String? = null
 )

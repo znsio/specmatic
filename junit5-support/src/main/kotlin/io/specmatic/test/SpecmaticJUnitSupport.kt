@@ -483,7 +483,7 @@ open class SpecmaticJUnitSupport {
                 scenario.specification,
                 scenario.serviceType,
                 scenario.requestContentType,
-                scenario.httpRequestPattern.headersPattern.contentType
+                scenario.httpResponsePattern.headersPattern.contentType
             )
         }
 

@@ -125,7 +125,6 @@ class OpenApiSpecification(
             }
         }
 
-        //Note - Used by external libraries as of now
         fun checkSpecValidity(openApiFilePath: String) {
             val parseResult: SwaggerParseResult =
                 OpenAPIV3Parser().readContents(

@@ -113,10 +113,11 @@ class OpenApiSpecification(
             return OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences()) != null
         }
 
-        fun getImplicitOverlayContent(openApiFilePath: String): String {
+        private fun getImplicitOverlayContent(openApiFilePath: String): String {
             return File(openApiFilePath).let { openApiFile ->
-                if(!openApiFile.isFile)
+                if (!openApiFile.isFile) {
                     return@let ""
+                }
 
                 val overlayFile = openApiFile.canonicalFile.parentFile.resolve(openApiFile.nameWithoutExtension + "_overlay.yaml")
                 if(overlayFile.isFile) return@let overlayFile.readText()
@@ -128,10 +129,10 @@ class OpenApiSpecification(
         fun checkSpecValidity(openApiFilePath: String) {
             val parseResult: SwaggerParseResult =
                 OpenAPIV3Parser().readContents(
-                    PassThroughHook().readContract(openApiFilePath),
+                    checkExists(File(openApiFilePath)).readText(),
                     null,
                     resolveExternalReferences(),
-                    openApiFilePath
+                    openApiFilePath,
                 )
             if (parseResult.openAPI == null) {
                 throw ContractException("Could not parse contract $openApiFilePath, please validate the syntax using https://editor.swagger.io")
@@ -140,9 +141,9 @@ class OpenApiSpecification(
                 throw ContractException(
                     "The OpenAPI file $openApiFilePath was read successfully but with some issues: ${
                         parseResult.messages.joinToString(
-                            "\n"
+                            "\n",
                         )
-                    }"
+                    }",
                 )
             }
         }

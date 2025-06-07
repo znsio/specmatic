@@ -741,7 +741,7 @@ class ScenarioTest {
 
             val paths = scenario.calculatePath(httpRequest)
 
-            assertThat(paths).containsExactly("CustomObject")
+            assertThat(paths).containsExactly("{CustomObject}")
         }
 
         @Test
@@ -765,7 +765,7 @@ class ScenarioTest {
 
             val paths = scenario.calculatePath(httpRequest)
 
-            assertThat(paths).containsExactlyInAnyOrder("[0]{string}", "[1]{number}")
+            assertThat(paths).containsExactlyInAnyOrder("{[0]}{string}", "{[1]}{number}")
         }
 
         @Test
@@ -797,6 +797,8 @@ class ScenarioTest {
             val scenario = Scenario(
                 name = "test",
                 httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    path = "/test",
                     body = StringPattern()
                 ),
                 httpResponsePattern = HttpResponsePattern(
@@ -852,8 +854,8 @@ class ScenarioTest {
             val paths = scenario.calculatePath(httpRequest)
 
             assertThat(paths).containsExactlyInAnyOrder(
-                "{Container}.items[0].{Item}.value{string}",
-                "{Container}.items[1].{Item}.value{number}"
+                "{Container}.items[0]{Item}.value{string}",
+                "{Container}.items[1]{Item}.value{number}"
             )
         }
 

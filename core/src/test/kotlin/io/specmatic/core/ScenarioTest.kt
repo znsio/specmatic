@@ -798,7 +798,7 @@ class ScenarioTest {
                 name = "test",
                 httpRequestPattern = HttpRequestPattern(
                     method = "POST",
-                    path = "/test",
+                    httpPathPattern = buildHttpPathPattern("/test"),
                     body = StringPattern()
                 ),
                 httpResponsePattern = HttpResponsePattern(

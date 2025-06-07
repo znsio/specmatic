@@ -1130,7 +1130,7 @@ internal class AnyPatternTest {
 
             val paths = pattern.calculatePath(value, deferredResolver)
 
-            assertThat(paths).containsExactly("TestType")
+            assertThat(paths).containsExactly("{TestType}")
         }
 
         @Test
@@ -1142,7 +1142,7 @@ internal class AnyPatternTest {
 
             val paths = pattern.calculatePath(value, resolver)
 
-            assertThat(paths).containsExactly("CustomString")
+            assertThat(paths).containsExactly("{CustomString}")
         }
 
         @Test
@@ -1172,7 +1172,7 @@ internal class AnyPatternTest {
 
             val paths = pattern.calculatePath(value, resolver)
 
-            assertThat(paths).containsExactly("SimpleObject")
+            assertThat(paths).containsExactly("{SimpleObject}")
         }
 
         @Test
@@ -1211,7 +1211,7 @@ internal class AnyPatternTest {
 
             val paths = pattern.calculatePath(value, resolver)
 
-            assertThat(paths).containsExactly("StringType")
+            assertThat(paths).containsExactly("{StringType}")
         }
     }
 

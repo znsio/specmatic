@@ -1065,6 +1065,156 @@ internal class AnyPatternTest {
         }
     }
 
+    @Nested
+    inner class CalculatePathTests {
+        @Test
+        fun `calculatePath should return empty set when pattern list is empty`() {
+            val pattern = AnyPattern(emptyList())
+            val value = StringValue("test")
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).isEmpty()
+        }
+
+        @Test
+        fun `calculatePath should return empty set when no patterns match`() {
+            val pattern = AnyPattern(listOf(NumberPattern()))
+            val value = StringValue("test")
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).isEmpty()
+        }
+
+        @Test
+        fun `calculatePath should return scalar type name for matching scalar pattern`() {
+            val pattern = AnyPattern(listOf(StringPattern(), NumberPattern()))
+            val value = StringValue("test")
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).containsExactly("string")
+        }
+
+        @Test
+        fun `calculatePath should return number type name for matching number pattern`() {
+            val pattern = AnyPattern(listOf(StringPattern(), NumberPattern()))
+            val value = NumberValue(42)
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).containsExactly("number")
+        }
+
+        @Test
+        fun `calculatePath should return boolean type name for matching boolean pattern`() {
+            val pattern = AnyPattern(listOf(StringPattern(), BooleanPattern()))
+            val value = BooleanValue(true)
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).containsExactly("boolean")
+        }
+
+        @Test
+        fun `calculatePath should extract typeAlias from DeferredPattern`() {
+            val pattern = AnyPattern(listOf(DeferredPattern("(TestType)")))
+            val deferredResolver = Resolver(newPatterns = mapOf("(TestType)" to StringPattern()))
+            val value = StringValue("test")
+
+            val paths = pattern.calculatePath(value, deferredResolver)
+
+            assertThat(paths).containsExactly("{TestType}")
+        }
+
+        @Test
+        fun `calculatePath should use typeAlias from pattern when available`() {
+            val patternWithAlias = StringPattern(typeAlias = "(CustomString)")
+            val pattern = AnyPattern(listOf(patternWithAlias))
+            val value = StringValue("test")
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).containsExactly("{CustomString}")
+        }
+
+        @Test
+        fun `calculatePath should recurse into JSONObjectPattern with nested AnyPatterns`() {
+            val nestedPattern = JSONObjectPattern(
+                pattern = mapOf("nested" to AnyPattern(listOf(StringPattern()))),
+                typeAlias = "(NestedObject)"
+            )
+            val pattern = AnyPattern(listOf(nestedPattern))
+            val value = JSONObjectValue(mapOf("nested" to StringValue("test")))
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).containsExactly("{NestedObject}.nested{string}")
+        }
+
+        @Test
+        fun `calculatePath should return typeAlias for JSONObjectPattern without nested AnyPatterns`() {
+            val nestedPattern = JSONObjectPattern(
+                pattern = mapOf("field" to StringPattern()),
+                typeAlias = "(SimpleObject)"
+            )
+            val pattern = AnyPattern(listOf(nestedPattern))
+            val value = JSONObjectValue(mapOf("field" to StringValue("test")))
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).containsExactly("{SimpleObject}")
+        }
+
+        @Test
+        fun `calculatePath should return index notation for patterns without typeAlias`() {
+            val patternWithoutAlias = JSONObjectPattern(pattern = mapOf("field" to StringPattern()))
+            val pattern = AnyPattern(listOf(StringPattern(), patternWithoutAlias))
+            val value = JSONObjectValue(mapOf("field" to StringValue("test")))
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).containsExactly("{[1]}")
+        }
+
+        @Test
+        fun `calculatePath should handle pattern with discriminator`() {
+            val discriminator = Discriminator(
+                property = "type",
+                values = setOf("string_type"),
+                mapping = mapOf("string_type" to "#/components/schemas/StringType")
+            )
+            val pattern = AnyPattern(
+                listOf(
+                    JSONObjectPattern(
+                        mapOf("type" to ExactValuePattern(StringValue("string_type")), "value" to StringPattern()),
+                        typeAlias = "(StringType)"
+                    )
+                ),
+                discriminator = discriminator
+            )
+            val value = JSONObjectValue(mapOf(
+                "type" to StringValue("string_type"),
+                "value" to StringValue("test")
+            ))
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).containsExactly("{StringType}")
+        }
+    }
+
     private fun String.toDiscriminator(): ExactValuePattern {
         return ExactValuePattern(StringValue(this))
     }

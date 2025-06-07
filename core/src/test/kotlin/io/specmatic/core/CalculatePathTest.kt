@@ -112,7 +112,7 @@ internal class CalculatePathTest {
         val paths = scenario.calculatePath(httpRequest)
         
         // For array at top level, paths should be in the format "[0]{string}", "[1]{number}", etc.
-        assertThat(paths).containsExactlyInAnyOrder("[0]{string}", "[1]{number}", "[2]{string}")
+        assertThat(paths).containsExactlyInAnyOrder("{[0]}{string}", "{[1]}{number}", "{[2]}{string}")
     }
 
     @Test
@@ -251,8 +251,7 @@ internal class CalculatePathTest {
             method = "POST",
             path = "/test",
             body = JSONObjectValue(mapOf(
-                "field1" to StringValue("value1"),
-                "field2" to NumberValue(42)
+                "field1" to StringValue("value1")
             ))
         )
 
@@ -426,7 +425,7 @@ internal class CalculatePathTest {
 
         val paths = scenario.calculatePath(httpRequest)
         
-        assertThat(paths).containsExactly("AddressRef")
+        assertThat(paths).containsExactly("{AddressRef}")
     }
     
     @Test
@@ -467,7 +466,7 @@ internal class CalculatePathTest {
 
         val paths = scenario.calculatePath(httpRequest)
         
-        assertThat(paths).containsExactly("AddressRef")
+        assertThat(paths).containsExactly("{AddressRef}")
     }
     
     @Test
@@ -604,7 +603,7 @@ internal class CalculatePathTest {
 
         val paths = scenario.calculatePath(httpRequest)
         
-        assertThat(paths).containsExactlyInAnyOrder("[0]{AddressRef}", "[1]{Address}")
+        assertThat(paths).containsExactlyInAnyOrder("{[0]}{AddressRef}", "{[1]}{Address}")
     }
     
     @Test
@@ -762,6 +761,50 @@ internal class CalculatePathTest {
         val paths = level1Pattern.calculatePath(value, Resolver())
         
         assertThat(paths).containsExactly("{Level1Object}.level2{Level2Object}.level3{Level3Object}.data{string}")
+    }
+
+    @Test
+    fun `calculatePath should return only the keys that at some level contain an AnyPattern`() {
+        // Test case 1: Nested structure with typeAlias at multiple levels
+        val level3Pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "keyAppears" to AnyPattern(listOf(StringPattern(), NumberPattern())),
+                "keyDoesNotAppear" to StringPattern()
+            ),
+            typeAlias = "(Level3Object)"
+        )
+
+        val level2Pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "keyAppears" to level3Pattern,
+                "keyDoesNotAppear?" to JSONObjectPattern(
+                    pattern = mapOf("key" to StringPattern())
+                )
+            ),
+            typeAlias = "(Level2Object)"
+        )
+
+        val level1Pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "keyAppears" to level2Pattern,
+                "keyDoesNotAppear?" to StringPattern()
+            ),
+            typeAlias = "(Level1Object)"
+        )
+
+        val value = JSONObjectValue(mapOf(
+            "keyDoesNotAppear" to StringValue("not relevant"),
+            "keyAppears" to JSONObjectValue(mapOf(
+                "keyDoesNotAppear" to StringValue("not relevant"),
+                "keyAppears" to JSONObjectValue(mapOf(
+                    "keyAppears" to StringValue("test")
+                ))
+            ))
+        ))
+
+        val paths = level1Pattern.calculatePath(value, Resolver())
+
+        assertThat(paths).containsExactly("{Level1Object}.keyAppears{Level2Object}.keyAppears{Level3Object}.keyAppears{string}")
     }
     
     @Test

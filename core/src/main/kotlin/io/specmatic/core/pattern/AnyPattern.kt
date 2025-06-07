@@ -543,14 +543,14 @@ data class AnyPattern(
             } else {
                 // JSONObjectPattern but no nested AnyPatterns found
                 if (patternTypeAlias != null && patternTypeAlias.isNotBlank()) {
-                    return setOf(patternTypeAlias)
+                    return setOf("{$patternTypeAlias}")
                 }
             }
         }
         
         // If the matching pattern has a typeAlias, use it
         if (patternTypeAlias != null && patternTypeAlias.isNotBlank()) {
-            return setOf(patternTypeAlias)
+            return setOf("{$patternTypeAlias}")
         }
         
         // If no typeAlias and it's a simple scalar pattern, return the scalar type name

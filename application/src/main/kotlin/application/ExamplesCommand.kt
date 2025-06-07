@@ -1,5 +1,6 @@
 package application
 
+import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.examples.module.*
 import io.specmatic.core.examples.server.ScenarioFilter
@@ -114,16 +115,18 @@ https://docs.specmatic.io/documentation/contract_tests.html#supported-filters--o
         override fun call(): Int {
             configureLogger(this.verbose)
 
-            if (contractFile != null && exampleFile != null) return validateExampleFile(contractFile!!, exampleFile)
+            if(contractFile != null) {
+                OpenApiSpecification.checkSpecValidity(contractFile!!.canonicalPath)
 
-            if (contractFile != null && examplesDir != null) {
-                val (exitCode, validationResults) = validateExamplesDir(contractFile!!, examplesDir)
+                if(exampleFile != null) return validateExampleFile(contractFile!!, exampleFile)
+                if(examplesDir != null) {
+                    val (exitCode, validationResults) = validateExamplesDir(contractFile!!, examplesDir)
 
-                printValidationResult(validationResults.exampleValidationResults, "Example directory")
-                return if (exitCode == FAILURE_EXIT_CODE) FAILURE_EXIT_CODE else validationResults.exitCode
+                    printValidationResult(validationResults.exampleValidationResults, "Example directory")
+                    return if (exitCode == FAILURE_EXIT_CODE) FAILURE_EXIT_CODE else validationResults.exitCode
+                }
+                return validateImplicitExamplesFrom(contractFile!!)
             }
-
-            if (contractFile != null) return validateImplicitExamplesFrom(contractFile!!)
 
             if (specsDir != null && examplesBaseDir != null) {
                 logger.log("- Validating associated examples in the directory: ${examplesBaseDir.path}")
@@ -191,7 +194,9 @@ https://docs.specmatic.io/documentation/contract_tests.html#supported-filters--o
 
         private fun validateAllExamplesAssociatedToEachSpecIn(specsDir: File, examplesBaseDir: File): List<ValidationResults> {
             val ordinal = AtomicInteger(1)
-            val allSpecFiles = specsDir.walk().filter(File::isFile).filter { isOpenAPI(it.canonicalPath) }
+            val allSpecFiles = specsDir.walk().filter(File::isFile).filter { isOpenAPI(it.canonicalPath) }.onEach {
+                OpenApiSpecification.checkSpecValidity(it.canonicalPath)
+            }
 
             val validationResults = allSpecFiles.map { specFile ->
                 val relativeSpecPath = specsDir.toPath().relativize(specFile.toPath()).toString()

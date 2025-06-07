@@ -10799,6 +10799,79 @@ paths:
         ))
     }
 
+    @Test
+    fun `should pass checkSpecValidity with valid openapi file`() {
+        assertThatCode {
+            OpenApiSpecification.checkSpecValidity("openApiTest.yaml")
+        }.doesNotThrowAnyException()
+    }
+
+    @Test
+    fun `checkSpecValidity should throw ContractException with invalid openapi file`(@TempDir tempDir: File) {
+        val invalidOpenApiContent = """
+            invalid yaml content
+            this is not valid yaml: [
+        """.trimIndent()
+        
+        val invalidOpenApiFile = tempDir.resolve(File("invalidOpenApi.yaml"))
+        invalidOpenApiFile.createNewFile()
+        invalidOpenApiFile.writeText(invalidOpenApiContent)
+        
+        try {
+            assertThatThrownBy {
+                OpenApiSpecification.checkSpecValidity(invalidOpenApiFile.canonicalPath)
+            }.isInstanceOf(ContractException::class.java)
+                .hasMessageContaining("Could not parse contract")
+                .hasMessageContainingAll("Could not parse contract", invalidOpenApiFile.name)
+        } finally {
+            invalidOpenApiFile.delete()
+        }
+    }
+
+    @Test
+    fun `checkSpecValidity should throw ContractException when a valid openapi file gets parsed with issues`(@TempDir tempDir: File) {
+        val invalidOpenApiContent = """
+            openapi: 3.0.1
+            servers:
+              - url: "http://localhost:3000"
+            paths:
+              "/products/{id}":
+                get:
+                  summary: Get a product by ID
+                  parameters:
+                    - name: id
+                      in: path
+                      required: true
+                      schema:
+                        type: integer
+                  responses:
+                    '200':
+                      description: Successful response
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+        """.trimIndent()
+
+        val invalidOpenApiFile = tempDir.resolve(File("invalidOpenApi.yaml"))
+        invalidOpenApiFile.createNewFile()
+        invalidOpenApiFile.writeText(invalidOpenApiContent)
+
+        try {
+            assertThatThrownBy {
+                OpenApiSpecification.checkSpecValidity(invalidOpenApiFile.canonicalPath)
+            }.isInstanceOf(ContractException::class.java)
+                .hasMessageContaining("attribute info is missing")
+        } finally {
+            invalidOpenApiFile.delete()
+        }
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

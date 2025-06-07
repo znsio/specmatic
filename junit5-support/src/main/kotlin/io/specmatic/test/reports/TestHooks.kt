@@ -13,6 +13,7 @@ import io.specmatic.test.reports.coverage.Endpoint
 
 data class TestExecutionResult(
     val name: String,
+    val details: String,
     val scenario: Scenario,
     val testResult: TestResult,
     val valid: Boolean,
@@ -60,7 +61,8 @@ object TestReportHooks {
             request = httpLogMessage.request,
             requestTime = httpLogMessage.requestTime.toEpochMillis(),
             response = httpLogMessage.response,
-            responseTime = httpLogMessage.responseTime?.toEpochMillis()
+            responseTime = httpLogMessage.responseTime?.toEpochMillis(),
+            details = testResultRecord.scenarioResult?.reportString() ?: "No details found for this test"
         )
 
         onEachListener { onTestResult(testExecutionResult) }

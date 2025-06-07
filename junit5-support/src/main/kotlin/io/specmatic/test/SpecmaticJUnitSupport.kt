@@ -481,7 +481,9 @@ open class SpecmaticJUnitSupport {
                 scenario.sourceRepository,
                 scenario.sourceRepositoryBranch,
                 scenario.specification,
-                scenario.serviceType
+                scenario.serviceType,
+                scenario.requestContentType,
+                scenario.httpResponsePattern.headersPattern.contentType
             )
         }
 

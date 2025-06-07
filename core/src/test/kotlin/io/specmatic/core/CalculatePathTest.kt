@@ -762,6 +762,50 @@ internal class CalculatePathTest {
         
         assertThat(paths).containsExactly("{Level1Object}.level2{Level2Object}.level3{Level3Object}.data{string}")
     }
+
+    @Test
+    fun `calculatePath should return only the keys that at some level contain an AnyPattern`() {
+        // Test case 1: Nested structure with typeAlias at multiple levels
+        val level3Pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "keyAppears" to AnyPattern(listOf(StringPattern(), NumberPattern())),
+                "keyDoesNotAppear" to StringPattern()
+            ),
+            typeAlias = "(Level3Object)"
+        )
+
+        val level2Pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "keyAppears" to level3Pattern,
+                "keyDoesNotAppear?" to JSONObjectPattern(
+                    pattern = mapOf("key" to StringPattern())
+                )
+            ),
+            typeAlias = "(Level2Object)"
+        )
+
+        val level1Pattern = JSONObjectPattern(
+            pattern = mapOf(
+                "keyAppears" to level2Pattern,
+                "keyDoesNotAppear?" to StringPattern()
+            ),
+            typeAlias = "(Level1Object)"
+        )
+
+        val value = JSONObjectValue(mapOf(
+            "keyDoesNotAppear" to StringValue("not relevant"),
+            "keyAppears" to JSONObjectValue(mapOf(
+                "keyDoesNotAppear" to StringValue("not relevant"),
+                "keyAppears" to JSONObjectValue(mapOf(
+                    "keyAppears" to StringValue("test")
+                ))
+            ))
+        ))
+
+        val paths = level1Pattern.calculatePath(value, Resolver())
+
+        assertThat(paths).containsExactly("{Level1Object}.keyAppears{Level2Object}.keyAppears{Level3Object}.keyAppears{string}")
+    }
     
     @Test
     fun `calculatePath should handle nested AnyPattern containing JSONObjectPattern`() {

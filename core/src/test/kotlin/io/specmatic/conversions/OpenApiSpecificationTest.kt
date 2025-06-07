@@ -10872,6 +10872,74 @@ paths:
         }
     }
 
+    @Test
+    fun `getImplicitOverlayContent should return empty string when OpenAPI file does not exist`(@TempDir tempDir: File) {
+        val nonExistentOpenApiFile = tempDir.resolve("non_existent_api.yaml")
+        
+        val result = OpenApiSpecification.getImplicitOverlayContent(nonExistentOpenApiFile.canonicalPath)
+        
+        assertThat(result).isEmpty()
+    }
+
+    @Test
+    fun `getImplicitOverlayContent should return empty string when OpenAPI file exists but overlay file does not exist`(@TempDir tempDir: File) {
+        val openApiContent = """
+            openapi: 3.0.0
+            info:
+              title: Test API
+              version: 1.0.0
+            paths:
+              /test:
+                get:
+                  responses:
+                    '200':
+                      description: Success
+        """.trimIndent()
+        
+        val openApiFile = tempDir.resolve("test_api.yaml")
+        openApiFile.writeText(openApiContent)
+        
+        val result = OpenApiSpecification.getImplicitOverlayContent(openApiFile.canonicalPath)
+        
+        assertThat(result).isEmpty()
+    }
+
+    @Test
+    fun `getImplicitOverlayContent should return overlay content when both OpenAPI file and overlay file exist`(@TempDir tempDir: File) {
+        val openApiContent = """
+            openapi: 3.0.0
+            info:
+              title: Test API
+              version: 1.0.0
+            paths:
+              /test:
+                get:
+                  responses:
+                    '200':
+                      description: Success
+        """.trimIndent()
+        
+        val overlayContent = """
+            overlay: 1.0.0
+            info:
+              title: Test API with Overlay
+              version: 1.0.1
+            actions:
+              - target: $.info.description
+                update: "API with overlay applied"
+        """.trimIndent()
+        
+        val openApiFile = tempDir.resolve("test_api.yaml")
+        openApiFile.writeText(openApiContent)
+        
+        val overlayFile = tempDir.resolve("test_api_overlay.yaml")
+        overlayFile.writeText(overlayContent)
+        
+        val result = OpenApiSpecification.getImplicitOverlayContent(openApiFile.canonicalPath)
+        
+        assertThat(result).isEqualTo(overlayContent)
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

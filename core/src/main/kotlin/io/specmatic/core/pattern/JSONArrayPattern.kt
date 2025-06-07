@@ -141,14 +141,22 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
                         // For AnyPattern, get the path and add array index prefix
                         val anyPatternPaths = resolvedPattern.calculatePath(arrayItem, resolver)
                         anyPatternPaths.map { path ->
-                            "[$index]$path"
+                            if (path in setOf("string", "number", "boolean")) {
+                                "{[$index]}{$path}"
+                            } else {
+                                "{[$index]}$path"
+                            }
                         }
                     }
                     is JSONObjectPattern -> {
                         // For JSONObjectPattern, recursively get paths and add array index prefix
                         val nestedPaths = resolvedPattern.calculatePath(arrayItem, resolver)
                         nestedPaths.map { nestedPath ->
-                            "[$index].$nestedPath"
+                            if (nestedPath.startsWith("{")) {
+                                "{[$index]}$nestedPath"
+                            } else {
+                                "{[$index]}.$nestedPath"
+                            }
                         }
                     }
                     else -> emptyList()
@@ -161,13 +169,21 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
                         is AnyPattern -> {
                             val anyPatternPaths = resolvedPattern.calculatePath(arrayItem, resolver)
                             anyPatternPaths.map { path ->
-                                "[$index]$path"
+                                if (path in setOf("string", "number", "boolean")) {
+                                    "{[$index]}{$path}"
+                                } else {
+                                    "{[$index]}$path"
+                                }
                             }
                         }
                         is JSONObjectPattern -> {
                             val nestedPaths = resolvedPattern.calculatePath(arrayItem, resolver)
                             nestedPaths.map { nestedPath ->
-                                "[$index].$nestedPath"
+                                if (nestedPath.startsWith("{")) {
+                                    "{[$index]}$nestedPath"
+                                } else {
+                                    "{[$index]}.$nestedPath"
+                                }
                             }
                         }
                         else -> emptyList()

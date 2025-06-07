@@ -807,35 +807,8 @@ data class Scenario(
             else -> emptySet()
         }
         
-        // For top-level AnyPattern that returns scalar type names, wrap them in braces
-        return if (bodyPattern is AnyPattern) {
-            paths.map { path ->
-                // If it's a simple scalar type name (string, number, boolean), wrap in braces
-                if (path in setOf("string", "number", "boolean")) {
-                    "{$path}"
-                } else {
-                    path
-                }
-            }.toSet()
-        } else if (bodyPattern is ListPattern) {
-            // For ListPattern, wrap array indices in braces: [0]{string} -> {[0]}{string}
-            paths.map { path ->
-                if (path.matches(Regex("\\[\\d+]\\{.+}"))) {
-                    val indexMatch = Regex("\\[(\\d+)]\\{(.+)}").find(path)
-                    if (indexMatch != null) {
-                        val index = indexMatch.groupValues[1]
-                        val content = indexMatch.groupValues[2]
-                        "{[$index]}{$content}"
-                    } else {
-                        path
-                    }
-                } else {
-                    path
-                }
-            }.toSet()
-        } else {
-            paths
-        }
+        // Return paths as-is since they're already formatted correctly
+        return paths
     }
 
     fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?): Scenario {

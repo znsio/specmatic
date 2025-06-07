@@ -518,6 +518,8 @@ data class JSONObjectPattern(
             anyPatternPaths.map { anyPatternInfo ->
                 if (anyPatternInfo.startsWith("{")) {
                     "$pathPrefix$anyPatternInfo"
+                } else if (anyPatternInfo in setOf("string", "number", "boolean")) {
+                    "$pathPrefix{$anyPatternInfo}"
                 } else {
                     "$pathPrefix.$anyPatternInfo"
                 }
@@ -581,12 +583,16 @@ data class JSONObjectPattern(
                     val cleanTypeAlias = withoutPatternDelimiters(typeAlias)
                     if (anyPath.startsWith("{")) {
                         "{$cleanTypeAlias}.$key[$index]$anyPath"
+                    } else if (anyPath in setOf("string", "number", "boolean")) {
+                        "{$cleanTypeAlias}.$key[$index]{$anyPath}"
                     } else {
                         "{$cleanTypeAlias}.$key[$index].$anyPath"
                     }
                 } else {
                     if (anyPath.startsWith("{")) {
                         "$key[$index]$anyPath"
+                    } else if (anyPath in setOf("string", "number", "boolean")) {
+                        "$key[$index]{$anyPath}"
                     } else {
                         "$key[$index].$anyPath"
                     }

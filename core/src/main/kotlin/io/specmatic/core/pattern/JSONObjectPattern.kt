@@ -504,10 +504,7 @@ data class JSONObjectPattern(
         }
     }
     
-    private fun needsBraces(path: String): Boolean {
-        return path.isNotEmpty() && path.all { it.isLetterOrDigit() }
-    }
-    
+
     private fun calculatePathForAnyPattern(key: String, childValue: Value, anyPattern: AnyPattern, resolver: Resolver): List<String> {
         val anyPatternPaths = anyPattern.calculatePath(childValue, resolver)
         val pathPrefix = if (!typeAlias.isNullOrBlank()) {
@@ -519,15 +516,10 @@ data class JSONObjectPattern(
         
         return if (anyPatternPaths.isNotEmpty()) {
             anyPatternPaths.map { anyPatternInfo ->
-                val formattedInfo = when {
-                    needsBraces(anyPatternInfo) -> "{$anyPatternInfo}"
-                    else -> anyPatternInfo
-                }
-
-                if (formattedInfo.startsWith("{")) {
-                    "$pathPrefix$formattedInfo"
+                if (anyPatternInfo.startsWith("{")) {
+                    "$pathPrefix$anyPatternInfo"
                 } else {
-                    "$pathPrefix.$formattedInfo"
+                    "$pathPrefix.$anyPatternInfo"
                 }
             }
         } else {
@@ -585,24 +577,18 @@ data class JSONObjectPattern(
         
         return if (anyPatternPaths.isNotEmpty()) {
             anyPatternPaths.map { anyPath ->
-                val formattedPath = if (needsBraces(anyPath)) {
-                    "{$anyPath}"
-                } else {
-                    anyPath
-                }
-                
                 if (!typeAlias.isNullOrBlank()) {
                     val cleanTypeAlias = withoutPatternDelimiters(typeAlias)
-                    if (formattedPath.startsWith("{")) {
-                        "{$cleanTypeAlias}.$key[$index]$formattedPath"
+                    if (anyPath.startsWith("{")) {
+                        "{$cleanTypeAlias}.$key[$index]$anyPath"
                     } else {
-                        "{$cleanTypeAlias}.$key[$index].$formattedPath"
+                        "{$cleanTypeAlias}.$key[$index].$anyPath"
                     }
                 } else {
-                    if (formattedPath.startsWith("{")) {
-                        "$key[$index]$formattedPath"
+                    if (anyPath.startsWith("{")) {
+                        "$key[$index]$anyPath"
                     } else {
-                        "$key[$index].$formattedPath"
+                        "$key[$index].$anyPath"
                     }
                 }
             }

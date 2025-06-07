@@ -141,13 +141,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
                         // For AnyPattern, get the path and add array index prefix
                         val anyPatternPaths = resolvedPattern.calculatePath(arrayItem, resolver)
                         anyPatternPaths.map { path ->
-                            // Wrap scalar type names in braces for consistency
-                            val wrappedPath = if (path in setOf("string", "number", "boolean")) {
-                                "{$path}"
-                            } else {
-                                path
-                            }
-                            "[$index]$wrappedPath"
+                            "[$index]$path"
                         }
                     }
                     is JSONObjectPattern -> {
@@ -167,13 +161,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
                         is AnyPattern -> {
                             val anyPatternPaths = resolvedPattern.calculatePath(arrayItem, resolver)
                             anyPatternPaths.map { path ->
-                                // Wrap scalar type names in braces for consistency
-                                val wrappedPath = if (path in setOf("string", "number", "boolean")) {
-                                    "{$path}"
-                                } else {
-                                    path
-                                }
-                                "[$index]$wrappedPath"
+                                "[$index]$path"
                             }
                         }
                         is JSONObjectPattern -> {

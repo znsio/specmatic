@@ -253,7 +253,7 @@ data class ListPattern(
                     // For AnyPattern, get the path and add array index prefix
                     val anyPatternPaths = resolvedPattern.calculatePath(arrayItem, resolver)
                     anyPatternPaths.map { path ->
-                        "[$index]{$path}"
+                        "[$index]$path"
                     }
                 }
                 is JSONObjectPattern -> {

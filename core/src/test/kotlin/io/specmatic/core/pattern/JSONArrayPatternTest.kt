@@ -399,7 +399,7 @@ paths:
 
             val paths = pattern.calculatePath(value, resolver)
 
-            assertThat(paths).containsExactlyInAnyOrder("[0]{string}", "[1]{number}")
+            assertThat(paths).containsExactlyInAnyOrder("{[0]}{string}", "{[1]}{number}")
         }
 
         @Test
@@ -418,8 +418,8 @@ paths:
             val paths = pattern.calculatePath(value, resolver)
 
             assertThat(paths).containsExactlyInAnyOrder(
-                "[0].{Item}.data{string}",
-                "[1].{Item}.data{string}"
+                "{[0]}{Item}.data{string}",
+                "{[1]}{Item}.data{string}"
             )
         }
 
@@ -439,7 +439,7 @@ paths:
 
             val paths = pattern.calculatePath(value, resolver)
 
-            assertThat(paths).containsExactlyInAnyOrder("[0]{string}", "[1]{number}", "[2]{boolean}")
+            assertThat(paths).containsExactlyInAnyOrder("{[0]}{string}", "{[1]}{number}", "{[2]}{boolean}")
         }
 
         @Test
@@ -454,7 +454,7 @@ paths:
 
             val paths = pattern.calculatePath(value, resolver)
 
-            assertThat(paths).containsExactlyInAnyOrder("[0]{string}", "[1]{string}", "[2]{string}")
+            assertThat(paths).containsExactlyInAnyOrder("{[0]}{string}", "{[1]}{string}", "{[2]}{string}")
         }
 
         @Test
@@ -473,7 +473,7 @@ paths:
 
             val paths = pattern.calculatePath(value, resolver)
 
-            assertThat(paths).containsExactlyInAnyOrder("[0]{string}", "[1]{number}")
+            assertThat(paths).containsExactlyInAnyOrder("{[0]}{string}", "{[1]}{number}")
         }
 
         @Test
@@ -495,8 +495,8 @@ paths:
             val paths = pattern.calculatePath(value, resolver)
 
             assertThat(paths).containsExactlyInAnyOrder(
-                "[0].{NestedItem}.value{string}",
-                "[1].{NestedItem}.value{number}"
+                "{[0]}{NestedItem}.value{string}",
+                "{[1]}{NestedItem}.value{number}"
             )
         }
 
@@ -508,7 +508,7 @@ paths:
 
             val paths = pattern.calculatePath(value, resolver)
 
-            assertThat(paths).containsExactly("[0]{string}")
+            assertThat(paths).containsExactly("{[0]}{string}")
         }
 
         @Test

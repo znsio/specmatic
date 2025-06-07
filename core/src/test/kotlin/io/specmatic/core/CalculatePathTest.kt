@@ -112,7 +112,7 @@ internal class CalculatePathTest {
         val paths = scenario.calculatePath(httpRequest)
         
         // For array at top level, paths should be in the format "[0]{string}", "[1]{number}", etc.
-        assertThat(paths).containsExactlyInAnyOrder("[0]{string}", "[1]{number}", "[2]{string}")
+        assertThat(paths).containsExactlyInAnyOrder("{[0]}{string}", "{[1]}{number}", "{[2]}{string}")
     }
 
     @Test
@@ -426,7 +426,7 @@ internal class CalculatePathTest {
 
         val paths = scenario.calculatePath(httpRequest)
         
-        assertThat(paths).containsExactly("AddressRef")
+        assertThat(paths).containsExactly("{AddressRef}")
     }
     
     @Test
@@ -467,7 +467,7 @@ internal class CalculatePathTest {
 
         val paths = scenario.calculatePath(httpRequest)
         
-        assertThat(paths).containsExactly("AddressRef")
+        assertThat(paths).containsExactly("{AddressRef}")
     }
     
     @Test
@@ -604,7 +604,7 @@ internal class CalculatePathTest {
 
         val paths = scenario.calculatePath(httpRequest)
         
-        assertThat(paths).containsExactlyInAnyOrder("[0]{AddressRef}", "[1]{Address}")
+        assertThat(paths).containsExactlyInAnyOrder("{[0]}{AddressRef}", "{[1]}{Address}")
     }
     
     @Test

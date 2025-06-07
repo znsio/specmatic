@@ -789,7 +789,7 @@ class ScenarioTest {
 
             val paths = scenario.calculatePath(httpRequest)
 
-            assertThat(paths).containsExactlyInAnyOrder("[0]{string}", "[1]{string}")
+            assertThat(paths).containsExactlyInAnyOrder("{[0]}{string}", "{[1]}{string}")
         }
 
         @Test

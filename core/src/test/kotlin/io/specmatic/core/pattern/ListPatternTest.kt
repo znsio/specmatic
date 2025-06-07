@@ -840,7 +840,7 @@ Feature: Recursive test
 
             val paths = pattern.calculatePath(value, resolver)
 
-            assertThat(paths).containsExactlyInAnyOrder("[0]{string}", "[1]{number}", "[2]{string}")
+            assertThat(paths).containsExactlyInAnyOrder("{[0]}{string}", "{[1]}{number}", "{[2]}{string}")
         }
 
         @Test
@@ -859,8 +859,8 @@ Feature: Recursive test
             val paths = pattern.calculatePath(value, resolver)
 
             assertThat(paths).containsExactlyInAnyOrder(
-                "[0].{ListItem}.data{string}",
-                "[1].{ListItem}.data{string}"
+                "{[0]}{ListItem}.data{string}",
+                "{[1]}{ListItem}.data{string}"
             )
         }
 
@@ -883,8 +883,8 @@ Feature: Recursive test
             val paths = pattern.calculatePath(value, resolver)
 
             assertThat(paths).containsExactlyInAnyOrder(
-                "[0].{NestedListItem}.value{string}",
-                "[1].{NestedListItem}.value{number}"
+                "{[0]}{NestedListItem}.value{string}",
+                "{[1]}{NestedListItem}.value{number}"
             )
         }
 
@@ -899,7 +899,7 @@ Feature: Recursive test
 
             val paths = pattern.calculatePath(value, resolver)
 
-            assertThat(paths).containsExactly("[0].data{string}")
+            assertThat(paths).containsExactly("{[0]}.data{string}")
         }
 
         @Test

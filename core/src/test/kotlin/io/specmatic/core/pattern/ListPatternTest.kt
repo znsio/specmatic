@@ -921,7 +921,7 @@ Feature: Recursive test
 
             val paths = pattern.calculatePath(value, resolver)
 
-            assertThat(paths).containsExactly("[0]{TestType}")
+            assertThat(paths).containsExactly("{[0]}{TestType}")
         }
 
         @Test
@@ -933,7 +933,7 @@ Feature: Recursive test
             val paths = pattern.calculatePath(largeArray, resolver)
 
             assertThat(paths).hasSize(100)
-            assertThat(paths).allMatch { it.matches(Regex("\\[\\d+]\\{string}")) }
+            assertThat(paths).allMatch { it.matches(Regex("\\{\\[\\d+]\\}\\{string\\}")) }
         }
     }
 }

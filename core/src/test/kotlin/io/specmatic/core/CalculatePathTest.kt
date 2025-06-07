@@ -251,8 +251,7 @@ internal class CalculatePathTest {
             method = "POST",
             path = "/test",
             body = JSONObjectValue(mapOf(
-                "field1" to StringValue("value1"),
-                "field2" to NumberValue(42)
+                "field1" to StringValue("value1")
             ))
         )
 

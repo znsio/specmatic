@@ -807,8 +807,19 @@ data class Scenario(
             else -> emptySet()
         }
         
-        // Return paths as-is since they're already formatted correctly
-        return paths
+        // For top-level AnyPattern that returns scalar type names, wrap them in braces
+        return if (bodyPattern is AnyPattern) {
+            paths.map { path ->
+                // If it's a simple scalar type name (string, number, boolean), wrap in braces
+                if (path in setOf("string", "number", "boolean")) {
+                    "{$path}"
+                } else {
+                    path
+                }
+            }.toSet()
+        } else {
+            paths
+        }
     }
 
     fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?): Scenario {

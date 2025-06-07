@@ -817,6 +817,22 @@ data class Scenario(
                     path
                 }
             }.toSet()
+        } else if (bodyPattern is ListPattern) {
+            // For ListPattern, wrap array indices in braces: [0]{string} -> {[0]}{string}
+            paths.map { path ->
+                if (path.matches(Regex("\\[\\d+]\\{.+}"))) {
+                    val indexMatch = Regex("\\[(\\d+)]\\{(.+)}").find(path)
+                    if (indexMatch != null) {
+                        val index = indexMatch.groupValues[1]
+                        val content = indexMatch.groupValues[2]
+                        "{[$index]}{$content}"
+                    } else {
+                        path
+                    }
+                } else {
+                    path
+                }
+            }.toSet()
         } else {
             paths
         }

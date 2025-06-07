@@ -113,7 +113,7 @@ class OpenApiSpecification(
             return OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences()) != null
         }
 
-        private fun getImplicitOverlayContent(openApiFilePath: String): String {
+        fun getImplicitOverlayContent(openApiFilePath: String): String {
             return File(openApiFilePath).let { openApiFile ->
                 if (!openApiFile.isFile) {
                     return@let ""

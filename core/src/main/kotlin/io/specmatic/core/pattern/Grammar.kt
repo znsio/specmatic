@@ -233,12 +233,13 @@ fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = 
                     LookupRowPattern(parsedPattern(pattern, typeAlias = typeAlias), lookupKey)
                 }
 
-                isOptionalValuePattern(it) -> AnyPattern(
-                    listOf(
+                isOptionalValuePattern(it) -> {
+                    val patterns = listOf(
                         DeferredPattern("(empty)", key),
                         parsedPattern(withoutNullToken(it), typeAlias = typeAlias)
                     )
-                )
+                    AnyPattern(patterns, extensions = patterns.extractCombinedExtensions())
+                }
 
                 isRestPattern(it) -> RestPattern(parsedPattern(withoutRestToken(it), typeAlias = typeAlias))
                 isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutListToken(it), typeAlias = typeAlias))

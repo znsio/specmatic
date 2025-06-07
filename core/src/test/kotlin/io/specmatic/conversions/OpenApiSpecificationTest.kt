@@ -10049,12 +10049,16 @@ paths:
         val additionalProperties = responseBodyPattern.additionalProperties
         assertThat(additionalProperties).isInstanceOf(AdditionalProperties.PatternConstrained::class.java)
         additionalProperties as AdditionalProperties.PatternConstrained
-        assertThat(resolvedHop(additionalProperties.pattern, scenario.resolver)).isEqualTo(AnyPattern(
-            pattern = listOf(
-                parsedPattern("{ \"property1?\": \"(string)\" }"),
-                parsedPattern("{ \"property2?\": \"(string)\" }")
-            ), typeAlias = "(ComplexSchema)"
-        ))
+
+        val patterns = listOf(
+            parsedPattern("{ \"property1?\": \"(string)\" }"),
+            parsedPattern("{ \"property2?\": \"(string)\" }")
+        )
+        assertThat(resolvedHop(additionalProperties.pattern, scenario.resolver)).isEqualTo(
+            AnyPattern(
+                pattern = patterns, typeAlias = "(ComplexSchema)", extensions = patterns.extractCombinedExtensions()
+            )
+        )
     }
 
     @Test

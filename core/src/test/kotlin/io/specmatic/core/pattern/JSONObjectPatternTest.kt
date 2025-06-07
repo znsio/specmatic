@@ -461,7 +461,7 @@ internal class JSONObjectPatternTest {
                 newPatterns = (1..6).associate { paramIndex ->
                     "(enum${paramIndex})" to AnyPattern((0..9).map { possibleValueIndex ->
                         ExactValuePattern(StringValue("${paramIndex}${possibleValueIndex}"))
-                    }.toList())
+                    }.toList(), extensions = emptyMap())
                 }
             )
 
@@ -1780,10 +1780,12 @@ components:
         @Test
         fun `should validate against pattern when additionalProperties is PatternConstrained with complex`() {
             val additionalProperties = AdditionalProperties.PatternConstrained(
-                AnyPattern(pattern = listOf(
-                    JSONObjectPattern(mapOf("values" to StringPattern())),
-                    ListPattern(StringPattern())
-                ))
+                AnyPattern(
+                    pattern = listOf(
+                        JSONObjectPattern(mapOf("values" to StringPattern())),
+                        ListPattern(StringPattern())
+                    ), extensions = emptyMap()
+                )
             )
             val pattern = JSONObjectPattern(mapOf("name" to StringPattern()), additionalProperties = additionalProperties)
             val validValues = listOf(
@@ -2293,7 +2295,8 @@ components:
                 AnyPattern(pattern = listOf(
                     JSONObjectPattern(mapOf("values" to NumberPattern())),
                     ListPattern(NumberPattern())
-                ))
+                ), extensions = emptyMap()
+                )
             )
             val pattern = JSONObjectPattern(
                 mapOf("name" to StringPattern(), "age" to NumberPattern()),

@@ -95,7 +95,7 @@ internal class ListPatternTest {
 
     @Test
     fun `a list should encompass a json array with items matching the list`() {
-        val bigger = ListPattern(AnyPattern(listOf(NumberPattern(), NullPattern)))
+        val bigger = ListPattern(AnyPattern(listOf(NumberPattern(), NullPattern), extensions = emptyMap()))
         val smaller1Element = parsedPattern("""["(number)"]""")
         val smaller1ElementAndRest = parsedPattern("""["(number)", "(number...)"]""")
 

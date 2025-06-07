@@ -2,15 +2,14 @@ package io.specmatic.core.pattern
 
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.NullValue
-import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.*
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.shouldMatch
 import io.specmatic.shouldNotMatch
 import io.specmatic.stub.HttpStub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
 internal class JSONArrayPatternTest {

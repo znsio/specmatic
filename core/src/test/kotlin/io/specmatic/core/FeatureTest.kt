@@ -3043,7 +3043,7 @@ paths:
                 name = "test",
                 httpRequestPattern = HttpRequestPattern(
                     method = "POST",
-                    httpPathPattern = buildHttpPathPattern("/test"),
+                    httpPathPattern = buildHttpPathPattern("/test/(id:number)"),
                     body = JSONObjectPattern(
                         mapOf("data" to AnyPattern(listOf(StringPattern()))),
                         typeAlias = "(BadRequest)"
@@ -3056,10 +3056,12 @@ paths:
                 )
             )
             val feature = Feature(scenarios = listOf(scenario), name = "TestFeature")
+
+            val pathWithInvalidDatatype = "/test/abc123"
             val httpRequest = HttpRequest(
                 method = "POST",
-                path = "/test",
-                body = JSONObjectValue(mapOf("data" to StringValue("invalid")))
+                path = pathWithInvalidDatatype,
+                body = JSONObjectValue(mapOf("data" to StringValue("string")))
             )
 
             val paths = feature.calculatePath(httpRequest, 400)

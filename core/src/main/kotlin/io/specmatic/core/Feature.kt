@@ -1542,10 +1542,11 @@ data class Feature(
                         val descriptor = if (isEmptyOrNull(type1)) type2Descriptor else type1Descriptor
                         val withoutBrackets = withoutPatternDelimiters(descriptor)
                         val newPattern = withoutBrackets.removeSuffix("?").let { "($it)" }
-
-                        AnyPattern(listOf(NullPattern, type.copy(pattern = newPattern)))
+                        val patterns = listOf(NullPattern, type.copy(pattern = newPattern))
+                        AnyPattern(patterns, extensions = patterns.extractCombinedExtensions())
                     } else {
-                        AnyPattern(listOf(NullPattern, type))
+                        val patterns = listOf(NullPattern, type)
+                        AnyPattern(patterns, extensions = patterns.extractCombinedExtensions())
                     }
                 } else if (cleanedUpDescriptors.first() == cleanedUpDescriptors.second()) {
                     entry.value
@@ -2257,7 +2258,10 @@ fun parseEnum(step: StepInfo): Pair<String, Pattern> {
             }
         )
     }
-    return Pair("($enumName)", AnyPattern(exactValuePatterns))
+    return Pair(
+        "($enumName)",
+        AnyPattern(exactValuePatterns, extensions = exactValuePatterns.extractCombinedExtensions())
+    )
 }
 
 private fun scenarioInfoWithExamples(

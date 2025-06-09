@@ -5,7 +5,7 @@ plugins {
 }
 
 dependencies {
-    implementation("io.netty:netty-codec-http:4.2.1.Final")
+    implementation("io.netty:netty-codec-http:4.2.2.Final")
     implementation("joda-time:joda-time:2.14.0")
     implementation("net.minidev:json-smart:2.5.2")
 
@@ -26,8 +26,8 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.3")
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.25")
-    implementation("org.eclipse.jgit:org.eclipse.jgit:7.2.1.202505142326-r")
-    implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.apache:7.2.1.202505142326-r")
+    implementation("org.eclipse.jgit:org.eclipse.jgit:7.3.0.202506031305-r")
+    implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.apache:7.3.0.202506031305-r")
     implementation("com.fasterxml.jackson.core:jackson-core:2.19.0")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.19.0")
 

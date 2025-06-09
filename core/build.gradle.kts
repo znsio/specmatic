@@ -50,6 +50,7 @@ dependencies {
     testImplementation("org.assertj:assertj-core:3.27.3")
     testImplementation("io.ktor:ktor-client-mock-jvm:2.3.13")
     implementation("org.thymeleaf:thymeleaf:3.1.3.RELEASE")
+    testImplementation(kotlin("test"))
 }
 
 configurations.implementation.configure {

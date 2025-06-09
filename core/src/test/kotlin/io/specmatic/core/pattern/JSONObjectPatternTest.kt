@@ -2508,6 +2508,31 @@ components:
                 println(result.value)
             }
         }
+
+        @Test
+        fun `should work with additional patterns`() {
+            val jsonObjectPattern = JSONObjectPattern(
+                pattern = mapOf("key-in-pattern" to ExactValuePattern(StringValue("some string value"))),
+                additionalProperties = AdditionalProperties.FreeForm,
+                typeAlias = "(Test)"
+            )
+            val validValue = parsedJSONObject("""{
+            "field1": "foo",
+            "field2": 123,
+            "field3": true,
+            "field4": null,
+            "field5": [1, 2, 3],
+            "field6": {
+                "field7": "bar"
+            }
+            }""".trimIndent())
+            val actualFilledInValue =
+                jsonObjectPattern.fillInTheBlanks(validValue, Resolver()).value as JSONObjectValue
+
+            val expectedFilledInValue = validValue.addEntry("key-in-pattern", "some string value")
+
+            assertThat(actualFilledInValue).isEqualTo(expectedFilledInValue)
+        }
     }
 
     companion object {
@@ -2518,6 +2543,178 @@ components:
                 AdditionalProperties.PatternConstrained(StringPattern()),
                 AdditionalProperties.NoAdditionalProperties
             )
+        }
+    }
+
+    @Nested
+    inner class CalculatePathTests {
+        @Test
+        fun `calculatePath should return empty set for non-JSONObjectValue input`() {
+            val pattern = JSONObjectPattern(mapOf("field" to StringPattern()))
+            val value = StringValue("not an object")
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).isEmpty()
+        }
+
+        @Test
+        fun `calculatePath should return empty set for object without AnyPatterns`() {
+            val pattern = JSONObjectPattern(mapOf("field" to StringPattern()))
+            val value = JSONObjectValue(mapOf("field" to StringValue("test")))
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).isEmpty()
+        }
+
+        @Test
+        fun `calculatePath should find AnyPattern in object field`() {
+            val pattern = JSONObjectPattern(
+                mapOf("data" to AnyPattern(listOf(StringPattern()))),
+                typeAlias = "(TestObject)"
+            )
+            val value = JSONObjectValue(mapOf("data" to StringValue("test")))
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).containsExactly("{TestObject}.data{string}")
+        }
+
+        @Test
+        fun `calculatePath should handle nested JSONObjectPattern`() {
+            val nestedPattern = JSONObjectPattern(
+                mapOf("nested" to AnyPattern(listOf(NumberPattern()))),
+                typeAlias = "(NestedObject)"
+            )
+            val pattern = JSONObjectPattern(
+                mapOf("outer" to nestedPattern),
+                typeAlias = "(OuterObject)"
+            )
+            val value = JSONObjectValue(mapOf(
+                "outer" to JSONObjectValue(mapOf("nested" to NumberValue(42)))
+            ))
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).containsExactly("{OuterObject}.outer{NestedObject}.nested{number}")
+        }
+
+        @Test
+        fun `calculatePath should handle array patterns`() {
+            val pattern = JSONObjectPattern(
+                mapOf("items" to ListPattern(AnyPattern(listOf(StringPattern())))),
+                typeAlias = "(ArrayContainer)"
+            )
+            val value = JSONObjectValue(mapOf(
+                "items" to JSONArrayValue(listOf(StringValue("item1"), StringValue("item2")))
+            ))
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).containsExactlyInAnyOrder(
+                "{ArrayContainer}.items[0]{string}",
+                "{ArrayContainer}.items[1]{string}"
+            )
+        }
+
+        @Test
+        fun `calculatePath should handle JSONArrayPattern`() {
+            val pattern = JSONObjectPattern(
+                mapOf("array" to JSONArrayPattern(listOf(AnyPattern(listOf(NumberPattern()))))),
+                typeAlias = "(JsonArrayContainer)"
+            )
+            val value = JSONObjectValue(mapOf(
+                "array" to JSONArrayValue(listOf(NumberValue(1), NumberValue(2)))
+            ))
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).containsExactlyInAnyOrder(
+                "{JsonArrayContainer}.array[0]{number}",
+                "{JsonArrayContainer}.array[1]{number}"
+            )
+        }
+
+        @Test
+        fun `calculatePath should handle object without typeAlias`() {
+            val pattern = JSONObjectPattern(mapOf("data" to AnyPattern(listOf(StringPattern()))))
+            val value = JSONObjectValue(mapOf("data" to StringValue("test")))
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).containsExactly("data{string}")
+        }
+
+        @Test
+        fun `calculatePath should handle multiple AnyPattern fields`() {
+            val pattern = JSONObjectPattern(
+                mapOf(
+                    "field1" to AnyPattern(listOf(StringPattern())),
+                    "field2" to AnyPattern(listOf(NumberPattern())),
+                    "field3" to StringPattern()
+                ),
+                typeAlias = "(MultiFieldObject)"
+            )
+            val value = JSONObjectValue(mapOf(
+                "field1" to StringValue("test"),
+                "field2" to NumberValue(42),
+                "field3" to StringValue("regular")
+            ))
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).containsExactlyInAnyOrder(
+                "{MultiFieldObject}.field1{string}",
+                "{MultiFieldObject}.field2{number}"
+            )
+        }
+
+        @Test
+        fun `calculatePath should handle deeply nested structures`() {
+            val level3Pattern = JSONObjectPattern(
+                mapOf("level3" to AnyPattern(listOf(BooleanPattern()))),
+                typeAlias = "(Level3)"
+            )
+            val level2Pattern = JSONObjectPattern(
+                mapOf("level2" to level3Pattern),
+                typeAlias = "(Level2)"
+            )
+            val level1Pattern = JSONObjectPattern(
+                mapOf("level1" to level2Pattern),
+                typeAlias = "(Level1)"
+            )
+            val value = JSONObjectValue(mapOf(
+                "level1" to JSONObjectValue(mapOf(
+                    "level2" to JSONObjectValue(mapOf(
+                        "level3" to BooleanValue(true)
+                    ))
+                ))
+            ))
+            val resolver = Resolver()
+
+            val paths = level1Pattern.calculatePath(value, resolver)
+
+            assertThat(paths).containsExactly("{Level1}.level1{Level2}.level2{Level3}.level3{boolean}")
+        }
+
+        @Test
+        fun `calculatePath should handle empty object`() {
+            val pattern = JSONObjectPattern(mapOf("data" to AnyPattern(listOf(StringPattern()))))
+            val value = JSONObjectValue(emptyMap())
+            val resolver = Resolver()
+
+            val paths = pattern.calculatePath(value, resolver)
+
+            assertThat(paths).isEmpty()
         }
     }
 }

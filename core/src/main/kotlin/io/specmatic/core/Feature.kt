@@ -13,6 +13,7 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.Examples.Companion.examplesFrom
 import io.specmatic.core.utilities.*
 import io.specmatic.core.value.*
+import io.specmatic.core.Result.Success
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStubData
@@ -285,6 +286,19 @@ data class Feature(
         } finally {
             serverState = emptyMap()
         }
+    }
+
+    fun calculatePath(httpRequest: HttpRequest, responseStatus: Int): Set<String> {
+        val matchingScenario = scenarios.firstOrNull { scenario ->
+            val resolver = scenario.resolver
+            if (responseStatus == 400) {
+                scenario.httpRequestPattern.matchesPathStructureMethodAndContentType(httpRequest, resolver) is Success
+            } else {
+                scenario.httpRequestPattern.matches(httpRequest, resolver) is Success
+            }
+        }
+        
+        return matchingScenario?.calculatePath(httpRequest) ?: emptySet()
     }
 
     private fun matchingScenarioToResultList(
@@ -2214,7 +2228,7 @@ private fun lexScenario(
         scenarioInfoWithExamples(matchingScenario, backgroundScenarioInfo, examplesList, ignoreFailure)
     }
 
-    return scenarioInfo.copy(isGherkinScenario = true)
+    return scenarioInfo.copy(isGherkinScenario = true, specification = scenarioInfo.specification ?: filePath)
 }
 
 private fun listOfDatatableRows(it: Step): MutableList<TableRow> = it.dataTable.getOrNull()?.rows.orEmpty().toMutableList()
@@ -2394,22 +2408,7 @@ internal fun lex(gherkinDocument: GherkinDocument, filePath: String = ""): Pair<
 }
 
 internal fun lex(featureChildren: List<FeatureChild>, filePath: String): List<Scenario> {
-    return scenarioInfos(featureChildren, filePath)
-        .map { scenarioInfo ->
-            Scenario(
-                scenarioInfo.scenarioName,
-                scenarioInfo.httpRequestPattern,
-                scenarioInfo.httpResponsePattern,
-                scenarioInfo.expectedServerState,
-                scenarioInfo.examples,
-                scenarioInfo.patterns,
-                scenarioInfo.fixtures,
-                scenarioInfo.ignoreFailure,
-                scenarioInfo.references,
-                scenarioInfo.bindings,
-                scenarioInfo.isGherkinScenario
-            )
-        }
+    return scenarioInfos(featureChildren, filePath).map { scenarioInfo -> Scenario(scenarioInfo) }
 }
 
 fun scenarioInfos(

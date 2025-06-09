@@ -9,6 +9,10 @@ import io.specmatic.core.filters.HttpFilterContext
 import io.specmatic.core.filters.ScenarioFilterVariablePopulator
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.Flags
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NumberValue
+import io.specmatic.core.value.StringValue
 import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Nested
@@ -378,7 +382,7 @@ class ScenarioTest {
         assertThat(exception.report()).isEqualToNormalizingWhitespace(
             """
         Error loading example named  for POST / -> 200
-        >> REQUEST.HEADERS.Authorization
+        >> REQUEST.PARAMETERS.HEADER.Authorization
         Authorization header must be prefixed with "Basic"
         """.trimIndent()
         )
@@ -426,9 +430,9 @@ class ScenarioTest {
         assertThat(exception.report()).isEqualToNormalizingWhitespace(
             """
         Error loading example named example.json for POST / -> 200
-        >> REQUEST.HEADERS.X-EXTRA-HEADERS
+        >> REQUEST.PARAMETERS.HEADER.X-EXTRA-HEADERS
         The header X-EXTRA-HEADERS was found in the example example.json but was not in the specification.
-        >> RESPONSE.HEADERS.X-EXTRA-HEADERS
+        >> RESPONSE.HEADER.X-EXTRA-HEADERS
         The header X-EXTRA-HEADERS was found in the example example.json but was not in the specification.
         """.trimIndent()
         )
@@ -477,9 +481,9 @@ class ScenarioTest {
         assertThat(exception.report()).isEqualToNormalizingWhitespace(
             """
         Error loading example named partial-example.json for POST / -> 200
-        >> REQUEST.HEADERS.X-EXTRA-HEADERS
+        >> REQUEST.PARAMETERS.HEADER.X-EXTRA-HEADERS
         The header X-EXTRA-HEADERS was found in the example partial-example.json but was not in the specification.
-        >> RESPONSE.HEADERS.X-EXTRA-HEADERS
+        >> RESPONSE.HEADER.X-EXTRA-HEADERS
         The header X-EXTRA-HEADERS was found in the example partial-example.json but was not in the specification.
         """.trimIndent()
         )
@@ -527,6 +531,17 @@ class ScenarioTest {
             val flagBased = strategiesFromFlags(SpecmaticConfig())
             assertDoesNotThrow { scenario.validExamplesOrException(flagBased) }
         }
+    }
+
+    @Test
+    fun `disambiguate should return the provided value with a space`() {
+        val scenario = Scenario(
+            name = "test scenario",
+            httpRequestPattern = HttpRequestPattern(method = "GET", httpPathPattern = HttpPathPattern.from("/")),
+            httpResponsePattern = HttpResponsePattern(status = 200),
+            disambiguate = { "[1] " }
+        )
+        assertThat(scenario.testDescription().trim()).isEqualTo("Scenario: GET / [1] -> 200")
     }
 
     @Nested
@@ -645,6 +660,258 @@ class ScenarioTest {
             Key named "extraKey" was unexpected
             """.trimIndent()
             )
+        }
+    }
+
+    @Nested
+    inner class CalculatePathTests {
+        @Test
+        fun `calculatePath should handle JSONObjectPattern body`() {
+            val scenario = Scenario(
+                name = "test",
+                httpRequestPattern = HttpRequestPattern(
+                    body = JSONObjectPattern(
+                        mapOf("data" to AnyPattern(listOf(StringPattern()))),
+                        typeAlias = "(TestRequest)"
+                    )
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 200,
+                    body = StringPattern()
+                )
+            )
+            val httpRequest = HttpRequest(
+                method = "POST",
+                path = "/test",
+                body = JSONObjectValue(mapOf("data" to StringValue("test")))
+            )
+
+            val paths = scenario.calculatePath(httpRequest)
+
+            assertThat(paths).containsExactly("{TestRequest}.data{string}")
+        }
+
+        @Test
+        fun `calculatePath should handle AnyPattern body with scalar wrapping`() {
+            val scenario = Scenario(
+                name = "test",
+                httpRequestPattern = HttpRequestPattern(
+                    body = AnyPattern(listOf(StringPattern(), NumberPattern()))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 200,
+                    body = StringPattern()
+                )
+            )
+            val httpRequest = HttpRequest(
+                method = "POST",
+                path = "/test",
+                body = StringValue("test")
+            )
+
+            val paths = scenario.calculatePath(httpRequest)
+
+            assertThat(paths).containsExactly("{string}")
+        }
+
+        @Test
+        fun `calculatePath should handle AnyPattern body with non-scalar types`() {
+            val objectPattern = JSONObjectPattern(
+                mapOf("field" to StringPattern()),
+                typeAlias = "(CustomObject)"
+            )
+            val scenario = Scenario(
+                name = "test",
+                httpRequestPattern = HttpRequestPattern(
+                    body = AnyPattern(listOf(objectPattern))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 200,
+                    body = StringPattern()
+                )
+            )
+            val httpRequest = HttpRequest(
+                method = "POST",
+                path = "/test",
+                body = JSONObjectValue(mapOf("field" to StringValue("test")))
+            )
+
+            val paths = scenario.calculatePath(httpRequest)
+
+            assertThat(paths).containsExactly("{CustomObject}")
+        }
+
+        @Test
+        fun `calculatePath should handle ListPattern body`() {
+            val scenario = Scenario(
+                name = "test",
+                httpRequestPattern = HttpRequestPattern(
+                    body = ListPattern(AnyPattern(listOf(StringPattern(), NumberPattern())))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 200,
+                    body = StringPattern()
+                )
+            )
+            val httpRequest = HttpRequest(
+                method = "POST",
+                path = "/test",
+                body = JSONArrayValue(listOf(StringValue("test"), NumberValue(42)))
+            )
+
+            val paths = scenario.calculatePath(httpRequest)
+
+            assertThat(paths).containsExactlyInAnyOrder("{[0]}{string}", "{[1]}{number}")
+        }
+
+        @Test
+        fun `calculatePath should handle JSONArrayPattern body`() {
+            val scenario = Scenario(
+                name = "test",
+                httpRequestPattern = HttpRequestPattern(
+                    body = JSONArrayPattern(listOf(AnyPattern(listOf(StringPattern()))))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 200,
+                    body = StringPattern()
+                )
+            )
+            val httpRequest = HttpRequest(
+                method = "POST",
+                path = "/test",
+                body = JSONArrayValue(listOf(StringValue("test1"), StringValue("test2")))
+            )
+
+            val paths = scenario.calculatePath(httpRequest)
+
+            assertThat(paths).containsExactlyInAnyOrder("{[0]}{string}", "{[1]}{string}")
+        }
+
+        @Test
+        fun `calculatePath should return empty set for unsupported body pattern types`() {
+            val scenario = Scenario(
+                name = "test",
+                httpRequestPattern = HttpRequestPattern(
+                    method = "POST",
+                    httpPathPattern = buildHttpPathPattern("/test"),
+                    body = StringPattern()
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 200,
+                    body = StringPattern()
+                )
+            )
+            val httpRequest = HttpRequest(
+                method = "POST",
+                path = "/test",
+                body = StringValue("test")
+            )
+
+            val paths = scenario.calculatePath(httpRequest)
+
+            assertThat(paths).isEmpty()
+        }
+
+        @Test
+        fun `calculatePath should handle nested complex patterns`() {
+            val nestedPattern = JSONObjectPattern(
+                mapOf(
+                    "items" to ListPattern(
+                        JSONObjectPattern(
+                            mapOf("value" to AnyPattern(listOf(StringPattern(), NumberPattern()))),
+                            typeAlias = "(Item)"
+                        )
+                    )
+                ),
+                typeAlias = "(Container)"
+            )
+            val scenario = Scenario(
+                name = "test",
+                httpRequestPattern = HttpRequestPattern(body = nestedPattern),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 200,
+                    body = StringPattern()
+                )
+            )
+            val httpRequest = HttpRequest(
+                method = "POST",
+                path = "/test",
+                body = JSONObjectValue(mapOf(
+                    "items" to JSONArrayValue(listOf(
+                        JSONObjectValue(mapOf("value" to StringValue("test"))),
+                        JSONObjectValue(mapOf("value" to NumberValue(42)))
+                    ))
+                ))
+            )
+
+            val paths = scenario.calculatePath(httpRequest)
+
+            assertThat(paths).containsExactlyInAnyOrder(
+                "{Container}.items[0]{Item}.value{string}",
+                "{Container}.items[1]{Item}.value{number}"
+            )
+        }
+
+        @Test
+        fun `calculatePath should handle DeferredPattern in resolver`() {
+            val patterns = mapOf(
+                "(CustomType)" to JSONObjectPattern(
+                    mapOf("data" to AnyPattern(listOf(StringPattern()))),
+                    typeAlias = "(CustomType)"
+                )
+            )
+            val scenario = Scenario(
+                name = "test",
+                httpRequestPattern = HttpRequestPattern(
+                    body = DeferredPattern("(CustomType)")
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 200,
+                    body = StringPattern()
+                ),
+                patterns = patterns
+            )
+            val httpRequest = HttpRequest(
+                method = "POST",
+                path = "/test",
+                body = JSONObjectValue(mapOf("data" to StringValue("test")))
+            )
+
+            val paths = scenario.calculatePath(httpRequest)
+
+            assertThat(paths).containsExactly("{CustomType}.data{string}")
+        }
+
+        @Test
+        fun `calculatePath should handle empty object without AnyPatterns`() {
+            val scenario = Scenario(
+                name = "test",
+                httpRequestPattern = HttpRequestPattern(
+                    body = JSONObjectPattern(mapOf("field" to StringPattern()))
+                ),
+                httpResponsePattern = HttpResponsePattern(
+                    headersPattern = HttpHeadersPattern(),
+                    status = 200,
+                    body = StringPattern()
+                )
+            )
+            val httpRequest = HttpRequest(
+                method = "POST",
+                path = "/test",
+                body = JSONObjectValue(mapOf("field" to StringValue("test")))
+            )
+
+            val paths = scenario.calculatePath(httpRequest)
+
+            assertThat(paths).isEmpty()
         }
     }
 }

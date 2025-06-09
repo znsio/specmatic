@@ -14,6 +14,7 @@ import io.ktor.server.response.*
 import io.ktor.util.*
 import io.ktor.util.pipeline.*
 import io.specmatic.core.*
+import io.specmatic.core.lifecycle.LifecycleHooks
 import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
@@ -296,6 +297,10 @@ class HttpStub(
                     if (httpRequest.path!!.startsWith("""/features/default""")) {
                         handleSse(httpRequest, this@HttpStub, this)
                     } else {
+                        httpStubResponse.scenario?.let { matchingScenario ->
+                            LifecycleHooks.requestResponseMatchingScenarioHooks.call(httpRequest, httpResponse, matchingScenario)
+                        }
+
                         val updatedHttpStubResponse = httpStubResponse.copy(response = httpResponse)
                         respondToKtorHttpResponse(call, updatedHttpStubResponse.response, updatedHttpStubResponse.delayInMilliSeconds, specmaticConfig)
                         httpLogMessage.addResponse(updatedHttpStubResponse)
@@ -781,7 +786,7 @@ class HttpStub(
 
 class CouldNotParseRequest(innerException: Throwable) : Exception(exceptionCauseMessage(innerException))
 
-internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
+suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
     try {
         val (body, formFields, multiPartFormData) = bodyFromCall(call)
 
@@ -895,7 +900,7 @@ internal fun toParams(queryParameters: Parameters): List<Pair<String, String>> =
         }
     }
 
-internal suspend fun respondToKtorHttpResponse(
+suspend fun respondToKtorHttpResponse(
     call: ApplicationCall,
     httpResponse: HttpResponse,
     delayInMilliSeconds: Long? = null,
@@ -941,8 +946,7 @@ fun getHttpResponse(
             return FoundStubbedResponse(
                 httpStubResponse.resolveSubstitutions(
                     httpRequest,
-                    if (httpStubData.partial != null) httpStubData.partial.request else httpStubData.originalRequest
-                        ?: httpRequest,
+                    httpStubData.resolveOriginalRequest() ?: httpRequest,
                     httpStubData.data,
                 )
             )

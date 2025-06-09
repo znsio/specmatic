@@ -510,6 +510,64 @@ data class AnyPattern(
         return randomString(10)
     }
 
+    fun calculatePath(value: Value, resolver: Resolver): Set<String> {
+        // Find which pattern in the list matches the given value
+        val matchingPatternIndex = pattern.indexOfFirst { pattern ->
+            val resolvedPattern = resolvedHop(pattern, resolver)
+            resolvedPattern.matches(value, resolver) is Result.Success
+        }
+        
+        if (matchingPatternIndex == -1) {
+            return emptySet()
+        }
+        
+        val matchingPattern = resolvedHop(pattern[matchingPatternIndex], resolver)
+        val originalPattern = pattern[matchingPatternIndex]
+        
+        // Handle DeferredPattern specially to preserve typeAlias information
+        val patternTypeAlias = when (originalPattern) {
+            is DeferredPattern -> {
+                // For DeferredPattern, extract typeAlias and remove parentheses using withoutPatternDelimiters
+                withoutPatternDelimiters(originalPattern.pattern)
+            }
+            else -> originalPattern.typeAlias?.let { withoutPatternDelimiters(it) }
+        }
+        
+        // If the resolved pattern is a JSONObjectPattern with nested AnyPatterns, 
+        // we need to recurse to get the nested paths
+        if (matchingPattern is JSONObjectPattern) {
+            val nestedPaths = matchingPattern.calculatePath(value, resolver)
+            if (nestedPaths.isNotEmpty()) {
+                // The nested paths already contain the proper formatting, just return them
+                return nestedPaths
+            } else {
+                // JSONObjectPattern but no nested AnyPatterns found
+                if (patternTypeAlias != null && patternTypeAlias.isNotBlank()) {
+                    return setOf("{$patternTypeAlias}")
+                }
+            }
+        }
+        
+        // If the matching pattern has a typeAlias, use it
+        if (patternTypeAlias != null && patternTypeAlias.isNotBlank()) {
+            return setOf("{$patternTypeAlias}")
+        }
+        
+        // If no typeAlias and it's a simple scalar pattern, return the scalar type name
+        if (matchingPattern is StringPattern || matchingPattern is NumberPattern || matchingPattern is BooleanPattern) {
+            val scalarTypeName = when (matchingPattern) {
+                is StringPattern -> "string"
+                is NumberPattern -> "number"
+                is BooleanPattern -> "boolean"
+                else -> null
+            }
+            return if (scalarTypeName != null) setOf(scalarTypeName) else emptySet()
+        }
+        
+        // If no typeAlias but it's a complex pattern, return the index in the format {[index]}
+        return setOf("{[$matchingPatternIndex]}")
+    }
+
     private fun allValuesAreScalar() = pattern.all { it is ExactValuePattern && it.pattern is ScalarValue }
 
     private fun hasNoAmbiguousPatterns(): Boolean {

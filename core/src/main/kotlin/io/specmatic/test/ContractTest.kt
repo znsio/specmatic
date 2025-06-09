@@ -11,7 +11,7 @@ interface ResponseValidator {
         return null
     }
 
-    fun postValidate(scenario: Scenario, httpRequest: HttpRequest, httpResponse: HttpResponse): Result? {
+    fun postValidate(scenario: Scenario, originalScenario: Scenario, httpRequest: HttpRequest, httpResponse: HttpResponse): Result? {
         return null
     }
 }

@@ -1,3 +1,5 @@
+import io.specmatic.gradle.extensions.RepoType
+
 plugins {
     id("io.specmatic.gradle")
     id("base")
@@ -13,11 +15,16 @@ allprojects {
 specmatic {
     publishToMavenCentral()
     releasePublishTasks = listOf(
+        "dockerBuildxPublish",
         "publishAllPublicationsToMavenCentralRepository",
         "publishAllPublicationsToSpecmaticPrivateRepository",
-        "dockerBuildxPublish"
+        "publishAllPublicationsToSpecmaticReleasesRepository",
     )
-    publishTo("specmaticPrivate", "https://maven.pkg.github.com/specmatic/specmatic-private-maven-repo")
+
+    publishTo("specmaticPrivate", "https://repo.specmatic.io/private", RepoType.PUBLISH_ALL)
+    publishTo("specmaticSnapshots", "https://repo.specmatic.io/snapshots", RepoType.PUBLISH_ALL)
+    publishTo("specmaticReleases", "https://repo.specmatic.io/releases", RepoType.PUBLISH_ALL)
+
     withOSSLibrary(project(":specmatic-core")) {
         githubRelease()
         publish {

@@ -23,6 +23,7 @@ import io.specmatic.core.value.Value
 import io.specmatic.stub.hasOpenApiFileExtension
 import io.specmatic.stub.isOpenAPI
 import io.specmatic.test.reports.OpenApiCoverageReportProcessor
+import io.specmatic.test.reports.TestReportHooks
 import io.specmatic.test.reports.coverage.Endpoint
 import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import kotlinx.serialization.Serializable
@@ -92,6 +93,8 @@ open class SpecmaticJUnitSupport {
                 logger.log("WARNING: No tests were executed. This is often due to filters resulting in 0 matching tests.")
             }
             
+            TestReportHooks.onEachListener { onTestsComplete() }
+
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
             val reportConfiguration = getReportConfiguration()
             val config = specmaticConfig?.updateReportConfiguration(reportConfiguration) ?: SpecmaticConfig().updateReportConfiguration(reportConfiguration)
@@ -344,9 +347,12 @@ open class SpecmaticJUnitSupport {
         timeoutInMilliseconds: Long
     ): Stream<DynamicTest> {
         try {
-            if(queryActuator().failed && actuatorFromSwagger(testBaseURL).failed)
+            if (queryActuator().failed && actuatorFromSwagger(testBaseURL).failed) {
+                openApiCoverageReportInput.setEndpointsAPIFlag(false)
                 logger.log("EndpointsAPI and SwaggerUI URL missing; cannot calculate actual coverage")
+            }
         } catch (exception: Throwable) {
+            openApiCoverageReportInput.setEndpointsAPIFlag(false)
             logger.log(exception, "Failed to query actuator with error")
         }
 
@@ -484,7 +490,9 @@ open class SpecmaticJUnitSupport {
                 scenario.sourceRepository,
                 scenario.sourceRepositoryBranch,
                 scenario.specification,
-                scenario.serviceType
+                scenario.serviceType,
+                scenario.requestContentType,
+                scenario.httpResponsePattern.headersPattern.contentType
             )
         }
 

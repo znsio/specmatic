@@ -14,7 +14,6 @@ import io.ktor.server.response.*
 import io.ktor.util.*
 import io.ktor.util.pipeline.*
 import io.specmatic.core.*
-import io.specmatic.core.lifecycle.LifecycleHooks
 import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
@@ -33,6 +32,7 @@ import io.specmatic.mock.ScenarioStub
 import io.specmatic.mock.TRANSIENT_MOCK
 import io.specmatic.mock.mockFromJSON
 import io.specmatic.mock.validateMock
+import io.specmatic.stub.listener.MockEventListener
 import io.specmatic.stub.report.StubEndpoint
 import io.specmatic.stub.report.StubUsageReport
 import io.specmatic.stub.report.StubUsageReportJson
@@ -76,7 +76,8 @@ class HttpStub(
     private val timeoutMillis: Long = 0,
     private val specToStubBaseUrlMap: Map<String, String?> = features.associate {
         it.path to endPointFromHostAndPort(host, port, keyData)
-    }
+    },
+    private val listeners: List<MockEventListener> = emptyList()
 ) : ContractStub {
     constructor(
         feature: Feature,
@@ -298,7 +299,9 @@ class HttpStub(
                         handleSse(httpRequest, this@HttpStub, this)
                     } else {
                         httpStubResponse.scenario?.let { matchingScenario ->
-                            LifecycleHooks.requestResponseMatchingScenarioHooks.call(httpRequest, httpResponse, matchingScenario)
+                            listeners.forEach { listener ->
+                                listener.call(httpRequest, httpResponse, matchingScenario)
+                            }
                         }
 
                         val updatedHttpStubResponse = httpStubResponse.copy(response = httpResponse)

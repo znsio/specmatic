@@ -17,6 +17,7 @@ import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.HttpClientFactory
 import io.specmatic.stub.endPointFromHostAndPort
+import io.specmatic.stub.listener.MockEventListener
 import picocli.CommandLine.*
 import java.io.File
 import java.util.concurrent.Callable
@@ -118,6 +119,8 @@ https://docs.specmatic.io/documentation/contract_tests.html#supported-filters--o
     private var contractSources:List<ContractPathData> = emptyList()
 
     var specmaticConfigPath: String? = null
+
+    var listeners : List<MockEventListener> = emptyList()
 
     override fun call() {
         if (delayInMilliseconds > 0) {
@@ -243,7 +246,8 @@ https://docs.specmatic.io/documentation/contract_tests.html#supported-filters--o
             httpClientFactory = httpClientFactory,
             workingDirectory = workingDirectory,
             gracefulRestartTimeoutInMs = gracefulRestartTimeoutInMs,
-            specToBaseUrlMap = contractSources.specToBaseUrlMap()
+            specToBaseUrlMap = contractSources.specToBaseUrlMap(),
+            listeners = listeners
         )
 
         LogTail.storeSnapshot()

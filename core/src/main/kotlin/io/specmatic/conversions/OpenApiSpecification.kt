@@ -1504,7 +1504,11 @@ class OpenApiSpecification(
                     val pattern = if (oneOfs.size == 1)
                         oneOfs.single()
                     else if (oneOfs.size > 1)
-                        AnyPattern(oneOfs, typeAlias = "(${patternName})")
+                        AnyPattern(
+                            oneOfs,
+                            typeAlias = "(${patternName})",
+                            extensions = oneOfs.extractCombinedExtensions()
+                        )
                     else if(allDiscriminators.isNotEmpty())
                         AnyPattern(
                             pattern = schemaProperties.zip(allDiscriminators.schemaNames).map { (properties, schemaName) ->
@@ -1517,8 +1521,13 @@ class OpenApiSpecification(
                             ),
                             typeAlias = "(${patternName})"
                         )
-                    else if(schemaProperties.size > 1)
-                        AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") })
+                    else if(schemaProperties.size > 1) {
+                        val pattern = schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") }
+                        AnyPattern(
+                            pattern,
+                            extensions = pattern.extractCombinedExtensions()
+                        )
+                    }
                     else
                         toJSONObjectPattern(schemaProperties.single(), "(${patternName})")
 
@@ -1838,7 +1847,8 @@ class OpenApiSpecification(
         val jsonObjectPattern = toJSONObjectPattern(schemaProperties, if(patternName.isNotBlank()) "(${patternName})" else null).copy(
             minProperties = minProperties,
             maxProperties = maxProperties,
-            additionalProperties = additionalPropertiesFrom(schema, patternName, typeStack)
+            additionalProperties = additionalPropertiesFrom(schema, patternName, typeStack),
+            extensions = schema.extensions.orEmpty()
         )
         return cacheComponentPattern(patternName, jsonObjectPattern)
     }

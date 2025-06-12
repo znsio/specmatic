@@ -1464,9 +1464,22 @@ class OpenApiSpecification(
 
                         val schemaProperties = (deepListOfAllOfs + schemasFromDiscriminator).map { schemaToProcess ->
                             val requiredFields = topLevelRequired.plus(schemaToProcess.required.orEmpty())
-                            toSchemaProperties(schemaToProcess, requiredFields.distinct(), patternName, typeStack, discriminator)
-                        }.fold(emptyMap<String, Pattern>()) { propertiesAcc, propertiesEntry ->
-                            combine(propertiesEntry, propertiesAcc)
+                            SchemaProperty(
+                                extensions = schemaToProcess.extensions.orEmpty(),
+                                properties = toSchemaProperties(
+                                    schemaToProcess,
+                                    requiredFields.distinct(),
+                                    patternName,
+                                    typeStack,
+                                    discriminator
+                                )
+                            )
+                        }.fold(SchemaProperty(extensions = emptyMap(), properties = emptyMap())) { propertiesAcc, propertiesEntry ->
+                            val (extensions, properties) = propertiesEntry
+                            propertiesAcc.copy(
+                                extensions = propertiesAcc.extensions.plus(extensions),
+                                properties = combine(properties, propertiesAcc.properties)
+                            )
                         }
 
                         schemaProperties
@@ -1492,7 +1505,7 @@ class OpenApiSpecification(
                             )
                         }.flatMap { (componentName, properties) ->
                             schemaProperties.map {
-                                componentName to combine(it, properties)
+                                componentName to combine(it.properties, properties)
                             }
                         }
 
@@ -1511,7 +1524,9 @@ class OpenApiSpecification(
                         )
                     else if(allDiscriminators.isNotEmpty())
                         AnyPattern(
-                            pattern = schemaProperties.zip(allDiscriminators.schemaNames).map { (properties, schemaName) ->
+                            pattern = schemaProperties.map {
+                                it.properties
+                            }.zip(allDiscriminators.schemaNames).map { (properties, schemaName) ->
                                 toJSONObjectPattern(properties, "(${schemaName})")
                             },
                             discriminator = Discriminator.create(
@@ -1522,14 +1537,22 @@ class OpenApiSpecification(
                             typeAlias = "(${patternName})"
                         )
                     else if(schemaProperties.size > 1) {
-                        val pattern = schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") }
+                        val pattern = schemaProperties.map {
+                            toJSONObjectPattern(it.properties, "(${patternName})", it.extensions)
+                        }
                         AnyPattern(
                             pattern,
                             extensions = pattern.extractCombinedExtensions()
                         )
                     }
-                    else
-                        toJSONObjectPattern(schemaProperties.single(), "(${patternName})")
+                    else {
+                        val schemaProperty = schemaProperties.single()
+                        toJSONObjectPattern(
+                            schemaProperty.properties,
+                            "(${patternName})",
+                            schemaProperty.extensions
+                        )
+                    }
 
                     cacheComponentPattern(patternName, pattern)
 

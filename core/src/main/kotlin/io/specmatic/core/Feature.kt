@@ -1598,7 +1598,7 @@ data class Feature(
     private fun isObjectType(type: Pattern): Boolean = type is TabularPattern || type is JSONObjectPattern
 
     private fun isJSONPayload(type: Pattern) =
-        type is TabularPattern || type is JSONObjectPattern || type is JSONArrayPattern
+        type is TabularPattern || type is JSONObjectPattern || type is JSONArrayPattern || type is ListPattern
 
     private fun toOpenApiSchema(pattern: Pattern): Schema<Any> {
         val schema = when {

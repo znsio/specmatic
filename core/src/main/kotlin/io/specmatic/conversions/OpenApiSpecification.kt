@@ -1497,17 +1497,17 @@ class OpenApiSpecification(
                                 "" to it
                             }
                             val requiredFields = schemaToProcess.required.orEmpty()
-                            Triple(componentName, schemaToProcess, toSchemaProperties(
+                            componentName to SchemaProperty(schemaToProcess.extensions.orEmpty(), toSchemaProperties(
                                 schemaToProcess,
                                 requiredFields,
                                 componentName,
                                 typeStack
                             ))
-                        }.flatMap { (componentName, schemaToProcess, properties) ->
+                        }.flatMap { (componentName, schemaProperty) ->
                             schemaProperties.map {
                                 componentName to SchemaProperty(
-                                    extensions = it.extensions.plus(schemaToProcess.extensions.orEmpty()),
-                                    properties = combine(it.properties, properties)
+                                    extensions = it.extensions.plus(schemaProperty.extensions),
+                                    properties = combine(it.properties, schemaProperty.properties)
                                 )
                             }
                         }

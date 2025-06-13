@@ -20,6 +20,11 @@ data class HttpLogMessage(
     var scenario: Scenario? = null,
     var exception: Exception? = null
 ) : LogMessage {
+
+    fun addRequestOnly(request: HttpRequest) {
+        this.request = request
+    }
+
     fun addRequest(httpRequest: HttpRequest) {
         requestTime = CurrentDate()
         this.request = httpRequest

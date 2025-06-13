@@ -878,6 +878,12 @@ data class Feature(
         }
     }
 
+    fun identifierMatchingScenario(httpRequest: HttpRequest): Scenario? {
+        return scenarios.asSequence().filter {
+            it.httpRequestPattern.matchesPathStructureMethodAndContentType(httpRequest, it.resolver).isSuccess()
+        }.firstOrNull()
+    }
+
     private fun getScenarioWithDescription(scenarioResult: ReturnValue<Scenario>): ReturnValue<Scenario> {
         return scenarioResult.ifHasValue { result: HasValue<Scenario> ->
             val apiDescription = result.value.descriptionFromPlugin ?: result.value.apiDescription

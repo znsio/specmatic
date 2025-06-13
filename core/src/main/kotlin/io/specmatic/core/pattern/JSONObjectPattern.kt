@@ -11,13 +11,22 @@ import java.util.Optional
 fun toJSONObjectPattern(jsonContent: String, typeAlias: String?): JSONObjectPattern =
     toJSONObjectPattern(stringToPatternMap(jsonContent), typeAlias)
 
-fun toJSONObjectPattern(map: Map<String, Pattern>, typeAlias: String? = null): JSONObjectPattern {
+fun toJSONObjectPattern(
+    map: Map<String, Pattern>,
+    typeAlias: String? = null,
+    extensions: Map<String, Any> = emptyMap()
+): JSONObjectPattern {
     val missingKeyStrategy: UnexpectedKeyCheck = when ("...") {
         in map -> IgnoreUnexpectedKeys
         else -> ValidateUnexpectedKeys
     }
 
-    return JSONObjectPattern(map.minus("..."), missingKeyStrategy, typeAlias)
+    return JSONObjectPattern(
+        pattern = map.minus("..."),
+        unexpectedKeyCheck = missingKeyStrategy,
+        typeAlias = typeAlias,
+        extensions = extensions
+    )
 }
 
 sealed interface AdditionalProperties {

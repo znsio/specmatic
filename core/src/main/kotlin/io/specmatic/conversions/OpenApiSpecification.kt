@@ -1497,16 +1497,16 @@ class OpenApiSpecification(
                                 "" to it
                             }
                             val requiredFields = schemaToProcess.required.orEmpty()
-                            componentName to toSchemaProperties(
+                            Triple(componentName, schemaToProcess, toSchemaProperties(
                                 schemaToProcess,
                                 requiredFields,
                                 componentName,
                                 typeStack
-                            )
-                        }.flatMap { (componentName, properties) ->
+                            ))
+                        }.flatMap { (componentName, schemaToProcess, properties) ->
                             schemaProperties.map {
                                 componentName to SchemaProperty(
-                                    extensions = it.extensions,
+                                    extensions = it.extensions.plus(schemaToProcess.extensions.orEmpty()),
                                     properties = combine(it.properties, properties)
                                 )
                             }
@@ -1527,7 +1527,7 @@ class OpenApiSpecification(
                         AnyPattern(
                             oneOfs,
                             typeAlias = "(${patternName})",
-                            extensions = oneOfs.extractCombinedExtensions()
+                            extensions = emptyMap()
                         )
                     else if(allDiscriminators.isNotEmpty())
                         AnyPattern(

@@ -348,10 +348,8 @@ class OpenAPIExtensionsTest {
         // Verify that there are two constituent patterns (one for each oneOf option)
         assertThat(anyPattern.pattern).hasSize(2)
         
-        // The AnyPattern should have all extensions combined from its constituent patterns
-        assertThat(anyPattern.extensions).containsEntry("x-property-common", "valueCommon")
-        assertThat(anyPattern.extensions).containsEntry("x-property-1", "value1")
-        assertThat(anyPattern.extensions).containsEntry("x-property-2", "value2")
+        // The AnyPattern should have empty extensions
+        assertThat(anyPattern.extensions).isEmpty()
         
         // Each constituent pattern should have the combined extensions
         val patterns = anyPattern.pattern.filterIsInstance<JSONObjectPattern>()

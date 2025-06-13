@@ -1497,17 +1497,17 @@ class OpenApiSpecification(
                                 "" to it
                             }
                             val requiredFields = schemaToProcess.required.orEmpty()
-                            componentName to toSchemaProperties(
+                            componentName to SchemaProperty(schemaToProcess.extensions.orEmpty(), toSchemaProperties(
                                 schemaToProcess,
                                 requiredFields,
                                 componentName,
                                 typeStack
-                            )
-                        }.flatMap { (componentName, properties) ->
+                            ))
+                        }.flatMap { (componentName, schemaProperty) ->
                             schemaProperties.map {
                                 componentName to SchemaProperty(
-                                    extensions = it.extensions,
-                                    properties = combine(it.properties, properties)
+                                    extensions = it.extensions.plus(schemaProperty.extensions),
+                                    properties = combine(it.properties, schemaProperty.properties)
                                 )
                             }
                         }
@@ -1527,7 +1527,7 @@ class OpenApiSpecification(
                         AnyPattern(
                             oneOfs,
                             typeAlias = "(${patternName})",
-                            extensions = oneOfs.extractCombinedExtensions()
+                            extensions = emptyMap()
                         )
                     else if(allDiscriminators.isNotEmpty())
                         AnyPattern(
@@ -1552,7 +1552,7 @@ class OpenApiSpecification(
                         }
                         AnyPattern(
                             pattern,
-                            extensions = pattern.extractCombinedExtensions()
+                            extensions = emptyMap()
                         )
                     }
                     else {

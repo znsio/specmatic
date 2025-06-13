@@ -266,7 +266,7 @@ class HttpStub(
 
                 try {
                     val rawHttpRequest = ktorHttpRequestToHttpRequest(call).also {
-                        httpLogMessage.addRequest(it)
+                        httpLogMessage.addRequestWithCurrentTime(it)
                         if (it.isHealthCheckRequest()) return@intercept
                     }
 
@@ -304,19 +304,19 @@ class HttpStub(
                     }
                 } catch (e: ContractException) {
                     val response = badRequest(e.report())
-                    httpLogMessage.addResponse(response)
-                    httpLogMessage.addScenario(e.scenario as? Scenario)
+                    httpLogMessage.addResponseWithCurrentTime(response)
+                    httpLogMessage.scenario = e.scenario as? Scenario
                     httpLogMessage.addException(e)
                     respondToKtorHttpResponse(call, response)
                 } catch (e: CouldNotParseRequest) {
-                    httpLogMessage.addRequest(defensivelyExtractedRequestForLogging(call))
+                    httpLogMessage.addRequestWithCurrentTime(defensivelyExtractedRequestForLogging(call))
                     val response = badRequest("Could not parse request")
-                    httpLogMessage.addResponse(response)
+                    httpLogMessage.addResponseWithCurrentTime(response)
                     httpLogMessage.addException(e)
                     respondToKtorHttpResponse(call, response)
                 } catch (e: Throwable) {
                     val response = internalServerError(exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString())
-                    httpLogMessage.addResponse(response)
+                    httpLogMessage.addResponseWithCurrentTime(response)
                     httpLogMessage.addException(Exception(e))
                     respondToKtorHttpResponse(call, response)
                 }

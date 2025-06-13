@@ -21,22 +21,14 @@ data class HttpLogMessage(
     var exception: Exception? = null
 ) : LogMessage {
 
-    fun addRequestOnly(request: HttpRequest) {
-        this.request = request
-    }
-
-    fun addRequest(httpRequest: HttpRequest) {
+    fun addRequestWithCurrentTime(httpRequest: HttpRequest) {
         requestTime = CurrentDate()
         this.request = httpRequest
     }
 
-    fun addResponse(httpResponse: HttpResponse) {
+    fun addResponseWithCurrentTime(httpResponse: HttpResponse) {
         responseTime = CurrentDate()
         this.response = httpResponse
-    }
-
-    fun addScenario(scenario: Scenario?) {
-        this.scenario = scenario
     }
 
     fun addException(exception: Exception) {
@@ -106,7 +98,7 @@ data class HttpLogMessage(
     }
 
     fun addResponse(stubResponse: HttpStubResponse) {
-        addResponse(stubResponse.response)
+        addResponseWithCurrentTime(stubResponse.response)
         contractPath = stubResponse.contractPath
         examplePath = stubResponse.examplePath
         scenario = stubResponse.scenario

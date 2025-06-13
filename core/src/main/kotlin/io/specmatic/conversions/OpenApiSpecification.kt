@@ -1552,7 +1552,7 @@ class OpenApiSpecification(
                         }
                         AnyPattern(
                             pattern,
-                            extensions = pattern.extractCombinedExtensions()
+                            extensions = emptyMap()
                         )
                     }
                     else {

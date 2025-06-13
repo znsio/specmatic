@@ -30,6 +30,10 @@ data class HttpLogMessage(
         this.response = httpResponse
     }
 
+    fun addScenario(scenario: Scenario?) {
+        this.scenario = scenario
+    }
+
     fun addException(exception: Exception) {
         this.exception = exception
     }
@@ -100,6 +104,7 @@ data class HttpLogMessage(
         addResponse(stubResponse.response)
         contractPath = stubResponse.contractPath
         examplePath = stubResponse.examplePath
+        scenario = stubResponse.scenario
     }
 
     fun logStartRequestTime() {

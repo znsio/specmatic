@@ -1505,13 +1505,20 @@ class OpenApiSpecification(
                             )
                         }.flatMap { (componentName, properties) ->
                             schemaProperties.map {
-                                componentName to combine(it.properties, properties)
+                                componentName to SchemaProperty(
+                                    extensions = it.extensions,
+                                    properties = combine(it.properties, properties)
+                                )
                             }
                         }
 
                         result
-                    }.flatten().map { (componentName, properties) ->
-                        toJSONObjectPattern(properties, "(${componentName})")
+                    }.flatten().map { (componentName, schemaProperty) ->
+                        toJSONObjectPattern(
+                            schemaProperty.properties,
+                            "(${componentName})",
+                            schemaProperty.extensions
+                        )
                     }
 
                     val pattern = if (oneOfs.size == 1)
@@ -1524,11 +1531,14 @@ class OpenApiSpecification(
                         )
                     else if(allDiscriminators.isNotEmpty())
                         AnyPattern(
-                            pattern = schemaProperties.map {
-                                it.properties
-                            }.zip(allDiscriminators.schemaNames).map { (properties, schemaName) ->
-                                toJSONObjectPattern(properties, "(${schemaName})")
-                            },
+                            pattern = schemaProperties.zip(allDiscriminators.schemaNames)
+                                .map { (schemaProperty, schemaName) ->
+                                    toJSONObjectPattern(
+                                        schemaProperty.properties,
+                                        "(${schemaName})",
+                                        schemaProperty.extensions
+                                    )
+                                },
                             discriminator = Discriminator.create(
                                 allDiscriminators.key,
                                 allDiscriminators.values.toSet(),

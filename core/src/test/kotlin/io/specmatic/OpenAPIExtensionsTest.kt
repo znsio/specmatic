@@ -288,4 +288,92 @@ class OpenAPIExtensionsTest {
             throw AssertionError("Expected AnyPattern but got ${resolvedResponseBodyPattern::class.simpleName}")
         }
     }
+
+    @Test
+    fun `should combine common extensions with oneOf option extensions in allOf`() {
+        val specContent = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /product:
+                get:
+                  responses:
+                    '200':
+                      description: Product retrieved successfully
+                      content:
+                        application/json:
+                          schema:
+                            ${'$'}ref: '#/components/schemas/ExtendedProduct'
+            components:
+              schemas:
+                ExtendedProduct:
+                  allOf:
+                    - type: object
+                      x-property-common: valueCommon
+                      properties:
+                        info:
+                          type: string
+                      required:
+                        - info 
+                    - oneOf:
+                      - type: object
+                        x-property-1: value1
+                        properties:
+                          category:
+                            type: string
+                        required:
+                          - category 
+                      - type: object
+                        x-property-2: value2
+                        properties:
+                          price:
+                            type: number
+                        required:
+                          - price
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(specContent, "").toFeature()
+        val scenario = feature.scenarios.first { it.path == "/product" }
+
+        val responseBodyPattern = scenario.httpResponsePattern.body
+        val resolvedResponseBodyPattern = resolvedHop(responseBodyPattern, scenario.resolver)
+
+        // The response body pattern should be an AnyPattern 
+        assertThat(resolvedResponseBodyPattern).isInstanceOf(AnyPattern::class.java)
+        
+        val anyPattern = resolvedResponseBodyPattern as AnyPattern
+        
+        // Verify that there are two constituent patterns (one for each oneOf option)
+        assertThat(anyPattern.pattern).hasSize(2)
+        
+        // The AnyPattern should have all extensions combined from its constituent patterns
+        assertThat(anyPattern.extensions).containsEntry("x-property-common", "valueCommon")
+        assertThat(anyPattern.extensions).containsEntry("x-property-1", "value1")
+        assertThat(anyPattern.extensions).containsEntry("x-property-2", "value2")
+        
+        // Each constituent pattern should have the combined extensions
+        val patterns = anyPattern.pattern.filterIsInstance<JSONObjectPattern>()
+        assertThat(patterns).hasSize(2)
+        
+        // Find patterns by their properties to verify extensions
+        val categoryPattern = patterns.find { it.pattern.containsKey("category") }
+        val pricePattern = patterns.find { it.pattern.containsKey("price") }
+        
+        assertThat(categoryPattern).isNotNull
+        assertThat(pricePattern).isNotNull
+        
+        // First object should have x-property-common and x-property-1
+        assertThat(categoryPattern!!.extensions).containsEntry("x-property-common", "valueCommon")
+        assertThat(categoryPattern.extensions).containsEntry("x-property-1", "value1")
+        
+        // Second object should have x-property-common and x-property-2
+        assertThat(pricePattern!!.extensions).containsEntry("x-property-common", "valueCommon")
+        assertThat(pricePattern.extensions).containsEntry("x-property-2", "value2")
+        
+        // Verify properties are correctly combined
+        assertThat(categoryPattern.pattern.keys).containsExactlyInAnyOrder("info", "category")
+        assertThat(pricePattern.pattern.keys).containsExactlyInAnyOrder("info", "price")
+    }
 }
